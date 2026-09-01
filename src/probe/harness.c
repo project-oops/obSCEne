@@ -378,6 +378,9 @@ const void *obs_module_symbol(int handle, const char *name) {
         }
     }
 
+    /* Function-pointer casts, fenced as in runtime.c and layout.c: clang-format 18 and
+     * 22 space them differently, and CI runs 18 while a dev here runs 22 (D016). */
+    /* clang-format off */
     int (*fn_dlsym)(int, const char *, void **) = NULL;
     if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
         fn_dlsym = (int (*)(int, const char *, void **))&sceKernelDlsym;
@@ -385,6 +388,7 @@ const void *obs_module_symbol(int handle, const char *name) {
                obs_address_is_callable((const void *)pargs->sys_dynlib_dlsym)) {
         fn_dlsym = (int (*)(int, const char *, void **))pargs->sys_dynlib_dlsym;
     }
+    /* clang-format on */
     if (fn_dlsym == NULL) {
         return NULL;
     }

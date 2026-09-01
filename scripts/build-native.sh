@@ -73,6 +73,9 @@ if [ "${NO_EBOOT:-0}" != "1" ]; then
     rm -rf "$ebootroot"
     mkdir -p "$ebootroot"
     cp "$BUILD/eboot.bin" "$ebootroot/eboot.bin"
+    if [ -d "$BUILD/sce_module" ]; then
+        cp -r "$BUILD/sce_module" "$ebootroot/sce_module"
+    fi
     root_arg=(--root "$(cd "$ebootroot" && pwd)")
 fi
 

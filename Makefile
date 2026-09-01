@@ -859,11 +859,10 @@ pkg: eboot sce-module | $(BUILD)
 # accepted by kstuff under kstuff's native PS5 auth rules.
 .PHONY: native
 native: EBOOT_GEN = 5
-native: EBOOT_TABLE = current
-native: EBOOT_KIND = executable
-native: eboot | $(BUILD)
+native: EBOOT_TABLE = legacy
+native: EBOOT_KIND = fixed
+native: eboot sce-module | $(BUILD)
 	@SELFISH=$(SELFISH) bash scripts/build-native.sh $(BUILD)
-
 # The same package around the *minimal* module, which is what to send at a console first.
 #
 # `module-min` is one import and one library, built by the same linker script through the same
