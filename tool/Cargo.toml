@@ -7,7 +7,10 @@ edition = "2024"
 description = "Build and analysis tooling for the obSCEne conformance probe"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/project-oops/obSCEne"
-rust-version = "1.85"
+# 1.88, not 1.85: `slice::as_chunks` is stable since 1.88 and `is_multiple_of` since 1.87,
+# and both are used in src/. The floor said 1.85 while the code had not compiled under it for
+# some time - clippy checks the two against each other and the mismatch is what it reported.
+rust-version = "1.88"
 publish = false
 
 [[bin]]

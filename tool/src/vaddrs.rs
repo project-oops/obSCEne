@@ -230,7 +230,7 @@ OBS|res|139-exports/enumerate|pass|0x74b||hardware
 ";
         let pairs = parse_report_measures(report);
         assert_eq!(pairs.len(), 2);
-        assert_eq!(pairs[0], ("HoLVWNanBBc#I#A".to_owned(), 0x5b0));
-        assert_eq!(pairs[1], ("sXzD8jK2dGs#I#A".to_owned(), 0x16e00));
+        assert_eq!(pairs.first(), Some(&("HoLVWNanBBc#I#A".to_owned(), 0x5b0)));
+        assert_eq!(pairs.get(1), Some(&("sXzD8jK2dGs#I#A".to_owned(), 0x16e00)));
     }
 }

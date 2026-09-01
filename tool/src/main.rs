@@ -774,7 +774,7 @@ fn run_hw(
             let console = hardware::resolve(hardware::load()?, name)?;
             eprintln!("listening to {} for {seconds}s", console.address);
             let (_stopper, lines) = pros_link::log::follow(&pros_link::Link::to(&console.address))?;
-            let deadline = std::time::Instant::now() + Duration::from_secs(seconds);
+            let deadline = deadline_in(seconds);
             for line in lines {
                 match line {
                     Ok(l) => {
@@ -1135,6 +1135,17 @@ See CLAUDE.md and D058. The fix is to test the address and obs_skip."
     Ok(ExitCode::FAILURE)
 }
 
+/// A deadline `secs` from now.
+///
+/// `Instant + Duration` panics on overflow, which `arithmetic_side_effects` reports and this
+/// crate treats as a defect rather than a nuisance: the lint is set to warn on purpose because
+/// "arithmetic on offsets and sizes is the whole job here". Three callers wrote the same
+/// addition, so the check lives in one place instead of three.
+fn deadline_in(secs: u64) -> std::time::Instant {
+    std::time::Instant::now()
+        .checked_add(Duration::from_secs(secs))
+        .expect("a deadline this close to now fits in an Instant")
+}
 fn main() -> ExitCode {
     // Held for the whole of `main`: the guard is what keeps the writers alive, and `let _`
     // would drop it here.
@@ -2367,7 +2378,7 @@ fn run_hw_deploy(
     // clear message rather than launching blind if the promote never completes. Each probe returns
     // as soon as the launcher answers, so a ready console is not made to wait out a timeout.
     println!("waiting for the install to promote, then launching {title}...");
-    let promote_deadline = std::time::Instant::now() + Duration::from_secs(seconds.max(90));
+    let promote_deadline = deadline_in(seconds.max(90));
     let out = loop {
         let out = pros_link::shell::run(
             &pros_link::Link::to(&console.address),
@@ -2392,15 +2403,18 @@ fn run_hw_deploy(
     // the handover can drop. This replaces the blind hold: a run and a crash both stop the moment
     // the fetching does, instead of sitting idle for the whole window - which is what made a
     // crashed launch cost minutes with nothing on record. The full window is only ever the ceiling.
-    println!("holding {} open while the mount reads the image...", offered.url);
-    let hold_deadline = std::time::Instant::now() + Duration::from_secs(seconds.max(30));
+    println!(
+        "holding {} open while the mount reads the image...",
+        offered.url
+    );
+    let hold_deadline = deadline_in(seconds.max(30));
     let mut last = offered.taken();
     let mut quiet = 0u32;
     loop {
         std::thread::sleep(Duration::from_secs(3));
         let now = offered.taken();
         if now == last {
-            quiet += 1;
+            quiet = quiet.saturating_add(1);
             // ~9s with no new range request: the mount has read what it needs.
             if quiet >= 3 {
                 break;

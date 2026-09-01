@@ -246,8 +246,15 @@ fn apply(path: &Path, c: &Counts, write: bool) -> std::io::Result<Outcome> {
 /// Update or check the marked regions. Returns true when everything is current.
 pub fn run(root: &Path, write: bool, check: bool) -> std::io::Result<bool> {
     let c = gather(root)?;
-    let backlog_doc = if root.join("docs").join("backlog").join("001-where-it-stands.md").exists() {
-        root.join("docs").join("backlog").join("001-where-it-stands.md")
+    let backlog_doc = if root
+        .join("docs")
+        .join("backlog")
+        .join("001-where-it-stands.md")
+        .exists()
+    {
+        root.join("docs")
+            .join("backlog")
+            .join("001-where-it-stands.md")
     } else {
         root.join("docs").join("BACKLOG.md")
     };
