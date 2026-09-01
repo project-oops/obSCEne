@@ -13,11 +13,11 @@
 #                           jobs run this by name before anything else
 #   ./bin/obscene klog      read the console system log
 #
-# The hardware round-trip (obSCEne-only — no counterpart in the other three projects). These are
+# The hardware round-trip (obSCEne-only - no counterpart in the other three projects). These are
 # the single entry point for that work; the scripts under scripts/ are their implementation and
 # are not run directly:
 #
-#   ./bin/obscene deploy    build the package, install, launch, capture the report — the round-trip
+#   ./bin/obscene deploy    build the package, install, launch, capture the report - the round-trip
 #   ./bin/obscene payload   build the plain-ELF payload, run it via elfldr, capture the system log
 #   ./bin/obscene report    capture obscene's records from the console system log to a file
 #   ./bin/obscene recover   read-only: what the console recorded, after a crash
@@ -67,7 +67,7 @@ case "${1:-help}" in
     # scans, or register it with sceAppInstUtilAppInstallTitleDir from a payload. Overridable via
     # TITLE_ID=/TITLE=/CONTENT_ID=/DEEPLINK=/NO_EBOOT=1.
     native) shift; make native "$@" ;;
-    # obSCEne's own: the hardware round-trip. None of these is a make target — each crosses the
+    # obSCEne's own: the hardware round-trip. None of these is a make target - each crosses the
     # WSL/Windows split (the package builds in WSL; the console fetches the install from Windows,
     # the one side its NAT can reach) or talks to a real console, which a portable Makefile rule
     # cannot. These verbs are the single entry point for that work: reach them here, never by
@@ -109,7 +109,7 @@ case "${1:-help}" in
     verify)     shift; _obscene_tool verify "$@" ;;
     selftest)   shift; _obscene_tool selftest "$@" ;;
     # The header comment above IS the usage text. The range ends at the line before `set -euo`,
-    # found rather than hardcoded — a hardcoded number silently truncates the help the next time
+    # found rather than hardcoded - a hardcoded number silently truncates the help the next time
     # a verb is documented, which is how it lost the hardware verbs once already.
     help|-h|--help)
         last=$(( $(grep -n '^set -euo' "$0" | head -1 | cut -d: -f1) - 1 ))

@@ -1,0 +1,18 @@
+# obSCEne's title identity - the single source of truth for both builds.
+#
+# `content_id` is the one fact. The title id (OBSC00001) is its middle field, and build-pkg.sh and
+# build-native.sh each derive the title id from it, so the two builds cannot disagree about which
+# app this is. Before this file the id was copied into each script; two homes for one fact is the
+# same failure the format tables were moved to selfish to avoid (D200).
+#
+# Inert data, not shell: it is read with `sed` and the values are passed to selfish as
+# `--content-id` / `--title-id` arguments. selfish does not read this file - it is a generic tool
+# shared across the OOPS projects, and the identity is obSCEne's, not a property of the format.
+# `param.json` is not the home either: selfish generates it *from* this id, so it is the output.
+#
+# Override at build time with CONTENT_ID=... for the one case it is needed: a crashed title the
+# console will not reap holds its id, and every install/launch under it is refused until a reboot;
+# building under a fresh id sidesteps that (build-pkg.sh, D223).
+
+content_id = "IV0002-OBSC00001_00-STOREUPD00000000"
+title = "obSCEne"

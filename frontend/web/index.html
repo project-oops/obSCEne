@@ -151,11 +151,16 @@ h1 .mark { color: var(--accent); }
 
   function assetLabel(name) {
     var n = name.toLowerCase();
-    if (n.indexOf("injector") > -1) return "Injector (.elf)";
-    if (n.indexOf("payload") > -1)  return "Payload (.elf)";
-    if (n.indexOf("pkg") > -1)      return "Package (.pkg)";
-    if (n.indexOf("eboot") > -1)    return "Eboot (.zip)";
-    if (n.indexOf("module") > -1)   return "Module (.elf)";
+    // Order matters: `obscene-probe.pkg` contains "probe" too, so the specific extensions are
+    // tested before the general name. Matching on the name alone put three of the five shapes
+    // through as raw filenames when they were renamed.
+    if (n.indexOf("injector") > -1)   return "Injector (.elf)";
+    if (n.indexOf("module") > -1)     return "Emulators (.elf)";
+    if (n.indexOf(".pkg") > -1)       return "Package (.pkg)";
+    if (n.indexOf(".zip") > -1)       return "Title directory (.zip)";
+    if (n.indexOf("probe") > -1)      return "Payload (.elf)";
+    if (n.indexOf("payload") > -1)    return "Payload (.elf)";
+    if (n.indexOf("eboot") > -1)      return "Eboot";
     if (n.indexOf("windows") > -1 || n.indexOf("win") > -1) return "Windows";
     if (n.indexOf("linux") > -1) return "Linux";
     if (n.indexOf("macos") > -1 || n.indexOf("darwin") > -1) return "macOS";

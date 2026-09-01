@@ -52,8 +52,15 @@ fi
 
 # Clippy failing to run and clippy finding lints are different problems and want
 # different responses, so they are reported differently rather than both as "not clean".
-if grep -qE '^(warning|error)' "$log"; then
-    grep -E '^(warning|error)' -A6 "$log"
+#
+# The match has to allow for `--message-format short`, which is what this script asks for:
+# a diagnostic then reads `src/main.rs:12:5: error: ...` and does **not** begin with the
+# word. Anchoring on `^(warning|error)` matched only cargo's closing summary, so CI said
+# "could not compile ... due to 7 previous errors" and named none of the seven. That is the
+# same blindness the header above describes, moved from the detection path into the
+# reporting path.
+if grep -qE '^(warning|error)|: (warning|error)(\[|:)' "$log"; then
+    grep -E '^(warning|error)|: (warning|error)(\[|:)' -A6 "$log"
 else
     printf 'clippy did not run:\n'
     tail -20 "$log"

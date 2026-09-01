@@ -110,10 +110,15 @@ jobs:
           fi
           echo "guard refused HARDWARE=1 BULK=1, as it must"
         working-directory: OOPS/obscene
+      # `make`, not `./bin/obscene payload`. That verb dispatches to `scripts/payload-run.sh`,
+      # which builds *and then deploys to a registered console* - and before either, re-enters
+      # WSL when `/proc/version` does not say microsoft. On a Linux runner that means calling
+      # `wsl.exe`, which is not there: exit 127, no build output, and this shape has therefore
+      # never been produced by CI. `make payload` is what the verb runs once it is inside WSL.
       - name: Build
         run: |
-          ./bin/obscene payload     HARDWARE=1 BUILD_ID=${{ github.sha }}
-          ./bin/obscene payload-min HARDWARE=1 BUILD_ID=${{ github.sha }}
+          make payload     HARDWARE=1 BUILD_ID=${{ github.sha }}
+          make payload-min HARDWARE=1 BUILD_ID=${{ github.sha }}
         working-directory: OOPS/obscene
       - name: Stage
         run: |
@@ -152,7 +157,9 @@ jobs:
           OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: Build
-        run: ./bin/obscene injector HARDWARE=1 BUILD_ID=${{ github.sha }}
+        # `make`, for the same reason as the payload shape above: the `injector` verb deploys to
+        # a console through payload-run.sh and re-enters WSL to do it.
+        run: make injector HARDWARE=1 BUILD_ID=${{ github.sha }}
         working-directory: OOPS/obscene
       - name: Stage
         run: |
@@ -212,8 +219,8 @@ jobs:
           name: obscene-module.elf
           path: OOPS/obscene/dist/obscene-module.elf
 
-  artifact-eboot:
-    name: "shape: fSELF eboot (system loader)"
+  artifact-native:
+    name: "shape: title directory (system loader)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -224,7 +231,7 @@ jobs:
         with:
           path: OOPS/obscene
       - name: Install clang and zip
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld zip
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld zip unzip
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
         env:
@@ -234,20 +241,26 @@ jobs:
       - name: Build the tooling
         run: ./bin/obscene tool-build
         working-directory: OOPS/obscene
+      # `native`, not `eboot`. The zip that ships is the **current-generation title directory** -
+      # param.json, the icon and the eboot laid out the way the system loader expects to find
+      # them - which is a thing somebody can drop where an auto-mounter scans. A zip containing
+      # a bare `eboot.bin`, which is what this job produced before, is not installable by
+      # itself and left the reader to know the layout. `native` depends on `eboot`, so the
+      # eboot is still built and verified on the way.
       - name: Build
-        run: ./bin/obscene eboot HARDWARE=1 BUILD_ID=${{ github.sha }}
+        run: ./bin/obscene native HARDWARE=1 BUILD_ID=${{ github.sha }}
         working-directory: OOPS/obscene
       - name: Stage
         run: |
           mkdir -p dist
-          cp build/eboot.bin dist/eboot.bin
-          ( cd build && zip -q ../dist/obscene-eboot.zip eboot.bin )
-          ls -l dist
+          [ -d build/native ] || { echo "no build/native - scripts/build-native.sh wrote nothing" >&2; exit 1; }
+          ( cd build/native && zip -qr ../../dist/obscene-probe.zip . )
+          unzip -l dist/obscene-probe.zip
         working-directory: OOPS/obscene
       - uses: actions/upload-artifact@v4
         with:
-          name: obscene-eboot.zip
-          path: OOPS/obscene/dist/obscene-eboot.zip
+          name: obscene-probe.zip
+          path: OOPS/obscene/dist/obscene-probe.zip
 
   artifact-pkg:
     name: "shape: package (installer)"
@@ -390,7 +403,7 @@ jobs:
     if: |
       always() && needs.build.result == 'success' &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build, artifact-payload, artifact-injector, artifact-module, artifact-eboot, artifact-pkg]
+    needs: [build, artifact-payload, artifact-injector, artifact-module, artifact-native, artifact-pkg]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -403,16 +416,20 @@ jobs:
           pattern: obscene*
           merge-multiple: true
 
-      - name: Name each shape for its loader
+      - name: Name each shape for what loads it
         run: |
           cd dist
           ls -l
           rename() { [ -f "$1" ] && mv "$1" "$2" && echo "  $1 -> $2" || true; }
-          rename obscene-payload.elf   obscene-for-homebrew-loader.elf
-          rename obscene-injector.elf  obscene-for-process-injector.elf
-          rename obscene-module.elf    obscene-for-emulators.module.elf
-          rename eboot.bin             obscene-for-system-loader.eboot.bin
-          rename obscene.pkg           obscene-for-installer.pkg
+          # `probe` is the probe in its three deliverable forms - a bare payload, an installable
+          # package, and a title directory - so the name says what it is and the extension says
+          # how it gets on. The injector is a different program, not a form of the probe.
+          rename obscene-payload.elf  obscene-probe.elf
+          rename obscene.pkg          obscene-probe.pkg
+          rename obscene-injector.elf obscene-injector.elf
+          # The emulator shape keeps its own name: it is not for hardware at all, and calling it
+          # a probe form would put it alongside three things you can send to a console.
+          rename obscene-module.elf   obscene-module.elf
           ls -l
 
       - name: Delete previous latest-main
@@ -431,21 +448,25 @@ jobs:
           body: |
             Auto-built from `main` at `${{ github.sha }}`.
 
-            **Four shapes, four loaders, and they are not interchangeable.** They are told
-            apart by two bytes at offset 16, and sending the wrong one to real hardware has
-            taken a loader down and cost a reboot. Each filename names its loader; read
-            `docs/ARTIFACTS.md` before sending anything anywhere.
+            **These are not interchangeable.** The three probe forms are told apart by two
+            bytes at offset 16, and sending the wrong one to real hardware has taken a loader
+            down and cost a reboot. Read `docs/ARTIFACTS.md` before sending anything anywhere.
 
-            | file | who loads it |
-            |---|---|
-            | `obscene-for-homebrew-loader.elf` | a homebrew ELF loader, which maps the segments itself |
-            | `obscene-for-process-injector.elf` | the native process injector - see `docs/INJECTOR.md` |
-            | `obscene-for-emulators.module.elf` | emulators, through their "not a SELF" path |
-            | `obscene-for-system-loader.eboot.bin` | the system loader, from an app directory |
-            | `obscene-for-installer.pkg` | the installer, then the system loader |
+            | file | what it is | how it gets on |
+            |---|---|---|
+            | `obscene-probe.elf` | the probe, headless | a homebrew ELF loader maps the segments itself |
+            | `obscene-probe.pkg` | the probe, packaged | the installer, then the system loader |
+            | `obscene-probe.zip` | the probe as a title directory | unpack where an auto-mounter scans |
+            | `obscene-injector.elf` | the title injector, a different program | a homebrew ELF loader - see `docs/INJECTOR.md` |
+            | `obscene-module.elf` | the emulator shape | emulators, through their "not a SELF" path. Not for hardware |
 
             The package is built by a job allowed to fail, so it may be absent from a given
             build. That is honest rather than hidden: it is the least settled of the shapes.
+
+            **`obscene-porthole.elf` is not here and is not late.** The Porthole payload is a
+            scaffold: `src/porthole/Makefile` builds a host self-test and compiles the target
+            half to an object, deliberately never linking it, because a real payload needs the
+            CRT and net wiring that the encoder go/no-go gates. There is no ELF to publish yet.
 
             This is ordinary homebrew. It needs no vendor toolchain to build and carries
             nothing from one.
