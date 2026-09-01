@@ -1,0 +1,33 @@
+# Libraries whose load ends the process on real hardware.
+#
+# Each line is a check identifier that `sceKernelLoadStartModule` did not return from, on a
+# retail PS5 (CUH-/CFI- Prospero, system software as of 2026-08-30). Established by
+# `scripts/oops-hwsweep.sh`: run, find the `try` record with no matching `res`, exclude it,
+# run again. One iteration per crasher; the sweep is complete when a run reaches
+# `suite complete`.
+#
+# WHY THIS FILE EXISTS RATHER THAN JUST `$BUILD/excludes.txt`: that file is in a build
+# directory. It does not survive `rm -rf`, it is not on any other machine, and it is not in
+# the history. This list cost a full sweep of a 370-library corpus against real hardware to
+# obtain, and losing it means paying for it again — and the payment is measured in console
+# crashes and reboots, not CPU. The build directory keeps the working copy; this keeps the
+# finding.
+#
+# It is NOT a list of libraries obSCEne refuses to probe in principle. It is what one console
+# generation did on one day. Another console, another firmware, or a fixed loader may return
+# an error where this one died — so re-running the sweep with this file emptied is a valid
+# experiment, and the right one to make when the platform changes. Exclusions are how you see
+# what is behind a crash, never how you stop finding them.
+#
+# Every entry here is an audio or video codec or a media-server interface, without exception
+# across the whole 370-library corpus. See docs/HARDWARE.md.
+900-surface/corpus_0146_libSceM4aacEnc
+900-surface/corpus_0207_libSceOpusCeltDec
+900-surface/corpus_0208_libSceOpusCeltEnc
+900-surface/corpus_0209_libSceOpusDec
+900-surface/corpus_0210_libSceOpusSilkEnc
+900-surface/corpus_0258_libSceSrcUtl
+900-surface/corpus_0295_libSceUlt
+900-surface/corpus_0311_libSceVideoCoreServerInterface
+900-surface/corpus_0319_libSceVideoOutSecondary
+900-surface/corpus_0320_libSceVideoRecording

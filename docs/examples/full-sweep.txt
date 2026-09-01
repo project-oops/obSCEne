@@ -1,0 +1,554 @@
+OBS|meta|1|18|95
+OBS|build|dev|module
+OBS|display|ready|1920x1080 framebuffer
+OBS|section|000-boot|Boot and report stream|Establishes that the report itself can be trusted before anything is reported.
+OBS|try|000-boot/number-formatting|obscene|obs_format_u64
+OBS|res|000-boot/number-formatting|pass|||assumed
+OBS|try|000-boot/write-returns-count|libkernel|sceKernelWrite
+OBS|res|000-boot/write-returns-count|pass|||assumed
+OBS|try|000-boot/write-rejects-bad-fd|libkernel|sceKernelWrite
+OBS|res|000-boot/write-rejects-bad-fd|pass|0xffffffff80020009||assumed
+OBS|sectiontally|000-boot|3|0|0|0
+OBS|section|005-generation|Console generation|Which console this is, inferred from which exclusive symbols resolve. Read this first: it decides whether an absence below is a gap or is expected.
+OBS|try|005-generation/detect|obscene|(symbol probe)
+OBS|res|005-generation/detect|partial||both generations resolve; absences cannot be attributed to a generation|assumed
+OBS|try|005-generation/neo-mode|libkernel|sceKernelIsNeoMode
+OBS|res|005-generation/neo-mode|pass|0x0||assumed
+OBS|sectiontally|005-generation|1|1|0|0
+OBS|section|007-responsive|Stub, or implemented|Whether a function reads its arguments at all, tested by giving it two whose answers must differ. Read before the failures below: a function that answers the same thing to everything is unimplemented, not incorrect, and the two need different work.
+OBS|try|007-responsive/libc|libSceLibcInternal|strlen
+OBS|responsive|libSceLibcInternal|strlen|responds|0x6
+OBS|responsive|libSceLibcInternal|strcmp|responds|0x1
+OBS|responsive|libSceLibcInternal|strspn|silent|0x0
+OBS|responsive|libSceLibcInternal|toupper|silent|0x0
+OBS|responsive|libSceLibcInternal|tolower|silent|0x0
+OBS|responsive|libSceLibcInternal|isdigit|silent|0x0
+OBS|responsive|libSceLibcInternal|isalpha|silent|0x0
+OBS|responsive|libSceLibcInternal|abs|silent|0x0
+OBS|responsive|libSceLibcInternal|labs|silent|0x0
+OBS|responsive|libSceLibcInternal|atoi|silent|0x0
+OBS|responsive|libSceLibcInternal|atol|silent|0x0
+OBS|responsive|libSceLibcInternal|wcslen|silent|0x0
+OBS|responsive|libSceLibcInternal|memcmp|responds|0x1
+OBS|responsive|libSceLibcInternal|strncmp|responds|0x1
+OBS|responsive|libSceLibcInternal|strchr|responds|0x5
+OBS|responsive|libSceLibcInternal|strstr|silent|0x0
+OBS|responsive|libSceLibcInternal|strcspn|silent|0x0
+OBS|responsive|libSceLibcInternal|strtol|silent|0x0
+OBS|responsive|libSceLibcInternal|strtoul|silent|0x0
+OBS|res|007-responsive/libc|partial|0xe|some of the library is stubbed rather than implemented|spec
+OBS|try|007-responsive/math|libSceLibcInternal|sqrt
+OBS|responsive|libSceLibcInternal|sqrt|silent|0x3c205d65726f435b
+OBS|responsive|libSceLibcInternal|fabs|silent|0x3c205d65726f435b
+OBS|responsive|libSceLibcInternal|floor|silent|0x3c205d65726f435b
+OBS|responsive|libSceLibcInternal|ceil|silent|0x3c205d65726f435b
+OBS|responsive|libSceLibcInternal|fmod|silent|0x3c205d65726f435b
+OBS|responsive|libSceLibcInternal|pow|responds|0x4040000000000000
+OBS|responsive|libSceLibcInternal|sin|responds|0x3feaed548f090cee
+OBS|responsive|libSceLibcInternal|cos|responds|0x3fe14a280fb5068c
+OBS|res|007-responsive/math|partial|0x5|some of the library is stubbed rather than implemented|spec
+OBS|sectiontally|007-responsive|0|2|0|0
+OBS|section|010-kernel|Kernel core|Process identity and the clocks everything else measures itself against.
+OBS|try|010-kernel/process-time|libkernel|sceKernelGetProcessTime
+OBS|res|010-kernel/process-time|pass|0x14d||assumed
+OBS|try|010-kernel/process-time-counter|libkernel|sceKernelGetProcessTimeCounter
+OBS|res|010-kernel/process-time-counter|pass|0x266fee6a1||assumed
+OBS|try|010-kernel/tsc-frequency|libkernel|sceKernelGetTscFrequency
+OBS|res|010-kernel/tsc-frequency|pass|0xd693a400||assumed
+OBS|sectiontally|010-kernel|3|0|0|0
+OBS|section|015-sync|Synchronisation and thread churn|Primitives with real semantics rather than existence tests, chosen from what an emulator's release notes said it had just fixed. Every one of these was censused and never called while it was broken.
+OBS|try|015-sync/mutex|libkernel|scePthreadMutexTrylock
+OBS|res|015-sync/mutex|pass|||spec
+OBS|try|015-sync/rwlock|libkernel|scePthreadRwlockTryrdlock
+OBS|res|015-sync/rwlock|pass|||spec
+OBS|try|015-sync/semaphore|libkernel|sceKernelPollSema
+OBS|res|015-sync/semaphore|pass|||spec
+OBS|try|015-sync/event-flag-round-trip|libkernel|sceKernelPollEventFlag
+OBS|res|015-sync/event-flag-round-trip|fail||a cleared bit still polls as set|documented
+OBS|try|015-sync/event-flag-rejects-bad-handle|libkernel|sceKernelPollEventFlag
+OBS|res|015-sync/event-flag-rejects-bad-handle|pass|0x80020003||assumed
+OBS|try|015-sync/thread-churn|libkernel|scePthreadCreate
+OBS|progress|015-sync/thread-churn|0
+OBS|progress|015-sync/thread-churn|4
+OBS|progress|015-sync/thread-churn|8
+OBS|progress|015-sync/thread-churn|12
+OBS|progress|015-sync/thread-churn|16
+OBS|progress|015-sync/thread-churn|20
+OBS|progress|015-sync/thread-churn|24
+OBS|progress|015-sync/thread-churn|28
+OBS|progress|015-sync/thread-churn|32
+OBS|progress|015-sync/thread-churn|36
+OBS|res|015-sync/thread-churn|pass|0x28||spec
+OBS|try|015-sync/machine-kind|libkernel|sceKernelIsCex
+OBS|res|015-sync/machine-kind|partial||the platform says it is neither a devkit nor a retail unit|assumed
+OBS|sectiontally|015-sync|5|1|1|0
+OBS|section|020-memory|Direct memory|A full reserve, map, use, unmap and release cycle, reported step by step.
+OBS|try|020-memory/direct-size|libkernel|sceKernelGetDirectMemorySize
+OBS|res|020-memory/direct-size|pass|0x120000000||assumed
+OBS|try|020-memory/allocate|libkernel|sceKernelAllocateDirectMemory
+OBS|res|020-memory/allocate|pass|0x7fc000||assumed
+OBS|try|020-memory/map|libkernel|sceKernelMapDirectMemory
+OBS|res|020-memory/map|pass|0x2007ec000||assumed
+OBS|try|020-memory/read-write|obscene|mapped memory
+OBS|res|020-memory/read-write|pass|||assumed
+OBS|try|020-memory/unmap|libkernel|sceKernelMunmap
+OBS|res|020-memory/unmap|pass|||assumed
+OBS|try|020-memory/release|libkernel|sceKernelReleaseDirectMemory
+OBS|res|020-memory/release|pass|||assumed
+OBS|try|020-memory/unmap-rejects-null|libkernel|sceKernelMunmap
+OBS|res|020-memory/unmap-rejects-null|pass|0x80020016||assumed
+OBS|sectiontally|020-memory|7|0|0|0
+OBS|section|030-thread|Threads|Creating a thread, proving its body actually ran, and joining it back.
+OBS|try|030-thread/self|libkernel|scePthreadSelf
+OBS|res|030-thread/self|pass|0x7ffffc000||spec
+OBS|try|030-thread/create|libkernel|scePthreadCreate
+OBS|res|030-thread/create|pass|||spec
+OBS|try|030-thread/join|libkernel|scePthreadJoin
+OBS|res|030-thread/join|pass|||spec
+OBS|sectiontally|030-thread|3|0|0|0
+OBS|section|035-libc|C runtime|The standard library a title leans on hardest, checked for behaviour rather than for mere presence.
+OBS|try|035-libc/strlen|libSceLibcInternal|strlen
+OBS|res|035-libc/strlen|pass|||spec
+OBS|try|035-libc/strcmp|libSceLibcInternal|strcmp
+OBS|res|035-libc/strcmp|pass|||spec
+OBS|try|035-libc/memcmp|libSceLibcInternal|memcmp
+OBS|res|035-libc/memcmp|pass|||spec
+OBS|try|035-libc/strchr|libSceLibcInternal|strchr
+OBS|res|035-libc/strchr|pass|||spec
+OBS|try|035-libc/snprintf|libSceLibcInternal|snprintf
+OBS|res|035-libc/snprintf|fail||a truncated write did not terminate the buffer|spec
+OBS|try|035-libc/malloc-free|libSceLibcInternal|malloc
+OBS|res|035-libc/malloc-free|fail||a small allocation returned null|spec
+OBS|res|035-libc/calloc-zeroes|skip||a prerequisite capability was not established|spec
+OBS|res|035-libc/realloc-preserves|skip||a prerequisite capability was not established|spec
+OBS|try|035-libc/qsort|libSceLibcInternal|qsort
+OBS|res|035-libc/qsort|fail|0x1|the array is not in order|spec
+OBS|try|035-libc/bsearch|libSceLibcInternal|bsearch
+OBS|res|035-libc/bsearch|fail||a present value was not found at the right element|spec
+OBS|try|035-libc/numeric|libSceLibcInternal|strtol
+OBS|res|035-libc/numeric|fail||absolute value is wrong|spec
+OBS|try|035-libc/strtoul-bases|libSceLibcInternal|strtoul
+OBS|res|035-libc/strtoul-bases|fail||decimal conversion is wrong|spec
+OBS|try|035-libc/strcpy-strcat|libSceLibcInternal|strcpy
+OBS|res|035-libc/strcpy-strcat|fail||strcpy did not return its destination|spec
+OBS|try|035-libc/strncpy-padding|libSceLibcInternal|strncpy
+OBS|res|035-libc/strncpy-padding|pass|||spec
+OBS|try|035-libc/strstr|libSceLibcInternal|strstr
+OBS|res|035-libc/strstr|fail||a present substring was not found at the right offset|spec
+OBS|try|035-libc/memchr-strrchr|libSceLibcInternal|memchr
+OBS|res|035-libc/memchr-strrchr|fail||memchr found the wrong occurrence|spec
+OBS|try|035-libc/strspn|libSceLibcInternal|strspn
+OBS|res|035-libc/strspn|fail||the leading accepted span is wrong|spec
+OBS|try|035-libc/strtok|libSceLibcInternal|strtok
+OBS|res|035-libc/strtok|fail|0x0|tokenising stopped early|spec
+OBS|try|035-libc/ctype|libSceLibcInternal|toupper
+OBS|res|035-libc/ctype|fail||case conversion is wrong|spec
+OBS|try|035-libc/rand-seeded|libSceLibcInternal|rand
+OBS|res|035-libc/rand-seeded|partial|0x0|two consecutive draws were identical|spec
+OBS|try|035-libc/strncat-bounds|libSceLibcInternal|strncat
+OBS|res|035-libc/strncat-bounds|fail||strncat did not return its destination|spec
+OBS|try|035-libc/strpbrk-case|libSceLibcInternal|strpbrk
+OBS|res|035-libc/strpbrk-case|fail||strpbrk found the wrong first occurrence|spec
+OBS|try|035-libc/integer-conversion|libSceLibcInternal|strtoll
+OBS|res|035-libc/integer-conversion|fail||atol got a negative value wrong|spec
+OBS|try|035-libc/character-classes|libSceLibcInternal|isprint
+OBS|res|035-libc/character-classes|fail||islower is wrong|spec
+OBS|try|035-libc/wide-strings|libSceLibcInternal|wcslen
+OBS|res|035-libc/wide-strings|fail|0x0|wcslen counted the wrong number of wide characters|spec
+OBS|sectiontally|035-libc|5|1|17|2
+OBS|section|037-math|Floating-point maths|Exact-value checks on the maths library, where sign and rounding direction are what break.
+OBS|try|037-math/sqrt|libSceLibcInternal|sqrt
+OBS|res|037-math/sqrt|fail|0x3c205d65726f435b|sqrt(4) is wrong|spec
+OBS|try|037-math/pow|libSceLibcInternal|pow
+OBS|res|037-math/pow|pass|||spec
+OBS|try|037-math/fabs|libSceLibcInternal|fabs
+OBS|res|037-math/fabs|fail||absolute value is wrong|spec
+OBS|try|037-math/floor-ceil|libSceLibcInternal|floor
+OBS|res|037-math/floor-ceil|fail||rounding a positive value is wrong|spec
+OBS|try|037-math/fmod|libSceLibcInternal|fmod
+OBS|res|037-math/fmod|fail|0x3c205d65726f435b|fmod is wrong|spec
+OBS|try|037-math/trigonometry|libSceLibcInternal|sin
+OBS|res|037-math/trigonometry|pass|||spec
+OBS|try|037-math/single-precision|libSceLibcInternal|sqrtf
+OBS|res|037-math/single-precision|fail||single-precision square root is wrong|spec
+OBS|sectiontally|037-math|2|0|5|0
+OBS|section|040-file|Filesystem|Descriptor handling, checked from the failure side where no layout is assumed.
+OBS|try|040-file/close-rejects-bad-fd|libkernel|sceKernelClose
+OBS|res|040-file/close-rejects-bad-fd|pass|0x80020009||assumed
+OBS|try|040-file/open-rejects-missing|libkernel|sceKernelOpen
+OBS|res|040-file/open-rejects-missing|pass|0x80020002||assumed
+OBS|res|040-file/open-rejects-null|skip||excluded at build time: known to end the process on this platform|assumed
+OBS|try|040-file/read-rejects-bad-fd|libkernel|sceKernelRead
+OBS|res|040-file/read-rejects-bad-fd|pass|0xffffffff80020009||assumed
+OBS|try|040-file/lseek-rejects-bad-fd|libkernel|sceKernelLseek
+OBS|res|040-file/lseek-rejects-bad-fd|pass|0xffffffff80020009||assumed
+OBS|sectiontally|040-file|4|0|0|1
+OBS|section|050-time|Timers and sleeping|Yielding the processor and coming back with the clock still monotonic.
+OBS|try|050-time/usleep|libkernel|sceKernelUsleep
+OBS|res|050-time/usleep|pass|0x7db||assumed
+OBS|sectiontally|050-time|1|0|0|0
+OBS|section|060-module|Dynamic linking|Loading modules and resolving symbols, checked from the failure side.
+OBS|try|060-module/load-rejects-missing|libkernel|sceKernelLoadStartModule
+OBS|res|060-module/load-rejects-missing|pass|0x80020002||assumed
+OBS|try|060-module/dlsym-rejects-bad-handle|libkernel|sceKernelDlsym
+OBS|res|060-module/dlsym-rejects-bad-handle|pass|0x80020003||assumed
+OBS|try|060-module/sysmodule-query|libSceSysmodule|sceSysmoduleIsLoaded
+OBS|res|060-module/sysmodule-query|pass|0x805a1000||assumed
+OBS|sectiontally|060-module|3|0|0|0
+OBS|section|070-user|User service|The user identity every presentation subsystem is opened against.
+OBS|try|070-user/initialise|libSceUserService|sceUserServiceInitialize
+OBS|res|070-user/initialise|pass|||assumed
+OBS|try|070-user/initial-user|libSceUserService|sceUserServiceGetInitialUser
+OBS|res|070-user/initial-user|pass|0x3e8||assumed
+OBS|sectiontally|070-user|2|0|0|0
+OBS|section|080-video|Video output|Acquiring and releasing the main display output.
+OBS|try|080-video/close-rejects-bad-handle|libSceVideoOut|sceVideoOutClose
+OBS|res|080-video/close-rejects-bad-handle|skip||the probe is drawing its report on this output|assumed
+OBS|try|080-video/open|libSceVideoOut|sceVideoOutOpen
+OBS|res|080-video/open|skip||the probe is drawing its report on this output|assumed
+OBS|res|080-video/flip-rate-rejects-bad-handle|skip||excluded at build time: known to end the process on this platform|assumed
+OBS|sectiontally|080-video|0|0|0|3
+OBS|section|090-audio|Audio output|Bringing up the audio subsystem and rejecting invalid handles.
+OBS|try|090-audio/initialise|libSceAudioOut|sceAudioOutInit
+OBS|res|090-audio/initialise|pass|||assumed
+OBS|try|090-audio/close-rejects-bad-handle|libSceAudioOut|sceAudioOutClose
+OBS|res|090-audio/close-rejects-bad-handle|pass|0x80260003||assumed
+OBS|sectiontally|090-audio|2|0|0|0
+OBS|section|100-input|Controller input|Bringing up the controller subsystem and acquiring a pad.
+OBS|try|100-input/initialise|libScePad|scePadInit
+OBS|res|100-input/initialise|pass|||assumed
+OBS|try|100-input/open|libScePad|scePadOpen
+OBS|res|100-input/open|pass|0x1||assumed
+OBS|try|100-input/close-rejects-bad-handle|libScePad|scePadClose
+OBS|res|100-input/close-rejects-bad-handle|pass|0x80920003||assumed
+OBS|sectiontally|100-input|3|0|0|0
+OBS|section|110-modules|What is loaded|The platform's own inventory rather than this program's list. On hardware this is authoritative; against an emulator it is what that emulator claims to provide, and the difference between the two is the gap.
+OBS|try|110-modules/list|libkernel|sceKernelGetModuleList
+OBS|res|110-modules/list|pass|0x1||assumed
+OBS|try|110-modules/names|libkernel|sceKernelGetModuleInfo
+OBS|res|110-modules/names|fail|0x80020016|the platform would not describe any module|assumed
+OBS|sectiontally|110-modules|1|0|1|0
+OBS|section|900-surface|Symbol census|How much of the known surface exists, by library. Nothing is called, and the control check validates the presence test itself - read it first.
+OBS|try|900-surface/control|obscene|(census control)
+OBS|sym|obscene|obs_census_control_present|present|shared
+OBS|sym|obscene|obs_census_control_absent|present|shared
+OBS|res|900-surface/control|fail||a symbol that does not exist reported present; every count in this section is meaningless|assumed
+OBS|try|900-surface/kernel|libkernel|(census)
+OBS|sym|libkernel|sceKernelPread|present|shared
+OBS|sym|libkernel|sceKernelPwrite|present|shared
+OBS|sym|libkernel|sceKernelStat|present|shared
+OBS|sym|libkernel|sceKernelFstat|present|shared
+OBS|sym|libkernel|sceKernelMkdir|present|shared
+OBS|sym|libkernel|sceKernelRmdir|present|shared
+OBS|sym|libkernel|sceKernelUnlink|present|shared
+OBS|sym|libkernel|sceKernelRename|present|shared
+OBS|sym|libkernel|sceKernelTruncate|present|shared
+OBS|sym|libkernel|sceKernelFtruncate|present|shared
+OBS|sym|libkernel|sceKernelFsync|present|shared
+OBS|sym|libkernel|sceKernelSync|present|shared
+OBS|sym|libkernel|sceKernelGetdents|present|shared
+OBS|sym|libkernel|sceKernelGetdirentries|present|shared
+OBS|sym|libkernel|sceKernelChmod|present|shared
+OBS|sym|libkernel|sceKernelDup|present|shared
+OBS|sym|libkernel|sceKernelDup2|present|shared
+OBS|sym|libkernel|sceKernelFcntl|present|shared
+OBS|sym|libkernel|sceKernelIoctl|present|shared
+OBS|sym|libkernel|sceKernelSelect|present|shared
+OBS|sym|libkernel|sceKernelPoll|present|shared
+OBS|sym|libkernel|sceKernelUnlinkat|present|shared
+OBS|sym|libkernel|sceKernelOpenat|present|shared
+OBS|sym|libkernel|sceKernelMmap|present|shared
+OBS|sym|libkernel|sceKernelMprotect|present|shared
+OBS|sym|libkernel|sceKernelMsync|present|shared
+OBS|sym|libkernel|sceKernelMlock|present|shared
+OBS|sym|libkernel|sceKernelMunlock|present|shared
+OBS|sym|libkernel|sceKernelMtypeprotect|present|shared
+OBS|sym|libkernel|sceKernelQueryMemoryProtection|present|shared
+OBS|sym|libkernel|sceKernelAvailableDirectMemorySize|present|shared
+OBS|sym|libkernel|sceKernelMapFlexibleMemory|present|shared
+OBS|sym|libkernel|sceKernelMapNamedDirectMemory|present|shared
+OBS|sym|libkernel|sceKernelMapNamedFlexibleMemory|present|shared
+OBS|sym|libkernel|sceKernelCheckedReleaseDirectMemory|present|shared
+OBS|sym|libkernel|sceKernelVirtualQuery|present|shared
+OBS|sym|libkernel|sceKernelSetVirtualRangeName|present|shared
+OBS|sym|libkernel|sceKernelReserveVirtualRange|present|shared
+OBS|sym|libkernel|sceKernelGetDirectMemoryType|present|shared
+OBS|sym|libkernel|sceKernelBatchMap|present|shared
+OBS|sym|libkernel|sceKernelBatchMap2|present|shared
+OBS|sym|libkernel|sceKernelReleaseFlexibleMemory|present|shared
+OBS|sym|libkernel|sceKernelAvailableFlexibleMemorySize|present|shared
+OBS|sym|libkernel|sceKernelGetpid|present|shared
+OBS|sym|libkernel|sceKernelGetppid|present|shared
+OBS|sym|libkernel|sceKernelExit|present|shared
+OBS|sym|libkernel|sceKernelSleep|present|shared
+OBS|sym|libkernel|sceKernelNanosleep|present|shared
+OBS|sym|libkernel|sceKernelGettimeofday|present|shared
+OBS|sym|libkernel|sceKernelClockGettime|present|shared
+OBS|sym|libkernel|sceKernelClockGetres|present|shared
+OBS|sym|libkernel|sceKernelGettimezone|present|shared
+OBS|sym|libkernel|sceKernelGetSystemSwVersion|present|shared
+OBS|sym|libkernel|sceKernelGetCpumode|present|shared
+OBS|sym|libkernel|sceKernelGetCurrentCpu|present|shared
+OBS|sym|libkernel|sceKernelGetProcessType|present|shared
+OBS|sym|libkernel|sceKernelGetProcParam|present|shared
+OBS|sym|libkernel|sceKernelWaitSema|present|shared
+OBS|sym|libkernel|sceKernelCancelSema|present|shared
+OBS|sym|libkernel|sceKernelWaitEventFlag|present|shared
+OBS|sym|libkernel|sceKernelCancelEventFlag|present|shared
+OBS|sym|libkernel|sceKernelCreateEqueue|present|shared
+OBS|sym|libkernel|sceKernelDeleteEqueue|present|shared
+OBS|sym|libkernel|sceKernelWaitEqueue|present|shared
+OBS|sym|libkernel|sceKernelAddUserEvent|present|shared
+OBS|sym|libkernel|sceKernelAddTimerEvent|present|shared
+OBS|sym|libkernel|sceKernelDeleteTimerEvent|present|shared
+OBS|sym|libkernel|sceKernelAddReadEvent|present|shared
+OBS|sym|libkernel|sceKernelTriggerUserEvent|present|shared
+OBS|sym|libkernel|sceKernelGetEventData|present|shared
+OBS|sym|libkernel|sceKernelGetEventId|present|shared
+OBS|sym|libkernel|sceKernelGetEventFilter|present|shared
+OBS|sym|libkernel|sceKernelGetEventUserData|present|shared
+OBS|sym|libkernel|sceKernelStopUnloadModule|present|shared
+OBS|sym|libkernel|FromAddr|present|shared
+OBS|sym|libkernel|sceKernelUuidCreate|present|shared
+OBS|sym|libkernel|sceKernelGetSystemSwVersion2|present|shared
+OBS|res|900-surface/kernel|pass|0x4d||assumed
+OBS|try|900-surface/pthread|libkernel|(census)
+OBS|sym|libkernel|scePthreadAttrInit|present|shared
+OBS|sym|libkernel|scePthreadAttrDestroy|present|shared
+OBS|sym|libkernel|scePthreadAttrSetstacksize|present|shared
+OBS|sym|libkernel|scePthreadAttrGetstacksize|present|shared
+OBS|sym|libkernel|scePthreadAttrSetdetachstate|present|shared
+OBS|sym|libkernel|scePthreadAttrGetdetachstate|present|shared
+OBS|sym|libkernel|scePthreadAttrSetinheritsched|present|shared
+OBS|sym|libkernel|scePthreadAttrSetschedparam|present|shared
+OBS|sym|libkernel|scePthreadAttrSetschedpolicy|present|shared
+OBS|sym|libkernel|scePthreadAttrSetaffinity|present|shared
+OBS|sym|libkernel|scePthreadAttrGetaffinity|present|shared
+OBS|sym|libkernel|scePthreadDetach|present|shared
+OBS|sym|libkernel|scePthreadExit|present|shared
+OBS|sym|libkernel|scePthreadEqual|present|shared
+OBS|sym|libkernel|scePthreadCancel|present|shared
+OBS|sym|libkernel|scePthreadSetName|present|shared
+OBS|sym|libkernel|scePthreadYield|present|shared
+OBS|sym|libkernel|scePthreadGetprio|present|shared
+OBS|sym|libkernel|scePthreadSetprio|present|shared
+OBS|sym|libkernel|scePthreadGetaffinity|present|shared
+OBS|sym|libkernel|scePthreadSetaffinity|present|shared
+OBS|sym|libkernel|scePthreadOnce|present|shared
+OBS|sym|libkernel|scePthreadKeyCreate|present|shared
+OBS|sym|libkernel|scePthreadKeyDelete|present|shared
+OBS|sym|libkernel|scePthreadGetspecific|present|shared
+OBS|sym|libkernel|scePthreadSetspecific|present|shared
+OBS|sym|libkernel|scePthreadGetthreadid|present|shared
+OBS|sym|libkernel|scePthreadRename|present|shared
+OBS|sym|libkernel|scePthreadMutexLock|present|shared
+OBS|sym|libkernel|scePthreadMutexTimedlock|present|shared
+OBS|sym|libkernel|scePthreadMutexattrInit|present|shared
+OBS|sym|libkernel|scePthreadMutexattrDestroy|present|shared
+OBS|sym|libkernel|scePthreadMutexattrSettype|present|shared
+OBS|sym|libkernel|scePthreadMutexattrSetprotocol|present|shared
+OBS|sym|libkernel|scePthreadCondInit|present|shared
+OBS|sym|libkernel|scePthreadCondDestroy|present|shared
+OBS|sym|libkernel|scePthreadCondWait|present|shared
+OBS|sym|libkernel|scePthreadCondTimedwait|present|shared
+OBS|sym|libkernel|scePthreadCondSignal|present|shared
+OBS|sym|libkernel|scePthreadCondBroadcast|present|shared
+OBS|sym|libkernel|scePthreadCondattrInit|present|shared
+OBS|sym|libkernel|scePthreadCondattrDestroy|present|shared
+OBS|sym|libkernel|scePthreadRwlockRdlock|present|shared
+OBS|sym|libkernel|scePthreadRwlockWrlock|present|shared
+OBS|sym|libkernel|scePthreadBarrierInit|present|shared
+OBS|sym|libkernel|scePthreadBarrierDestroy|present|shared
+OBS|sym|libkernel|scePthreadBarrierWait|present|shared
+OBS|res|900-surface/pthread|pass|0x2f||assumed
+OBS|try|900-surface/libc|libSceLibcInternal|(census)
+OBS|sym|libSceLibcInternal|strdup|present|shared
+OBS|sym|libSceLibcInternal|strncasecmp|present|shared
+OBS|sym|libSceLibcInternal|sprintf|present|shared
+OBS|sym|libSceLibcInternal|vsnprintf|present|shared
+OBS|sym|libSceLibcInternal|vsprintf|present|shared
+OBS|sym|libSceLibcInternal|printf|present|shared
+OBS|sym|libSceLibcInternal|vprintf|present|shared
+OBS|sym|libSceLibcInternal|fprintf|present|shared
+OBS|sym|libSceLibcInternal|fputs|present|shared
+OBS|sym|libSceLibcInternal|fopen|present|shared
+OBS|sym|libSceLibcInternal|fclose|present|shared
+OBS|sym|libSceLibcInternal|fread|present|shared
+OBS|sym|libSceLibcInternal|fwrite|present|shared
+OBS|sym|libSceLibcInternal|fseek|present|shared
+OBS|sym|libSceLibcInternal|ftell|present|shared
+OBS|sym|libSceLibcInternal|fflush|present|shared
+OBS|sym|libSceLibcInternal|fgets|present|shared
+OBS|sym|libSceLibcInternal|feof|present|shared
+OBS|sym|libSceLibcInternal|ferror|present|shared
+OBS|sym|libSceLibcInternal|setvbuf|present|shared
+OBS|sym|libSceLibcInternal|atoll|present|shared
+OBS|sym|libSceLibcInternal|strtoull|present|shared
+OBS|sym|libSceLibcInternal|strtod|present|shared
+OBS|sym|libSceLibcInternal|strtof|present|shared
+OBS|sym|libSceLibcInternal|abort|present|shared
+OBS|sym|libSceLibcInternal|atexit|present|shared
+OBS|sym|libSceLibcInternal|llabs|present|shared
+OBS|sym|libSceLibcInternal|div|present|shared
+OBS|sym|libSceLibcInternal|ldiv|present|shared
+OBS|sym|libSceLibcInternal|tan|present|shared
+OBS|sym|libSceLibcInternal|asin|present|shared
+OBS|sym|libSceLibcInternal|acos|present|shared
+OBS|sym|libSceLibcInternal|atan|present|shared
+OBS|sym|libSceLibcInternal|atan2|present|shared
+OBS|sym|libSceLibcInternal|exp|present|shared
+OBS|sym|libSceLibcInternal|log|present|shared
+OBS|sym|libSceLibcInternal|log2|present|shared
+OBS|sym|libSceLibcInternal|log10|present|shared
+OBS|sym|libSceLibcInternal|round|present|shared
+OBS|sym|libSceLibcInternal|trunc|present|shared
+OBS|sym|libSceLibcInternal|sinf|present|shared
+OBS|sym|libSceLibcInternal|cosf|present|shared
+OBS|sym|libSceLibcInternal|tanf|present|shared
+OBS|sym|libSceLibcInternal|powf|present|shared
+OBS|sym|libSceLibcInternal|expf|present|shared
+OBS|sym|libSceLibcInternal|logf|present|shared
+OBS|sym|libSceLibcInternal|fmodf|present|shared
+OBS|sym|libSceLibcInternal|floorf|present|shared
+OBS|sym|libSceLibcInternal|ceilf|present|shared
+OBS|sym|libSceLibcInternal|setjmp|present|shared
+OBS|sym|libSceLibcInternal|longjmp|present|shared
+OBS|sym|libSceLibcInternal|time|present|shared
+OBS|sym|libSceLibcInternal|clock|present|shared
+OBS|sym|libSceLibcInternal|gmtime|present|shared
+OBS|sym|libSceLibcInternal|localtime|present|shared
+OBS|sym|libSceLibcInternal|mktime|present|shared
+OBS|sym|libSceLibcInternal|strftime|present|shared
+OBS|sym|libSceLibcInternal|difftime|present|shared
+OBS|sym|libSceLibcInternal|wcscmp|present|shared
+OBS|sym|libSceLibcInternal|mbstowcs|present|shared
+OBS|sym|libSceLibcInternal|wcstombs|present|shared
+OBS|sym|libSceLibcInternal|__cxa_atexit|present|shared
+OBS|sym|libSceLibcInternal|__cxa_guard_acquire|present|shared
+OBS|sym|libSceLibcInternal|__cxa_guard_release|present|shared
+OBS|sym|libSceLibcInternal|__cxa_pure_virtual|present|shared
+OBS|sym|libSceLibcInternal|__stack_chk_fail|present|shared
+OBS|res|900-surface/libc|pass|0x42||assumed
+OBS|try|900-surface/videoout|libSceVideoOut|(census)
+OBS|sym|libSceVideoOut|sceVideoOutUnregisterBuffers|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutUnregisterBuffer|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutGetFlipStatus|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutGetResolutionStatus|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutAddFlipEvent|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutAddVblankEvent|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutDeleteFlipEvent|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutGetEventId|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutGetEventData|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutGetEventCount|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutIsFlipPending|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutGetVblankStatus|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutSetWindowModeMargins|present|shared
+OBS|sym|libSceVideoOut|sceVideoOutAdjustColor|present|shared
+OBS|res|900-surface/videoout|pass|0xe||assumed
+OBS|try|900-surface/audioout|libSceAudioOut|(census)
+OBS|sym|libSceAudioOut|sceAudioOutOutput|present|shared
+OBS|sym|libSceAudioOut|sceAudioOutOutputs|present|shared
+OBS|sym|libSceAudioOut|sceAudioOutSetVolume|present|shared
+OBS|sym|libSceAudioOut|sceAudioOutGetLastOutputTime|present|shared
+OBS|sym|libSceAudioOut|sceAudioOutGetPortState|present|shared
+OBS|sym|libSceAudioOut|sceAudioOutGetSystemState|present|shared
+OBS|sym|libSceAudioOut|sceAudioOutSetMixLevelPadSpk|present|shared
+OBS|res|900-surface/audioout|pass|0x7||assumed
+OBS|try|900-surface/pad|libScePad|(census)
+OBS|sym|libScePad|scePadReadState|present|shared
+OBS|sym|libScePad|scePadRead|present|shared
+OBS|sym|libScePad|scePadSetLightBar|present|shared
+OBS|sym|libScePad|scePadResetLightBar|present|shared
+OBS|sym|libScePad|scePadSetVibration|present|shared
+OBS|sym|libScePad|scePadGetControllerInformation|present|shared
+OBS|sym|libScePad|scePadGetHandle|present|shared
+OBS|sym|libScePad|scePadSetMotionSensorState|present|shared
+OBS|sym|libScePad|scePadResetOrientation|present|shared
+OBS|sym|libScePad|scePadOpenExt|present|shared
+OBS|sym|libScePad|scePadSetTiltCorrectionState|present|shared
+OBS|sym|libScePad|scePadGetExtControllerInformation|present|shared
+OBS|res|900-surface/pad|pass|0xc||assumed
+OBS|try|900-surface/sysmodule|libSceSysmodule|(census)
+OBS|sym|libSceSysmodule|sceSysmoduleUnloadModule|present|shared
+OBS|sym|libSceSysmodule|sceSysmoduleLoadModuleInternal|present|shared
+OBS|sym|libSceSysmodule|sceSysmoduleUnloadModuleInternal|present|shared
+OBS|sym|libSceSysmodule|sceSysmoduleIsLoadedInternal|present|shared
+OBS|res|900-surface/sysmodule|pass|0x4||assumed
+OBS|try|900-surface/userservice|libSceUserService|(census)
+OBS|sym|libSceUserService|sceUserServiceGetUserName|present|shared
+OBS|sym|libSceUserService|sceUserServiceGetLoginUserIdList|present|shared
+OBS|sym|libSceUserService|sceUserServiceGetEvent|present|shared
+OBS|sym|libSceUserService|sceUserServiceGetUserColor|present|shared
+OBS|sym|libSceUserService|sceUserServiceGetForegroundUser|present|shared
+OBS|res|900-surface/userservice|pass|0x5||assumed
+OBS|try|900-surface/systemservice|libSceSystemService|(census)
+OBS|sym|libSceSystemService|sceSystemServiceHideSplashScreen|present|shared
+OBS|sym|libSceSystemService|sceSystemServiceGetStatus|present|shared
+OBS|sym|libSceSystemService|sceSystemServiceParamGetInt|present|shared
+OBS|sym|libSceSystemService|sceSystemServiceParamGetString|present|shared
+OBS|sym|libSceSystemService|sceSystemServiceLoadExec|present|shared
+OBS|res|900-surface/systemservice|pass|0x5||assumed
+OBS|try|900-surface/savedata|libSceSaveData|(census)
+OBS|sym|libSceSaveData|sceSaveDataInitialize|present|shared
+OBS|sym|libSceSaveData|sceSaveDataInitialize3|present|shared
+OBS|sym|libSceSaveData|sceSaveDataTerminate|present|shared
+OBS|sym|libSceSaveData|sceSaveDataMount|present|shared
+OBS|sym|libSceSaveData|sceSaveDataUmount|present|shared
+OBS|sym|libSceSaveData|sceSaveDataDirNameSearch|present|shared
+OBS|sym|libSceSaveData|sceSaveDataDelete|present|shared
+OBS|sym|libSceSaveData|sceSaveDataSaveIcon|present|shared
+OBS|res|900-surface/savedata|pass|0x8||assumed
+OBS|try|900-surface/trophy|libSceNpTrophy|(census)
+OBS|sym|libSceNpTrophy|sceNpTrophyCreateContext|present|shared
+OBS|sym|libSceNpTrophy|sceNpTrophyCreateHandle|present|shared
+OBS|sym|libSceNpTrophy|sceNpTrophyRegisterContext|present|shared
+OBS|sym|libSceNpTrophy|sceNpTrophyUnlockTrophy|present|shared
+OBS|sym|libSceNpTrophy|sceNpTrophyDestroyContext|present|shared
+OBS|sym|libSceNpTrophy|sceNpTrophyDestroyHandle|present|shared
+OBS|res|900-surface/trophy|pass|0x6||assumed
+OBS|try|900-surface/graphics|libSceGnmDriver|(census)
+OBS|sym|libSceGnmDriver|sceGnmSubmitCommandBuffers|present|previous
+OBS|sym|libSceGnmDriver|sceGnmSubmitAndFlipCommandBuffers|present|previous
+OBS|sym|libSceGnmDriver|sceGnmSubmitDone|present|previous
+OBS|sym|libSceGnmDriver|sceGnmAreSubmitsAllowed|present|previous
+OBS|sym|libSceGnmDriver|sceGnmDrawIndex|present|previous
+OBS|sym|libSceGnmDriver|sceGnmDrawIndexAuto|present|previous
+OBS|sym|libSceGnmDriver|sceGnmSetVsShader|present|previous
+OBS|sym|libSceGnmDriver|sceGnmSetPsShader|present|previous
+OBS|sym|libSceGnmDriver|sceGnmSetCsShader|present|previous
+OBS|sym|libSceGnmDriver|sceGnmSetEmbeddedVsShader|present|previous
+OBS|sym|libSceGnmDriver|sceGnmDrawInitDefaultHardwareState|present|previous
+OBS|sym|libSceGnmDriver|sceGnmInsertWaitFlipDone|present|previous
+OBS|sym|libSceGnmDriver|sceGnmFlushGarlic|present|previous
+OBS|sym|libSceGnmDriver|sceGnmGetGpuCoreClockFrequency|present|previous
+OBS|sym|libSceGnmDriver|sceGnmRequestFlipAndSubmitDone|present|previous
+OBS|sym|libSceGnmDriver|sceGnmMapComputeQueue|present|previous
+OBS|sym|libSceGnmDriver|sceGnmDingDong|present|previous
+OBS|res|900-surface/graphics|pass|0x11||assumed
+OBS|try|900-surface/dialog|libSceCommonDialog|(census)
+OBS|sym|libSceCommonDialog|sceCommonDialogInitialize|present|shared
+OBS|sym|libSceCommonDialog|sceMsgDialogInitialize|present|shared
+OBS|sym|libSceCommonDialog|sceMsgDialogOpen|present|shared
+OBS|sym|libSceCommonDialog|sceMsgDialogUpdateStatus|present|shared
+OBS|sym|libSceCommonDialog|sceMsgDialogTerminate|present|shared
+OBS|sym|libSceCommonDialog|sceImeDialogInit|present|shared
+OBS|sym|libSceCommonDialog|sceImeDialogGetStatus|present|shared
+OBS|res|900-surface/dialog|pass|0x7||assumed
+OBS|try|900-surface/net|libSceNet|(census)
+OBS|sym|libSceNet|sceNetInit|present|shared
+OBS|sym|libSceNet|sceNetTerm|present|shared
+OBS|sym|libSceNet|sceNetSocket|present|shared
+OBS|sym|libSceNet|sceNetBind|present|shared
+OBS|sym|libSceNet|sceNetConnect|present|shared
+OBS|sym|libSceNet|sceNetSend|present|shared
+OBS|sym|libSceNet|sceNetRecv|present|shared
+OBS|sym|libSceNet|sceNetSocketClose|present|shared
+OBS|sym|libSceNet|sceNetEpollCreate|present|shared
+OBS|sym|libSceNet|sceNetResolverCreate|present|shared
+OBS|sym|libSceNet|sceNetGetsockname|present|shared
+OBS|sym|libSceNet|sceNetHtons|present|shared
+OBS|sym|libSceNet|sceNetInetPton|present|shared
+OBS|res|900-surface/net|pass|0xd||assumed
+OBS|sectiontally|900-surface|14|0|1|0
+OBS|tally|59|5|25|6
+OBS|end|sceKernelWrite

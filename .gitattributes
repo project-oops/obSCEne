@@ -1,0 +1,6 @@
+# Shell scripts and sources are executed inside a Linux VM over a Windows mount.
+# A CR at the end of a line makes `set -e` an illegal option and a shebang unusable,
+# and the failure reads as a shell bug rather than a line-ending one - so line endings
+# are pinned rather than left to the platform. See docs/WORKLOG.md.
+* text=auto eol=lf
+*.png binary

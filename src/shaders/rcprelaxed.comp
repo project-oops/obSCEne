@@ -1,0 +1,22 @@
+#version 450
+/* rcprelaxed: data[i] = 1.0 / x, at relaxed precision
+ * The controlled-ISA counterpart to `rcp`. Both compute a reciprocal; the difference is the
+ * precision the SPIR-V asks for. `rcp` is full precision, which RDNA lowers to the correctly
+ * rounded IEEE division sequence (v_div_scale, v_rcp, v_div_fmas, v_div_fixup). This one is
+ * mediump, which decorates the division RelaxedPrecision, and RDNA then takes the bare fast
+ * v_rcp with no correction. Same input vector, so `rcp` vs `rcprelaxed` diffs the fast-path
+ * error directly, and each against the reference shows which side matches correctly-rounded.
+ * The reference is the same correctly-rounded 1/x for both; on hardware `rcprelaxed` is the one
+ * expected to diverge from it. On a rasteriser that ignores the hint the two agree, which is
+ * the plumbing working, not the finding. One input, one output per lane. */
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return;
+    }
+    mediump float x = data[i];
+    mediump float r = 1.0 / x;
+    data[i] = r;
+}

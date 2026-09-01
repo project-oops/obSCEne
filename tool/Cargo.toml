@@ -1,0 +1,113 @@
+cargo-features = ["edition2024"]
+
+[package]
+name = "obscene-tool"
+version = "0.1.0"
+edition = "2024"
+description = "Build and analysis tooling for the obSCEne conformance probe"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/project-oops/obSCEne"
+rust-version = "1.85"
+publish = false
+
+[[bin]]
+name = "obscene-tool"
+path = "src/main.rs"
+
+[dependencies]
+# The console's file formats, read and written. A sibling repository rather than a copy in
+# this tree, and the reason is recorded in its own CLAUDE.md as well as here: this project
+# once shipped a container builder emitting the *previous* generation's magic while the
+# current one sat, observed and written down, in another project one directory away.
+#
+# What moved out: the import hash, the executable format, the vendor dynamic table in both
+# directions, the container, and the format tables under `data/`. What stayed: everything
+# that knows what this probe is *for* - the census, the check registry, the mined corpus,
+# the manifest that says which library resolves which name.
+#
+# Same checkout convention `pros-link` already established below (D189). The repositories
+# are checked out as a set.
+selfish-abi = { path = "../../selfish/crates/selfish-abi" }
+selfish-nid = { path = "../../selfish/crates/selfish-nid" }
+selfish-elf = { path = "../../selfish/crates/selfish-elf" }
+selfish-container = { path = "../../selfish/crates/selfish-container" }
+
+# Argument parsing. The one large dependency, and it earns its place across eight
+# subcommands.
+clap = { version = "4", features = ["derive", "env"] }
+# The NID hash. Hand-rolling a hash to save a dependency would be a poor trade: this
+# one is small, ubiquitous, and its correctness is not something to reinvent.
+sha1 = "0.10"
+# The firmware module descriptions are JSON, and the same reasoning applies: escapes,
+# nesting and encodings are exactly where a hand-rolled reader is quietly wrong. Every
+# other format this tool reads is parsed by hand, because those are line-oriented tables
+# where splitting is both simpler and easier to test than a pattern.
+serde_json = "1"
+# Talking to a console. A path dependency on a sibling repository rather than a published
+# version: the alternative trades a checkout convention for a release process, and a
+# release process is the worse thing to owe.
+#
+# **It adds four packages, and they are the logging facade.** `pros-link` was std-only with an
+# empty dependency table, kept empty deliberately *because* this project takes it; it now
+# carries `tracing` and nothing else, argued in its own manifest (prosperous#D025). The
+# measurement that changed the answer was taken in *this* tree: four packages, no proc-macro,
+# and `tracing/max_level_off` compiles every call out for a consumer that wants none of it.
+#
+# `pros-core` below has always brought more than this, so the boundary the empty table
+# protected was already crossed here, deliberately, one entry down.
+#
+# The code in it is the transport that used to be the second half of `src/hardware.rs`, now
+# shared with the emulator instead of copied into it. (D189)
+#
+# The known cost: this crate no longer builds from a standalone clone of `obscene`. The
+# repositories are checked out as a set.
+pros-link = { path = "../../prosperous/crates/pros-link" }
+# The HTTP handover an installer needs: `pkg_install` takes a URL, and the target fetches with
+# Range requests. Serving that correctly is prosperous work, already built and proven there.
+pros-core = { path = "../../prosperous/crates/pros-core" }
+# Which build this is, and one way to turn logging up. Shared with the rest of the collection
+# rather than written again here; `oops-build` has no dependencies of its own and `oops-log` is
+# the `tracing` facade plus a subscriber. Both are argued in their own manifests.
+oops-build = { path = "../../oops-libs/crates/oops-build" }
+oops-log = { path = "../../oops-libs/crates/oops-log" }
+# Where this tool writes, which is where its siblings write. The console registered here is the
+# console Prosperous already knows about - two files recording one fact, which is the next thing
+# to fix rather than a design.
+oops-paths = { path = "../../oops-libs/crates/oops-paths" }
+tracing = { version = "0.1", default-features = false, features = ["std"] }
+
+[build-dependencies]
+# The other half of `oops-build`: `emit` runs at build time, `line!` at run time. Not
+# target-gated, unlike the icon below - a commit is wanted on every platform.
+oops-build = { path = "../../oops-libs/crates/oops-build" }
+
+[lints.rust]
+# The tool writes binary formats a loader will reject on any mistake, so the compiler
+# is asked to be as unhelpful-to-carelessness as it can be.
+unsafe_code = "forbid"
+missing_docs = "warn"
+unused_qualifications = "warn"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Arithmetic on offsets and sizes is the whole job here. A silent wrap produces a
+# module that is subtly wrong rather than one that fails, which is the failure mode
+# this tool exists to avoid.
+arithmetic_side_effects = "warn"
+indexing_slicing = "warn"
+unwrap_used = "warn"
+expect_used = "allow"
+missing_errors_doc = "allow"
+module_name_repetitions = "allow"
+# ELF field names are the specification's: e_phoff, e_shoff, e_phnum, e_shnum. They are
+# similar because the format made them similar, and renaming them to satisfy a lint
+# would make the parser harder to check against the document it implements.
+similar_names = "allow"
+
+# Windows is the only one of the three targets that carries an icon inside the executable. A Linux
+# ELF and a macOS CLI binary have nowhere to put one - theirs live in packaging metadata, which a
+# bare command-line tool has none of. Target-gated rather than conditional inside `build.rs`, so on
+# Linux and macOS it is not fetched, not built, and not in the lockfile's way.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"

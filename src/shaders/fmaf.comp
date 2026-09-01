@@ -1,0 +1,19 @@
+#version 450
+// fmaf: data[out] = fma(a, b, c)
+// fused multiply-add; whether the product is rounded before the add is the whole question
+// - a fused unit and a two-step a*b then +c disagree in the last bit, and only the device
+// settles which one this hardware is.
+// obs-arity: 3
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint lane = gl_GlobalInvocationID.x;
+    uint base = lane * 4u;
+    if (base + 4u > data.length()) {
+        return;
+    }
+    float a = data[base + 0u];
+    float b = data[base + 1u];
+    float c = data[base + 2u];
+    data[base + 3u] = fma(a, b, c);
+}

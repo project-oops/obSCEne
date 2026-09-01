@@ -1,0 +1,18 @@
+#version 450
+/* sqrtrelaxed: data[i] = sqrt(x), at relaxed precision
+ * The controlled-ISA counterpart to `sqrt`. Full-precision `sqrt` is correctly rounded on RDNA
+ * (a v_sqrt seed refined to the last bit); this mediump form decorates it RelaxedPrecision and
+ * RDNA takes the bare v_sqrt approximation instead. `sqrt` vs `sqrtrelaxed` diffs the fast-path
+ * error. The reference is the same correctly-rounded sqrt for both; `sqrtrelaxed` is the one
+ * expected to diverge from it on hardware. One input, one output per lane. */
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return;
+    }
+    mediump float x = data[i];
+    mediump float r = sqrt(x);
+    data[i] = r;
+}

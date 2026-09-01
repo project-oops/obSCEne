@@ -1,0 +1,35 @@
+diff --git a/fpPS4.lpr b/fpPS4.lpr
+index d2c59b9..269f8a7 100644
+--- a/fpPS4.lpr
++++ b/fpPS4.lpr
+@@ -253,13 +253,25 @@ asm
+  xor %rax,%rax
+ end;
+ 
+-procedure print_stub(nid:QWORD;lib:PLIBRARY); MS_ABI_Default;
++//LOCAL CHANGE (obSCEne): return instead of Sleep(INFINITE).
++//
++//Upstream freezes the calling thread forever on an unimplemented import, so a debugger can be
++//attached and the missing function identified. Sensible for that workflow; for an automated
++//conformance sweep it means one missing function costs the entire run, silently - the process
++//stays alive and stops producing output, which looks identical to a hang in the guest.
++//
++//Returning zero is what `_nop_stub` above already does and what every other loader in the
++//toolkit does. It is also what makes the measurement *correct* rather than merely available:
++//obSCEne's 007-responsive section detects a stub by giving a function two inputs whose answers
++//must differ, so a stub that returns is reported as `silent`, which is the true answer.
++//
++//`Result` rather than a bare procedure, because the trampoline is `call rax; pop; pop; ret` -
++//it returns whatever the handler left in rax. Undefined there is not harmless: a pointer-
++//returning function handed garbage crashes at the first dereference, far from the cause.
++function print_stub(nid:QWORD;lib:PLIBRARY):QWORD; MS_ABI_Default;
+ begin
+  Writeln(StdErr,SysLogPrefix,'nop nid:',lib^.strName,':',HexStr(nid,16),':',ps4libdoc.GetFunctName(nid));
+- //DebugBreak;
+- Sleep(INFINITE);
+- //readln;
+- //Print_libs(ps4_app.GetFile('libc.prx'));
++ Result:=0;
+ end;
+ 
+ function ResolveImport(elf:Telf_file;Info:PResolveImportInfo;data:Pointer):Pointer;

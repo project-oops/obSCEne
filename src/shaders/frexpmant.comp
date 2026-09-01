@@ -1,0 +1,21 @@
+#version 450
+/* frexpmant: data[i] = frexp(x).mantissa
+ * The significand half of frexp: x = m * 2^e with m in [0.5, 1) (or 0 for x == 0). On RDNA
+ * this is v_frexp_mant_f32, a distinct hardware op from the SFU transcendentals - closing the
+ * decompose gap the GPU surface census named. Exact and no rounding, so on normal inputs the
+ * device must match the reference bit for bit. Subnormals are the interesting exception: some
+ * devices do not normalise them (llvmpipe returns the un-normalised mantissa), so a divergence
+ * there is an observation about the device's denormal handling, not a defect - exactly what the
+ * probe is for. inf/NaN are undefined by GLSL frexp; the reference skips them.
+ * One input, one output per lane. */
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return;
+    }
+    float x = data[i];
+    int e;
+    data[i] = frexp(x, e);
+}

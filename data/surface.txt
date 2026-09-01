@@ -1,0 +1,734 @@
+# The curated surface: every group, its prose note, and its symbol list.
+#
+# Moved out of the generator when that generator was ported to Rust. This is data - a
+# judgement about which names belong to which library - with several pages of prose
+# attached, and retyping it into another language is how a transcription error gets into a
+# census. The generator assembles; this file decides.
+#
+# Blocks open with `@<kind>` and close with `@end`. Prose is emitted verbatim, which is why
+# the terminator is explicit: an earlier version used a blank line as the separator and the
+# reader could not tell a separator from a blank line the prose actually wanted.
+
+@prose preamble
+/*
+ * The known symbol surface.
+ *
+ * # What this is for
+ *
+ * The behavioural sections answer "does this function work?" and cost a confident
+ * signature each. This answers the cheaper question - "does this function exist at
+ * all?" - which costs only a name, and so scales to the whole platform.
+ *
+ * That distinction matters because the honest headline for an emulator is the ratio
+ * of implemented surface to needed surface. One commercial title imports around
+ * 1,400 symbols. Fifty behavioural checks will never measure that; a census can.
+ *
+ * # These are declared as data, and that is deliberate
+ *
+ * Every name below is declared `const char`, not as a function. Only its **address**
+ * is ever read, never called - and calling a function whose signature is unknown is
+ * exactly the mistake D008 exists to prevent. Declaring them as data means the type
+ * system refuses the call outright, so the rule is enforced by the compiler rather
+ * than by anyone remembering it. A census of several hundred symbols would otherwise
+ * be several hundred chances to get it wrong.
+ *
+ * A weak undefined symbol resolves to a null address rather than failing the link,
+ * so an absent function is reported rather than fatal.
+ *
+ * # A wrong name here is harmless
+ *
+ * If a name in this list does not exist on the platform, the census reports it
+ * absent. That is a false negative: visible, harmless, and correctable. Contrast a
+ * wrong *arity* in the behavioural checks, which corrupts the stack and crashes
+ * somewhere unrelated. The asymmetry is why this list can cast a much wider net than
+ * platform.h is allowed to.
+ *
+ * Names come from public interface documentation and open-source homebrew
+ * toolchains. See ACKNOWLEDGEMENTS.md.
+ *
+ * Regenerate with obscene-tool surface.
+ */
+
+
+@end
+
+@prose fence
+/* clang-format off
+ *
+ * These lists are data, not code. clang-format reads `X(name) X(name)` as a chain of
+ * calls and reflows it into a cascading indent that is unreadable and - worse -
+ * unstable: running it twice does not converge. Fenced off, and written one symbol
+ * per line so adding or removing one is a one-line diff. */
+
+
+@end
+
+@prose libraries-note
+/* Every list, paired with an identifier tag, the library that provides it, and which
+ * console generation it belongs to.
+ *
+ * The tag exists because a string literal cannot be pasted into an identifier, and
+ * the census generates one table and one function per group. Adding a group is one
+ * line here; each symbol name still appears exactly once, in its list above. */
+#define OBS_SURFACE_LIBRARIES(L)
+@end
+
+@called-elsewhere
+sceVencCoreCreateEncoder
+sceVencCoreGetAuData
+sceVencCoreQueryMemorySize
+sceKernelGetdents
+scePadReadState
+putchar
+puts
+exit
+sceNetInit
+sceNetTerm
+sceNetSocket
+sceNetBind
+sceNetListen
+sceNetAccept
+sceNetSend
+sceNetRecv
+sceNetSocketClose
+sceVideoOutSetBufferAttribute
+sceVideoOutRegisterBuffers
+sceVideoOutRegisterBuffers2
+sceVideoOutSetBufferAttribute2
+sceVideoOutSubmitFlip
+sceVideoOutGetFlipStatus
+scePthreadMutexattrInit
+scePthreadMutexattrDestroy
+scePthreadMutexattrSettype
+scePthreadMutexattrGettype
+sceKernelGetModuleList
+sceKernelGetModuleInfo
+sceKernelCreateEventFlag
+sceKernelDeleteEventFlag
+sceKernelSetEventFlag
+sceKernelClearEventFlag
+sceKernelPollEventFlag
+scePthreadMutexInit
+scePthreadMutexDestroy
+scePthreadMutexTrylock
+scePthreadMutexUnlock
+scePthreadRwlockInit
+scePthreadRwlockDestroy
+scePthreadRwlockTryrdlock
+scePthreadRwlockTrywrlock
+scePthreadRwlockUnlock
+sceKernelCreateSema
+sceKernelDeleteSema
+sceKernelSignalSema
+sceKernelPollSema
+strncat
+strpbrk
+strcasecmp
+atol
+strtoll
+labs
+islower
+isalnum
+isprint
+ispunct
+wcslen
+getenv
+
+
+
+sceKernelIsStack
+scePthreadAttrInit
+scePthreadAttrDestroy
+scePthreadAttrSetdetachstate
+scePthreadAttrGetdetachstate
+
+
+
+scePthreadCondInit
+scePthreadCondDestroy
+scePthreadCondSignal
+scePthreadCondBroadcast
+scePthreadCondWait
+scePthreadBarrierInit
+scePthreadBarrierDestroy
+scePthreadBarrierWait
+round
+trunc
+exp
+log
+log2
+log10
+tan
+asin
+acos
+atan
+atan2
+floorf
+ceilf
+fmodf
+powf
+expf
+logf
+sinf
+cosf
+tanf
+strtod
+strtof
+atoll
+strtoull
+llabs
+strncasecmp
+strdup
+sprintf
+@end
+
+@group OBS_SURFACE_LIBKERNEL kernel libkernel OBS_SHARED
+@note
+/* The kernel: POSIX-shaped calls, then the vendor additions.
+ *
+ * Much of this half has a documented FreeBSD analogue, which is the strongest lawful
+ * reference available for what these are supposed to do. */
+@end
+
+@symbols
+sceKernelPread
+sceKernelPwrite
+sceKernelStat
+sceKernelFstat
+sceKernelMkdir
+sceKernelRmdir
+sceKernelUnlink
+sceKernelRename
+sceKernelTruncate
+sceKernelFtruncate
+sceKernelFsync
+sceKernelSync
+sceKernelGetdirentries
+sceKernelChmod
+sceKernelDup
+sceKernelDup2
+sceKernelFcntl
+sceKernelIoctl
+sceKernelSelect
+sceKernelPoll
+sceKernelUnlinkat
+sceKernelOpenat
+sceKernelMmap
+sceKernelMprotect
+sceKernelMsync
+sceKernelMlock
+sceKernelMunlock
+sceKernelMtypeprotect
+sceKernelQueryMemoryProtection
+sceKernelAvailableDirectMemorySize
+sceKernelMapNamedDirectMemory
+sceKernelMapNamedFlexibleMemory
+sceKernelCheckedReleaseDirectMemory
+sceKernelVirtualQuery
+sceKernelSetVirtualRangeName
+sceKernelReserveVirtualRange
+sceKernelGetDirectMemoryType
+sceKernelBatchMap
+sceKernelBatchMap2
+sceKernelGetpid
+sceKernelGetppid
+sceKernelExit
+sceKernelSleep
+sceKernelNanosleep
+sceKernelGettimeofday
+sceKernelClockGettime
+sceKernelClockGetres
+sceKernelGettimezone
+sceKernelGetCpumode
+sceKernelGetCurrentCpu
+sceKernelGetProcessType
+sceKernelGetProcParam
+sceKernelWaitSema
+sceKernelCancelSema
+sceKernelWaitEventFlag
+sceKernelCancelEventFlag
+sceKernelCreateEqueue
+sceKernelDeleteEqueue
+sceKernelWaitEqueue
+sceKernelAddUserEvent
+sceKernelAddTimerEvent
+sceKernelDeleteTimerEvent
+sceKernelAddReadEvent
+sceKernelTriggerUserEvent
+sceKernelGetEventData
+sceKernelGetEventId
+sceKernelGetEventFilter
+sceKernelGetEventUserData
+sceKernelStopUnloadModule
+sceKernelGetModuleInfoFromAddr
+sceKernelUuidCreate
+sceKernelGetSystemSwVersion2
+@end
+
+@group OBS_SURFACE_PTHREAD pthread libkernel OBS_SHARED
+@note
+/* The threading half of the kernel library. POSIX threads with vendor naming, which
+ * makes the pthread specification the reference for nearly all of it. */
+@end
+
+@symbols
+scePthreadAttrSetstacksize
+scePthreadAttrGetstacksize
+scePthreadAttrSetinheritsched
+scePthreadAttrSetschedparam
+scePthreadAttrSetschedpolicy
+scePthreadAttrSetaffinity
+scePthreadAttrGetaffinity
+scePthreadDetach
+scePthreadExit
+scePthreadEqual
+scePthreadCancel
+scePthreadSetName
+scePthreadYield
+scePthreadGetprio
+scePthreadSetprio
+scePthreadGetaffinity
+scePthreadSetaffinity
+scePthreadOnce
+scePthreadKeyCreate
+scePthreadKeyDelete
+scePthreadGetspecific
+scePthreadSetspecific
+scePthreadGetthreadid
+scePthreadRename
+scePthreadMutexLock
+scePthreadMutexTimedlock
+scePthreadMutexattrSetprotocol
+scePthreadCondTimedwait
+scePthreadCondattrInit
+scePthreadCondattrDestroy
+scePthreadRwlockRdlock
+scePthreadRwlockWrlock
+@end
+
+@group OBS_SURFACE_POSIX posix libScePosix OBS_SHARED
+@note
+/* POSIX under its own names, from libScePosix.
+ *
+ * The twelve that could be called without assuming a struct layout are declared in
+ * platform.h and checked in 017-posix. These are the rest, and the reason they are here
+ * rather than there is uniform: every one takes a `timespec`, a `sigaction`, a
+ * `sockaddr` or an `mmap` argument, and a wrong layout produces a call that succeeds and
+ * does the wrong thing (D008).
+ *
+ * Presence is the honest claim about them, and it is not a small one: this library is a
+ * second implementation path onto the same kernel, so which half of it an emulator has
+ * bothered with is worth knowing. */
+@end
+
+@symbols
+posix_clock_getres
+posix_clock_gettime
+posix_clock_settime
+posix_ftruncate
+posix_gettimeofday
+posix_kevent
+posix_kqueue
+posix_mmap
+posix_mprotect
+posix_msync
+posix_munmap
+posix_nanosleep
+posix_pthread_cleanup_push
+posix_pthread_key_delete
+posix_pthread_kill
+posix_pthread_rwlock_rdlock
+posix_pthread_rwlock_timedrdlock
+posix_pthread_rwlock_timedwrlock
+posix_pthread_rwlock_wrlock
+posix_pthread_rwlockattr_destroy
+posix_pthread_rwlockattr_getpshared
+posix_pthread_rwlockattr_gettype_np
+posix_pthread_rwlockattr_init
+posix_pthread_rwlockattr_setpshared
+posix_pthread_rwlockattr_settype_np
+posix_pthread_setprio
+posix_pthread_sigmask
+posix_pwrite
+posix_settimeofday
+posix_sigaction
+posix_sigaltstack
+posix_signal
+posix_sigpending
+posix_sigprocmask
+posix_sleep
+posix_sysconf
+sys_accept
+sys_bind
+sys_connect
+sys_getpeername
+sys_getsockname
+sys_getsockopt
+sys_listen
+sys_recv
+sys_recvfrom
+sys_recvmsg
+sys_send
+sys_sendmsg
+sys_sendto
+sys_setsockopt
+sys_socket
+@end
+
+@group OBS_SURFACE_LIBC libc libSceLibcInternal OBS_SHARED
+@note
+/* The C runtime. The largest single block of what a title actually imports, and the
+ * only library here whose behaviour can be checked with total confidence - every
+ * signature is ISO C.
+ *
+ * memcpy, memset and memmove are absent deliberately: this program defines its own
+ * because the compiler emits calls to them regardless of -ffreestanding, and a local
+ * definition would win over the import, so a check would be testing us rather than
+ * the platform. Section 035-libc exercises the rest for behaviour, not presence. */
+@end
+
+@symbols
+div
+ldiv
+vsnprintf
+vsprintf
+printf
+vprintf
+fprintf
+fputs
+fopen
+fclose
+fread
+fwrite
+fseek
+ftell
+fflush
+fgets
+feof
+ferror
+setvbuf
+abort
+atexit
+setjmp
+longjmp
+time
+clock
+gmtime
+localtime
+mktime
+strftime
+difftime
+wcscmp
+mbstowcs
+wcstombs
+__cxa_atexit
+__cxa_guard_acquire
+__cxa_guard_release
+__cxa_pure_virtual
+__stack_chk_fail
+@end
+
+@group OBS_SURFACE_AGC agc libSceAgc OBS_CURRENT
+@note
+/* The current generation's graphics interface.
+ *
+ * # Why this was absent until now
+ *
+ * The census carried `sceGnm*`, which is the *previous* generation's driver, and nothing
+ * for the current one - the interface the emulator this exists to serve actually targets.
+ * The blocker was provenance: the obvious name lists come from dumping decrypted
+ * libraries, and inventing plausible names would fill the census with confident-looking
+ * absences that mean nothing.
+ *
+ * # What closed it
+ *
+ * A current-generation emulator carries these as structured export attributes - NID, name
+ * and library together - and an independent NID database carries most of the same names.
+ * Both are public and neither required anything decrypted.
+ *
+ * # Every one is checked against our own hash
+ *
+ * A name is censused only where hashing it reproduces the identifier the source records.
+ * That is not a formality: it rejected five, two of which were placeholders with the
+ * identifier embedded in the name - a project marking a function it could not name, which
+ * would have entered the census as a symbol that cannot exist.
+ *
+ * Marked OBS_CURRENT. Absence on previous-generation hardware is correct rather than a
+ * gap, and counting it as one is the mistake that availability exists to prevent. */
+@end
+
+@symbols
+sceAgcAcbAcquireMem
+sceAgcAcbDispatchIndirect
+sceAgcAcbDmaData
+sceAgcAcbDmaDataGetSize
+sceAgcAcbEventWrite
+sceAgcAcbPopMarker
+sceAgcAcbPushMarker
+sceAgcAcbResetQueue
+sceAgcAcbWaitRegMem
+sceAgcAcbWriteData
+sceAgcCbDispatch
+sceAgcCbNop
+sceAgcCbReleaseMem
+sceAgcCbSetShRegisterRangeDirect
+sceAgcCbSetShRegistersDirect
+sceAgcCreatePrimState
+sceAgcCreateShader
+sceAgcDcbAcquireMem
+sceAgcDcbDispatchIndirect
+sceAgcDcbDmaData
+sceAgcDcbDmaDataGetSize
+sceAgcDcbDrawIndex
+sceAgcDcbDrawIndexAuto
+sceAgcDcbDrawIndexIndirect
+sceAgcDcbDrawIndexIndirectGetSize
+sceAgcDcbDrawIndexOffset
+sceAgcDcbEventWrite
+sceAgcDcbGetLodStats
+sceAgcDcbGetLodStatsGetSize
+sceAgcDcbJump
+sceAgcDcbPopMarker
+sceAgcDcbPushMarker
+sceAgcDcbResetQueue
+sceAgcDcbSetBaseIndirectArgs
+sceAgcDcbSetCxRegistersIndirect
+sceAgcDcbSetFlip
+sceAgcDcbSetIndexBuffer
+sceAgcDcbSetIndexCount
+sceAgcDcbSetIndexCountGetSize
+sceAgcDcbSetIndexSize
+sceAgcDcbSetNumInstances
+sceAgcDcbSetPredication
+sceAgcDcbSetShRegistersIndirect
+sceAgcDcbSetUcRegistersIndirect
+sceAgcDcbStallCommandBufferParser
+sceAgcDcbStallCommandBufferParserGetSize
+sceAgcDcbWaitRegMem
+sceAgcDcbWaitUntilSafeForRendering
+sceAgcDcbWriteData
+sceAgcDmaDataPatchSetDstAddressOrOffset
+sceAgcDmaDataPatchSetSrcAddressOrOffsetOrImmediate
+sceAgcDriverGetDefaultOwner
+sceAgcDriverGetResourceRegistrationMaxNameLength
+sceAgcDriverInitResourceRegistration
+sceAgcDriverQueryResourceRegistrationUserMemoryRequirements
+sceAgcDriverRegisterDefaultOwner
+sceAgcDriverRegisterOwner
+sceAgcDriverRegisterResource
+sceAgcDriverUnregisterResource
+sceAgcGetRegisterDefaults2
+sceAgcGetRegisterDefaults2Internal
+sceAgcQueueEndOfPipeActionPatchAddress
+sceAgcQueueEndOfPipeActionPatchData
+sceAgcQueueEndOfPipeActionPatchGcrCntl
+sceAgcQueueEndOfPipeActionPatchType
+sceAgcSetCxRegIndirectPatchAddRegisters
+sceAgcSetCxRegIndirectPatchSetAddress
+sceAgcSetPacketPredication
+sceAgcSetShRegIndirectPatchAddRegisters
+sceAgcSetShRegIndirectPatchSetAddress
+sceAgcSetUcRegIndirectPatchAddRegisters
+sceAgcSetUcRegIndirectPatchSetAddress
+sceAgcSuspendPoint
+sceAgcWaitRegMemPatchAddress
+sceAgcWaitRegMemPatchCompareFunction
+sceAgcWaitRegMemPatchMask
+sceAgcWaitRegMemPatchReference
+sceAgcWriteDataPatchSetAddressOrOffset
+sceAgcWriteDataPatchSetCachePolicy
+sceAgcWriteDataPatchSetDst
+@end
+
+@group OBS_SURFACE_AGCDRIVER agcdriver libSceAgcDriver OBS_CURRENT
+@note
+@end
+
+@symbols
+sceAgcDriverAddEqEvent
+sceAgcDriverDeleteEqEvent
+sceAgcDriverSetHsOffchipParam
+sceAgcDriverSetTFRing
+sceAgcDriverSubmitAcb
+sceAgcDriverSubmitDcb
+sceAgcDriverSubmitMultiDcbs
+@end
+
+@group OBS_SURFACE_VIDEOOUT videoout libSceVideoOut OBS_SHARED
+@note
+@end
+
+@symbols
+sceVideoOutUnregisterBuffers
+sceVideoOutUnregisterBuffer
+sceVideoOutAddFlipEvent
+sceVideoOutAddVblankEvent
+sceVideoOutDeleteFlipEvent
+sceVideoOutGetEventId
+sceVideoOutGetEventData
+sceVideoOutGetEventCount
+sceVideoOutIsFlipPending
+sceVideoOutGetVblankStatus
+sceVideoOutSetWindowModeMargins
+sceVideoOutAdjustColor
+@end
+
+@group OBS_SURFACE_AUDIOOUT audioout libSceAudioOut OBS_SHARED
+@note
+@end
+
+@symbols
+sceAudioOutOutput
+sceAudioOutOutputs
+sceAudioOutSetVolume
+sceAudioOutGetLastOutputTime
+sceAudioOutGetPortState
+sceAudioOutGetSystemState
+sceAudioOutSetMixLevelPadSpk
+@end
+
+@group OBS_SURFACE_PAD pad libScePad OBS_SHARED
+@note
+@end
+
+@symbols
+scePadRead
+scePadSetLightBar
+scePadResetLightBar
+scePadSetVibration
+scePadGetControllerInformation
+scePadGetHandle
+scePadSetMotionSensorState
+scePadResetOrientation
+scePadOpenExt
+scePadSetTiltCorrectionState
+scePadGetExtControllerInformation
+@end
+
+@group OBS_SURFACE_SYSMODULE sysmodule libSceSysmodule OBS_SHARED
+@note
+/* One name from this library is absent here deliberately: it is declared with a real
+ * signature in platform.h, and a name cannot be both a function and a const char. Its
+ * presence is already implied by the behavioural check that calls it. */
+@end
+
+@symbols
+sceSysmoduleUnloadModule
+sceSysmoduleLoadModuleInternal
+sceSysmoduleUnloadModuleInternal
+sceSysmoduleIsLoadedInternal
+@end
+
+@group OBS_SURFACE_USERSERVICE userservice libSceUserService OBS_SHARED
+@note
+/* One name from this library is absent here deliberately: it is declared with a real
+ * signature in platform.h, and a name cannot be both a function and a const char. Its
+ * presence is already implied by the behavioural check that calls it. */
+@end
+
+@symbols
+sceUserServiceGetUserName
+sceUserServiceGetLoginUserIdList
+sceUserServiceGetEvent
+sceUserServiceGetUserColor
+sceUserServiceGetForegroundUser
+@end
+
+@group OBS_SURFACE_SYSTEMSERVICE systemservice libSceSystemService OBS_SHARED
+@note
+@end
+
+@symbols
+sceSystemServiceHideSplashScreen
+sceSystemServiceGetStatus
+sceSystemServiceParamGetInt
+sceSystemServiceParamGetString
+sceSystemServiceLoadExec
+@end
+
+@group OBS_SURFACE_SAVEDATA savedata libSceSaveData OBS_SHARED
+@note
+@end
+
+@symbols
+sceSaveDataInitialize
+sceSaveDataInitialize3
+sceSaveDataTerminate
+sceSaveDataMount
+sceSaveDataUmount
+sceSaveDataDirNameSearch
+sceSaveDataDelete
+sceSaveDataSaveIcon
+@end
+
+@group OBS_SURFACE_TROPHY trophy libSceNpTrophy OBS_SHARED
+@note
+@end
+
+@symbols
+sceNpTrophyCreateContext
+sceNpTrophyCreateHandle
+sceNpTrophyRegisterContext
+sceNpTrophyUnlockTrophy
+sceNpTrophyDestroyContext
+sceNpTrophyDestroyHandle
+@end
+
+@group OBS_SURFACE_GRAPHICS graphics libSceGnmDriver OBS_PREVIOUS
+@note
+/* The previous generation graphics driver - the layer with the most public
+ * documentation. The current generation equivalent is a different interface and
+ * belongs in its own list once its names are confident. */
+@end
+
+@symbols
+sceGnmSubmitCommandBuffers
+sceGnmSubmitAndFlipCommandBuffers
+sceGnmSubmitDone
+sceGnmAreSubmitsAllowed
+sceGnmDrawIndex
+sceGnmDrawIndexAuto
+sceGnmSetVsShader
+sceGnmSetPsShader
+sceGnmSetCsShader
+sceGnmSetEmbeddedVsShader
+sceGnmDrawInitDefaultHardwareState
+sceGnmInsertWaitFlipDone
+sceGnmFlushGarlic
+sceGnmGetGpuCoreClockFrequency
+sceGnmRequestFlipAndSubmitDone
+sceGnmMapComputeQueue
+sceGnmDingDong
+@end
+
+@group OBS_SURFACE_DIALOG dialog libSceCommonDialog OBS_SHARED
+@note
+@end
+
+@symbols
+sceCommonDialogInitialize
+sceMsgDialogInitialize
+sceMsgDialogOpen
+sceMsgDialogUpdateStatus
+sceMsgDialogTerminate
+sceImeDialogInit
+sceImeDialogGetStatus
+@end
+
+@group OBS_SURFACE_NET net libSceNet OBS_SHARED
+@note
+/* Init/Term/Socket/Bind/Send/Recv/SocketClose have moved to platform.h as real
+ * declarations - the console socket transport calls them (src/net_target.c), and a name
+ * cannot be both censused (const char, uncallable) and called. Listen and Accept are new,
+ * declared there too. What remains here is the part still probed for presence only. */
+@end
+
+@symbols
+sceNetConnect
+sceNetEpollCreate
+sceNetResolverCreate
+sceNetGetsockname
+sceNetHtons
+sceNetInetPton
+@end
+

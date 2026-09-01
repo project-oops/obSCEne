@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# obscene - the entry point for building, testing and checking this repository.
+#
+#   ./bin/obscene build     module, payload, injector, host
+#   ./bin/obscene test      the tooling's own tests
+#   ./bin/obscene lint      the tooling's lints, in full
+#   ./bin/obscene fmt       format the C in place
+#   ./bin/obscene check     the full gate: all three shapes, tooling tests, host harness,
+#                           report verification, imports. What CI runs.
+#   ./bin/obscene clean     remove build output
+#   ./bin/obscene pkg       the installable package
+#   ./bin/obscene tool-build  build obscene-tool, which most other verbs need. Four CI
+#                           jobs run this by name before anything else
+#   ./bin/obscene klog      read the console system log
+#
+# The hardware round-trip (obSCEne-only — no counterpart in the other three projects). These are
+# the single entry point for that work; the scripts under scripts/ are their implementation and
+# are not run directly:
+#
+#   ./bin/obscene deploy    build the package, install, launch, capture the report — the round-trip
+#   ./bin/obscene payload   build the plain-ELF payload, run it via elfldr, capture the system log
+#   ./bin/obscene report    capture obscene's records from the console system log to a file
+#   ./bin/obscene recover   read-only: what the console recorded, after a crash
+#   ./bin/obscene hwsweep   iterate against hardware, excluding each call that does not return
+#   ./bin/obscene minbuild  build the minimal diagnostic package
+#   ./bin/obscene digcheck  does a built package still agree with its own digests?
+#   ./bin/obscene prep      send klogsrv/shsrv payloads to bring the readable services up
+#
+# Every verb except the hardware round-trip is the same in all four OOPS projects, so
+# `oops test obscene` and `./bin/obscene test` are the same command reached two ways. See
+# https://github.com/project-oops/OOPS/blob/main/docs/BUILDING.md.
+#
+# This is a front door, not an implementation. Anything else is passed straight through to
+# `make`, so every target still works by name:
+#
+#   ./bin/obscene module-min      ./bin/obscene eboot      ./bin/obscene pkg-min
+#   ./bin/obscene payload HARDWARE=1 BUILD_ID=$(git rev-parse HEAD)
+#
+# `test` is the tooling's tests rather than `make check`. Those were the same command until
+# this script existed, which made `test` and `check` indistinguishable and said nothing true
+# about either.
+#
+# NOTE: obSCEne resolves SELFish and Prosperous by relative path, as siblings, so a clone of
+# only this repository does not build. `oops bootstrap obscene` fetches them. Compiling needs
+# clang and lld; on Windows that means WSL, which `oops` enters for you.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# The Rust tooling's own binary, built to its default target dir so the checks that run it find
+# it where they look. A helper because several verbs run one of its subcommands.
+_obscene_tool() {
+    [ -x tool/target/release/obscene-tool ] || ( cd tool && cargo build --release --quiet )
+    ./tool/target/release/obscene-tool "$@"
+}
+
+case "${1:-help}" in
+    build) shift; make module payload host injector "$@" ;;
+    test)  shift; ( cd tool && cargo test "$@" ) ;;
+    lint)  shift; sh scripts/lint.sh "$@" ;;
+    fmt)   shift; sh scripts/format.sh "$@" ;;
+    check) shift; make check "$@" ;;
+    clean) shift; make clean "$@" ;;
+    pkg)   shift; make pkg "$@" ;;
+    # `native` lays out obSCEne as a current-generation title directory (param.json + icon +
+    # fake-signed eboot) rather than a PS4-badged package: `make native` builds the eboot, then
+    # `selfish native` writes the title dir. Drop the result where an auto-mounter (ShadowMountPlus)
+    # scans, or register it with sceAppInstUtilAppInstallTitleDir from a payload. Overridable via
+    # TITLE_ID=/TITLE=/CONTENT_ID=/DEEPLINK=/NO_EBOOT=1.
+    native) shift; make native "$@" ;;
+    # obSCEne's own: the hardware round-trip. None of these is a make target — each crosses the
+    # WSL/Windows split (the package builds in WSL; the console fetches the install from Windows,
+    # the one side its NAT can reach) or talks to a real console, which a portable Makefile rule
+    # cannot. These verbs are the single entry point for that work: reach them here, never by
+    # running a script under scripts/ directly.
+    #
+    # `deploy` builds, installs and launches in one, then captures the report. It uses the
+    # combined `hw deploy` (a separate install-then-launch leaves a dead app0-mount URL). Flags
+    # pass through: --gen, --seconds, --name, --build-only, --deploy-only, --no-cache, --jobs.
+    deploy)   shift; bash scripts/oops-rebuild-pkg.sh --launch "$@" ;;
+    # `payload` is the other round-trip: build the unsandboxed plain-ELF shape, run it through
+    # elfldr, and capture the system log across the run. All out-connections, so no Windows half -
+    # it stays in WSL. A crashing payload writes no records but a `signo:` line, and the verb says
+    # which. Flags: --seconds, --into, --build-only, --name, and `-- GEN=5 CORPUS=0` to make.
+    payload)  shift; bash scripts/payload-run.sh "$@" ;;
+    # `inject` runs the native process injector: builds both obscene-payload.elf and
+    # obscene-injector.elf, sends the injector through elfldr, which hijacks the foreground title
+    # to run obSCEne natively.
+    inject|injector) shift; bash scripts/payload-run.sh --injector "$@" ;;
+    # `report` captures obscene's records from the console system log. The report leaves the
+    # sandbox through that log, not the file sink (D233): obscene writes every record to klog
+    # unconditionally because that channel is not confined to the title's sandbox, where the file
+    # it also writes is locked away from ftpsrv/shsrv. It is folded into the tool (it connects
+    # *out*, so it needs no Windows build); the title must be running during the window, so
+    # launch it separately or use `deploy`, which launches and captures together.
+    report)   shift; _obscene_tool report "$@" ;;
+    klog)     shift; _obscene_tool report "$@" ;;   # the channel's name, kept as an alias
+    # Read-only forensics and the hardware sweep, each one script behind one verb.
+    recover)  shift; bash scripts/oops-recover.sh "$@" ;;
+    hwsweep)  shift; bash scripts/oops-hwsweep.sh "$@" ;;
+    minbuild) shift; bash scripts/oops-minbuild.sh "$@" ;;
+    digcheck) shift; bash scripts/oops-digcheck.sh "$@" ;;
+    prep)     shift; bash scripts/oops-prep.sh "$@" ;;
+    doc)   shift; ( cd tool && cargo doc --no-deps "$@" ) ;;
+    # The Rust tooling: build its binary, run its checks. Named so CI reaches them the same way
+    # a person does, rather than reaching past the front door to `cargo` and the raw tool path.
+    tool-build) shift; ( cd tool && cargo build --release "$@" ) ;;
+    guards)     shift; ( cd tool && cargo run --quiet -- guards "$@" ) ;;
+    imports)    shift; _obscene_tool imports "$@" ;;
+    verify)     shift; _obscene_tool verify "$@" ;;
+    selftest)   shift; _obscene_tool selftest "$@" ;;
+    # The header comment above IS the usage text. The range ends at the line before `set -euo`,
+    # found rather than hardcoded — a hardcoded number silently truncates the help the next time
+    # a verb is documented, which is how it lost the hardware verbs once already.
+    help|-h|--help)
+        last=$(( $(grep -n '^set -euo' "$0" | head -1 | cut -d: -f1) - 1 ))
+        sed -n "2,${last}p" "$0" | sed 's/^#\{1,\} \{0,1\}//' ;;
+    *) make "$@" ;;
+esac

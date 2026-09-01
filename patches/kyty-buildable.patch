@@ -1,0 +1,37 @@
+diff --git a/source/CMakeLists.txt b/source/CMakeLists.txt
+index 2432499..2502f1b 100644
+--- a/source/CMakeLists.txt
++++ b/source/CMakeLists.txt
+@@ -160,7 +160,11 @@ config_compiler_and_linker()
+ add_subdirectory(3rdparty)
+ add_subdirectory(emulator)
+ add_subdirectory(unit_test)
+-if(NOT ${KYTY_PROJECT_NAME} MATCHES "Build_Tools")
++# Local build change (obSCEne): let the launcher be skipped independently of Build_Tools.
++# Build_Tools skips it, but also moves KYTY_PROJECT away from KYTY_PROJECT_EMULATOR, which
++# compiles the emulator out via KYTY_EMU_ENABLED - fc_script then builds with no kyty_* Lua
++# bindings at all. The launcher is the only thing needing Qt, so this separates the two.
++if(NOT ${KYTY_PROJECT_NAME} MATCHES "Build_Tools" AND NOT KYTY_NO_LAUNCHER)
+ 	add_subdirectory(launcher)
+ endif()
+ add_subdirectory(lib)
+diff --git a/source/utils.cmake b/source/utils.cmake
+index b41d30f..3428910 100644
+--- a/source/utils.cmake
++++ b/source/utils.cmake
+@@ -81,7 +81,14 @@ endfunction()
+ 
+ macro(config_compiler_and_linker)
+ 
+-set(KYTY_WARNINGS_ARE_ERRORS ON)
++# Local build change (obSCEne): respect a -D override instead of forcing ON.
++# The bundled SDL2 is from 2022 and declares TF_PROFILE_DAYI, which the 2026 Windows
++# SDK now also declares in msctf.h - so -Wshadow fires inside a third-party dependency
++# and /WX turns it into a build failure. This relaxes a *build* setting only; no
++# emulator behaviour is altered.
++if(NOT DEFINED KYTY_WARNINGS_ARE_ERRORS)
++    set(KYTY_WARNINGS_ARE_ERRORS ON)
++endif()
+ 
+ set(KYTY_C_FLAGS "")
+ set(KYTY_CPP_FLAGS "")

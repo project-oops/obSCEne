@@ -1,0 +1,16 @@
+#version 450
+// divf: data[out] = a / b
+// division; a/0 and 0/0 are the domain edges worth recording
+// obs-arity: 2
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint lane = gl_GlobalInvocationID.x;
+    uint base = lane * 3u;
+    if (base + 3u > data.length()) {
+        return;
+    }
+    float a = data[base + 0u];
+    float b = data[base + 1u];
+    data[base + 2u] = a / b;
+}

@@ -1,0 +1,18 @@
+#version 450
+// bfi: data[out] = bitfieldInsert(base, insert, 8, 8)
+// Inserts insert's low 8 bits into base's field at offset 8, width 8. On RDNA this is v_bfi_b32.
+// The field is fixed so it stays arity 2 over the edge operand set; both operands are read as
+// bit patterns, not float values. Exact - the device must match the reference bit for bit.
+// obs-arity: 2
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint lane = gl_GlobalInvocationID.x;
+    uint base = lane * 3u;
+    if (base + 3u > data.length()) {
+        return;
+    }
+    uint b = floatBitsToUint(data[base + 0u]);
+    uint ins = floatBitsToUint(data[base + 1u]);
+    data[base + 2u] = uintBitsToFloat(bitfieldInsert(b, ins, 8, 8));
+}

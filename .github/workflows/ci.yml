@@ -1,0 +1,428 @@
+name: ci
+
+# Every job begins the same three steps: check out the collection, check this repository
+# out *into* it, and ask `oops bootstrap` for the siblings this project needs. See
+# docs/BUILDING.md.
+#
+# Two things that were wrong here until they were looked at, neither of which any run
+# would have reported, because this workflow has never executed:
+#
+#   * three jobs checked out flat, with no collection around them. obSCEne resolves
+#     SELFish and Prosperous by relative path, so those fail as a missing *directory*.
+#   * the jobs that did have the layout set `defaults.run.working-directory` to
+#     `OOPS/obscene` and then ran `OOPS/bin/oops bootstrap obscene` - which resolves to
+#     `OOPS/obscene/OOPS/bin/oops`, a path that does not exist.
+#
+# So the shape below never sets a job-level working directory. The bootstrap step runs
+# from the workspace root, and each project step names `OOPS/obscene` for itself.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build and verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Install clang
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang lld
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+
+      - name: Build the tooling
+        run: ./bin/obscene tool-build
+        working-directory: OOPS/obscene
+      - name: Test the tooling
+        run: ./bin/obscene test --quiet
+        working-directory: OOPS/obscene
+      - name: Lint the tooling
+        run: ./bin/obscene lint
+        working-directory: OOPS/obscene
+      - name: Build the module
+        run: ./bin/obscene module BUILD_ID=${{ github.sha }}
+        working-directory: OOPS/obscene
+      - name: Report imports
+        run: ./bin/obscene imports build/obscene.module.elf
+        working-directory: OOPS/obscene
+      - name: Check cross-symbol guards
+        run: ./bin/obscene guards --root ..
+        working-directory: OOPS/obscene
+      - name: Build the host harness
+        run: ./bin/obscene host BUILD_ID=${{ github.sha }}
+        working-directory: OOPS/obscene
+      - name: Run the host harness
+        run: ./build/obscene-host > build/host-report.txt || true
+        working-directory: OOPS/obscene
+      - name: Verify the report format
+        run: ./bin/obscene verify build/host-report.txt
+        working-directory: OOPS/obscene
+      - name: Check the NID chain
+        run: ./bin/obscene selftest
+        working-directory: OOPS/obscene
+      - name: Upload the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-report
+          path: OOPS/obscene/build/host-report.txt
+
+  artifact-payload:
+    name: "shape: plain ELF payload (homebrew loader)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Install clang
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+
+      - name: The hardware guard refuses the blind prober
+        # A guard is not finished until somebody has made it fail, so this job makes it
+        # fail on purpose and reports an error if the build *succeeds*.
+        run: |
+          if make module HARDWARE=1 BULK=1 >/dev/null 2>&1; then
+            echo "::error::HARDWARE=1 BULK=1 built - the guard is not working"; exit 1
+          fi
+          echo "guard refused HARDWARE=1 BULK=1, as it must"
+        working-directory: OOPS/obscene
+      - name: Build
+        run: |
+          ./bin/obscene payload     HARDWARE=1 BUILD_ID=${{ github.sha }}
+          ./bin/obscene payload-min HARDWARE=1 BUILD_ID=${{ github.sha }}
+        working-directory: OOPS/obscene
+      - name: Stage
+        run: |
+          mkdir -p dist
+          cp build/obscene-payload.elf dist/obscene-payload.elf
+          cp build/obscene-min.elf     dist/obscene-payload-min.elf 2>/dev/null || true
+          ls -l dist
+        working-directory: OOPS/obscene
+      - name: No shipped artifact contains the blind prober
+        run: |
+          strings dist/obscene-payload.elf | grep -q "built without OBS_BULK" \
+            || { echo "::error::obscene-payload.elf may contain the blind prober"; exit 1; }
+        working-directory: OOPS/obscene
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obscene-payload.elf
+          path: OOPS/obscene/dist/obscene-payload.elf
+
+  artifact-injector:
+    name: "shape: native process injector (homebrew loader)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Install clang
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+
+      - name: Build
+        run: ./bin/obscene injector HARDWARE=1 BUILD_ID=${{ github.sha }}
+        working-directory: OOPS/obscene
+      - name: Stage
+        run: |
+          mkdir -p dist
+          cp build/obscene-injector.elf dist/obscene-injector.elf
+          ls -l dist
+        working-directory: OOPS/obscene
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obscene-injector.elf
+          path: OOPS/obscene/dist/obscene-injector.elf
+
+  artifact-module:
+    name: "shape: vendor ELF (emulators)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Install clang
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+
+      - name: Build the tooling
+        run: ./bin/obscene tool-build
+        working-directory: OOPS/obscene
+      - name: Build
+        run: |
+          make module     BUILD_ID=${{ github.sha }}
+          make module-min BUILD_ID=${{ github.sha }}
+        working-directory: OOPS/obscene
+      - name: Stage
+        run: |
+          mkdir -p dist
+          cp build/obscene.module.elf     dist/obscene-module.elf
+          cp build/obscene-min.module.elf dist/obscene-min.module.elf 2>/dev/null || true
+          ls -l dist
+        working-directory: OOPS/obscene
+      - name: The module declares itself executable
+        # Read out of the file with `od` rather than trusted. Four shapes reach four
+        # loaders and two bytes at offset 16 are what tell them apart.
+        run: |
+          t=$(od -An -tx1 -j16 -N2 dist/obscene-module.elf | tr -d ' ')
+          [ "$t" = "10fe" ] || { echo "::error::e_type is $t, expected 10fe"; exit 1; }
+          echo "e_type 0xFE10 (ET_SCE_DYNEXEC)"
+        working-directory: OOPS/obscene
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obscene-module.elf
+          path: OOPS/obscene/dist/obscene-module.elf
+
+  artifact-eboot:
+    name: "shape: fSELF eboot (system loader)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Install clang and zip
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld zip
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+
+      - name: Build the tooling
+        run: ./bin/obscene tool-build
+        working-directory: OOPS/obscene
+      - name: Build
+        run: ./bin/obscene eboot HARDWARE=1 BUILD_ID=${{ github.sha }}
+        working-directory: OOPS/obscene
+      - name: Stage
+        run: |
+          mkdir -p dist
+          cp build/eboot.bin dist/eboot.bin
+          ( cd build && zip -q ../dist/obscene-eboot.zip eboot.bin )
+          ls -l dist
+        working-directory: OOPS/obscene
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obscene-eboot.zip
+          path: OOPS/obscene/dist/obscene-eboot.zip
+
+  artifact-pkg:
+    name: "shape: package (installer)"
+    runs-on: ubuntu-latest
+    # `continue-on-error`, and honestly so: the package is the least settled of the four
+    # shapes. A job that is allowed to fail says that plainly; one that is quietly removed
+    # from the workflow does not.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Install clang
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+
+      - name: Build the tooling
+        run: ./bin/obscene tool-build
+        working-directory: OOPS/obscene
+      - name: Build
+        run: ./bin/obscene pkg HARDWARE=1 BUILD_ID=${{ github.sha }}
+        working-directory: OOPS/obscene
+      - name: Stage
+        run: |
+          mkdir -p dist
+          cp build/obscene.pkg dist/obscene.pkg 2>/dev/null || echo "no package yet - see build log"
+          ls -l dist || true
+        working-directory: OOPS/obscene
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: obscene.pkg
+          path: OOPS/obscene/dist/obscene.pkg
+          if-no-files-found: ignore
+
+  provenance:
+    name: provenance
+    runs-on: ubuntu-latest
+    # Compiles nothing, and still takes the same preamble as everything else: one shape,
+    # so that reading any workflow in the collection teaches you all of them.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+      - name: Refuse vendor material
+        run: |
+          set -e
+          if git ls-files | grep -inE '\.(pkg|prx|sprx|self|pup|elf|bin)$'; then
+            echo "::error::binary or vendor-shaped material is tracked"
+            exit 1
+          fi
+          if git ls-files | grep -iE '(^|/)(firmware|dumps|games|sdk)/'; then
+            echo "::error::a path reserved for vendor material is tracked"
+            exit 1
+          fi
+          # An extension is not enough, and that is not hypothetical: a 16 KB x86-64 ELF was
+          # tracked at src/porthole/build/porthole_selftest and every pattern above passed it,
+          # because the file has no extension at all. The subtree builds itself with its own
+          # Makefile, so it made its own build/ that the root-anchored /build/ rule missed.
+          #
+          # Content is what a loader reads, so content is what this checks. Images are the
+          # only binaries this repository is meant to track.
+          #
+          # Offenders go to a file rather than a variable: the loop runs in a subshell on the
+          # right of a pipe, so anything it assigned would be gone by the time it was read.
+          : > /tmp/tracked-binaries.txt
+          git ls-files | while IFS= read -r f; do
+            case "$f" in *.png|*.ico|*.svg|*.jpg|*.gif) continue ;; esac
+            [ -f "$f" ] || continue
+            case "$(head -c 4 "$f" | od -An -tx1 | tr -d ' ')" in
+              7f454c46*|4d5a*) echo "$f" >> /tmp/tracked-binaries.txt ;;
+            esac
+          done
+          if [ -s /tmp/tracked-binaries.txt ]; then
+            echo "::error::executable binaries are tracked"
+            cat /tmp/tracked-binaries.txt
+            exit 1
+          fi
+          echo "no vendor material tracked, and nothing tracked is an executable"
+        working-directory: OOPS/obscene
+
+  format:
+    name: formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OOPS
+          path: OOPS
+      - uses: actions/checkout@v4
+        with:
+          path: OOPS/obscene
+      - name: Install clang-format
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+      - name: Siblings this build needs
+        run: OOPS/bin/oops bootstrap obscene
+      - name: Check formatting
+        run: |
+          find src include -name '*.c' -o -name '*.h' \
+            | xargs clang-format --dry-run --Werror
+        working-directory: OOPS/obscene
+
+  # --- publish ----------------------------------------------------------------------------
+  #
+  # A release job here rather than in a `release.yml` of its own, because the five shapes are
+  # already built and uploaded by the jobs above. A separate workflow would have to rebuild
+  # all of them - five more clang toolchains and five more sibling checkouts - to publish
+  # bytes this run already has.
+  #
+  # **Every asset is renamed to say which loader it is for.** `docs/ARTIFACTS.md` opens by
+  # warning that the shapes are told apart by two bytes at offset 16, and that sending the
+  # vendor build to the hardware's homebrew loader took that loader down and cost a reboot.
+  # A releases page listing `obscene.elf` and `obscene.module.elf` side by side invites
+  # exactly that mistake from somebody who has not read the document. The filename is the
+  # last thing between a reader and the wrong loader, so it carries the answer.
+  release:
+    name: Publish the shapes
+    # `always()` so a missing package - `artifact-pkg` is `continue-on-error`, honestly so -
+    # does not withhold the four shapes that did build.
+    if: |
+      always() && needs.build.result == 'success' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, artifact-payload, artifact-injector, artifact-module, artifact-eboot, artifact-pkg]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # `pattern` rather than everything: `host-report` is a text report of one run on a
+      # runner, not something to install, and it would sit on the page looking like an asset.
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: obscene*
+          merge-multiple: true
+
+      - name: Name each shape for its loader
+        run: |
+          cd dist
+          ls -l
+          rename() { [ -f "$1" ] && mv "$1" "$2" && echo "  $1 -> $2" || true; }
+          rename obscene-payload.elf   obscene-for-homebrew-loader.elf
+          rename obscene-injector.elf  obscene-for-process-injector.elf
+          rename obscene-module.elf    obscene-for-emulators.module.elf
+          rename eboot.bin             obscene-for-system-loader.eboot.bin
+          rename obscene.pkg           obscene-for-installer.pkg
+          ls -l
+
+      - name: Delete previous latest-main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete latest-main --yes --cleanup-tag --repo "${{ github.repository }}" || true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-main
+          name: "Latest main build"
+          prerelease: true
+          make_latest: "false"
+          draft: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            Auto-built from `main` at `${{ github.sha }}`.
+
+            **Four shapes, four loaders, and they are not interchangeable.** They are told
+            apart by two bytes at offset 16, and sending the wrong one to real hardware has
+            taken a loader down and cost a reboot. Each filename names its loader; read
+            `docs/ARTIFACTS.md` before sending anything anywhere.
+
+            | file | who loads it |
+            |---|---|
+            | `obscene-for-homebrew-loader.elf` | a homebrew ELF loader, which maps the segments itself |
+            | `obscene-for-process-injector.elf` | the native process injector - see `docs/INJECTOR.md` |
+            | `obscene-for-emulators.module.elf` | emulators, through their "not a SELF" path |
+            | `obscene-for-system-loader.eboot.bin` | the system loader, from an app directory |
+            | `obscene-for-installer.pkg` | the installer, then the system loader |
+
+            The package is built by a job allowed to fail, so it may be absent from a given
+            build. That is honest rather than hidden: it is the least settled of the shapes.
+
+            This is ordinary homebrew. It needs no vendor toolchain to build and carries
+            nothing from one.
+          files: dist/*

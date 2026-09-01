@@ -1,0 +1,17 @@
+#version 450
+/* ftz: data[i] = x * 0.5
+ * Halving pushes the smallest normals into the denormal range, so a device that flushes
+ * denormals to zero returns 0 where IEEE returns the denormal. The reference is the exact IEEE
+ * x*0.5, so a divergence on the denormal-producing lanes (the smallest normal, the subnormal
+ * in the input vector) is a flush-to-zero observation - the arithmetic complement of `double`
+ * (x*2), which pushes denormals the other way toward a normal. Not an approximation: on a
+ * device that does not flush it matches bit for bit. One input, one output per lane. */
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return;
+    }
+    data[i] = data[i] * 0.5;
+}

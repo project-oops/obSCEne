@@ -1,0 +1,16 @@
+#version 450
+// maxf: data[out] = max(a, b)
+// maximum; the same NaN and signed-zero questions as min
+// obs-arity: 2
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint lane = gl_GlobalInvocationID.x;
+    uint base = lane * 3u;
+    if (base + 3u > data.length()) {
+        return;
+    }
+    float a = data[base + 0u];
+    float b = data[base + 1u];
+    data[base + 2u] = max(a, b);
+}

@@ -1,0 +1,5 @@
+# 2026-08-31 (payload runs) - the full payload executes on 12.40; the verb captures both channels
+
+
+Earlier today the payload took a fatal signal faulting into `libkernel_sys.sprx+0x0` (its base+vaddr resolution landing on the library base - same on the 380 KB CORPUS=0 build, so not size). That base-resolution path was since fixed (the payload-rewrite thread), and the full 9.3 MB payload now runs the whole suite to `OBS|end` - `meta 1|38|543`, `tally 5/4/363/171`. The 363 fails are payload mode's unbound imports (elfldr resolves none); the survivors are the base+vaddr-reachable checks; display is `absent` (OBS_NO_UI). The report arrives on the **send socket** (the net sink connects once it runs), not klog - so `./bin/obscene payload` now captures **both** channels (`$into` = socket, `$into.klog` = system log) and reads whichever spoke, rather than summarizing klog alone and mis-reporting a socket run as "no records". 36,361 records captured. (Also fixed a `set -e` + `grep -c` abort in the verb's summary - the third pass on that one line, now called out in-comment.)
+

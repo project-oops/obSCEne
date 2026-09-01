@@ -1,0 +1,19 @@
+#version 450
+/*
+ * The pipeline self-check kernel: double every lane.
+ *
+ * Its answer is exact in binary (x*2 never rounds), so the section can assert it and prove
+ * the whole path - upload, dispatch, readback - is correct before trusting any kernel whose
+ * result it cannot predict. That is the same role the census control and the responsiveness
+ * "must differ" pair play: one thing with a known answer, so a wrong answer means the
+ * instrument is broken rather than the platform.
+ */
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return; /* the tail of the last workgroup */
+    }
+    data[i] = data[i] * 2.0;
+}

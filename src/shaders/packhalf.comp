@@ -1,0 +1,23 @@
+#version 450
+// packhalf: data[out] = uintBitsToFloat(packHalf2x16(vec2(a, b)))
+// Packs two f32 into two f16 in a 32-bit word. On RDNA this lowers to v_cvt_pkrtz_f16_f32,
+// the round-toward-zero packing conversion - closing the convert gap the GPU surface census
+// named. The packed word is reinterpreted into the float slot the report carries; it is bits,
+// not a float value. The reference SKIPS this kernel: an exact baseline needs a correct f16
+// rounding this build does not carry (same reason `half` is skipped), so the device record
+// stands on its own for hardware-vs-emulator diffing rather than against an exact reference.
+// The GLSL spec leaves packHalf2x16's rounding to the implementation, so the mode this reveals
+// - RDNA's round-toward-zero - is itself a finding.
+// obs-arity: 2
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint lane = gl_GlobalInvocationID.x;
+    uint base = lane * 3u;
+    if (base + 3u > data.length()) {
+        return;
+    }
+    float a = data[base + 0u];
+    float b = data[base + 1u];
+    data[base + 2u] = uintBitsToFloat(packHalf2x16(vec2(a, b)));
+}

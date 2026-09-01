@@ -1,0 +1,114 @@
+# The GPU ISA classification table. Source of truth for docs/GPU_SURFACE.md.
+#
+# Moved out of the generator when that generator was ported to Rust: the table is data -
+# a judgement about which hardware operation a GLSL call lowers to - and transcribing
+# sixty rows of prose into a new language is how a transcription error gets into a census.
+#
+# Columns are tab-separated: table, name, unit, on-rdna2, coverage, note.
+# `on-rdna2` is yes / no / ? and is empty for the ISA tables, which do not carry it.
+#
+census	rcp	sfu	yes	covered:rcp	v_rcp_f32, the bare fast reciprocal; rcprelaxed pins it via RelaxedPrecision, while full-precision rcp exercises the correctly-rounded division sequence instead
+census	rsq	sfu	yes	covered:rsq	v_rsq_f32; inversesqrt(x), already the fast SFU form at full precision
+census	sqrt	sfu	yes	covered:sqrt	v_sqrt_f32, the bare SFU sqrt; sqrtrelaxed pins it, while full-precision sqrt is correctly rounded
+census	sin	sfu	yes	covered:sin	v_sin_f32; note the hardware op is sin(2*pi*x) - the driver inserts the 1/2pi scale
+census	cos	sfu	yes	covered:cos	v_cos_f32; likewise cos(2*pi*x)
+census	log	sfu	yes	covered:log2	v_log_f32 is log2, not natural log; obSCEne log2 exercises it directly, ln composes it
+census	exp2	sfu	yes	covered:exp2	v_exp_f32 is exp2; obSCEne exp2 exercises it directly, exp composes it
+census	fract	sfu	yes	covered:fract	v_fract_f32; note the hardware fract may differ from x-floor(x) at the boundary
+census	rcp_legacy	sfu	?	isa	legacy 0-for-inf reciprocal; pre-RDNA, likely absent on gfx1033
+census	rsq_legacy	sfu	?	isa	legacy rsqrt; pre-RDNA, likely absent
+census	rsq_clamp	sfu	?	isa	rsqrt with clamped output; SI/CI era, likely absent on RDNA2
+census	log_clamp	sfu	?	isa	log with clamped output; SI/CI era, likely absent on RDNA2
+census	div_scale	division	yes	sequence	scales operands and reports the overflow flag div_fmas consumes; part of the full-precision divf/rcp sequence
+census	div_fixup	division	yes	sequence	final correction of the division result, incl. special cases; part of the divf/rcp sequence
+census	div_fmas	division	yes	sequence	fma that also adds/subtracts based on the div_scale flag; part of the divf/rcp sequence
+census	fdiv_fast	division	yes	covered:divrelaxed	the fast, not-correctly-rounded division; divrelaxed pins it via RelaxedPrecision
+census	trig_preop	division	yes	isa	the 2/pi table lookup that seeds large-argument sin/cos reduction
+census	frexp_mant	decompose	yes	covered:frexpmant	mantissa of frexp; GLSL frexp(x, out exp) returns it
+census	frexp_exp	decompose	yes	covered:frexpexp	exponent of frexp; the second half of the same builtin
+census	fma_legacy	fused	?	isa	legacy fma with 0*inf=0; pre-RDNA
+census	fmad_ftz	fused	yes	isa	multiply-add that flushes denormals to zero
+census	fmul_legacy	fused	?	isa	legacy multiply with 0*inf=0; pre-RDNA
+census	fmed3	median	yes	isa	median(a,b,c); a GLSL clamp(x,lo,hi) may or may not lower to it
+census	cvt_pkrtz	convert	yes	covered:packhalf	pack two f32 to two f16, round-toward-zero; GLSL packHalf2x16
+census	cvt_pknorm_i16	convert	yes	covered:packsnorm	pack two f32 to two snorm16; GLSL packSnorm2x16
+census	cvt_pknorm_u16	convert	yes	covered:packunorm	pack two f32 to two unorm16; GLSL packUnorm2x16
+census	cvt_pk_i16	convert	yes	isa	pack two i32 to two i16, signed-saturating
+census	cvt_pk_u16	convert	yes	isa	pack two u32 to two u16, unsigned-saturating
+census	cvt_pk_u8_f32	convert	yes	isa	convert f32 to u8 and insert into a lane of a packed word
+census	cubeid	cubemap	yes	isa	selects the cubemap face index for a direction vector
+census	cubema	cubemap	yes	isa	the major axis magnitude for cube face projection
+census	cubesc	cubemap	yes	isa	s coordinate for cube face projection
+census	cubetc	cubemap	yes	isa	t coordinate for cube face projection
+census	cvt_f32_bf8	convert	no	na-cdna	bf8 to f32; CDNA3 (gfx940+) only
+census	cvt_f32_fp8	convert	no	na-cdna	fp8 to f32; CDNA3 only
+census	cvt_pk_f32_bf8	convert	no	na-cdna	packed bf8 to f32; CDNA3 only
+census	cvt_pk_f32_fp8	convert	no	na-cdna	packed fp8 to f32; CDNA3 only
+census	cvt_pk_bf8_f32	convert	no	na-cdna	f32 to packed bf8; CDNA3 only
+census	cvt_pk_fp8_f32	convert	no	na-cdna	f32 to packed fp8; CDNA3 only
+census	cvt_sr_bf8_f32	convert	no	na-cdna	f32 to bf8 with stochastic rounding; CDNA3 only
+census	cvt_sr_fp8_f32	convert	no	na-cdna	f32 to fp8 with stochastic rounding; CDNA3 only
+base	v_floor_f32			covered:floor	GLSL floor
+base	v_ceil_f32			covered:ceil	GLSL ceil
+base	v_trunc_f32			covered:trunc	GLSL trunc
+base	v_rndne_f32			covered:roundeven	GLSL roundEven; round ties-to-even
+base	v_min_f32			covered:minf	GLSL min
+base	v_max_f32			covered:maxf	GLSL max
+base	v_fma_f32			covered:fmaf	GLSL fma; the fused, non-legacy form
+base	v_cvt_i32_f32			covered:cvti	GLSL int(x)
+base	v_cvt_f16_f32			covered:half	GLSL packing to f16 and back
+base	v_cvt_f32_f16			covered:unpackhalf	GLSL unpackHalf2x16 (low half); f16->f32 decode, exact
+base	v_cvt_f32_u32			covered:unpackunorm	GLSL unpackUnorm2x16 (low half); low 16 bits / 65535
+base	v_cvt_f32_i32			covered:unpacksnorm	GLSL unpackSnorm2x16 (low half); signed low 16 / 32767, clamped
+base	v_mul_f32			covered:ftz	GLSL x*0.5; probes flush-to-zero of a denormal result
+int	v_bcnt_u32_b32			covered:bitcount	GLSL bitCount; population count, 0..32
+int	v_ffbh_u32			covered:findmsb	GLSL findMSB (unsigned); highest set bit or -1
+int	v_ffbl_b32			covered:findlsb	GLSL findLSB; lowest set bit or -1
+int	v_bfrev_b32			covered:bitreverse	GLSL bitfieldReverse; reverse the 32 bits
+int	v_bfe_u32			covered:bfe	GLSL bitfieldExtract (unsigned); fixed [8,16) field
+int	v_bfi_b32			covered:bfi	GLSL bitfieldInsert; fixed [8,16) field
+#
+# The scalar-math intrinsic families this census is responsible for classifying.
+# Matched exactly, never by prefix: `int_amdgcn_rcp` is ours and `int_amdgcn_rcp_f16`
+# is not, and a prefix test would claim both.
+family	cos				
+family	cubeid				
+family	cubema				
+family	cubesc				
+family	cubetc				
+family	cvt_f32_bf8				
+family	cvt_f32_fp8				
+family	cvt_pk_bf8_f32				
+family	cvt_pk_f32_bf8				
+family	cvt_pk_f32_fp8				
+family	cvt_pk_fp8_f32				
+family	cvt_pk_i16				
+family	cvt_pk_u16				
+family	cvt_pk_u8_f32				
+family	cvt_pknorm_i16				
+family	cvt_pknorm_u16				
+family	cvt_pkrtz				
+family	cvt_sr_bf8_f32				
+family	cvt_sr_fp8_f32				
+family	div_fixup				
+family	div_fmas				
+family	div_scale				
+family	exp2				
+family	fdiv_fast				
+family	fma_legacy				
+family	fmad_ftz				
+family	fmed3				
+family	fmul_legacy				
+family	fract				
+family	frexp_exp				
+family	frexp_mant				
+family	log				
+family	log_clamp				
+family	rcp				
+family	rcp_legacy				
+family	rsq				
+family	rsq_clamp				
+family	rsq_legacy				
+family	sin				
+family	sqrt				
+family	trig_preop				

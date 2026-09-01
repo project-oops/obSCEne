@@ -1,0 +1,15 @@
+#version 450
+// asin: data[i] = asin(x)
+// arcsine; defined only on [-1, 1], so most edge inputs are out of domain
+// One input, one output per lane; the section feeds a shared vector of edge-y values and
+// records the device's result bits for the recipient to diff against emulation.
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return;
+    }
+    float x = data[i];
+    data[i] = asin(x);
+}

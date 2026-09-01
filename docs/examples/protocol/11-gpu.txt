@@ -1,0 +1,33 @@
+# The gpu verb: dispatch a compiled-in kernel over the socket, no rebuild.
+#
+# Captured from the host build (GPU=1) on llvmpipe. On a Steam Deck the same commands return
+# gfx1033 results; the gpudev record is what tells the two apart, so a software answer is
+# never read as silicon.
+CMD|1|hello|1
+OBS|ack|1|hello
+OBS|hello|1|c0x1|call,read,report,gpu
+OBS|part|c0x1|probe|dev
+OBS|part|c0x1|binary|host
+OBS|part|c0x1|transport|posix
+OBS|done|1|ok||
+# A unary kernel over three operands = three lanes. rcp(1)=1, rcp(2)=0.5, rcp(3)=1/3.
+CMD|2|gpu|rcp|0x3f800000|0x40000000|0x40400000
+OBS|ack|2|gpu
+OBS|gpudev|vulkan|llvmpipe (LLVM 20.1.2, 256 bits)|cpu
+OBS|gpu|rcp|0|0x3f800000|0x3f800000
+OBS|gpu|rcp|1|0x40000000|0x3f000000
+OBS|gpu|rcp|2|0x40400000|0x3eaaaaab
+OBS|done|2|returned|0x3|
+# A ternary kernel takes a multiple of three operands. fma(2, 3, 1) = 2*3 + 1 = 7.
+CMD|3|gpu|fmaf|0x40000000|0x40400000|0x3f800000
+OBS|ack|3|gpu
+OBS|gpudev|vulkan|llvmpipe (LLVM 20.1.2, 256 bits)|cpu
+OBS|gpuop|fmaf|0|0x40e00000|0x40000000|0x40400000|0x3f800000
+OBS|done|3|returned|0x1|
+# An unknown kernel is refused, not guessed.
+CMD|4|gpu|nonesuch|0x0
+OBS|ack|4|gpu
+OBS|refused|4|bad-argument
+CMD|5|bye
+OBS|ack|5|bye
+OBS|done|5|ok||

@@ -1,0 +1,19 @@
+#version 450
+// packsnorm: data[out] = packSnorm2x16(vec2(a, b))
+// Packs two floats, each clamped to [-1,1] and scaled to a 16-bit signed integer, into a 32-bit
+// word. On RDNA this is v_cvt_pknorm_i16. The operand set spans [-1,1] with a value past each
+// end for the clamp; the packed word is reinterpreted into the report's float slot. Rounding at
+// a half-integer is the device's choice, so a divergence there is an observation.
+// obs-arity: 2
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint lane = gl_GlobalInvocationID.x;
+    uint base = lane * 3u;
+    if (base + 3u > data.length()) {
+        return;
+    }
+    float a = data[base + 0u];
+    float b = data[base + 1u];
+    data[base + 2u] = uintBitsToFloat(packSnorm2x16(vec2(a, b)));
+}

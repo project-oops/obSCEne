@@ -1,0 +1,17 @@
+#version 450
+/* unpackhalf: data[i] = unpackHalf2x16(x).x
+ * The low half of unpackHalf2x16: the low 16 bits decoded from f16 to f32. Unlike packing to
+ * f16 (packhalf, which needs a rounding this build's reference cannot judge), f16 -> f32 is
+ * exact - every half is representable as a float - so this one HAS a reference and the device
+ * must match it bit for bit. The input is a packed word from the bit-pattern vector; one input,
+ * one output per lane. */
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return;
+    }
+    uint bits = floatBitsToUint(data[i]);
+    data[i] = unpackHalf2x16(bits).x;
+}

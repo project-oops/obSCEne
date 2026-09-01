@@ -1,0 +1,22 @@
+#version 450
+/* frexpexp: data[i] = intBitsToFloat(frexp(x).exponent)
+ * The exponent half of frexp: the integer e with x = m * 2^e, m in [0.5, 1). On RDNA this is
+ * v_frexp_exp_i32_f32. The result is an int, so it is reinterpreted into the float slot the
+ * report carries - the record is bits, and the reference produces the same bits from the same
+ * integer. GLSL frexp gives e == 0 for x == 0; inf/NaN are undefined and the reference skips
+ * them. Exact on normal inputs, so the device must match bit for bit there; subnormals differ
+ * by device (llvmpipe does not normalise, reporting -126 where IEEE frexp gives the normalised
+ * exponent), and that divergence is a denormal-handling observation. One output per lane.
+ * The mantissa return is discarded; e is the out parameter and its use keeps the call live. */
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= data.length()) {
+        return;
+    }
+    float x = data[i];
+    int e;
+    frexp(x, e);
+    data[i] = intBitsToFloat(e);
+}

@@ -1,0 +1,21 @@
+#version 450
+// divrelaxed: data[out] = a / b, at relaxed precision
+// The controlled-ISA counterpart to `divf`. Full-precision `divf` is the correctly rounded IEEE
+// division sequence on RDNA; this mediump form decorates the division RelaxedPrecision and RDNA
+// takes the fast v_fdiv path (a v_rcp on the divisor and a multiply, no fixup). `divf` vs
+// `divrelaxed` diffs the fast-path error. The reference is the same correctly-rounded a/b for
+// both; `divrelaxed` is the one expected to diverge from it on hardware.
+// obs-arity: 2
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Buf { float data[]; };
+void main() {
+    uint lane = gl_GlobalInvocationID.x;
+    uint base = lane * 3u;
+    if (base + 3u > data.length()) {
+        return;
+    }
+    mediump float a = data[base + 0u];
+    mediump float b = data[base + 1u];
+    mediump float r = a / b;
+    data[base + 2u] = r;
+}

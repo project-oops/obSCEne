@@ -1,0 +1,5 @@
+# 2026-08-31 (payload verb) - canonized the payload round-trip as `./bin/obscene payload`
+
+
+The package round-trip has been a verb (`deploy`) since D269; the payload round-trip was still hand-assembled bash each time (`hw logs & ; hw send ; grep`), and it bit twice - `wsl.exe … bash -lc '...'` mangles inline shell **variables** under Git Bash, so `T=$HOME/...; "$T" hw send` silently ran as empty and captured nothing. Added `./bin/obscene payload` (`scripts/payload-run.sh`): `make payload` + **raw** klog capture (raw, not the OBS-filtered `report`, so a crash's `signo:` line survives) + `hw send`, reporting whether the payload ran or took a signal. No Windows half (all out-connections); re-enters WSL itself from a Windows shell. `--build-only`/`--seconds`/`--into`/`--name`/`-- MAKEFLAGS`. D273. Also surfaced the finding it was chasing: the full 9.3 MB payload takes a **fatal signal** under elfldr (`signo 0xa0020328`, `rip 0x2005cc299`, no OBS records) - crashing on load/entry, not just failing to phone home.
+
