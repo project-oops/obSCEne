@@ -127,11 +127,13 @@ static obs_result check_virtual_query_mapped(void) {
     uint64_t start = 0, end = 0;
     for (unsigned int i = 0; i < 8; i++) {
         start |= ((uint64_t)after[i]) << (i * 8);
-        end   |= ((uint64_t)after[8 + i]) << (i * 8);
+        end |= ((uint64_t)after[8 + i]) << (i * 8);
     }
 
-    if (start > (uint64_t)(uintptr_t)mapped_at || end < (uint64_t)(uintptr_t)mapped_at) {
-        return obs_partial_value("virtual query range does not enclose mapped address", start);
+    if (start > (uint64_t)(uintptr_t)mapped_at ||
+        end < (uint64_t)(uintptr_t)mapped_at) {
+        return obs_partial_value("virtual query range does not enclose mapped address",
+                                 start);
     }
 
     return obs_pass_value(end - start);
@@ -160,7 +162,7 @@ static obs_result check_virtual_query_text(void) {
     uint64_t start = 0, end = 0;
     for (unsigned int i = 0; i < 8; i++) {
         start |= ((uint64_t)after[i]) << (i * 8);
-        end   |= ((uint64_t)after[8 + i]) << (i * 8);
+        end |= ((uint64_t)after[8 + i]) << (i * 8);
     }
     return obs_pass_value(end - start);
 }
@@ -187,7 +189,7 @@ static obs_result check_virtual_query_stack(void) {
     uint64_t start = 0, end = 0;
     for (unsigned int i = 0; i < 8; i++) {
         start |= ((uint64_t)after[i]) << (i * 8);
-        end   |= ((uint64_t)after[8 + i]) << (i * 8);
+        end |= ((uint64_t)after[8 + i]) << (i * 8);
     }
     return obs_pass_value(end - start);
 }
@@ -202,7 +204,8 @@ static obs_result check_virtual_query_unmapped(void) {
         after[i] = 0xAA;
     }
 
-    /* Test address 0x720000240000 - the exact address queried in PPSA25872/orbistoun#D436 */
+    /* Test address 0x720000240000 - the exact address queried in
+     * PPSA25872/orbistoun#D436 */
     const void *unmapped = (const void *)0x720000240000ULL;
     int rc = sceKernelVirtualQuery(unmapped, 0, after, OBS_VQ_BUF_LEN);
     if (rc == 0) {
@@ -249,15 +252,17 @@ static obs_result check_allocate_main(void) {
     int rc = sceKernelAllocateMainDirectMemory(OBS_ALLOC_LEN, OBS_ALLOC_ALIGN,
                                                OBS_MEM_TYPE_WB_ONION, &physical);
     if (rc != 0) {
-        return obs_fail_code("allocate main direct memory was refused", (uint64_t)(uint32_t)rc);
+        return obs_fail_code("allocate main direct memory was refused",
+                             (uint64_t)(uint32_t)rc);
     }
 
     void *virt = NULL;
-    rc = sceKernelMapDirectMemory(&virt, OBS_ALLOC_LEN, OBS_PROT_CPU_RW, 0,
-                                  physical, OBS_ALLOC_ALIGN);
+    rc = sceKernelMapDirectMemory(&virt, OBS_ALLOC_LEN, OBS_PROT_CPU_RW, 0, physical,
+                                  OBS_ALLOC_ALIGN);
     if (rc != 0 || virt == NULL) {
         sceKernelReleaseDirectMemory(physical, OBS_ALLOC_LEN);
-        return obs_fail_code("mapping allocated main direct memory failed", (uint64_t)(uint32_t)rc);
+        return obs_fail_code("mapping allocated main direct memory failed",
+                             (uint64_t)(uint32_t)rc);
     }
 
     volatile unsigned char *p = (volatile unsigned char *)virt;
@@ -284,10 +289,10 @@ static obs_result check_unmap_rejects_null(void) {
 }
 
 static obs_result check_flexible_available(void) {
-    /* How much the system will lend. Nothing is asserted about the figure - it varies by
-     * console, by title and by what is already mapped - only that the call answers and
-     * that the answer is not zero, since a platform with no flexible memory at all cannot
-     * run anything that asks for some. */
+    /* How much the system will lend. Nothing is asserted about the figure - it varies
+     * by console, by title and by what is already mapped - only that the call answers
+     * and that the answer is not zero, since a platform with no flexible memory at all
+     * cannot run anything that asks for some. */
     size_t available = 0;
     int rc = sceKernelAvailableFlexibleMemorySize(&available);
     if (rc != 0) {
@@ -301,12 +306,13 @@ static obs_result check_flexible_available(void) {
 }
 
 static obs_result check_flexible_configured(void) {
-    /* The configured total - the ceiling the available figure above counts down from, and the
-     * one that does not move as memory is mapped. Reported as its value so a consumer can seed a
-     * flexible-memory budget from it, the same way flexible-available supplies the current
-     * figure. Nothing is asserted about the number except that it is not zero: a platform with
-     * flexible memory at all cannot configure none of it, and a zero here would be the function
-     * answering without meaning to. */
+    /* The configured total - the ceiling the available figure above counts down from,
+     * and the one that does not move as memory is mapped. Reported as its value so a
+     * consumer can seed a flexible-memory budget from it, the same way
+     * flexible-available supplies the current figure. Nothing is asserted about the
+     * number except that it is not zero: a platform with flexible memory at all cannot
+     * configure none of it, and a zero here would be the function answering without
+     * meaning to. */
     size_t configured = 0;
     int rc = sceKernelConfiguredFlexibleMemorySize(&configured);
     if (rc != 0) {
@@ -326,13 +332,13 @@ static obs_result check_flexible_round_trip(void) {
      * against the other allocation path.
      *
      * The difference that matters: no offset is chosen here. The system finds the pages
-     * and hands back an address, which is the whole distinction from direct memory and the
-     * reason an emulator can implement one and not the other.
+     * and hands back an address, which is the whole distinction from direct memory and
+     * the reason an emulator can implement one and not the other.
      *
-     * The write-and-read-back is the part that makes this a positive check rather than a
-     * negative one (CLAUDE.md principle 7): an implementation returning a plausible
-     * address it has not actually mapped fails here and passes any check that only looks
-     * at the return code. */
+     * The write-and-read-back is the part that makes this a positive check rather than
+     * a negative one (CLAUDE.md principle 7): an implementation returning a plausible
+     * address it has not actually mapped fails here and passes any check that only
+     * looks at the return code. */
     const size_t len = 0x4000;
     void *address = NULL;
     int rc = sceKernelMapFlexibleMemory(&address, len, OBS_PROT_CPU_RW, 0);
@@ -365,27 +371,36 @@ static const obs_check memory_checks[] = {
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelGetDirectMemorySize,
      check_direct_memory_size, OBS_FROM_ASSUMED},
     {"020-memory/allocate", "libkernel", "sceKernelAllocateDirectMemory", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceKernelAllocateDirectMemory, check_allocate, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, (const void *)&sceKernelAllocateDirectMemory, check_allocate,
+     OBS_FROM_ASSUMED},
     {"020-memory/map", "libkernel", "sceKernelMapDirectMemory", OBS_CAP_NONE,
-     OBS_CAP_MEMORY, (const void *)&sceKernelMapDirectMemory, check_map, OBS_FROM_ASSUMED},
+     OBS_CAP_MEMORY, (const void *)&sceKernelMapDirectMemory, check_map,
+     OBS_FROM_ASSUMED},
     {"020-memory/read-write", "obscene", "mapped memory", OBS_CAP_MEMORY, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_mapped_memory_behaves, OBS_FROM_ASSUMED},
-    {"020-memory/virtual-query-mapped", "libkernel", "sceKernelVirtualQuery", OBS_CAP_MEMORY, OBS_CAP_NONE,
-     (const void *)&sceKernelVirtualQuery, check_virtual_query_mapped, OBS_FROM_ASSUMED},
-    {"020-memory/virtual-query-text", "libkernel", "sceKernelVirtualQuery", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sceKernelVirtualQuery, check_virtual_query_text, OBS_FROM_ASSUMED},
-    {"020-memory/virtual-query-stack", "libkernel", "sceKernelVirtualQuery", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sceKernelVirtualQuery, check_virtual_query_stack, OBS_FROM_ASSUMED},
-    {"020-memory/virtual-query-unmapped", "libkernel", "sceKernelVirtualQuery", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sceKernelVirtualQuery, check_virtual_query_unmapped, OBS_FROM_ASSUMED},
+    {"020-memory/virtual-query-mapped", "libkernel", "sceKernelVirtualQuery",
+     OBS_CAP_MEMORY, OBS_CAP_NONE, (const void *)&sceKernelVirtualQuery,
+     check_virtual_query_mapped, OBS_FROM_ASSUMED},
+    {"020-memory/virtual-query-text", "libkernel", "sceKernelVirtualQuery",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelVirtualQuery,
+     check_virtual_query_text, OBS_FROM_ASSUMED},
+    {"020-memory/virtual-query-stack", "libkernel", "sceKernelVirtualQuery",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelVirtualQuery,
+     check_virtual_query_stack, OBS_FROM_ASSUMED},
+    {"020-memory/virtual-query-unmapped", "libkernel", "sceKernelVirtualQuery",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelVirtualQuery,
+     check_virtual_query_unmapped, OBS_FROM_ASSUMED},
     {"020-memory/unmap", "libkernel", "sceKernelMunmap", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&sceKernelMunmap, check_unmap, OBS_FROM_DERIVED},
     {"020-memory/release", "libkernel", "sceKernelReleaseDirectMemory", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceKernelReleaseDirectMemory, check_release, OBS_FROM_ASSUMED},
-    {"020-memory/allocate-main", "libkernel", "sceKernelAllocateMainDirectMemory", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceKernelAllocateMainDirectMemory, check_allocate_main, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, (const void *)&sceKernelReleaseDirectMemory, check_release,
+     OBS_FROM_ASSUMED},
+    {"020-memory/allocate-main", "libkernel", "sceKernelAllocateMainDirectMemory",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelAllocateMainDirectMemory,
+     check_allocate_main, OBS_FROM_ASSUMED},
     {"020-memory/unmap-rejects-null", "libkernel", "sceKernelMunmap", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceKernelMunmap, check_unmap_rejects_null, OBS_FROM_DERIVED},
+     OBS_CAP_NONE, (const void *)&sceKernelMunmap, check_unmap_rejects_null,
+     OBS_FROM_DERIVED},
     {"020-memory/flexible-available", "libkernel",
      "sceKernelAvailableFlexibleMemorySize", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&sceKernelAvailableFlexibleMemorySize, check_flexible_available,

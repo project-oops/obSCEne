@@ -1,8 +1,9 @@
 /* A real obSCEne report on real hardware, bootstrapped from getpid.
  *
- * elfldr resolves nothing; every function is located as (word0 - getpid_vaddr) + fn_vaddr,
- * the vaddrs read from the real 12.40 libkernel_sys.sprx with selfish. Records go to fd 1,
- * which elfldr dup'd onto the loader socket, in the OBS| report format.
+ * elfldr resolves nothing; every function is located as (word0 - getpid_vaddr) +
+ * fn_vaddr, the vaddrs read from the real 12.40 libkernel_sys.sprx with selfish.
+ * Records go to fd 1, which elfldr dup'd onto the loader socket, in the OBS| report
+ * format.
  *
  * This is the first report in the project's history with hardware provenance.
  */
@@ -12,11 +13,11 @@ typedef int (*getver_t)(void *);
 typedef long (*proctime_t)(void);
 
 /* libkernel_sys export vaddrs, from selfish over the pulled .sprx. */
-#define V_GETPID       0x005b0UL
-#define V_WRITE        0x16e00UL
-#define V_PROCTIME     0x16160UL
-#define V_TSCFREQ      0x1cf30UL
-#define V_SWVERSION    0x1d230UL
+#define V_GETPID 0x005b0UL
+#define V_WRITE 0x16e00UL
+#define V_PROCTIME 0x16160UL
+#define V_TSCFREQ 0x1cf30UL
+#define V_SWVERSION 0x1d230UL
 
 void obscene_start(void);
 
@@ -24,24 +25,33 @@ static write_t g_write;
 
 static void emit(const char *s) {
     unsigned long n = 0;
-    while (s[n]) n++;
+    while (s[n])
+        n++;
     g_write(1, s, n);
 }
 
-/* u64 to decimal into a caller buffer, returns length. No libc, index-assign (no memcpy). */
+/* u64 to decimal into a caller buffer, returns length. No libc, index-assign (no
+ * memcpy). */
 static void emit_u64(unsigned long v) {
     char buf[21];
     int i = 20;
     buf[i--] = 0;
-    if (v == 0) { buf[i--] = '0'; }
-    while (v > 0) { buf[i--] = (char)('0' + (v % 10)); v /= 10; }
+    if (v == 0) {
+        buf[i--] = '0';
+    }
+    while (v > 0) {
+        buf[i--] = (char)('0' + (v % 10));
+        v /= 10;
+    }
     emit(&buf[i + 1]);
 }
 
 static void emit_hex(unsigned long v) {
     static const char d[] = "0123456789abcdef";
     char buf[17];
-    for (int i = 0; i < 16; i++) { buf[15 - i] = d[(v >> (i * 4)) & 0xF]; }
+    for (int i = 0; i < 16; i++) {
+        buf[15 - i] = d[(v >> (i * 4)) & 0xF];
+    }
     buf[16] = 0;
     emit("0x");
     emit(buf);
@@ -70,18 +80,23 @@ void obscene_start(void) {
 
     /* Process CPU time, twice, must advance. */
     unsigned long t0 = (unsigned long)proctime();
-    for (volatile int i = 0; i < 1000000; i++) { }
+    for (volatile int i = 0; i < 1000000; i++) {
+    }
     unsigned long t1 = (unsigned long)proctime();
     emit("OBS|try|000-hw/proc-time|libkernel|sceKernelGetProcessTime\n");
     emit("OBS|measure|000-hw/proc-time|sceKernelGetProcessTime|delta-us|");
     emit_u64(t1 - t0);
     emit("|us\n");
-    emit(t1 > t0 ? "OBS|res|000-hw/proc-time|pass|||hardware\n"
-                 : "OBS|res|000-hw/proc-time|fail|process time did not advance||hardware\n");
+    emit(
+        t1 > t0
+            ? "OBS|res|000-hw/proc-time|pass|||hardware\n"
+            : "OBS|res|000-hw/proc-time|fail|process time did not advance||hardware\n");
 
     /* The system software version struct: call it, dump the raw bytes it wrote. */
     unsigned char ver[48];
-    for (int i = 0; i < 48; i++) { ver[i] = 0xC7; }
+    for (int i = 0; i < 48; i++) {
+        ver[i] = 0xC7;
+    }
     int rc = getver(ver);
     emit("OBS|try|000-hw/sw-version|libkernel|sceKernelGetSystemSwVersion\n");
     emit("OBS|measure|000-hw/sw-version|sceKernelGetSystemSwVersion|rc|");
@@ -89,7 +104,9 @@ void obscene_start(void) {
     emit("|code\n");
     for (int off = 0; off < 48; off += 8) {
         unsigned long w = 0;
-        for (int b = 0; b < 8; b++) { w |= (unsigned long)ver[off + b] << (b * 8); }
+        for (int b = 0; b < 8; b++) {
+            w |= (unsigned long)ver[off + b] << (b * 8);
+        }
         emit("OBS|bytes|000-hw/sw-version|sceKernelGetSystemSwVersion|ver|");
         emit_u64((unsigned long)off);
         emit("|");

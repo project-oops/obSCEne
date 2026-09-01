@@ -22,11 +22,12 @@ void obs_screen_begin(unsigned int sections, unsigned int checks);
 /* Takes the whole result rather than the status alone.
  *
  * The status is a colour and the `detail` beside it is the reason - and the reason was
- * being dropped here while the text report carried it, so the screen said `FAIL` where the
- * stream said `FAIL: the attribute object could not be initialised`. The screen exists for
- * the case where the stream cannot be read, which is exactly the case where losing the
- * reason costs the most. */
-/* The check about to be attempted, drawn immediately so a hang names what it is inside. */
+ * being dropped here while the text report carried it, so the screen said `FAIL` where
+ * the stream said `FAIL: the attribute object could not be initialised`. The screen
+ * exists for the case where the stream cannot be read, which is exactly the case where
+ * losing the reason costs the most. */
+/* The check about to be attempted, drawn immediately so a hang names what it is inside.
+ */
 void obs_screen_attempt(const char *id);
 
 void obs_screen_check(const char *id, obs_result result);

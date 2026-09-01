@@ -48,4 +48,3 @@ int memcmp(const void *s1, const void *s2, size_t len);
 #endif
 
 #endif /* OBSCENE_COMMON_FREESTD_H */
-

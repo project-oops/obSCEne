@@ -47,14 +47,14 @@ struct reg {
 /**
  * Standard mmap / protection flags
  */
-#define PROC_PROT_NONE  0x00
-#define PROC_PROT_READ  0x01
+#define PROC_PROT_NONE 0x00
+#define PROC_PROT_READ 0x01
 #define PROC_PROT_WRITE 0x02
-#define PROC_PROT_EXEC  0x04
+#define PROC_PROT_EXEC 0x04
 
-#define PROC_MAP_SHARED    0x0001
-#define PROC_MAP_PRIVATE   0x0002
-#define PROC_MAP_FIXED     0x0010
+#define PROC_MAP_SHARED 0x0001
+#define PROC_MAP_PRIVATE 0x0002
+#define PROC_MAP_FIXED 0x0010
 #define PROC_MAP_ANONYMOUS 0x1000
 
 /**
@@ -74,19 +74,20 @@ int procctl_setregs(pid_t pid, const struct reg *r);
 /**
  * Remote memory read/write.
  */
-int      procctl_copyin(pid_t pid, const void *src, uintptr_t dst_addr, size_t len);
-int      procctl_copyout(pid_t pid, uintptr_t src_addr, void *dst, size_t len);
-int      procctl_setlong(pid_t pid, uintptr_t addr, uint64_t val);
+int procctl_copyin(pid_t pid, const void *src, uintptr_t dst_addr, size_t len);
+int procctl_copyout(pid_t pid, uintptr_t src_addr, void *dst, size_t len);
+int procctl_setlong(pid_t pid, uintptr_t addr, uint64_t val);
 uint64_t procctl_getlong(pid_t pid, uintptr_t addr);
-int      procctl_setint(pid_t pid, uintptr_t addr, uint32_t val);
+int procctl_setint(pid_t pid, uintptr_t addr, uint32_t val);
 uint32_t procctl_getint(pid_t pid, uintptr_t addr);
 
 /**
  * Remote address space management.
  */
-uintptr_t procctl_remote_mmap(pid_t pid, uintptr_t addr, size_t len, int prot, int flags, int fd, off_t off);
-int       procctl_remote_munmap(pid_t pid, uintptr_t addr, size_t len);
-int       procctl_remote_mprotect(pid_t pid, uintptr_t addr, size_t len, int prot);
+uintptr_t procctl_remote_mmap(pid_t pid, uintptr_t addr, size_t len, int prot,
+                              int flags, int fd, off_t off);
+int procctl_remote_munmap(pid_t pid, uintptr_t addr, size_t len);
+int procctl_remote_mprotect(pid_t pid, uintptr_t addr, size_t len, int prot);
 
 /**
  * Remote syscall execution.
@@ -97,4 +98,3 @@ void procctl_set_syscall_gadget(uintptr_t gadget);
 uintptr_t procctl_find_syscall_gadget(pid_t pid, uintptr_t libkernel_base);
 
 #endif /* OBSCENE_INJECTOR_PROCCTL_H */
-

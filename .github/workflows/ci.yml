@@ -457,17 +457,22 @@ jobs:
           body: |
             Auto-built from `main` at `${{ github.sha }}`.
 
-            **These are not interchangeable.** The three probe forms are told apart by two
-            bytes at offset 16, and sending the wrong one to real hardware has taken a loader
-            down and cost a reboot. Read `docs/ARTIFACTS.md` before sending anything anywhere.
+            **These are not interchangeable, and two of them answer different questions about
+            the same console.** The probe forms are told apart by two bytes at offset 16, and
+            sending the wrong one to real hardware has taken a loader down and cost a reboot.
+            Read `docs/ARTIFACTS.md` before sending anything anywhere.
 
-            | file | what it is | how it gets on |
+            | file | runs as | what that means |
             |---|---|---|
-            | `obscene-probe.elf` | the probe, headless | a homebrew ELF loader maps the segments itself |
-            | `obscene-probe.pkg` | the probe, packaged | the installer, then the system loader |
-            | `obscene-probe.zip` | the probe as a title directory | unpack where an auto-mounter scans |
-            | `obscene-injector.elf` | the title injector, a different program | a homebrew ELF loader - see `docs/INJECTOR.md` |
-            | `obscene-module.elf` | the emulator shape | emulators, through their "not a SELF" path. Not for hardware |
+            | `obscene-probe.elf` | **`ps4_mode`** - the backward-compatibility sandbox | a homebrew ELF loader maps the segments. `libSceAgc` cannot be mapped, dynamic introspection is refused, `DT_DEBUG` is absent (D276) |
+            | `obscene-probe.pkg` | **`ps4_mode`** - installs as a `ps4_game` title | the installer, then the system loader. A ps4-format, previous-generation package; the current-generation driver is inaccessible from inside it (D255) |
+            | `obscene-probe.zip` | **native PS5 title** | unpack where an auto-mounter scans. What makes it native is `param.json` plus native registration, not the eboot magic - a real title's eboot is `4F 15 3D 1D`, same as this one (D293) |
+            | `obscene-injector.elf` | **native PS5 process** | a homebrew ELF loader runs it, then it hijacks a native-category process and executes the probe inside it. This is the only shape that measures native behaviour from a running title (D276, `docs/INJECTOR.md`) |
+            | `obscene-module.elf` | emulators | their "not a SELF" path. Not for hardware at all |
+
+            So: the `.elf` and `.pkg` measure the compatibility sandbox, the `.zip` measures a
+            native title launched by the system loader, and the injector measures a native
+            process that was already running. A result from one says nothing about the others.
 
             The package is built by a job allowed to fail, so it may be absent from a given
             build. That is honest rather than hidden: it is the least settled of the shapes.

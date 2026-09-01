@@ -29,4 +29,3 @@ pid_t target_find_foreground_app(void);
 pid_t target_resolve(const char *target_spec);
 
 #endif /* OBSCENE_INJECTOR_TARGET_H */
-

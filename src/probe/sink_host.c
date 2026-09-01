@@ -1,21 +1,23 @@
 /*
  * The file sink's backend on an ordinary machine.
  *
- * The other half of the pair described in `obscene/sink.h`. It exists so that the sink is
- * **exercised by `make host`**, which CLAUDE.md requires of anything before its output is
- * believed - a rule that has caught a wrong check twice.
+ * The other half of the pair described in `obscene/sink.h`. It exists so that the sink
+ * is
+ * **exercised by `make host`**, which CLAUDE.md requires of anything before its output
+ * is believed - a rule that has caught a wrong check twice.
  *
  * Without it the sink would be untestable off hardware. The target's `sceKernelOpen` is
  * stubbed on the host as not-implemented, which is the right answer for the `040-file`
  * checks that measure it and the wrong one for a sink that needs to actually write
- * something. Giving the host build a real backend separates those two concerns instead of
- * compromising one for the other: the checks still see a stub, and the sink still gets
- * tested.
+ * something. Giving the host build a real backend separates those two concerns instead
+ * of compromising one for the other: the checks still see a stub, and the sink still
+ * gets tested.
  *
  * What this does *not* test is the target's three platform calls, which is the same
  * position every other platform call is in and is exactly what the emulators and the
- * hardware are for. What it does test is everything else - path discovery, the write loop,
- * the close-on-failure path, and that a record reaches disk at the moment it is produced.
+ * hardware are for. What it does test is everything else - path discovery, the write
+ * loop, the close-on-failure path, and that a record reaches disk at the moment it is
+ * produced.
  */
 
 #include <fcntl.h>

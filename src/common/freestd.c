@@ -151,10 +151,8 @@ static inline uint32_t sha1_rol(uint32_t val, int bits) {
 static void sha1_transform(uint32_t state[5], const uint8_t block[64]) {
     uint32_t w[80];
     for (int i = 0; i < 16; i++) {
-        w[i] = ((uint32_t)block[i * 4] << 24) |
-               ((uint32_t)block[i * 4 + 1] << 16) |
-               ((uint32_t)block[i * 4 + 2] << 8) |
-               ((uint32_t)block[i * 4 + 3]);
+        w[i] = ((uint32_t)block[i * 4] << 24) | ((uint32_t)block[i * 4 + 1] << 16) |
+               ((uint32_t)block[i * 4 + 2] << 8) | ((uint32_t)block[i * 4 + 3]);
     }
     for (int i = 16; i < 80; i++) {
         w[i] = sha1_rol(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
@@ -190,15 +188,15 @@ static void sha1_transform(uint32_t state[5], const uint8_t block[64]) {
 }
 
 void obs_compute_nid(const char *name, char out_nid[12]) {
-    static const uint8_t suffix[16] = {
-        0x51, 0x8d, 0x64, 0xa6, 0x35, 0xde, 0xd8, 0xc1,
-        0xe6, 0xb0, 0x39, 0xb1, 0xc3, 0xe5, 0x52, 0x30
-    };
-    static const char alphabet[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-";
+    static const uint8_t suffix[16] = {0x51, 0x8d, 0x64, 0xa6, 0x35, 0xde, 0xd8, 0xc1,
+                                       0xe6, 0xb0, 0x39, 0xb1, 0xc3, 0xe5, 0x52, 0x30};
+    static const char alphabet[65] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-";
 
     uint32_t state[5] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};
     uint8_t buffer[128];
-    for (size_t i = 0; i < sizeof(buffer); i++) buffer[i] = 0;
+    for (size_t i = 0; i < sizeof(buffer); i++)
+        buffer[i] = 0;
 
     size_t name_len = obs_strlen(name);
     size_t total_len = name_len + sizeof(suffix);
@@ -238,14 +236,10 @@ void obs_compute_nid(const char *name, char out_nid[12]) {
     digest8[6] = (uint8_t)(state[1] >> 8);
     digest8[7] = (uint8_t)(state[1]);
 
-    uint64_t val = (uint64_t)digest8[0] |
-                   ((uint64_t)digest8[1] << 8) |
-                   ((uint64_t)digest8[2] << 16) |
-                   ((uint64_t)digest8[3] << 24) |
-                   ((uint64_t)digest8[4] << 32) |
-                   ((uint64_t)digest8[5] << 40) |
-                   ((uint64_t)digest8[6] << 48) |
-                   ((uint64_t)digest8[7] << 56);
+    uint64_t val = (uint64_t)digest8[0] | ((uint64_t)digest8[1] << 8) |
+                   ((uint64_t)digest8[2] << 16) | ((uint64_t)digest8[3] << 24) |
+                   ((uint64_t)digest8[4] << 32) | ((uint64_t)digest8[5] << 40) |
+                   ((uint64_t)digest8[6] << 48) | ((uint64_t)digest8[7] << 56);
 
     unsigned __int128 bits = ((unsigned __int128)val) << 2;
     for (int pos = 10; pos >= 0; pos--) {
@@ -257,8 +251,10 @@ void obs_compute_nid(const char *name, char out_nid[12]) {
 }
 
 const void *obs_kexport_lookup(const obs_kexport_table_t *table, const char *nid) {
-    if (table == NULL || nid == NULL) return NULL;
-    if (table->count == 0 || table->count > 16384) return NULL;
+    if (table == NULL || nid == NULL)
+        return NULL;
+    if (table->count == 0 || table->count > 16384)
+        return NULL;
     int low = 0;
     int high = (int)table->count - 1;
     while (low <= high) {
@@ -274,4 +270,3 @@ const void *obs_kexport_lookup(const obs_kexport_table_t *table, const char *nid
     }
     return NULL;
 }
-

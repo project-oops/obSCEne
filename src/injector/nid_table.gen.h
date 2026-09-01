@@ -398,7 +398,6 @@ static const obs_nid_entry_t s_nid_table[] = {
     {"sceVideoOutIsFlipPending", "zgXifHT9ErY"},
     {"__cxa_pure_virtual", "zr094EQ39Ww"},
     {"sceGnmSubmitCommandBuffers", "zwY0YV91TTI"},
-    {0, ""}
-};
+    {0, ""}};
 
 #endif /* INJECTOR_NID_TABLE_GEN_H */

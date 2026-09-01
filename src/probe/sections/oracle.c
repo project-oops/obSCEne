@@ -13,16 +13,17 @@
  * candidate with a yes-or-no answer, and it reaches functions no title imports at all.
  *
  * `docs/HARDWARE-PROBE.md` calls this "the one that changes the most", and it is the
- * cheapest thing on that page to attempt: the call is already declared, and the check is a
- * loop.
+ * cheapest thing on that page to attempt: the call is already declared, and the check
+ * is a loop.
  *
  * # It is written to be useful when the answer is no
  *
- * A platform that cannot resolve by name is the likely outcome, and this section is built
- * so that outcome is stated rather than merely absent. The control pair below is the whole
- * design: **a name that must resolve and a name that cannot**. An implementation
- * answering yes to both is useless in the opposite direction to one answering no to both,
- * and neither is distinguishable from a working oracle by any single query.
+ * A platform that cannot resolve by name is the likely outcome, and this section is
+ * built so that outcome is stated rather than merely absent. The control pair below is
+ * the whole design: **a name that must resolve and a name that cannot**. An
+ * implementation answering yes to both is useless in the opposite direction to one
+ * answering no to both, and neither is distinguishable from a working oracle by any
+ * single query.
  *
  * That is the same reasoning as the census control (`900-surface/control`), and for the
  * same reason: an instrument that cannot be shown to work is not evidence.
@@ -45,10 +46,10 @@
 
 /* Names the oracle is asked about.
  *
- * Two of them are the control and the rest are ordinary. The candidates are deliberately
- * things this program already imports, so a yes is checkable against a symbol whose
- * address the loader has already resolved - which is what makes a positive answer
- * trustworthy rather than merely encouraging. */
+ * Two of them are the control and the rest are ordinary. The candidates are
+ * deliberately things this program already imports, so a yes is checkable against a
+ * symbol whose address the loader has already resolved - which is what makes a positive
+ * answer trustworthy rather than merely encouraging. */
 typedef struct {
     const char *library;
     const char *name;
@@ -67,8 +68,8 @@ static const candidate candidates[] = {
     {"libkernel", "scePthreadSelf", -1},
     {"libSceLibcInternal", "strlen", -1},
     /* And one that is real, documented and deliberately *not* imported here. If the
-     * oracle answers for this, it is answering about the platform rather than about this
-     * module's import table - which is the difference between a name oracle and an
+     * oracle answers for this, it is answering about the platform rather than about
+     * this module's import table - which is the difference between a name oracle and an
      * expensive way to read our own symbols back. */
     {"libkernel", "sceKernelGetCurrentCpu", -1},
 };
@@ -98,21 +99,22 @@ static obs_result check_resolve_by_name(void) {
 
     /* The control decides what any of this is worth.
      *
-     * A platform saying yes to a name that cannot exist is not an oracle, it is a function
-     * that returns success - and its yes for every other name means nothing. That is the
-     * more dangerous failure of the two, because it looks like success. */
+     * A platform saying yes to a name that cannot exist is not an oracle, it is a
+     * function that returns success - and its yes for every other name means nothing.
+     * That is the more dangerous failure of the two, because it looks like success. */
     if (control_absent == 1) {
         return obs_fail("a name that cannot exist resolved; the answers are worthless");
     }
     if (control_present == 0) {
-        /* Saying no to everything is the expected outcome on a platform without a by-name
-         * interface, and it is honest. Reported as a skip rather than a failure: the
-         * platform is not obliged to have one. */
-        return obs_skip("nothing resolves by name, including a symbol known to be present");
+        /* Saying no to everything is the expected outcome on a platform without a
+         * by-name interface, and it is honest. Reported as a skip rather than a
+         * failure: the platform is not obliged to have one. */
+        return obs_skip(
+            "nothing resolves by name, including a symbol known to be present");
     }
     if (control_present == 1 && control_absent == 0) {
-        /* Both controls right, so the answers can be believed - which makes this the most
-         * consequential pass in the suite. */
+        /* Both controls right, so the answers can be believed - which makes this the
+         * most consequential pass in the suite. */
         return obs_pass_value((uint64_t)resolved);
     }
     return obs_partial_value("the controls did not both answer, so treat the rest as "
@@ -125,11 +127,11 @@ static obs_result check_error_codes(void) {
 
     /* Deliberately wrong arguments, and the *code* is the finding.
      *
-     * Every negative check in this suite asserts that a bad argument is refused and throws
-     * the returned value away. That is right on an emulator, where the code is invented.
-     * On hardware the code is the whole point: an implementation returning something no
-     * caller recognises makes guests retry forever, and a table of real codes turns
-     * "unimplemented" into "fails the way the caller expects".
+     * Every negative check in this suite asserts that a bad argument is refused and
+     * throws the returned value away. That is right on an emulator, where the code is
+     * invented. On hardware the code is the whole point: an implementation returning
+     * something no caller recognises makes guests retry forever, and a table of real
+     * codes turns "unimplemented" into "fails the way the caller expects".
      *
      * No expectation is asserted here at all. It records what came back. */
     unsigned int recorded = 0;
@@ -139,13 +141,14 @@ static obs_result check_error_codes(void) {
     recorded++;
 
     unsigned char scratch[16];
-    obs_report_error_code("libkernel", "sceKernelRead", "descriptor -1",
-                          (uint64_t)sceKernelRead(OBS_HANDLE_INVALID, scratch,
-                                                  sizeof scratch));
+    obs_report_error_code(
+        "libkernel", "sceKernelRead", "descriptor -1",
+        (uint64_t)sceKernelRead(OBS_HANDLE_INVALID, scratch, sizeof scratch));
     recorded++;
 
-    obs_report_error_code("libkernel", "sceKernelLseek", "descriptor -1",
-                          (uint64_t)sceKernelLseek(OBS_HANDLE_INVALID, 0, OBS_SEEK_CUR));
+    obs_report_error_code(
+        "libkernel", "sceKernelLseek", "descriptor -1",
+        (uint64_t)sceKernelLseek(OBS_HANDLE_INVALID, 0, OBS_SEEK_CUR));
     recorded++;
 
     if (obs_address_is_callable((const void *)&sceKernelOpen)) {
@@ -160,8 +163,9 @@ static obs_result check_error_codes(void) {
         recorded++;
     }
     if (obs_address_is_callable((const void *)&sceKernelPollEventFlag)) {
-        obs_report_error_code("libkernel", "sceKernelPollEventFlag", "null handle",
-                              (uint64_t)(uint32_t)sceKernelPollEventFlag(NULL, 1, 0, NULL));
+        obs_report_error_code(
+            "libkernel", "sceKernelPollEventFlag", "null handle",
+            (uint64_t)(uint32_t)sceKernelPollEventFlag(NULL, 1, 0, NULL));
         recorded++;
     }
     if (obs_address_is_callable((const void *)&sceKernelSetEventFlag)) {
@@ -170,8 +174,8 @@ static obs_result check_error_codes(void) {
         recorded++;
     }
 
-    /* Never a failure. Nothing here has an expectation to violate - the section exists to
-     * fill a table, and an empty table would be the only bad outcome. */
+    /* Never a failure. Nothing here has an expectation to violate - the section exists
+     * to fill a table, and an empty table would be the only bad outcome. */
     return obs_pass_value((uint64_t)recorded);
 }
 
@@ -197,11 +201,13 @@ static obs_result check_resolve_census(void) {
 
     void *present_address = 0;
     void *absent_address = 0;
-    int present_rc = sceKernelDlsym(OBS_HANDLE_SELF, "sceKernelWrite", &present_address);
+    int present_rc =
+        sceKernelDlsym(OBS_HANDLE_SELF, "sceKernelWrite", &present_address);
     int absent_rc = sceKernelDlsym(OBS_HANDLE_SELF, "obscene_no_such_symbol_exists",
                                    &absent_address);
     if (absent_rc == 0 && absent_address != 0) {
-        return obs_fail("a name that cannot exist resolved; the walk would be worthless");
+        return obs_fail(
+            "a name that cannot exist resolved; the walk would be worthless");
     }
     if (!(present_rc == 0 && present_address != 0)) {
         return obs_skip("the oracle does not answer, so there is nothing to walk");
@@ -226,10 +232,12 @@ static obs_result check_kernel_exports_stream(void) {
     if (pargs == NULL || pargs->kexport_table == NULL) {
         return obs_skip("no kernel export table available in this execution context");
     }
-    const obs_kexport_table_t *table = (const obs_kexport_table_t *)pargs->kexport_table;
+    const obs_kexport_table_t *table =
+        (const obs_kexport_table_t *)pargs->kexport_table;
     for (uint32_t i = 0; i < table->count; i++) {
         const obs_kexport_entry_t *entry = &table->entries[i];
-        obs_report_measure("140-oracle/kexport-table", entry->nid, "vaddr", entry->vaddr, "offset");
+        obs_report_measure("140-oracle/kexport-table", entry->nid, "vaddr",
+                           entry->vaddr, "offset");
     }
     return obs_pass_value((uint64_t)table->count);
 }
@@ -241,17 +249,20 @@ static const obs_check oracle_checks[] = {
     {"140-oracle/resolve-census", "libkernel", "sceKernelDlsym", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelDlsym, check_resolve_census,
      OBS_FROM_ASSUMED},
-    {"140-oracle/error-codes", "libkernel", "sceKernelClose", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sceKernelClose, check_error_codes, OBS_FROM_ASSUMED},
-    {"140-oracle/kexport-stream", "obscene", "kexport_table", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&obs_get_payload_args, check_kernel_exports_stream, OBS_FROM_HARDWARE},
+    {"140-oracle/error-codes", "libkernel", "sceKernelClose", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceKernelClose, check_error_codes, OBS_FROM_ASSUMED},
+    {"140-oracle/kexport-stream", "obscene", "kexport_table", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&obs_get_payload_args, check_kernel_exports_stream,
+     OBS_FROM_HARDWARE},
 };
 
 const obs_section obs_section_oracle = {
     "140-oracle",
     "Asking, not guessing",
-    "Whether the platform will resolve a symbol by name - which would replace the whole "
-    "guess-and-hash approach to naming - and what its real error codes are. Both record "
+    "Whether the platform will resolve a symbol by name - which would replace the "
+    "whole "
+    "guess-and-hash approach to naming - and what its real error codes are. Both "
+    "record "
     "answers rather than testing them.",
     oracle_checks,
     OBS_COUNT(oracle_checks),

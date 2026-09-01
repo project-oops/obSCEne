@@ -688,12 +688,14 @@ static obs_result check_getpctype(void) {
     }
 
     const void *(*fn_getptolower)(void) = (const void *(*)(void))_Getptolower;
-    if (fn_getptolower == NULL || !obs_address_is_callable((const void *)fn_getptolower)) {
+    if (fn_getptolower == NULL ||
+        !obs_address_is_callable((const void *)fn_getptolower)) {
         fn_getptolower = (const void *(*)(void))obs_module_symbol(1, "_Getptolower");
     }
 
     const void *(*fn_getptoupper)(void) = (const void *(*)(void))_Getptoupper;
-    if (fn_getptoupper == NULL || !obs_address_is_callable((const void *)fn_getptoupper)) {
+    if (fn_getptoupper == NULL ||
+        !obs_address_is_callable((const void *)fn_getptoupper)) {
         fn_getptoupper = (const void *(*)(void))obs_module_symbol(1, "_Getptoupper");
     }
 
@@ -708,44 +710,64 @@ static obs_result check_getpctype(void) {
      * (covering index -1 EOF through index 255). */
     const unsigned char *pct_raw = (const unsigned char *)pct_ptr - 16;
     for (unsigned int off = 0; off < 544; off += 16) {
-        obs_report_bytes("035-libc/getpctype", "_Getpctype", "table_raw_neg16", off, &pct_raw[off], 16);
+        obs_report_bytes("035-libc/getpctype", "_Getpctype", "table_raw_neg16", off,
+                         &pct_raw[off], 16);
     }
 
     /* Sample classification masks across known ASCII character classes */
     const uint16_t *ctable = (const uint16_t *)pct_ptr;
     const int16_t *ctable_s = (const int16_t *)pct_ptr;
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_eof_neg1", (uint64_t)(uint16_t)ctable_s[-1], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_nul_0", (uint64_t)ctable[0], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_tab_9", (uint64_t)ctable['\t'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_space_32", (uint64_t)ctable[' '], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_0_48", (uint64_t)ctable['0'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_9_57", (uint64_t)ctable['9'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_A_65", (uint64_t)ctable['A'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_F_70", (uint64_t)ctable['F'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_Z_90", (uint64_t)ctable['Z'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_a_97", (uint64_t)ctable['a'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_f_102", (uint64_t)ctable['f'], "mask");
-    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_z_122", (uint64_t)ctable['z'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_eof_neg1",
+                       (uint64_t)(uint16_t)ctable_s[-1], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_nul_0",
+                       (uint64_t)ctable[0], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_tab_9",
+                       (uint64_t)ctable['\t'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_space_32",
+                       (uint64_t)ctable[' '], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_0_48",
+                       (uint64_t)ctable['0'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_9_57",
+                       (uint64_t)ctable['9'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_A_65",
+                       (uint64_t)ctable['A'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_F_70",
+                       (uint64_t)ctable['F'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_Z_90",
+                       (uint64_t)ctable['Z'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_a_97",
+                       (uint64_t)ctable['a'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_f_102",
+                       (uint64_t)ctable['f'], "mask");
+    obs_report_measure("035-libc/getpctype", "_Getpctype", "mask_z_122",
+                       (uint64_t)ctable['z'], "mask");
 
     /* Sibling _Getptolower */
     if (fn_getptolower == NULL) {
         fn_getptolower = (const void *(*)(void))_Getptolower;
     }
-    if (fn_getptolower != NULL && obs_address_is_callable((const void *)fn_getptolower)) {
+    if (fn_getptolower != NULL &&
+        obs_address_is_callable((const void *)fn_getptolower)) {
         const void *ptolower_ptr = fn_getptolower();
         obs_report_measure("035-libc/getpctype", "_Getptolower", "pointer",
                            (uint64_t)(uintptr_t)ptolower_ptr, "address");
         if (ptolower_ptr != NULL) {
             const unsigned char *lower_raw = (const unsigned char *)ptolower_ptr - 16;
             for (unsigned int off = 0; off < 544; off += 16) {
-                obs_report_bytes("035-libc/getpctype", "_Getptolower", "table_raw_neg16", off, &lower_raw[off], 16);
+                obs_report_bytes("035-libc/getpctype", "_Getptolower",
+                                 "table_raw_neg16", off, &lower_raw[off], 16);
             }
             const int16_t *ltable_s = (const int16_t *)ptolower_ptr;
-            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_eof_neg1", (uint64_t)(uint16_t)ltable_s[-1], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_A_65", (uint64_t)(uint16_t)ltable_s['A'], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_Z_90", (uint64_t)(uint16_t)ltable_s['Z'], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_a_97", (uint64_t)(uint16_t)ltable_s['a'], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_0_48", (uint64_t)(uint16_t)ltable_s['0'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_eof_neg1",
+                               (uint64_t)(uint16_t)ltable_s[-1], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_A_65",
+                               (uint64_t)(uint16_t)ltable_s['A'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_Z_90",
+                               (uint64_t)(uint16_t)ltable_s['Z'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_a_97",
+                               (uint64_t)(uint16_t)ltable_s['a'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptolower", "entry_0_48",
+                               (uint64_t)(uint16_t)ltable_s['0'], "val");
         }
     }
 
@@ -753,21 +775,28 @@ static obs_result check_getpctype(void) {
     if (fn_getptoupper == NULL) {
         fn_getptoupper = (const void *(*)(void))_Getptoupper;
     }
-    if (fn_getptoupper != NULL && obs_address_is_callable((const void *)fn_getptoupper)) {
+    if (fn_getptoupper != NULL &&
+        obs_address_is_callable((const void *)fn_getptoupper)) {
         const void *ptoupper_ptr = fn_getptoupper();
         obs_report_measure("035-libc/getpctype", "_Getptoupper", "pointer",
                            (uint64_t)(uintptr_t)ptoupper_ptr, "address");
         if (ptoupper_ptr != NULL) {
             const unsigned char *upper_raw = (const unsigned char *)ptoupper_ptr - 16;
             for (unsigned int off = 0; off < 544; off += 16) {
-                obs_report_bytes("035-libc/getpctype", "_Getptoupper", "table_raw_neg16", off, &upper_raw[off], 16);
+                obs_report_bytes("035-libc/getpctype", "_Getptoupper",
+                                 "table_raw_neg16", off, &upper_raw[off], 16);
             }
             const int16_t *utable_s = (const int16_t *)ptoupper_ptr;
-            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_eof_neg1", (uint64_t)(uint16_t)utable_s[-1], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_a_97", (uint64_t)(uint16_t)utable_s['a'], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_z_122", (uint64_t)(uint16_t)utable_s['z'], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_A_65", (uint64_t)(uint16_t)utable_s['A'], "val");
-            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_0_48", (uint64_t)(uint16_t)utable_s['0'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_eof_neg1",
+                               (uint64_t)(uint16_t)utable_s[-1], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_a_97",
+                               (uint64_t)(uint16_t)utable_s['a'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_z_122",
+                               (uint64_t)(uint16_t)utable_s['z'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_A_65",
+                               (uint64_t)(uint16_t)utable_s['A'], "val");
+            obs_report_measure("035-libc/getpctype", "_Getptoupper", "entry_0_48",
+                               (uint64_t)(uint16_t)utable_s['0'], "val");
         }
     }
 
@@ -778,7 +807,8 @@ static obs_result check_wctype_and_fpu(void) {
     /* 1. Hardware FPU / MXCSR status */
     uint32_t mxcsr = 0;
     __asm__ __volatile__("stmxcsr %0" : "=m"(mxcsr));
-    obs_report_measure("035-libc/fpu-environment", "mxcsr", "raw", (uint64_t)mxcsr, "flags");
+    obs_report_measure("035-libc/fpu-environment", "mxcsr", "raw", (uint64_t)mxcsr,
+                       "flags");
     obs_report_measure("035-libc/fpu-environment", "mxcsr", "daz_denormals_are_zero",
                        (uint64_t)((mxcsr >> 6) & 1u), "flag");
     obs_report_measure("035-libc/fpu-environment", "mxcsr", "ftz_flush_to_zero",
@@ -789,9 +819,11 @@ static obs_result check_wctype_and_fpu(void) {
                        (uint64_t)((mxcsr >> 7) & 0x3fu), "mask");
 
     /* 2. Wide character classification tables */
-    const void *(*fn_getwctype)(void) = (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctype");
+    const void *(*fn_getwctype)(void) =
+        (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctype");
     if (fn_getwctype == NULL) {
-        fn_getwctype = (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctypetab");
+        fn_getwctype =
+            (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctypetab");
     }
     if (fn_getwctype != NULL && obs_address_is_callable((const void *)fn_getwctype)) {
         const void *wctype_ptr = fn_getwctype();
@@ -800,33 +832,40 @@ static obs_result check_wctype_and_fpu(void) {
         if (wctype_ptr != NULL) {
             const unsigned char *wctype_raw = (const unsigned char *)wctype_ptr;
             for (unsigned int off = 0; off < 256; off += 16) {
-                obs_report_bytes("035-libc/wctype", "_Getwctype", "table_raw", off, &wctype_raw[off], 16);
+                obs_report_bytes("035-libc/wctype", "_Getwctype", "table_raw", off,
+                                 &wctype_raw[off], 16);
             }
         }
     }
 
-    const void *(*fn_getwctolower)(void) = (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctolower");
-    if (fn_getwctolower != NULL && obs_address_is_callable((const void *)fn_getwctolower)) {
+    const void *(*fn_getwctolower)(void) =
+        (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctolower");
+    if (fn_getwctolower != NULL &&
+        obs_address_is_callable((const void *)fn_getwctolower)) {
         const void *wlower_ptr = fn_getwctolower();
         obs_report_measure("035-libc/wctype", "_Getwctolower", "pointer",
                            (uint64_t)(uintptr_t)wlower_ptr, "address");
         if (wlower_ptr != NULL) {
             const unsigned char *wlower_raw = (const unsigned char *)wlower_ptr;
             for (unsigned int off = 0; off < 256; off += 16) {
-                obs_report_bytes("035-libc/wctype", "_Getwctolower", "table_raw", off, &wlower_raw[off], 16);
+                obs_report_bytes("035-libc/wctype", "_Getwctolower", "table_raw", off,
+                                 &wlower_raw[off], 16);
             }
         }
     }
 
-    const void *(*fn_getwctoupper)(void) = (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctoupper");
-    if (fn_getwctoupper != NULL && obs_address_is_callable((const void *)fn_getwctoupper)) {
+    const void *(*fn_getwctoupper)(void) =
+        (const void *(*)(void))obs_module_symbol(OBS_HANDLE_SELF, "_Getwctoupper");
+    if (fn_getwctoupper != NULL &&
+        obs_address_is_callable((const void *)fn_getwctoupper)) {
         const void *wupper_ptr = fn_getwctoupper();
         obs_report_measure("035-libc/wctype", "_Getwctoupper", "pointer",
                            (uint64_t)(uintptr_t)wupper_ptr, "address");
         if (wupper_ptr != NULL) {
             const unsigned char *wupper_raw = (const unsigned char *)wupper_ptr;
             for (unsigned int off = 0; off < 256; off += 16) {
-                obs_report_bytes("035-libc/wctype", "_Getwctoupper", "table_raw", off, &wupper_raw[off], 16);
+                obs_report_bytes("035-libc/wctype", "_Getwctoupper", "table_raw", off,
+                                 &wupper_raw[off], 16);
             }
         }
     }
@@ -896,10 +935,11 @@ static const obs_check libc_checks[] = {
      (const void *)&strdup, check_strdup, OBS_FROM_SPEC},
     {"035-libc/sprintf", "libSceLibcInternal", "sprintf", OBS_CAP_LIBC, OBS_CAP_NONE,
      (const void *)&sprintf, check_sprintf, OBS_FROM_SPEC},
-    {"035-libc/getpctype", "libSceLibcInternal", "_Getpctype", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_getpctype, check_getpctype, OBS_FROM_SPEC},
-    {"035-libc/fpu-wctype", "libSceLibcInternal", "_Getwctype", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_wctype_and_fpu, check_wctype_and_fpu, OBS_FROM_SPEC},
+    {"035-libc/getpctype", "libSceLibcInternal", "_Getpctype", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_getpctype, check_getpctype, OBS_FROM_SPEC},
+    {"035-libc/fpu-wctype", "libSceLibcInternal", "_Getwctype", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_wctype_and_fpu, check_wctype_and_fpu,
+     OBS_FROM_SPEC},
 };
 
 const obs_section obs_section_libc = {

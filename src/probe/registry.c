@@ -21,7 +21,8 @@ const obs_section *const obs_sections[] = {
      * the clocks, since it needs nothing but symbol addresses. */
     &obs_section_generation,
     /* Before every behavioural section, because it changes how their failures read: a
-     * function that answers the same thing to everything is unimplemented, not wrong. */
+     * function that answers the same thing to everything is unimplemented, not wrong.
+     */
     &obs_section_responsive,
     &obs_section_kernel,
     /* Synchronisation, before anything that might rely on it. Chosen from what an
@@ -43,12 +44,13 @@ const obs_section *const obs_sections[] = {
     &obs_section_math,
     /* Operating-system services. */
     &obs_section_file,
-    /* After the file section, whose filesystem capability both need. Reach first: it reports a
-     * plain jailed/escaped verdict, so the SELF audit's skip-or-confirm below reads against a
-     * known filesystem context. Behaviour only, both of them. */
+    /* After the file section, whose filesystem capability both need. Reach first: it
+     * reports a plain jailed/escaped verdict, so the SELF audit's skip-or-confirm below
+     * reads against a known filesystem context. Behaviour only, both of them. */
     &obs_section_reach,
-    /* Confirms selfish's SELF format table against a real container, on the console, reporting
-     * only which rows the current generation keeps. Never copies the header off the box. (selfish#D086) */
+    /* Confirms selfish's SELF format table against a real container, on the console,
+     * reporting only which rows the current generation keeps. Never copies the header
+     * off the box. (selfish#D086) */
     &obs_section_selfaudit,
     &obs_section_time,
     &obs_section_module,
@@ -85,24 +87,24 @@ const obs_section *const obs_sections[] = {
     &obs_section_layout,
     /* Named knobs, beside the oracle for the same reason: it asks the platform about
      * itself rather than testing it. Before the oracle because a value read by name is
-     * the plainest question in the suite, and one of its answers is what another project
-     * is waiting on. */
+     * the plainest question in the suite, and one of its answers is what another
+     * project is waiting on. */
     &obs_section_sysctl,
-    /* Past the names entirely, after the section that reads them by name. Late because it
-     * builds a gadget out of arithmetic on a resolved address and calls through it, which is
-     * the one check here most likely to end the run - everything above it should have
-     * reported first. */
-    /* The handoff itself, read and classified - 136, before the section that calls through
-     * it. Reads only, so it is inert off a real console. */
+    /* Past the names entirely, after the section that reads them by name. Late because
+     * it builds a gadget out of arithmetic on a resolved address and calls through it,
+     * which is the one check here most likely to end the run - everything above it
+     * should have reported first. */
+    /* The handoff itself, read and classified - 136, before the section that calls
+     * through it. Reads only, so it is inert off a real console. */
     &obs_section_kernelprobe,
     &obs_section_kernelcall,
-    /* Where things are, beside the section that reaches them by number. Late for the same
-     * reason: it asks the platform about itself rather than testing it, and a reader wants the
-     * verdicts above it first. */
+    /* Where things are, beside the section that reaches them by number. Late for the
+     * same reason: it asks the platform about itself rather than testing it, and a
+     * reader wants the verdicts above it first. */
     &obs_section_layoutmap,
-    /* Export vaddrs, confirmed by behaviour. After the map that lists addresses and before the
-     * oracle, because it turns candidate offsets into measured ones by calling them - the safe
-     * counterpart to 136-kernel's read-only recon. */
+    /* Export vaddrs, confirmed by behaviour. After the map that lists addresses and
+     * before the oracle, because it turns candidate offsets into measured ones by
+     * calling them - the safe counterpart to 136-kernel's read-only recon. */
     &obs_section_exports,
     /* The oracle, last of the sections that call anything: it asks the platform about
      * itself rather than testing it, so a reader wants every verdict above it first. */
@@ -111,13 +113,13 @@ const obs_section *const obs_sections[] = {
      * reader is most likely to scroll to the end for. */
     &obs_section_memmap,
     /* GPU compute, before the census: it measures what the device computes, which is a
-     * question about the platform, so it belongs with the sections that call things rather
-     * than with the census that only counts them. Skips cheaply when built without the GPU
-     * capability. */
+     * question about the platform, so it belongs with the sections that call things
+     * rather than with the census that only counts them. Skips cheaply when built
+     * without the GPU capability. */
     &obs_section_gpu,
-    /* The console GPU API, right after the GPU execution probe: same subsystem, the other axis
-     * (the sceGnm calls rather than what the device computes). Skips as "not present" on any
-     * loader without libSceGnmDriver, the host build included. */
+    /* The console GPU API, right after the GPU execution probe: same subsystem, the
+     * other axis (the sceGnm calls rather than what the device computes). Skips as "not
+     * present" on any loader without libSceGnmDriver, the host build included. */
     &obs_section_gnm,
     &obs_section_surface,
     /* After the census, because it needs nothing the census establishes and because it
@@ -130,9 +132,11 @@ const unsigned int obs_section_count = OBS_COUNT(obs_sections);
 
 /* The screen has to be able to draw every section.
  *
- * Checked here rather than in `screen.c` because this is the file that decides how many there
- * are. A section added below without room on screen is now a build failure naming this line,
- * where before it was a row silently dropped and a display stuck at `SECTION 32 OF 33`. (D259)
+ * Checked here rather than in `screen.c` because this is the file that decides how many
+ * there are. A section added below without room on screen is now a build failure naming
+ * this line, where before it was a row silently dropped and a display stuck at `SECTION
+ * 32 OF 33`. (D259)
  */
-_Static_assert(OBS_COUNT(obs_sections) <= OBS_SCREEN_MAX,
-               "more sections than the screen can draw - raise OBS_SCREEN_MAX in sections.h");
+_Static_assert(
+    OBS_COUNT(obs_sections) <= OBS_SCREEN_MAX,
+    "more sections than the screen can draw - raise OBS_SCREEN_MAX in sections.h");

@@ -9,26 +9,29 @@
  *
  * **`ack` is written and flushed before the command runs.**
  *
- * Arbitrary calls with arbitrary arguments fault constantly - that is the normal case here,
- * not the exceptional one - and a probe cannot report its own death, because the process is
- * gone. So the protocol is arranged to make death legible from the *other* end: an `ack`
- * with no result, followed by a closed connection, means exactly one thing.
+ * Arbitrary calls with arbitrary arguments fault constantly - that is the normal case
+ * here, not the exceptional one - and a probe cannot report its own death, because the
+ * process is gone. So the protocol is arranged to make death legible from the *other*
+ * end: an `ack` with no result, followed by a closed connection, means exactly one
+ * thing.
  *
- * The driver records that as `died`. It never invents a value, and it never records a null
- * return, because a timeout written down as "returned 0" is fiction that is indistinguishable
- * from evidence - and it is the fiction that gets trusted later.
+ * The driver records that as `died`. It never invents a value, and it never records a
+ * null return, because a timeout written down as "returned 0" is fiction that is
+ * indistinguishable from evidence - and it is the fiction that gets trusted later.
  *
- * This is the same principle the report already applies to itself (CLAUDE.md, principle 1),
- * and it is the reason the ordering below is not negotiable: acknowledge, flush, then work.
+ * This is the same principle the report already applies to itself (CLAUDE.md, principle
+ * 1), and it is the reason the ordering below is not negotiable: acknowledge, flush,
+ * then work.
  *
  * # Capabilities are what this build can actually do
  *
- * Not a wish list. Every token announced in `hello` must be honourable, and anything else
- * is refused - a responder that guesses at a command it does not implement produces a
- * record that looks like evidence and is not.
+ * Not a wish list. Every token announced in `hello` must be honourable, and anything
+ * else is refused - a responder that guesses at a command it does not implement
+ * produces a record that looks like evidence and is not.
  *
- * The list is assembled from what is really present, so a build with the refusing network
- * backend, or a platform missing a function, announces less rather than failing later.
+ * The list is assembled from what is really present, so a build with the refusing
+ * network backend, or a platform missing a function, announces less rather than failing
+ * later.
  */
 
 #include "obscene/harness.h"
@@ -48,18 +51,19 @@
 
 /* One session's state.
  *
- * `last_seq` is not bookkeeping: sequence numbers must strictly increase, and a driver that
- * repeats or rewinds one has lost track of which reply belongs to which request. Catching
- * it here is cheaper than discovering it in a corpus afterwards. */
+ * `last_seq` is not bookkeeping: sequence numbers must strictly increase, and a driver
+ * that repeats or rewinds one has lost track of which reply belongs to which request.
+ * Catching it here is cheaper than discovering it in a corpus afterwards. */
 typedef struct obs_session {
     int connection;
     unsigned long last_seq;
     int greeted;
     int finished;
-    /* Printed in `hello` and on every `part`. The driver holds it, and a *different* one
-     * where it expected the old one is how a restart becomes visible - which matters
-     * because a faulting command ends the probe and something outside this protocol brings
-     * it back. Everything before a new identifier belongs to a different process. */
+    /* Printed in `hello` and on every `part`. The driver holds it, and a *different*
+     * one where it expected the old one is how a restart becomes visible - which
+     * matters because a faulting command ends the probe and something outside this
+     * protocol brings it back. Everything before a new identifier belongs to a
+     * different process. */
     char id[OBS_NUM_MAX + 1];
 } obs_session;
 
@@ -67,13 +71,13 @@ typedef struct obs_session {
  *
  * Derived from a clock where the platform has one, because the property that matters is
  * that a *restarted* probe produces a different value - and a counter starting from one
- * every time a process begins produces the same sequence on every run, which is precisely
- * the case restart detection exists to catch.
+ * every time a process begins produces the same sequence on every run, which is
+ * precisely the case restart detection exists to catch.
  *
- * Where there is no clock this falls back to a counter and **says so**, by prefixing the
- * value. A driver reading `c1` knows the identifier only distinguishes sessions within one
- * process and cannot see a restart; a driver reading a clock-derived one knows it can. An
- * identifier whose guarantees are unknowable would be worse than none.
+ * Where there is no clock this falls back to a counter and **says so**, by prefixing
+ * the value. A driver reading `c1` knows the identifier only distinguishes sessions
+ * within one process and cannot see a restart; a driver reading a clock-derived one
+ * knows it can. An identifier whose guarantees are unknowable would be worse than none.
  */
 static unsigned long obs_net_session_counter;
 
@@ -96,12 +100,13 @@ static void obs_net_session_id(obs_session *session) {
     session->id[at] = '\0';
 }
 
-/* ---- writing --------------------------------------------------------------------------
+/* ---- writing
+ * --------------------------------------------------------------------------
  *
  * Records are built here rather than through `obs_report_*`, because those write to the
  * report's own channels and these have to go to one particular socket. The shapes are
- * identical on purpose - a session transcript and a report are the same kind of artefact,
- * and the same parsers read both.
+ * identical on purpose - a session transcript and a report are the same kind of
+ * artefact, and the same parsers read both.
  */
 
 /* Appends a field's *contents*, with separators neutralised.
@@ -110,11 +115,11 @@ static void obs_net_session_id(obs_session *session) {
  * escaped - no parser then needs a matching unescape step, which is the same rule the
  * report follows.
  *
- * **Only for field contents.** The first version used this to write the `OBS|` prefix too,
- * and the sanitiser duly turned that separator into a space: every record went out as
- * `OBS ack|1|hello`. The wire format was wrong from the very first byte and it took
- * running a real session to see it, because the code reads as though it is writing what it
- * means to write. Structure is emitted by `obs_net_raw`, contents by this. */
+ * **Only for field contents.** The first version used this to write the `OBS|` prefix
+ * too, and the sanitiser duly turned that separator into a space: every record went out
+ * as `OBS ack|1|hello`. The wire format was wrong from the very first byte and it took
+ * running a real session to see it, because the code reads as though it is writing what
+ * it means to write. Structure is emitted by `obs_net_raw`, contents by this. */
 static size_t obs_net_append(char *out, size_t at, const char *text) {
     for (size_t i = 0; text[i] != '\0' && at < OBS_NET_REPLY_MAX - 2; i++) {
         char c = text[i];
@@ -174,11 +179,11 @@ static int obs_net_line(obs_session *session, const char *kind, const char *a,
 
 /* `ack`, and the flush that makes it mean something.
  *
- * The backend's send writes all of it or fails, so by the time this returns the bytes are
- * on the wire. That is what lets the other end distinguish "did not answer" from "was never
- * asked", and it is the reason this is a separate function rather than a line in each
- * handler - a handler that forgot to acknowledge would silently produce a command whose
- * death is unattributable. */
+ * The backend's send writes all of it or fails, so by the time this returns the bytes
+ * are on the wire. That is what lets the other end distinguish "did not answer" from
+ * "was never asked", and it is the reason this is a separate function rather than a
+ * line in each handler - a handler that forgot to acknowledge would silently produce a
+ * command whose death is unattributable. */
 static int obs_net_ack(obs_session *session, unsigned long seq, const char *verb) {
     char number[OBS_NUM_MAX + 1];
     size_t n = obs_format_u64(number, seq);
@@ -195,9 +200,10 @@ static int obs_net_done(obs_session *session, unsigned long seq, const char *out
     out[at++] = '|';
     at = obs_net_append(out, at, outcome);
     out[at++] = '|';
-    /* An empty value field rather than `0x0` where there is nothing to report. Zero is a
-     * legitimate answer from a call, and writing it for "no value" would make the two
-     * indistinguishable - which is the whole failure this protocol is arranged to avoid. */
+    /* An empty value field rather than `0x0` where there is nothing to report. Zero is
+     * a legitimate answer from a call, and writing it for "no value" would make the two
+     * indistinguishable - which is the whole failure this protocol is arranged to
+     * avoid. */
     if (outcome[0] == 'r' && outcome[1] == 'e' && outcome[2] == 't') {
         at = obs_net_append_hex(out, at, value);
     }
@@ -209,17 +215,19 @@ static int obs_net_done(obs_session *session, unsigned long seq, const char *out
     return obs_net_backend_send(session->connection, out, at) >= 0;
 }
 
-static int obs_net_refused(obs_session *session, unsigned long seq, const char *reason) {
+static int obs_net_refused(obs_session *session, unsigned long seq,
+                           const char *reason) {
     char number[OBS_NUM_MAX + 1];
     size_t n = obs_format_u64(number, seq);
     number[n] = '\0';
     return obs_net_line(session, "refused", number, reason, NULL);
 }
 
-/* ---- reading -------------------------------------------------------------------------- */
+/* ---- reading
+ * -------------------------------------------------------------------------- */
 
-/* Reads one newline-terminated line. Returns its length, or negative when the connection
- * has closed or the line exceeded the specification's limit. */
+/* Reads one newline-terminated line. Returns its length, or negative when the
+ * connection has closed or the line exceeded the specification's limit. */
 static long obs_net_read_line(obs_session *session, char *out, size_t max) {
     size_t at = 0;
     for (;;) {
@@ -233,8 +241,8 @@ static long obs_net_read_line(obs_session *session, char *out, size_t max) {
             return (long)at;
         }
         /* Carried over from a driver on a platform whose line endings differ. Dropped
-         * rather than refused: it is not ambiguous, and refusing would fail a session over
-         * something nobody would think to look for. */
+         * rather than refused: it is not ambiguous, and refusing would fail a session
+         * over something nobody would think to look for. */
         if (c == '\r') {
             continue;
         }
@@ -284,9 +292,9 @@ static uint64_t obs_net_parse_u64(const char *text, int *ok) {
     return value;
 }
 
-/* Hex, with or without the `0x` the protocol uses for addresses and arguments. Rejects an
- * empty string and any non-hex digit, so a malformed argument becomes a `bad-argument`
- * refusal rather than a call to a garbage address. */
+/* Hex, with or without the `0x` the protocol uses for addresses and arguments. Rejects
+ * an empty string and any non-hex digit, so a malformed argument becomes a
+ * `bad-argument` refusal rather than a call to a garbage address. */
 static uint64_t obs_net_parse_hex(const char *text, int *ok) {
     *ok = 0;
     if (text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
@@ -314,13 +322,13 @@ static uint64_t obs_net_parse_hex(const char *text, int *ok) {
     return value;
 }
 
-/* One `bytes` record, straight to the socket, in the exact shape `obs_report_bytes` uses so
- * the same parser reads a session and a report (docs/OUTPUT.md).
+/* One `bytes` record, straight to the socket, in the exact shape `obs_report_bytes`
+ * uses so the same parser reads a session and a report (docs/OUTPUT.md).
  *
- * Sixteen bytes per record, matching OBS_BYTES_PER_RECORD, so no line approaches the length
- * cap however large the read. This is a separate emitter from the report's because these
- * bytes are the driver's answer and must go down *this* socket, not to the probe's own
- * output channels. */
+ * Sixteen bytes per record, matching OBS_BYTES_PER_RECORD, so no line approaches the
+ * length cap however large the read. This is a separate emitter from the report's
+ * because these bytes are the driver's answer and must go down *this* socket, not to
+ * the probe's own output channels. */
 static int obs_net_bytes(obs_session *session, const char *id, unsigned int offset,
                          const unsigned char *bytes, unsigned int len) {
     static const char digits[] = "0123456789abcdef";
@@ -340,46 +348,48 @@ static int obs_net_bytes(obs_session *session, const char *id, unsigned int offs
 }
 
 /* The call primitive's function type. Committed to nothing but the calling convention -
- * the same variadic-prototype trick 910-bulk uses (D096), for the same reason: on this ABI
- * the caller cleans up, so handing six registers to a function that reads fewer cannot
- * corrupt the stack, and a variadic prototype zeroes the vector-count register a variadic
- * callee reads. D008 is about expectations, not calls, and a `call` asserts nothing about
- * what it invokes. */
-typedef uint64_t (*obs_net_fn)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
-                               ...);
+ * the same variadic-prototype trick 910-bulk uses (D096), for the same reason: on this
+ * ABI the caller cleans up, so handing six registers to a function that reads fewer
+ * cannot corrupt the stack, and a variadic prototype zeroes the vector-count register a
+ * variadic callee reads. D008 is about expectations, not calls, and a `call` asserts
+ * nothing about what it invokes. */
+typedef uint64_t (*obs_net_fn)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
+                               uint64_t, ...);
 
-
-/* ---- the session secret -----------------------------------------------------------------
+/* ---- the session secret
+ * -----------------------------------------------------------------
  *
  * # Why there is one
  *
- * `docs/PROTOCOL.md` describes this socket accurately: unauthenticated, and its `call` verb
- * invokes an arbitrary address with six arguments. On a development machine that is fine,
- * because the listener is on a machine with a firewall. On a console it is not: there is no
- * shell to tunnel through, the module binds every interface because the driver is on another
- * machine, and anything else on that network can connect and issue commands.
+ * `docs/PROTOCOL.md` describes this socket accurately: unauthenticated, and its `call`
+ * verb invokes an arbitrary address with six arguments. On a development machine that
+ * is fine, because the listener is on a machine with a firewall. On a console it is
+ * not: there is no shell to tunnel through, the module binds every interface because
+ * the driver is on another machine, and anything else on that network can connect and
+ * issue commands.
  *
  * # Generated per startup, never built in
  *
- * A secret compiled into the module would be shared by everybody who has that module, which
- * is the opposite of a secret. This is generated once when the probe starts listening and
- * lasts for that run: every session in the accept loop uses the same one, and restarting the
- * probe replaces it.
+ * A secret compiled into the module would be shared by everybody who has that module,
+ * which is the opposite of a secret. This is generated once when the probe starts
+ * listening and lasts for that run: every session in the accept loop uses the same one,
+ * and restarting the probe replaces it.
  *
- * It is **displayed**, because that is the only channel a console has - the HUD already draws
- * the port for the same reason ("read the address off the screen", which the protocol assumes)
- * and the secret goes beside it. It is also emitted as a record, so a host or emulator run can
- * read it off stdout without a camera.
+ * It is **displayed**, because that is the only channel a console has - the HUD already
+ * draws the port for the same reason ("read the address off the screen", which the
+ * protocol assumes) and the secret goes beside it. It is also emitted as a record, so a
+ * host or emulator run can read it off stdout without a camera.
  *
  * # What it defends and what it does not
  *
- * It stops another device on the network connecting and driving the probe. That is the threat
- * it exists for and it is effective against it.
+ * It stops another device on the network connecting and driving the probe. That is the
+ * threat it exists for and it is effective against it.
  *
- * It does **not** defend against anyone who can observe the link. The socket is cleartext, so
- * an adversary on the path reads the secret out of the `hello` and never needs to guess it,
- * and on the console the entropy behind it is timing jitter rather than a CSPRNG. Both facts
- * are in `docs/PROTOCOL.md` rather than left for someone to discover.
+ * It does **not** defend against anyone who can observe the link. The socket is
+ * cleartext, so an adversary on the path reads the secret out of the `hello` and never
+ * needs to guess it, and on the console the entropy behind it is timing jitter rather
+ * than a CSPRNG. Both facts are in `docs/PROTOCOL.md` rather than left for someone to
+ * discover.
  */
 #define OBS_NET_SECRET_BYTES 16u
 #define OBS_NET_SECRET_CHARS (OBS_NET_SECRET_BYTES * 2u)
@@ -413,13 +423,13 @@ int obs_net_secret_generate(void) {
 
 /* Compare without letting the time taken say how much was right.
  *
- * An ordinary comparison returns as soon as two bytes differ, so an attacker who can time the
- * response learns the secret one character at a time - a few hundred attempts rather than
- * 2^128. Every byte is compared here and the differences are accumulated.
+ * An ordinary comparison returns as soon as two bytes differ, so an attacker who can
+ * time the response learns the secret one character at a time - a few hundred attempts
+ * rather than 2^128. Every byte is compared here and the differences are accumulated.
  *
- * The offered string may be shorter than the secret, so the index into it stops advancing at
- * its terminator instead of running past the end of the buffer, and a final byte catches an
- * offered string that is longer. */
+ * The offered string may be shorter than the secret, so the index into it stops
+ * advancing at its terminator instead of running past the end of the buffer, and a
+ * final byte catches an offered string that is longer. */
 static int obs_net_secret_matches(const char *offered) {
     if (offered == NULL) {
         return 0;
@@ -437,29 +447,31 @@ static int obs_net_secret_matches(const char *offered) {
     return diff == 0;
 }
 
-/* ---- capabilities ----------------------------------------------------------------------
+/* ---- capabilities
+ * ----------------------------------------------------------------------
  *
  * Assembled from what this build can honour, not from what the grammar defines.
  *
- * `report` is always available: the compiled-in suite is the one thing the probe can always
- * do. The rest are absent until they are implemented, and their absence is how a driver
- * learns what this target is - a stand-in with no vendor libraries announces no `resolve`,
- * and a driver discovers that rather than assuming past it.
+ * `report` is always available: the compiled-in suite is the one thing the probe can
+ * always do. The rest are absent until they are implemented, and their absence is how a
+ * driver learns what this target is - a stand-in with no vendor libraries announces no
+ * `resolve`, and a driver discovers that rather than assuming past it.
  */
 static const char *obs_net_capabilities(void) {
-    /* `call` and `read` join `report`: both are always available - calling an address and
-     * reading memory need no vendor library to resolve first. `write` stays off, because a
-     * read or a call costs a crash at worst while a write costs a crash *and* whatever state
-     * was being built (docs/PROTOCOL.md, security posture).
+    /* `call` and `read` join `report`: both are always available - calling an address
+     * and reading memory need no vendor library to resolve first. `write` stays off,
+     * because a read or a call costs a crash at worst while a write costs a crash *and*
+     * whatever state was being built (docs/PROTOCOL.md, security posture).
      *
-     * `blob` and `reset` are announced only when the build opted into the escape hatch with
-     * OBS_NET_ESCAPE. `blob`/`run` execute code the socket supplied, so they are off unless a
-     * build deliberately turns them on - the doc's "blob is off unless enabled" made literal.
-     * A driver against a default build learns they are absent and does not assume past it. */
+     * `blob` and `reset` are announced only when the build opted into the escape hatch
+     * with OBS_NET_ESCAPE. `blob`/`run` execute code the socket supplied, so they are
+     * off unless a build deliberately turns them on - the doc's "blob is off unless
+     * enabled" made literal. A driver against a default build learns they are absent
+     * and does not assume past it. */
 #if defined(OBS_GPU)
     /* `gpu` only when a backend is actually up - a GPU build on a target with no usable
-     * device (the console's refusing stub) announces nothing it cannot honour, exactly the
-     * rule the capability list exists to keep. */
+     * device (the console's refusing stub) announces nothing it cannot honour, exactly
+     * the rule the capability list exists to keep. */
     if (obs_gpu_backend_available()) {
 #if defined(OBS_NET_ESCAPE)
         return "call,read,report,gpu,blob,reset";
@@ -475,11 +487,12 @@ static const char *obs_net_capabilities(void) {
 #endif
 }
 
-/* The call primitive: invoke an address with up to six integer arguments, report the return.
+/* The call primitive: invoke an address with up to six integer arguments, report the
+ * return.
  *
- * The announcement in the session loop is already on the wire before this runs, so a call
- * that faults leaves an `ack` with no `done` and the driver records `died` - which is the
- * normal, expected outcome of poking an arbitrary address, not an error path. */
+ * The announcement in the session loop is already on the wire before this runs, so a
+ * call that faults leaves an `ack` with no `done` and the driver records `died` - which
+ * is the normal, expected outcome of poking an arbitrary address, not an error path. */
 static int obs_net_call(obs_session *session, unsigned long seq, char **fields,
                         unsigned int count) {
     int ok = 0;
@@ -487,14 +500,14 @@ static int obs_net_call(obs_session *session, unsigned long seq, char **fields,
     /* A malformed address is refused; a *valid but fatal* one (0, an unmapped page) is
      * not. `call` invokes what it is told to, and a call that faults is the normal,
      * designed outcome - the `ack` is already on the wire, so the death reads as a lone
-     * `ack` and the driver records `died`. Special-casing 0 here would both contradict the
-     * spec and hide the death path a consumer must handle anyway. */
+     * `ack` and the driver records `died`. Special-casing 0 here would both contradict
+     * the spec and hide the death path a consumer must handle anyway. */
     if (count < 4 || !ok) {
         return obs_net_refused(session, seq, "bad-argument");
     }
-    /* Up to six arguments, hex, defaulting to zero. A malformed one is refused rather than
-     * silently read as zero - a wrong argument to an arbitrary call is not something to
-     * paper over. */
+    /* Up to six arguments, hex, defaulting to zero. A malformed one is refused rather
+     * than silently read as zero - a wrong argument to an arbitrary call is not
+     * something to paper over. */
     uint64_t a[6] = {0, 0, 0, 0, 0, 0};
     for (unsigned int i = 0; i < 6u && (unsigned int)(4 + i) < count; i++) {
         int arg_ok = 0;
@@ -508,12 +521,14 @@ static int obs_net_call(obs_session *session, unsigned long seq, char **fields,
     return obs_net_done(session, seq, "returned", returned, NULL);
 }
 
-/* The read primitive: dump guest memory as `bytes` records, then a `done` with the length.
+/* The read primitive: dump guest memory as `bytes` records, then a `done` with the
+ * length.
  *
- * An unmapped address faults, which is the `died` path (ack, then the connection closes) -
- * not a refusal. That is deliberate per the spec: "this address is not readable" and
- * "asking about this address killed the process" are different facts, and this build reports
- * the second by dying rather than pretending it could test the address first. */
+ * An unmapped address faults, which is the `died` path (ack, then the connection
+ * closes) - not a refusal. That is deliberate per the spec: "this address is not
+ * readable" and "asking about this address killed the process" are different facts, and
+ * this build reports the second by dying rather than pretending it could test the
+ * address first. */
 static int obs_net_read(obs_session *session, unsigned long seq, char **fields,
                         unsigned int count) {
     int addr_ok = 0;
@@ -526,8 +541,8 @@ static int obs_net_read(obs_session *session, unsigned long seq, char **fields,
 
     /* `read/0x…`, matching the id in docs/examples/protocol/06-read.txt so a consumer
      * built against that transcript reads a live session unchanged. `obs_format_hex`
-     * already writes the `0x` prefix - adding one here produced `read/0x0x…`, which is why
-     * the prefix is not written by hand. */
+     * already writes the `0x` prefix - adding one here produced `read/0x0x…`, which is
+     * why the prefix is not written by hand. */
     char id[5 + 2 + 16 + 1];
     size_t at = 0;
     id[at++] = 'r';
@@ -548,7 +563,8 @@ static int obs_net_read(obs_session *session, unsigned long seq, char **fields,
     return obs_net_done(session, seq, "returned", len, NULL);
 }
 
-/* ---- the session ----------------------------------------------------------------------- */
+/* ---- the session
+ * ----------------------------------------------------------------------- */
 
 static int obs_net_hello(obs_session *session, unsigned long seq, char **fields,
                          unsigned int count) {
@@ -561,14 +577,14 @@ static int obs_net_hello(obs_session *session, unsigned long seq, char **fields,
     /* The secret, checked before a single capability is disclosed.
      *
      * Placed here rather than beside `greeted` below because the reply to `hello` names
-     * everything this build can do, and an unauthenticated peer should not learn that. The
-     * existing gate does the rest of the work: every other verb is refused with
+     * everything this build can do, and an unauthenticated peer should not learn that.
+     * The existing gate does the rest of the work: every other verb is refused with
      * `not-negotiated` until `greeted` is set, and returning here never sets it.
      *
      * Field 4, appended after the version, which is what `docs/OUTPUT.md` permits - new
-     * fields go on the end of a line. A driver built before this existed still works against
-     * a probe that could not generate a secret, and gets a clear refusal against one that
-     * did, rather than a parse error. */
+     * fields go on the end of a line. A driver built before this existed still works
+     * against a probe that could not generate a secret, and gets a clear refusal
+     * against one that did, rather than a parse error. */
     if (obs_net_secret_ready) {
         const char *offered = count > 4 ? fields[4] : "";
         if (!obs_net_secret_matches(offered)) {
@@ -577,8 +593,9 @@ static int obs_net_hello(obs_session *session, unsigned long seq, char **fields,
     }
 
     /* At most what the driver asked for, and this build speaks exactly one version. A
-     * driver asking for a later one is answered in the version both understand rather than
-     * being refused, which is what makes the version field useful rather than a gate. */
+     * driver asking for a later one is answered in the version both understand rather
+     * than being refused, which is what makes the version field useful rather than a
+     * gate. */
     if (!obs_net_line(session, "hello", "1", session->id, obs_net_capabilities())) {
         return 0;
     }
@@ -586,17 +603,18 @@ static int obs_net_hello(obs_session *session, unsigned long seq, char **fields,
     /* What the probe can *observe* about itself, and nothing it cannot.
      *
      * `binary` is the build kind (module/host), not the machine - it used to be sent as
-     * `target`, which squatted on the key a consumer grades by with a value that is not a
-     * machine at all. The machine identity - `target`, `gpu`, `firmware`, above all whether
-     * this is real hardware - a probe **cannot certify**: inside an emulator every system
-     * call answers as the emulator chooses, so a self-reported `firmware` would be an
-     * emulator's value wearing the hardware's badge. That identity is the operator's to assert
-     * through the driver (`drive --part target=prospero`), never the probe's to claim. See
-     * docs/OUTPUT.md, "The origin is stamped by the operator, not claimed by the probe". */
-    if (!obs_net_line(session, "part", session->id, "probe", OBSCENE_BUILD_ID)
-        || !obs_net_line(session, "part", session->id, "binary", OBSCENE_TARGET)
-        || !obs_net_line(session, "part", session->id, "transport",
-                         obs_net_backend_name())) {
+     * `target`, which squatted on the key a consumer grades by with a value that is not
+     * a machine at all. The machine identity - `target`, `gpu`, `firmware`, above all
+     * whether this is real hardware - a probe **cannot certify**: inside an emulator
+     * every system call answers as the emulator chooses, so a self-reported `firmware`
+     * would be an emulator's value wearing the hardware's badge. That identity is the
+     * operator's to assert through the driver (`drive --part target=prospero`), never
+     * the probe's to claim. See docs/OUTPUT.md, "The origin is stamped by the operator,
+     * not claimed by the probe". */
+    if (!obs_net_line(session, "part", session->id, "probe", OBSCENE_BUILD_ID) ||
+        !obs_net_line(session, "part", session->id, "binary", OBSCENE_TARGET) ||
+        !obs_net_line(session, "part", session->id, "transport",
+                      obs_net_backend_name())) {
         return 0;
     }
     session->greeted = 1;
@@ -605,11 +623,11 @@ static int obs_net_hello(obs_session *session, unsigned long seq, char **fields,
 
 /* The report tee: copy one already-formatted record straight to the session socket.
  *
- * Installed via obs_set_write_tee only while a `report` command runs, so the suite's records
- * reach the driver between its `ack` and `done`. The bytes are a complete `OBS|…\n` line
- * already, so this forwards them verbatim - the same shape the driver reads from a report
- * file. A send failure is swallowed: the session is ending anyway, and the `done` that
- * follows will fail to send too and end the loop cleanly. */
+ * Installed via obs_set_write_tee only while a `report` command runs, so the suite's
+ * records reach the driver between its `ack` and `done`. The bytes are a complete
+ * `OBS|…\n` line already, so this forwards them verbatim - the same shape the driver
+ * reads from a report file. A send failure is swallowed: the session is ending anyway,
+ * and the `done` that follows will fail to send too and end the loop cleanly. */
 static void obs_net_tee(void *ctx, const char *bytes, size_t len) {
     obs_session *session = (obs_session *)ctx;
     (void)obs_net_backend_send(session->connection, bytes, len);
@@ -618,22 +636,23 @@ static void obs_net_tee(void *ctx, const char *bytes, size_t len) {
 #if defined(OBS_GPU)
 /* The gpu primitive: dispatch a compiled-in kernel over caller-supplied operands.
  *
- * `CMD|seq|gpu|<kernel>|<op0>|<op1>|...` - the operands are 32-bit words (float bits) fed to
- * the named shader. Unlike `call` and `blob`, this runs only shaders the build already
- * contains, so it executes nothing arbitrary: the driver picks *which* known kernel and
- * *what* inputs, which is the interactive loop - a new question without a rebuild.
+ * `CMD|seq|gpu|<kernel>|<op0>|<op1>|...` - the operands are 32-bit words (float bits)
+ * fed to the named shader. Unlike `call` and `blob`, this runs only shaders the build
+ * already contains, so it executes nothing arbitrary: the driver picks *which* known
+ * kernel and *what* inputs, which is the interactive loop - a new question without a
+ * rebuild.
  *
- * The operands follow the same lane layout the section uses, applied per command: a unary
- * kernel takes N operands as N lanes; an arity-k kernel takes a multiple of k, each group a
- * tuple laid out `[in0..in_{k-1}, out]`. Results come back as the same `gpu`/`gpuop` records
- * a report emits, teed to this socket, so a driver reads a live dispatch exactly as it reads
- * a captured one - and `gpudev` goes first, so the results are never read without their
- * provenance.
+ * The operands follow the same lane layout the section uses, applied per command: a
+ * unary kernel takes N operands as N lanes; an arity-k kernel takes a multiple of k,
+ * each group a tuple laid out `[in0..in_{k-1}, out]`. Results come back as the same
+ * `gpu`/`gpuop` records a report emits, teed to this socket, so a driver reads a live
+ * dispatch exactly as it reads a captured one - and `gpudev` goes first, so the results
+ * are never read without their provenance.
  *
- * A dispatch that fails without crashing (a Vulkan error, the probe still alive) is not a
- * death: it returns zero lanes and no records, which a driver tells from success by the
- * lane count in the `done`. A dispatch that *ends the process* is the ordinary `ack`-with-no
- * `done` path, handled by the driver as `died` like any other. */
+ * A dispatch that fails without crashing (a Vulkan error, the probe still alive) is not
+ * a death: it returns zero lanes and no records, which a driver tells from success by
+ * the lane count in the `done`. A dispatch that *ends the process* is the ordinary
+ * `ack`-with-no `done` path, handled by the driver as `died` like any other. */
 static int obs_net_gpu(obs_session *session, unsigned long seq, char **fields,
                        unsigned int count) {
     /* Bounded, so one command cannot ask for an unbounded buffer. The line-length cap
@@ -648,8 +667,8 @@ static int obs_net_gpu(obs_session *session, unsigned long seq, char **fields,
     const char *kernel = fields[3];
     unsigned int arity = obs_gpu_arity(kernel);
     if (arity == 0u) {
-        /* Unknown kernel: refused, not guessed. The driver learns the names from a report,
-         * where every kernel appears. */
+        /* Unknown kernel: refused, not guessed. The driver learns the names from a
+         * report, where every kernel appears. */
         return obs_net_refused(session, seq, "bad-argument");
     }
 
@@ -665,7 +684,8 @@ static int obs_net_gpu(obs_session *session, unsigned long seq, char **fields,
         }
     }
 
-    unsigned int stride = arity > 1u ? arity + 1u : 1u; /* unary is in place, stride 1 */
+    unsigned int stride =
+        arity > 1u ? arity + 1u : 1u; /* unary is in place, stride 1 */
     unsigned int lanes = arity == 1u ? nops : nops / arity;
     unsigned int words = lanes * stride;
     for (unsigned int l = 0; l < lanes; l++) {
@@ -695,20 +715,22 @@ static int obs_net_gpu(obs_session *session, unsigned long seq, char **fields,
     }
     obs_set_write_tee(0, 0);
 
-    /* The lane count on success, zero on a graceful failure - which the driver reads as "ran
-     * but produced nothing", distinct from a death. */
+    /* The lane count on success, zero on a graceful failure - which the driver reads as
+     * "ran but produced nothing", distinct from a death. */
     return obs_net_done(session, seq, "returned", rc == 0 ? lanes : 0u, NULL);
 }
 #endif /* OBS_GPU */
 
 /* Serves commands until the driver leaves or the connection drops. */
 #if defined(OBS_NET_ESCAPE)
-/* ---- the escape hatch: blob, run and reset ---------------------------------------------
+/* ---- the escape hatch: blob, run and reset
+ * ---------------------------------------------
  *
- * Compiled only when a build defines OBS_NET_ESCAPE, because `blob`/`run` execute code the
- * socket supplied - the doc's "blob is off unless enabled" made literal. Storage is a small
- * fixed table, not an allocation, in keeping with the freestanding rule: a handful of blobs
- * can be resident and named, and `reset` returns to the known state of none.
+ * Compiled only when a build defines OBS_NET_ESCAPE, because `blob`/`run` execute code
+ * the socket supplied - the doc's "blob is off unless enabled" made literal. Storage is
+ * a small fixed table, not an allocation, in keeping with the freestanding rule: a
+ * handful of blobs can be resident and named, and `reset` returns to the known state of
+ * none.
  */
 #define OBS_BLOB_COUNT 4
 #define OBS_BLOB_MAX 4096u
@@ -731,8 +753,8 @@ static void obs_blob_clear(void) {
     }
 }
 
-/* The blob named `id`, or the first free slot when `create` and none matches. Null when the
- * id is empty or too long, or the table is full and none matched. */
+/* The blob named `id`, or the first free slot when `create` and none matches. Null when
+ * the id is empty or too long, or the table is full and none matched. */
 static obs_blob *obs_blob_find(const char *id, int create) {
     size_t n = 0;
     while (id[n]) {
@@ -775,8 +797,9 @@ static int obs_net_nibble(char c) {
     return -1;
 }
 
-/* CMD|seq|blob|id|offset|hex - uploads a chunk of machine code at an offset into a named blob.
- * Chunked so a line stays inside the length bound; the id lets several be resident at once. */
+/* CMD|seq|blob|id|offset|hex - uploads a chunk of machine code at an offset into a
+ * named blob. Chunked so a line stays inside the length bound; the id lets several be
+ * resident at once. */
 static int obs_net_blob(obs_session *session, unsigned long seq, char **fields,
                         unsigned int count) {
     if (count < 6) {
@@ -814,14 +837,16 @@ static int obs_net_blob(obs_session *session, unsigned long seq, char **fields,
     if ((size_t)offset + nbytes > b->len) {
         b->len = (size_t)offset + nbytes;
     }
-    /* The `done` value is the count of bytes this chunk carried, so a driver uploading in
-     * chunks can check each landed whole - see docs/examples/protocol/07-blob-run.txt. */
+    /* The `done` value is the count of bytes this chunk carried, so a driver uploading
+     * in chunks can check each landed whole - see
+     * docs/examples/protocol/07-blob-run.txt. */
     return obs_net_done(session, seq, "returned", (uint64_t)nbytes, 0);
 }
 
-/* CMD|seq|run|id|arg0|... - calls an uploaded blob with up to six integer args and reports the
- * return. A blob that faults ends the process (ack with no done -> the driver records died),
- * exactly like `call`; a backend that cannot execute at all makes this `unsupported`. */
+/* CMD|seq|run|id|arg0|... - calls an uploaded blob with up to six integer args and
+ * reports the return. A blob that faults ends the process (ack with no done -> the
+ * driver records died), exactly like `call`; a backend that cannot execute at all makes
+ * this `unsupported`. */
 static int obs_net_run(obs_session *session, unsigned long seq, char **fields,
                        unsigned int count) {
     if (count < 4) {
@@ -848,9 +873,10 @@ static int obs_net_run(obs_session *session, unsigned long seq, char **fields,
     return obs_net_done(session, seq, "returned", result, 0);
 }
 
-/* CMD|seq|reset - frees the resident blobs and returns to the known state of none loaded.
- * The detail says how many were freed, in the same shape as 08-reset.txt's console reset - a
- * reset that returns `ok` and reports nothing is the one the doc warns reads as doing nothing. */
+/* CMD|seq|reset - frees the resident blobs and returns to the known state of none
+ * loaded. The detail says how many were freed, in the same shape as 08-reset.txt's
+ * console reset - a reset that returns `ok` and reports nothing is the one the doc
+ * warns reads as doing nothing. */
 static int obs_net_reset(obs_session *session, unsigned long seq) {
     unsigned int freed = 0;
     for (unsigned int i = 0; i < OBS_BLOB_COUNT; i++) {
@@ -871,8 +897,9 @@ static int obs_net_reset(obs_session *session, unsigned long seq) {
 static void obs_net_session(obs_session *session) {
     char line[OBS_NET_LINE_MAX];
 #if defined(OBS_NET_ESCAPE)
-    /* A fresh session starts with no blobs resident, whatever a prior one left in the static
-     * table. reset returns here mid-session; this guarantees it at the start of one. */
+    /* A fresh session starts with no blobs resident, whatever a prior one left in the
+     * static table. reset returns here mid-session; this guarantees it at the start of
+     * one. */
     obs_blob_clear();
 #endif
     while (!session->finished) {
@@ -891,9 +918,9 @@ static void obs_net_session(obs_session *session) {
             continue;
         }
 
-        /* Wide enough for the longest request: `CMD|seq|call|addr|a0|a1|a2|a3|a4|a5`, ten
-         * fields. A narrower split would silently drop a call's later arguments into the
-         * last field, which is a wrong call rather than a refused one. */
+        /* Wide enough for the longest request: `CMD|seq|call|addr|a0|a1|a2|a3|a4|a5`,
+         * ten fields. A narrower split would silently drop a call's later arguments
+         * into the last field, which is a wrong call rather than a refused one. */
         char *fields[12];
         unsigned int count = obs_net_split(line, fields, 12);
         if (count < 3 || !obs_net_equal(fields[0], "CMD")) {
@@ -910,10 +937,10 @@ static void obs_net_session(obs_session *session) {
         session->last_seq = (unsigned long)seq;
         const char *verb = fields[2];
 
-        /* Acknowledged before anything else happens, including before the verb is known to
-         * be one we implement. A refusal is still a command that was attempted, and the
-         * transcript is easier to read - and easier to check - when every request has an
-         * acknowledgement rather than only the ones that got somewhere. */
+        /* Acknowledged before anything else happens, including before the verb is known
+         * to be one we implement. A refusal is still a command that was attempted, and
+         * the transcript is easier to read - and easier to check - when every request
+         * has an acknowledgement rather than only the ones that got somewhere. */
         if (!obs_net_ack(session, (unsigned long)seq, verb)) {
             return;
         }
@@ -986,10 +1013,11 @@ static void obs_net_session(obs_session *session) {
 #else
         if (obs_net_equal(verb, "blob") || obs_net_equal(verb, "run") ||
             obs_net_equal(verb, "reset")) {
-            /* Known verbs, but this build did not compile the escape hatch, so their capability
-             * was never announced. Refused `not-negotiated` - the reason a capability outside
-             * the negotiated set gets (docs/examples/protocol/09-no-reset.txt), not
-             * unknown-verb, which would deny they are part of the grammar at all. */
+            /* Known verbs, but this build did not compile the escape hatch, so their
+             * capability was never announced. Refused `not-negotiated` - the reason a
+             * capability outside the negotiated set gets
+             * (docs/examples/protocol/09-no-reset.txt), not unknown-verb, which would
+             * deny they are part of the grammar at all. */
             if (!obs_net_refused(session, (unsigned long)seq, "not-negotiated")) {
                 return;
             }
@@ -1001,13 +1029,13 @@ static void obs_net_session(obs_session *session) {
             /* The compiled-in suite, streamed down the socket as it runs.
              *
              * The tee copies every record to this session while the suite runs, so the
-             * driver receives the section/try/res/sym/tally records between this `ack` and
-             * the `done`, as docs/PROTOCOL.md describes - and the report still reaches
-             * stdout and the file sink, because the tee is additive. Cleared afterwards so
-             * nothing outside a `report` command goes to the socket.
+             * driver receives the section/try/res/sym/tally records between this `ack`
+             * and the `done`, as docs/PROTOCOL.md describes - and the report still
+             * reaches stdout and the file sink, because the tee is additive. Cleared
+             * afterwards so nothing outside a `report` command goes to the socket.
              *
-             * The `done` value stays the fail count, now as a summary line after the full
-             * stream rather than instead of it. */
+             * The `done` value stays the fail count, now as a summary line after the
+             * full stream rather than instead of it. */
             obs_set_write_tee(obs_net_tee, session);
             obs_tally tally = obs_run_all();
             obs_set_write_tee(0, 0);
@@ -1018,8 +1046,8 @@ static void obs_net_session(obs_session *session) {
             continue;
         }
 
-        /* Never guessed at, never approximated. A responder that interprets a command it
-         * does not know produces a record that looks like evidence and is not. */
+        /* Never guessed at, never approximated. A responder that interprets a command
+         * it does not know produces a record that looks like evidence and is not. */
         if (!obs_net_refused(session, (unsigned long)seq, "unknown-verb")) {
             return;
         }

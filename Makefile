@@ -456,24 +456,13 @@ SELFISH ?= ../selfish
 # `GEN` still decides what the **code** targets, and stays 5: `-DOBSCENE_GEN` picks which entry
 # points the probe calls at run time, and a real eboot marked `0` is still a current-generation
 # title. What changes here is only what the file says it is.
-EBOOT_GEN ?= 4
-EBOOT_TABLE ?= legacy
+EBOOT_GEN ?= $(GEN)
+EBOOT_TABLE ?= $(TABLE)
 
-# Which `e_type` the eboot carries, and it is the one thing the console and every emulator
-# disagree about.
-#
-#   fixed       0xFE00   what a real package's eboot carries, and what a console's rtld runs
-#   executable  0xFE10   what every emulator and `elfldr` accept, and what rtld refuses by name
-#
-# `fixed` is the default because the package is the point. `executable` exists so the *same*
-# eboot - same sources, same twelve libraries, same run-time census - can be put through an
-# emulator before it is put through a console:
-#
-#   make eboot EBOOT_KIND=executable    # then: PS5PCEM game-run build/eboot.bin
-#
-# Everything except the four bytes is identical, so a run under an emulator tests the parts
-# that are expensive to get wrong on hardware. Nothing else in the build changes. (D231)
-EBOOT_KIND ?= fixed
+# Which `e_type` the eboot carries:
+#   fixed       0xFE00   what a previous-generation package's eboot carries
+#   executable  0xFE10   what native current-generation (PS5) eboots carry and what kstuff expects
+EBOOT_KIND ?= $(if $(filter 5,$(EBOOT_GEN)),executable,fixed)
 
 TARGET_LD ?= $(SELFISH)/link/module.ld
 
@@ -856,29 +845,22 @@ eboot: tool eboot-libs-guard $(BUILD)/symbols-no-census.txt $(EBOOT_OBJ) | $(BUI
 # built without it is never the package anybody wanted. `pkg-min` declared it and this
 # did not, which is the whole of the difference - `build-pkg.sh` warned and then died
 # several steps later on a missing file, reporting `NotFound` with no path.
+pkg: EBOOT_GEN = 4
+pkg: EBOOT_TABLE = legacy
+pkg: EBOOT_KIND = fixed
 pkg: eboot sce-module | $(BUILD)
-	@SELFISH=$(SELFISH) GEN=$(GEN) bash scripts/build-pkg.sh $(BUILD)
+	@SELFISH=$(SELFISH) GEN=4 bash scripts/build-pkg.sh $(BUILD)
 
-# obSCEne as a native title entry, which is a different thing from a package.
+# obSCEne as a native title entry.
 #
 # `pkg` builds a previous-generation package: it installs through the compatibility path and is
-# badged accordingly, because that is what it is. `native` builds the current generation's own
-# title layout — a directory described by param.json, registered by a payload with kernel
-# privileges.
-#
-# It is a home-screen entry, not an executable title. A native title that ran its own code
-# would need a signed eboot, and no fake-signing keyset exists for this generation. obSCEne's
-# code runs outside the compatibility sandbox already, as a payload; this gives it somewhere to
-# be launched from.
+# badged accordingly. `native` builds the current generation's own title layout — a directory
+# described by param.json, with a Gen-5 native eboot (e_type 0xFE10, EI_ABIVERSION 2, current tables)
+# accepted by kstuff under kstuff's native PS5 auth rules.
 .PHONY: native
-# The native title's eboot uses the container a real current-generation title's eboot uses, which
-# hardware measurement showed is `4F 15 3D 1D` (the default EBOOT_GEN=4) - NOT the `54 14 F5 EE`
-# magic selfish's table (a stated hypothesis) labels "current generation" and that no installed
-# title on hardware actually carries: `048-selfaudit/metadata-differential` measured
-# gen4_containers=1, gen5_containers=0 on a ps5 native title (PPSA02664). So `native` takes the
-# default gen-4 container, same as `pkg`; what makes it a ps5 native title is `param.json` + native
-# registration, not the eboot magic. `make native EBOOT_GEN=5` still builds the `54 14 F5 EE`
-# variant to try against hardware, but it matches nothing measured so far. (D289, D293)
+native: EBOOT_GEN = 5
+native: EBOOT_TABLE = current
+native: EBOOT_KIND = executable
 native: eboot | $(BUILD)
 	@SELFISH=$(SELFISH) bash scripts/build-native.sh $(BUILD)
 

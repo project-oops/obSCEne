@@ -91,9 +91,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceLibcInternal", "isalpha"},
     {"libSceLibcInternal", "isspace"},
     {"libSceLibcInternal", "isupper"},
-    /* The ctype table accessors the isxxx/toxxx macros expand to - undefined references the checks
-     * above pull in by using ctype, resolved from the same library. The mined corpus places them
-     * here. (D290) */
+    /* The ctype table accessors the isxxx/toxxx macros expand to - undefined references
+     * the checks above pull in by using ctype, resolved from the same library. The
+     * mined corpus places them here. (D290) */
     {"libSceLibcInternal", "_Getpctype"},
     {"libSceLibcInternal", "_Getptolower"},
     {"libSceLibcInternal", "_Getptoupper"},
@@ -221,27 +221,32 @@ static const obs_import obs_platform_imports[] = {
     {"libSceNet", "sceNetSend"},
     {"libSceNet", "sceNetSocketClose"},
 
-    /* The GPU command-builders (src/sections/gnm.c). Only the two whose arity two independent
-     * reimplementations confirm; the rest of libSceGnmDriver stays in the census, uncalled. */
+    /* The GPU command-builders (src/sections/gnm.c). Only the two whose arity two
+     * independent reimplementations confirm; the rest of libSceGnmDriver stays in the
+     * census, uncalled. */
     {"libSceGnmDriver", "sceGnmDispatchInitDefaultHardwareState"},
     {"libSceGnmDriver", "sceGnmDispatchDirect"},
     /* Called by checks and, until now, declared only by the census.
      *
-     * That worked because the census imports every name it lists, so the association existed
-     * - in the wrong file. A build that does not link the census (D227) has these as undefined
-     * symbols nothing claims, and `mkmodule` refuses it by name, which is how they were found:
+     * That worked because the census imports every name it lists, so the association
+     * existed
+     * - in the wrong file. A build that does not link the census (D227) has these as
+     * undefined symbols nothing claims, and `mkmodule` refuses it by name, which is how
+     * they were found:
      *
-     *     error: 4 imported symbol(s) have no library ... sceGnmDrawIndex, sceGnmSubmitDone
+     *     error: 4 imported symbol(s) have no library ... sceGnmDrawIndex,
+     * sceGnmSubmitDone
      *
-     * A symbol a check *calls* belongs here whether or not the census also lists it. The
-     * libraries are the census's own, not a guess: `libSceGnmDriver` from the `graphics` group
-     * and `libSceAgc` from `agc`. */
+     * A symbol a check *calls* belongs here whether or not the census also lists it.
+     * The libraries are the census's own, not a guess: `libSceGnmDriver` from the
+     * `graphics` group and `libSceAgc` from `agc`. */
     {"libSceGnmDriver", "sceGnmDrawIndex"},
     {"libSceGnmDriver", "sceGnmSubmitCommandBuffers"},
     {"libSceGnmDriver", "sceGnmSubmitDone"},
 
     /* Address-probed by the HUD (src/sysinfo.c), never called - its struct layout is
-     * unconfirmed. Listed so mkmodule knows the library the presence probe imports from. */
+     * unconfirmed. Listed so mkmodule knows the library the presence probe imports
+     * from. */
     {"libSceNetCtl", "sceNetCtlInit"},
     {"libSceNetCtl", "sceNetCtlGetInfo"},
 
@@ -251,9 +256,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceVideoOut", "sceVideoOutGetResolutionStatus"},
     {"libSceVideoOut", "sceVideoOutGetFlipStatus"},
 
-    /* Escaping the sandbox to write the report where ftp can read it (mkdir a path outside
-     * the jail; a timestamp for it). Added for the second thread's disk-escape work; libkernel
-     * by the sceKernel* prefix, unambiguous. */
+    /* Escaping the sandbox to write the report where ftp can read it (mkdir a path
+     * outside the jail; a timestamp for it). Added for the second thread's disk-escape
+     * work; libkernel by the sceKernel* prefix, unambiguous. */
     {"libkernel", "sceKernelMkdir"},
     {"libkernel", "sceKernelGettimeofday"},
 
@@ -302,12 +307,13 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "sceKernelPollEventFlag"},
     {"libkernel", "sceKernelIsDevkit"},
     {"libkernel", "sceKernelIsCex"},
-    /* Named `libkernel` by `900-surface` and by every call site in `src/sections/sysctl.c`.
+    /* Named `libkernel` by `900-surface` and by every call site in
+     * `src/sections/sysctl.c`.
      *
      * It reached `platform.h` without reaching here, and the mined corpus carried the
-     * association instead - so the build worked while `corpus.h` still listed the name, and
-     * broke the moment that header was regenerated and dropped it as a duplicate. A fact held
-     * only in a generated file is held nowhere. (D243) */
+     * association instead - so the build worked while `corpus.h` still listed the name,
+     * and broke the moment that header was regenerated and dropped it as a duplicate. A
+     * fact held only in a generated file is held nowhere. (D243) */
     {"libkernel", "sysctlbyname"},
     {"libkernel", "statfs"},
 

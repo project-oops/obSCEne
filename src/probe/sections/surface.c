@@ -37,35 +37,40 @@ typedef struct obs_symbol {
 
 /* Whether this build takes the address of every censused name.
  *
- * # Taking an address is what imports a symbol, and importing is what requires a library
+ * # Taking an address is what imports a symbol, and importing is what requires a
+ * library
  *
- * The census asks "does this exist?" by taking a name's address and testing it. That makes
- * the name an undefined import, which puts its library in `DT_NEEDED`, which makes a loader
- * **load that library before this program runs**. Under a homebrew loader or an emulator that
- * costs nothing: one loads what it is told, the other stubs everything.
+ * The census asks "does this exist?" by taking a name's address and testing it. That
+ * makes the name an undefined import, which puts its library in `DT_NEEDED`, which
+ * makes a loader
+ * **load that library before this program runs**. Under a homebrew loader or an
+ * emulator that costs nothing: one loads what it is told, the other stubs everything.
  *
- * A system loader is not either of those. The census names 339 libraries beyond the thirteen
- * the checks actually call, so an eboot required 352, a title is given six, and the console
- * went down inside the loader with no report - before any instruction of ours could run, which
- * is the one place this program's guards cannot reach. (D226, D227)
+ * A system loader is not either of those. The census names 339 libraries beyond the
+ * thirteen the checks actually call, so an eboot required 352, a title is given six,
+ * and the console went down inside the loader with no report - before any instruction
+ * of ours could run, which is the one place this program's guards cannot reach. (D226,
+ * D227)
  *
- * So an eboot is built with this off. No address is taken, nothing is imported, no library is
- * required, and the census reports itself skipped with a reason rather than emitting thirty-five
- * thousand absences that are true of the build rather than of the platform.
+ * So an eboot is built with this off. No address is taken, nothing is imported, no
+ * library is required, and the census reports itself skipped with a reason rather than
+ * emitting thirty-five thousand absences that are true of the build rather than of the
+ * platform.
  *
- * **The measurement is not lost, it moves.** With this off, `census` loads each library through
- * `sceKernelLoadStartModule` and resolves each name through `sceKernelDlsym` - so the section
- * asks the same questions, produces the same records, and additionally reports a library that
- * *cannot be loaded* as a finding rather than as a dead console. That is strictly more than
- * linking ever told us. (D229) */
+ * **The measurement is not lost, it moves.** With this off, `census` loads each library
+ * through `sceKernelLoadStartModule` and resolves each name through `sceKernelDlsym` -
+ * so the section asks the same questions, produces the same records, and additionally
+ * reports a library that *cannot be loaded* as a finding rather than as a dead console.
+ * That is strictly more than linking ever told us. (D229) */
 #ifndef OBS_CENSUS_LINKED
 #define OBS_CENSUS_LINKED 0
 #endif
 
 /* Declares one censused name as data. See the note above on why not as a function.
  *
- * Kept in both modes. A declaration imports nothing on its own - only taking the address
- * does - so leaving it costs nothing and keeps the two modes one file rather than two. */
+ * Kept in both modes. A declaration imports nothing on its own - only taking the
+ * address does - so leaving it costs nothing and keeps the two modes one file rather
+ * than two. */
 #define OBS_DECLARE_SYMBOL(name) extern OBS_WEAK const char name;
 #if OBS_CENSUS_LINKED
 /* One table row. The name appears once in the list and is stringified here, so the
@@ -74,9 +79,9 @@ typedef struct obs_symbol {
 #else
 /* The same row without the address, which is the only part that imports anything.
  *
- * The **name is kept**, so the table, the checks and every record they produce are unchanged -
- * what changes is how presence is decided, not what is asked or how it is reported. The
- * stringify-once property above holds either way. */
+ * The **name is kept**, so the table, the checks and every record they produce are
+ * unchanged - what changes is how presence is decided, not what is asked or how it is
+ * reported. The stringify-once property above holds either way. */
 #define OBS_SYMBOL_ROW(name) {#name, NULL},
 #endif
 
@@ -85,34 +90,37 @@ static obs_result census(const char *library, obs_availability availability,
     unsigned int present = 0;
 #if !OBS_CENSUS_LINKED
     /* Resolved at run time, because this build imports none of these names. See
-     * `OBS_CENSUS_LINKED`: the address in each row is null and the name is what is left.
+     * `OBS_CENSUS_LINKED`: the address in each row is null and the name is what is
+     * left.
      *
-     * Announced by the harness before this runs, one check per library, which is what makes a
-     * library that takes the process down with it name itself. */
+     * Announced by the harness before this runs, one check per library, which is what
+     * makes a library that takes the process down with it name itself. */
     /* The control first, or every result below is unreadable.
      *
-     * A loader that does not implement module resolution answers "no" for every library,
-     * including ones this process is executing calls into - which is a sheet of failures that
-     * parses, counts, and is wrong throughout. Measured, on PS5PCEM: `900-surface/kernel fail`
-     * from a process running on `libkernel`. (D232) */
+     * A loader that does not implement module resolution answers "no" for every
+     * library, including ones this process is executing calls into - which is a sheet
+     * of failures that parses, counts, and is wrong throughout. Measured, on PS5PCEM:
+     * `900-surface/kernel fail` from a process running on `libkernel`. (D232) */
     if (!obs_module_resolution_works()) {
-        return obs_skip("this build resolves the census at run time and this platform does not "
-                        "resolve modules by name, so no library here could be found - which is "
-                        "a fact about the loader rather than about any library");
+        return obs_skip(
+            "this build resolves the census at run time and this platform does not "
+            "resolve modules by name, so no library here could be found - which is "
+            "a fact about the loader rather than about any library");
     }
 
     int handle = obs_module_open(library);
     if (handle < 0) {
-        /* **A finding, and the one this whole change exists to produce**, now that the control
-         * above has established the mechanism works. Under the linked census this same
-         * condition was a console that died in the loader with nothing on record. */
+        /* **A finding, and the one this whole change exists to produce**, now that the
+         * control above has established the mechanism works. Under the linked census
+         * this same condition was a console that died in the loader with nothing on
+         * record. */
         return obs_fail("this library could not be loaded");
     }
 
     for (unsigned int i = 0; i < count; i++) {
         /* `obs_module_symbol` returns null both when the resolver refuses and when it
-         * answers with an address that is not callable - the trap the linked census avoids
-         * by not testing `!= NULL`. */
+         * answers with an address that is not callable - the trap the linked census
+         * avoids by not testing `!= NULL`. */
         int found = obs_module_symbol(handle, symbols[i].name) != NULL;
         obs_report_symbol(library, symbols[i].name, found, availability);
         present += (unsigned int)(found ? 1 : 0);
@@ -204,10 +212,10 @@ OBS_SURFACE_LIBRARIES(OBS_DEFINE_GROUP)
 
 /* And the mined corpus, through the same macro.
  *
- * `corpus.h` is generated and declares its groups in exactly the shape `surface.h` uses,
- * so nothing here needs to know which of the two a group came from. That is the whole
- * reason the generator emits that shape: a second walk, a second table type or a second
- * check function would all be places for the two censuses to drift apart.
+ * `corpus.h` is generated and declares its groups in exactly the shape `surface.h`
+ * uses, so nothing here needs to know which of the two a group came from. That is the
+ * whole reason the generator emits that shape: a second walk, a second table type or a
+ * second check function would all be places for the two censuses to drift apart.
  *
  * They stay separate files because they are different kinds of thing - one curated and
  * annotated, one mined and mechanical (D105) - not because they behave differently. */
@@ -215,13 +223,14 @@ OBS_CORPUS_LIBRARIES(OBS_DEFINE_GROUP)
 
 /* And the nameless ones, which need their own macros because a row carries two things.
  *
- * A named symbol is its own C declaration; an identifier is not a C name at all, so each
- * gets a generated one plus an assembler label carrying the real symbol. The label is what
- * the linker emits, what the manifest records and what mkmodule sees - the C name exists
- * only because C requires one.
+ * A named symbol is its own C declaration; an identifier is not a C name at all, so
+ * each gets a generated one plus an assembler label carrying the real symbol. The label
+ * is what the linker emits, what the manifest records and what mkmodule sees - the C
+ * name exists only because C requires one.
  *
- * The label keeps its `$` in the reported name deliberately. `sym|libSceFont|$Xh3kd9sLpQw`
- * says what is true: something is exported here and this project cannot name it. */
+ * The label keeps its `$` in the reported name deliberately.
+ * `sym|libSceFont|$Xh3kd9sLpQw` says what is true: something is exported here and this
+ * project cannot name it. */
 #define OBS_DECLARE_NID(symbol, label) extern OBS_WEAK const char symbol __asm__(label);
 #if OBS_CENSUS_LINKED
 #define OBS_NID_ROW(symbol, label) {label, (const void *)&symbol},
@@ -230,7 +239,7 @@ OBS_CORPUS_LIBRARIES(OBS_DEFINE_GROUP)
 #endif
 #define OBS_DEFINE_NID_GROUP(tag, library, availability, LIST)                         \
     LIST(OBS_DECLARE_NID)                                                              \
-    static const obs_symbol tag##_symbols[] = {LIST(OBS_NID_ROW)};     \
+    static const obs_symbol tag##_symbols[] = {LIST(OBS_NID_ROW)};                     \
     static obs_result check_##tag(void) {                                              \
         return census(library, availability, tag##_symbols, OBS_COUNT(tag##_symbols)); \
     }
@@ -242,7 +251,7 @@ OBS_NID_LIBRARIES(OBS_DEFINE_NID_GROUP)
  * safe even when everything else has failed, which is exactly
  * when its answer is most useful. */
 #define OBS_GROUP_ROW(tag, library, availability, LIST)                                \
-    {"900-surface/" #tag, library,       "(census)", OBS_CAP_NONE,                     \
+    {"900-surface/" #tag, library,       "(census)",  OBS_CAP_NONE,                    \
      OBS_CAP_NONE,        OBS_NO_SYMBOL, check_##tag, OBS_FROM_ASSUMED},
 
 /* Published by 007-responsive, which is the only part of this program that knows the
@@ -255,8 +264,8 @@ extern unsigned int obs_responsive_silent;
  * # The problem it exists to state
  *
  * Presence is not behaviour. A platform resolving every symbol to a stub that returns
- * success scores full marks on everything above and is useless, and a census cannot tell
- * the two apart - it reads addresses and never calls anything (BACKLOG §7).
+ * success scores full marks on everything above and is useless, and a census cannot
+ * tell the two apart - it reads addresses and never calls anything (BACKLOG §7).
  *
  * That is not hypothetical. A previous-generation emulator reports every one of the
  * current generation's 87 graphics symbols as present, through a generic stub, for an
@@ -264,13 +273,13 @@ extern unsigned int obs_responsive_silent;
  *
  * # Why it lives here rather than in a document
  *
- * A caveat in a section's purpose line is read once. A number in the report is read every
- * time somebody quotes a coverage figure, which is the moment the caveat matters.
+ * A caveat in a section's purpose line is read once. A number in the report is read
+ * every time somebody quotes a coverage figure, which is the moment the caveat matters.
  *
  * The verdict is deliberately never `pass`. This check does not test the platform - it
- * qualifies the rest of the section - so a green line would be one more thing to add up.
- * It reports `partial` with the responding count, and says plainly when the sample says
- * the platform is mostly stubs. */
+ * qualifies the rest of the section - so a green line would be one more thing to add
+ * up. It reports `partial` with the responding count, and says plainly when the sample
+ * says the platform is mostly stubs. */
 static obs_result check_presence_is_not_behaviour(void) {
     unsigned int tested = obs_responsive_responding + obs_responsive_silent;
     if (tested == 0) {
@@ -290,9 +299,10 @@ static obs_result check_presence_is_not_behaviour(void) {
                                  "an upper bound, not a coverage figure",
                                  (uint64_t)obs_responsive_responding);
     }
-    return obs_partial_value("presence is not behaviour; this census counts symbols that "
-                             "resolve, and only the sections above call anything",
-                             (uint64_t)obs_responsive_responding);
+    return obs_partial_value(
+        "presence is not behaviour; this census counts symbols that "
+        "resolve, and only the sections above call anything",
+        (uint64_t)obs_responsive_responding);
 }
 
 static const obs_check surface_checks[] = {
@@ -302,9 +312,8 @@ static const obs_check surface_checks[] = {
     /* Second, so it qualifies the counts before they are read rather than after. */
     {"900-surface/presence-is-not-behaviour", "obscene", "(qualifier)", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_presence_is_not_behaviour, OBS_FROM_SPEC},
-    OBS_SURFACE_LIBRARIES(OBS_GROUP_ROW)
-    OBS_CORPUS_LIBRARIES(OBS_GROUP_ROW)
-    OBS_NID_LIBRARIES(OBS_GROUP_ROW)};
+    OBS_SURFACE_LIBRARIES(OBS_GROUP_ROW) OBS_CORPUS_LIBRARIES(OBS_GROUP_ROW)
+        OBS_NID_LIBRARIES(OBS_GROUP_ROW)};
 
 /* Reports which library each censused name belongs to.
  *
@@ -317,19 +326,22 @@ static const obs_check surface_checks[] = {
  * generated by a macro - there is no single array to hand back, and building one
  * would mean allocating, which this program does not do.
  */
-#define OBS_WALK_GROUP(tag, library, availability, LIST)                                    for (unsigned int i = 0; i < OBS_COUNT(tag##_symbols); i++) {                              fn(library, tag##_symbols[i].name);                                                }
+#define OBS_WALK_GROUP(tag, library, availability, LIST)                               \
+    for (unsigned int i = 0; i < OBS_COUNT(tag##_symbols); i++) {                      \
+        fn(library, tag##_symbols[i].name);                                            \
+    }
 
 void obs_surface_each_symbol(void (*fn)(const char *library, const char *symbol)) {
 #if !OBS_CENSUS_LINKED
-    /* Nothing to walk: the tables hold one placeholder row apiece. This is only ever called
-     * by the host build, which always links the census - but the eboot compiles this file
-     * too, so it has to be correct rather than merely unreached. */
+    /* Nothing to walk: the tables hold one placeholder row apiece. This is only ever
+     * called by the host build, which always links the census - but the eboot compiles
+     * this file too, so it has to be correct rather than merely unreached. */
     (void)fn;
 #else
     OBS_SURFACE_LIBRARIES(OBS_WALK_GROUP)
     /* The corpus too, or the module build imports none of it: this walk is what emits
-     * the manifest `mkmodule` links against, so a symbol missing here is censused by the
-     * host build and absent from the module entirely. */
+     * the manifest `mkmodule` links against, so a symbol missing here is censused by
+     * the host build and absent from the module entirely. */
     OBS_CORPUS_LIBRARIES(OBS_WALK_GROUP)
     OBS_NID_LIBRARIES(OBS_WALK_GROUP)
 #endif

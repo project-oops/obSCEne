@@ -14,19 +14,21 @@
 #define SYS_getpid 20
 
 static const uintptr_t KERNEL_OFFSET_PROC_P_UCRED = 0x40;
-static const uintptr_t KERNEL_OFFSET_PROC_P_PID   = 0xBC;
+static const uintptr_t KERNEL_OFFSET_PROC_P_PID = 0xBC;
 static const uintptr_t DEFAULT_OFFSET_PROC_P_COMM = 0x274;
 
-/* Search for Title ID (e.g. "PPSAxxxxx", "CUSAxxxxx") in proc structure at offset 0x470 */
+/* Search for Title ID (e.g. "PPSAxxxxx", "CUSAxxxxx") in proc structure at offset 0x470
+ */
 static int get_proc_title_id(uintptr_t proc, char *out_title, size_t out_len) {
     if (proc == 0 || out_title == NULL || out_len < 16) {
         return 0;
     }
 
     uint32_t fw = krw_fw_version() & 0xffff0000u;
-    uintptr_t titleid_off = (fw >= 0x08000000u) ? 0x470u :
-                            (fw >= 0x07000000u) ? 0x49Au :
-                            (fw >= 0x06000000u) ? 0x498u : 0x470u;
+    uintptr_t titleid_off = (fw >= 0x08000000u)   ? 0x470u
+                            : (fw >= 0x07000000u) ? 0x49Au
+                            : (fw >= 0x06000000u) ? 0x498u
+                                                  : 0x470u;
 
     char tid[16];
     memset(tid, 0, sizeof(tid));
@@ -73,10 +75,11 @@ static uintptr_t detect_p_comm_offset(uintptr_t my_proc) {
 
 static uintptr_t find_allproc_kaddr(pid_t mypid) {
     uintptr_t kdata = krw_kdata_base();
-    if (kdata == 0) return krw_allproc_addr();
+    if (kdata == 0)
+        return krw_allproc_addr();
 
     uintptr_t start = kdata + 0x2700000;
-    uintptr_t end   = kdata + 0x2A00000;
+    uintptr_t end = kdata + 0x2A00000;
 
     uintptr_t user_allproc = 0;
     int max_user_chain = 0;
@@ -131,9 +134,11 @@ static uintptr_t find_allproc_kaddr(pid_t mypid) {
 }
 
 static const char *obs_strstr(const char *haystack, const char *needle) {
-    if (!haystack || !needle) return NULL;
+    if (!haystack || !needle)
+        return NULL;
     size_t nlen = obs_strlen(needle);
-    if (nlen == 0) return haystack;
+    if (nlen == 0)
+        return haystack;
     for (; *haystack != '\0'; haystack++) {
         if (*haystack == *needle && obs_strncmp(haystack, needle, nlen) == 0) {
             return haystack;
@@ -144,7 +149,8 @@ static const char *obs_strstr(const char *haystack, const char *needle) {
 
 static int is_system_daemon(const char *comm) {
     if (comm == NULL || comm[0] == '\0') {
-        return 1; /* Skip unknown/empty names; retail games always have comm "eboot.bin" */
+        return 1; /* Skip unknown/empty names; retail games always have comm "eboot.bin"
+                   */
     }
 
     /* Any binary ending in .elf or .self is an internal daemon / payload */
@@ -157,18 +163,28 @@ static int is_system_daemon(const char *comm) {
     }
 
     /* Any Sony system daemon starting with Sce, NPXS, or NPXX */
-    if (obs_strncmp(comm, "Sce", 3) == 0 ||
-        obs_strncmp(comm, "NPXS", 4) == 0 ||
+    if (obs_strncmp(comm, "Sce", 3) == 0 || obs_strncmp(comm, "NPXS", 4) == 0 ||
         obs_strncmp(comm, "NPXX", 4) == 0) {
         return 1;
     }
 
-    static const char *system_names[] = {
-        "kernel", "init", "pldmgr", "elfldr", "klogsrv", "ftpsrv", "shsrv",
-        "kstuff", "shadowmount", "orbis_audiod", "AgcCompositor",
-        "fs_cleaner", "webrtc_daemon", "sh", "sysctl", "df",
-        NULL
-    };
+    static const char *system_names[] = {"kernel",
+                                         "init",
+                                         "pldmgr",
+                                         "elfldr",
+                                         "klogsrv",
+                                         "ftpsrv",
+                                         "shsrv",
+                                         "kstuff",
+                                         "shadowmount",
+                                         "orbis_audiod",
+                                         "AgcCompositor",
+                                         "fs_cleaner",
+                                         "webrtc_daemon",
+                                         "sh",
+                                         "sysctl",
+                                         "df",
+                                         NULL};
 
     for (size_t i = 0; system_names[i] != NULL; i++) {
         if (obs_strcmp(comm, system_names[i]) == 0) {
@@ -204,7 +220,8 @@ pid_t target_find_by_name(const char *name) {
             memset(tid, 0, sizeof(tid));
             get_proc_title_id(proc, tid, sizeof(tid));
 
-            if (obs_strcmp(name, comm) == 0 || (tid[0] != '\0' && obs_strcmp(name, tid) == 0)) {
+            if (obs_strcmp(name, comm) == 0 ||
+                (tid[0] != '\0' && obs_strcmp(name, tid) == 0)) {
                 return pid;
             }
         }
@@ -237,16 +254,19 @@ pid_t target_find_foreground_app(void) {
     klog_write_hex("p_comm offset=", comm_offset);
 
     uint32_t fw = krw_fw_version() & 0xffff0000u;
-    uintptr_t name_off = (fw >= 0x12000000u) ? 0x5E4u :
-                         (fw >= 0x10000000u) ? 0x5DCu :
-                         (fw >= 0x07000000u) ? 0x5D4u :
-                         (fw >= 0x06000000u) ? 0x5C4u : 0x59Cu;
-    uintptr_t titleid_off = (fw >= 0x08000000u) ? 0x470u :
-                            (fw >= 0x07000000u) ? 0x49Au :
-                            (fw >= 0x06000000u) ? 0x498u : 0x470u;
-    uintptr_t path_off = (fw >= 0x12000000u) ? 0x604u :
-                         (fw >= 0x10000000u) ? 0x5FCu :
-                         (fw >= 0x07000000u) ? 0x5F4u : 0x5BCu;
+    uintptr_t name_off = (fw >= 0x12000000u)   ? 0x5E4u
+                         : (fw >= 0x10000000u) ? 0x5DCu
+                         : (fw >= 0x07000000u) ? 0x5D4u
+                         : (fw >= 0x06000000u) ? 0x5C4u
+                                               : 0x59Cu;
+    uintptr_t titleid_off = (fw >= 0x08000000u)   ? 0x470u
+                            : (fw >= 0x07000000u) ? 0x49Au
+                            : (fw >= 0x06000000u) ? 0x498u
+                                                  : 0x470u;
+    uintptr_t path_off = (fw >= 0x12000000u)   ? 0x604u
+                         : (fw >= 0x10000000u) ? 0x5FCu
+                         : (fw >= 0x07000000u) ? 0x5F4u
+                                               : 0x5BCu;
 
     pid_t game_pid = -1;
 
@@ -277,8 +297,10 @@ pid_t target_find_foreground_app(void) {
             /* If raw_tid is empty, scan pbuf for PPSA / CUSA */
             if (raw_tid[0] == '\0') {
                 for (uintptr_t off = 0x400; off < sizeof(pbuf) - 16; off++) {
-                    if ((pbuf[off] == 'P' && pbuf[off+1] == 'P' && pbuf[off+2] == 'S' && pbuf[off+3] == 'A') ||
-                        (pbuf[off] == 'C' && pbuf[off+1] == 'U' && pbuf[off+2] == 'S' && pbuf[off+3] == 'A')) {
+                    if ((pbuf[off] == 'P' && pbuf[off + 1] == 'P' &&
+                         pbuf[off + 2] == 'S' && pbuf[off + 3] == 'A') ||
+                        (pbuf[off] == 'C' && pbuf[off + 1] == 'U' &&
+                         pbuf[off + 2] == 'S' && pbuf[off + 3] == 'A')) {
                         obs_strncpy(raw_tid, pbuf + off, sizeof(raw_tid) - 1);
                         break;
                     }
@@ -305,9 +327,12 @@ pid_t target_find_foreground_app(void) {
                 goto next_proc;
             }
 
-            /* 2. Skip daemons and payloads ending in .self or .elf (retail games are always eboot.bin) */
-            if (obs_strstr(app_path, ".self") != NULL || obs_strstr(comm, ".self") != NULL ||
-                obs_strstr(app_path, ".elf") != NULL || obs_strstr(comm, ".elf") != NULL) {
+            /* 2. Skip daemons and payloads ending in .self or .elf (retail games are
+             * always eboot.bin) */
+            if (obs_strstr(app_path, ".self") != NULL ||
+                obs_strstr(comm, ".self") != NULL ||
+                obs_strstr(app_path, ".elf") != NULL ||
+                obs_strstr(comm, ".elf") != NULL) {
                 goto next_proc;
             }
 
@@ -328,8 +353,10 @@ pid_t target_find_foreground_app(void) {
             klog_write(app_path[0] != '\0' ? app_path : "(none)");
 
             /* 4. Match retail game by Title ID (PPSA / CUSA) */
-            if ((raw_tid[0] == 'P' && raw_tid[1] == 'P' && raw_tid[2] == 'S' && raw_tid[3] == 'A') ||
-                (raw_tid[0] == 'C' && raw_tid[1] == 'U' && raw_tid[2] == 'S' && raw_tid[3] == 'A')) {
+            if ((raw_tid[0] == 'P' && raw_tid[1] == 'P' && raw_tid[2] == 'S' &&
+                 raw_tid[3] == 'A') ||
+                (raw_tid[0] == 'C' && raw_tid[1] == 'U' && raw_tid[2] == 'S' &&
+                 raw_tid[3] == 'A')) {
                 klog_write(">>> MATCHED RETAIL GAME BY TITLE ID:");
                 klog_write(raw_tid);
                 klog_write("  path=");
@@ -352,7 +379,9 @@ pid_t target_find_foreground_app(void) {
             /* 6. Candidate userland process */
             uintptr_t ucred = 0;
             uint32_t uid = 0;
-            if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_UCRED, &ucred, sizeof(ucred)) == 0 && ucred != 0) {
+            if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_UCRED, &ucred, sizeof(ucred)) ==
+                    0 &&
+                ucred != 0) {
                 krw_copyout(ucred + 0x04, &uid, sizeof(uid));
             }
             uintptr_t prison = 0;
@@ -383,7 +412,7 @@ pid_t target_find_foreground_app(void) {
                 }
             }
         }
-next_proc:
+    next_proc:
         next = krw_read64(proc);
         if (next == 0 || next == proc) {
             break;
@@ -424,4 +453,3 @@ pid_t target_resolve(const char *target_spec) {
 
     return target_find_foreground_app();
 }
-

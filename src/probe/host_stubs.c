@@ -48,11 +48,12 @@
 
 /* "This is implemented, and the answer is no."
  *
- * Distinct from the value above, and the distinction is load-bearing. A poll that finds the
- * bits unset and a poll that does not exist are opposite results, and returning the same
- * code for both would let a check pass its negative case against a stub that never ran -
- * which is the failure `900-surface/presence-is-not-behaviour` exists to name, reproduced
- * inside the known-good implementation everything else is validated against. */
+ * Distinct from the value above, and the distinction is load-bearing. A poll that finds
+ * the bits unset and a poll that does not exist are opposite results, and returning the
+ * same code for both would let a check pass its negative case against a stub that never
+ * ran - which is the failure `900-surface/presence-is-not-behaviour` exists to name,
+ * reproduced inside the known-good implementation everything else is validated against.
+ */
 #define OBS_HOST_NOT_SATISFIED ((int)0xDEADBEEE)
 
 /* ---- libScePosix, forwarded to the real thing --------------------------------
@@ -205,16 +206,17 @@ uint64_t sceKernelGetProcessTimeCounterFrequency(void) {
  * Five checks were skipping here - `040-file` reaches its negative cases without a real
  * descriptor, but every *relation* about files needs one. Two of them,
  * `018-relational/descriptors-distinct` and `close-is-not-idempotent`, had additionally
- * never run for an unrelated reason (D158), so between the two faults the file relations
- * had no known-good implementation to have been validated against at all.
+ * never run for an unrelated reason (D158), so between the two faults the file
+ * relations had no known-good implementation to have been validated against at all.
  *
  * # The path a console has and a host does not
  *
  * The checks open `/app0/eboot.bin`, which is the running module and is present by
  * definition on anything executing this program. The host equivalent is the running
- * binary, so that one path is redirected to `/proc/self/exe` and everything else is passed
- * through. The redirect is deliberately narrow: a check that opens something else is
- * asking a different question and should get the real answer, including a real refusal.
+ * binary, so that one path is redirected to `/proc/self/exe` and everything else is
+ * passed through. The redirect is deliberately narrow: a check that opens something
+ * else is asking a different question and should get the real answer, including a real
+ * refusal.
  */
 static const char *host_real_path(const char *path) {
     if (path == NULL) {
@@ -223,9 +225,10 @@ static const char *host_real_path(const char *path) {
     if (strcmp(path, "/app0/eboot.bin") == 0) {
         return "/proc/self/exe";
     }
-    /* A scan root under a test tree, so 048-selfaudit's directory walk can be exercised on the
-     * host: set OBS_HOST_APPROOT to a directory of <title>/eboot.bin and the app roots resolve
-     * inside it. On a console this env is unset and the real paths are used. */
+    /* A scan root under a test tree, so 048-selfaudit's directory walk can be exercised
+     * on the host: set OBS_HOST_APPROOT to a directory of <title>/eboot.bin and the app
+     * roots resolve inside it. On a console this env is unset and the real paths are
+     * used. */
     const char *root = getenv("OBS_HOST_APPROOT");
     if (root != NULL) {
         static char remapped[1024];
@@ -251,14 +254,14 @@ static const char *host_real_path(const char *path) {
 int sceKernelOpen(const char *path, int flags, uint16_t mode) {
     const char *real = host_real_path(path);
     if (real == NULL) {
-        /* A null path is the one case `040-file/open-rejects-null` asks about, and handing
-         * it to `open` would be undefined rather than refused. */
+        /* A null path is the one case `040-file/open-rejects-null` asks about, and
+         * handing it to `open` would be undefined rather than refused. */
         return OBS_HOST_NOT_IMPLEMENTED;
     }
     /* Read-only whatever was asked. The vendor flag values are not the host's, and this
-     * program's file checks never write - so translating the flags would mean inventing a
-     * mapping to serve no check, while opening for write would let a wrong test damage the
-     * binary it is running from. */
+     * program's file checks never write - so translating the flags would mean inventing
+     * a mapping to serve no check, while opening for write would let a wrong test
+     * damage the binary it is running from. */
     (void)flags;
     int fd = open(real, O_RDONLY, (mode_t)mode);
     if (fd < 0) {
@@ -276,11 +279,12 @@ int sceKernelClose(int fd) {
 
 /* Directory enumeration on the host, translated to the layout the target returns.
  *
- * Linux `getdents64` gives a different `dirent` (wide d_ino, a d_off, d_type at the end); the
- * probe parses the FreeBSD-11 one (d_fileno u32, d_reclen, d_type, d_namlen, name). This reads
- * the host's dirents and rewrites each into that layout, so the scan logic in 048-selfaudit is
- * exercised for real under `make host` rather than only on a console. The d_type values happen
- * to agree (DT_DIR=4, DT_REG=8), so only the offsets move. */
+ * Linux `getdents64` gives a different `dirent` (wide d_ino, a d_off, d_type at the
+ * end); the probe parses the FreeBSD-11 one (d_fileno u32, d_reclen, d_type, d_namlen,
+ * name). This reads the host's dirents and rewrites each into that layout, so the scan
+ * logic in 048-selfaudit is exercised for real under `make host` rather than only on a
+ * console. The d_type values happen to agree (DT_DIR=4, DT_REG=8), so only the offsets
+ * move. */
 sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes) {
     char tmp[8192];
     long n = syscall(SYS_getdents64, fd, tmp, sizeof tmp);
@@ -299,16 +303,17 @@ sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes) {
         unsigned char ltype = (unsigned char)tmp[pos + 18];
         const char *lname = tmp + pos + 19;
         size_t namelen = strlen(lname);
-        size_t frec = (8 + namelen + 1 + 7) & ~(size_t)7; /* FreeBSD rounds records to 8 */
+        size_t frec =
+            (8 + namelen + 1 + 7) & ~(size_t)7; /* FreeBSD rounds records to 8 */
         if (out + (long)frec > (long)nbytes) {
             break;
         }
         char *o = buf + out;
         memset(o, 0, frec);
         unsigned short fr = (unsigned short)frec;
-        memcpy(o + 4, &fr, sizeof fr);   /* d_reclen */
-        o[6] = (char)ltype;              /* d_type */
-        o[7] = (char)(namelen & 0xffu);  /* d_namlen */
+        memcpy(o + 4, &fr, sizeof fr);  /* d_reclen */
+        o[6] = (char)ltype;             /* d_type */
+        o[7] = (char)(namelen & 0xffu); /* d_namlen */
         memcpy(o + 8, lname, namelen);
         out += (long)frec;
         pos += lrec;
@@ -317,15 +322,23 @@ sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes) {
 }
 
 sce_off_t sceKernelLseek(int fd, sce_off_t offset, int whence) {
-    /* The vendor `SEEK_*` values are ISO C's and match the host's, which is worth stating
-     * rather than relying on: they are the three checked constants in `platform.h`, and if
-     * a platform ever disagreed the translation would belong here. */
+    /* The vendor `SEEK_*` values are ISO C's and match the host's, which is worth
+     * stating rather than relying on: they are the three checked constants in
+     * `platform.h`, and if a platform ever disagreed the translation would belong here.
+     */
     int host_whence;
     switch (whence) {
-        case OBS_SEEK_SET: host_whence = SEEK_SET; break;
-        case OBS_SEEK_CUR: host_whence = SEEK_CUR; break;
-        case OBS_SEEK_END: host_whence = SEEK_END; break;
-        default: return OBS_HOST_NOT_IMPLEMENTED;
+    case OBS_SEEK_SET:
+        host_whence = SEEK_SET;
+        break;
+    case OBS_SEEK_CUR:
+        host_whence = SEEK_CUR;
+        break;
+    case OBS_SEEK_END:
+        host_whence = SEEK_END;
+        break;
+    default:
+        return OBS_HOST_NOT_IMPLEMENTED;
     }
     off_t moved = lseek(fd, (off_t)offset, host_whence);
     if (moved < 0) {
@@ -337,26 +350,26 @@ sce_off_t sceKernelLseek(int fd, sce_off_t offset, int whence) {
 /* ---- direct memory, a real allocator over a static arena ---------------------
  *
  * `018-relational/allocations-do-not-overlap` asks whether two allocations held at the
- * same time can name the same memory. A stub returning a fixed offset would fail it and a
- * stub returning not-implemented skips it, and neither is a validation - so the host needs
- * an allocator that genuinely tracks what it has handed out.
+ * same time can name the same memory. A stub returning a fixed offset would fail it and
+ * a stub returning not-implemented skips it, and neither is a validation - so the host
+ * needs an allocator that genuinely tracks what it has handed out.
  *
- * A bump pointer with a free list of released extents. Not efficient and not general; it
- * is enough to make "two live allocations are disjoint" and "a released extent can be
- * allocated again" (`direct-memory-round-trip`) both mean something.
+ * A bump pointer with a free list of released extents. Not efficient and not general;
+ * it is enough to make "two live allocations are disjoint" and "a released extent can
+ * be allocated again" (`direct-memory-round-trip`) both mean something.
  *
  * # Why the arena is half a gigabyte
  *
- * Nothing here is ever mapped. These calls reserve a *range* - an offset and a length in a
- * table - and turning one into usable memory is `sceKernelMapDirectMemory`, which remains
- * unimplemented. So the span costs an integer, and the first choice of sixteen megabytes
- * made `020-memory/direct-size` report `partial: implausibly small` against its 256 MiB
- * threshold, leaving that check's pass branch unexercised on the one platform where the
- * right answer is known.
+ * Nothing here is ever mapped. These calls reserve a *range* - an offset and a length
+ * in a table - and turning one into usable memory is `sceKernelMapDirectMemory`, which
+ * remains unimplemented. So the span costs an integer, and the first choice of sixteen
+ * megabytes made `020-memory/direct-size` report `partial: implausibly small` against
+ * its 256 MiB threshold, leaving that check's pass branch unexercised on the one
+ * platform where the right answer is known.
  *
- * Raising it is not the host telling a plausible lie, which is the hazard this project keeps
- * meeting. The number is true: the allocator really does hand out offsets across that range,
- * and really does refuse past the end of it.
+ * Raising it is not the host telling a plausible lie, which is the hazard this project
+ * keeps meeting. The number is true: the allocator really does hand out offsets across
+ * that range, and really does refuse past the end of it.
  */
 #define OBS_HOST_DIRECT_SIZE ((sce_off_t)0x20000000)
 #define OBS_HOST_DIRECT_MAX 16
@@ -387,10 +400,11 @@ int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end,
         return OBS_HOST_NOT_IMPLEMENTED;
     }
 
-    /* A released extent of at least the size asked for, before taking new ground. This is
-     * what makes `direct-memory-round-trip` measure something: an allocator that never
-     * reuses would pass its first two calls and fail the third only once the arena ran
-     * out, which is a different fault from the one that check is looking for. */
+    /* A released extent of at least the size asked for, before taking new ground. This
+     * is what makes `direct-memory-round-trip` measure something: an allocator that
+     * never reuses would pass its first two calls and fail the third only once the
+     * arena ran out, which is a different fault from the one that check is looking for.
+     */
     for (int i = 0; i < OBS_HOST_DIRECT_MAX; i++) {
         if (!host_direct[i].in_use && host_direct[i].len >= len) {
             host_direct[i].in_use = 1;
@@ -407,7 +421,8 @@ int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end,
     if (start < search_start) {
         start = search_start;
     }
-    if (start + (sce_off_t)len > search_end || start + (sce_off_t)len > OBS_HOST_DIRECT_SIZE) {
+    if (start + (sce_off_t)len > search_end ||
+        start + (sce_off_t)len > OBS_HOST_DIRECT_SIZE) {
         return OBS_HOST_NOT_IMPLEMENTED;
     }
     for (int i = 0; i < OBS_HOST_DIRECT_MAX; i++) {
@@ -420,56 +435,57 @@ int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end,
             return 0;
         }
     }
-    /* The table is full. Reported as a refusal to allocate, which is a real outcome for an
-     * allocator and one the relations are written to skip on rather than fail. */
+    /* The table is full. Reported as a refusal to allocate, which is a real outcome for
+     * an allocator and one the relations are written to skip on rather than fail. */
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 
 int sceKernelReleaseDirectMemory(sce_off_t start, size_t len) {
     for (int i = 0; i < OBS_HOST_DIRECT_MAX; i++) {
-        if (host_direct[i].in_use && host_direct[i].start == start
-            && host_direct[i].len == len) {
+        if (host_direct[i].in_use && host_direct[i].start == start &&
+            host_direct[i].len == len) {
             host_direct[i].in_use = 0;
             return 0;
         }
     }
     /* Releasing something never allocated, or releasing twice. Refused rather than
-     * accepted, because a release that always succeeds is how a double-free check passes
-     * against nothing. */
+     * accepted, because a release that always succeeds is how a double-free check
+     * passes against nothing. */
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 
 /* A map entry, and a deliberate difference between flag values.
  *
- * `130-layout/direct-memory-query` and `direct-memory-query-flags` both skipped here for
- * want of this, which means neither had been run against a known-good implementation - and
- * the second one exists to answer a question orbistoun cannot answer from its side, so
- * shipping it unvalidated would be shipping an instrument nobody has calibrated.
+ * `130-layout/direct-memory-query` and `direct-memory-query-flags` both skipped here
+ * for want of this, which means neither had been run against a known-good
+ * implementation - and the second one exists to answer a question orbistoun cannot
+ * answer from its side, so shipping it unvalidated would be shipping an instrument
+ * nobody has calibrated.
  *
  * # What this is and is not
  *
- * It is **not** a model of what a console returns. This program does not know that; finding
- * it out is the entire purpose of `130-layout`, and a host stub that guessed would be
- * putting a guess where the report should carry a measurement.
+ * It is **not** a model of what a console returns. This program does not know that;
+ * finding it out is the entire purpose of `130-layout`, and a host stub that guessed
+ * would be putting a guess where the report should carry a measurement.
  *
  * It is a shape chosen to exercise the *instrument*: a start and a length in the first
- * sixteen bytes, a byte that varies with the flag, and a refusal for one flag value. Between
- * them they drive every branch of the check - baseline capture, difference detection, the
- * first-differing-byte report, and the refusal count - on a machine where the right answer
- * is known because this file wrote it.
+ * sixteen bytes, a byte that varies with the flag, and a refusal for one flag value.
+ * Between them they drive every branch of the check - baseline capture, difference
+ * detection, the first-differing-byte report, and the refusal count - on a machine
+ * where the right answer is known because this file wrote it.
  *
  * The varying byte sits at offset 16, past the two eight-byte fields, so a check that
- * compared only the first sixteen bytes would find nothing and say so. That is the mistake
- * worth catching here: a differencing pass that stops early reports "the flag changes
- * nothing", which is a conclusion rather than a silence.
+ * compared only the first sixteen bytes would find nothing and say so. That is the
+ * mistake worth catching here: a differencing pass that stops early reports "the flag
+ * changes nothing", which is a conclusion rather than a silence.
  */
 int sceKernelDirectMemoryQuery(sce_off_t offset, int flags, void *info, size_t size) {
     if (info == NULL || size < 24) {
         return OBS_HOST_NOT_IMPLEMENTED;
     }
-    /* One value refused, so the check's refusal branch is exercised somewhere. Four rather
-     * than a value nothing passes: it is in the set the flag sweep tries, and a refusal it
-     * never sees would not be a test of anything. */
+    /* One value refused, so the check's refusal branch is exercised somewhere. Four
+     * rather than a value nothing passes: it is in the set the flag sweep tries, and a
+     * refusal it never sees would not be a test of anything. */
     if (flags == 4) {
         return OBS_HOST_NOT_SATISFIED;
     }
@@ -477,8 +493,9 @@ int sceKernelDirectMemoryQuery(sce_off_t offset, int flags, void *info, size_t s
     for (size_t i = 0; i < size; i++) {
         out[i] = 0;
     }
-    /* Start and length, little-endian, as such a structure would carry them. The start is
-     * the offset asked about, so a check that queried elsewhere would see it move. */
+    /* Start and length, little-endian, as such a structure would carry them. The start
+     * is the offset asked about, so a check that queried elsewhere would see it move.
+     */
     for (unsigned int i = 0; i < 8; i++) {
         out[i] = (unsigned char)(((uint64_t)offset >> (i * 8)) & 0xFFu);
         out[8 + i] = (unsigned char)((0x00100000u >> (i * 8)) & 0xFFu);
@@ -526,18 +543,18 @@ int sceKernelUsleep(unsigned int microseconds) {
  * rather than being hidden by a stub that says yes to everything.
  */
 ScePthread scePthreadSelf(void) {
-    /* The real one. `018-relational/thread-identity-stable` asks that two calls agree and
-     * that the answer is not nothing - both true here, and neither true of a stub
+    /* The real one. `018-relational/thread-identity-stable` asks that two calls agree
+     * and that the answer is not nothing - both true here, and neither true of a stub
      * returning NULL, which is what this used to be. */
     return (ScePthread)pthread_self();
 }
 
 /* Event flags: a handle table with real allocation and release.
  *
- * `sceKernelCreateEventFlag` in the target build takes a `SceKernelEventFlag *`, which is
- * an opaque pointer. Here it points into a small static pool - enough for the eight the
- * distinctness check asks for, with room over, and released on delete so the reuse check
- * measures something. */
+ * `sceKernelCreateEventFlag` in the target build takes a `SceKernelEventFlag *`, which
+ * is an opaque pointer. Here it points into a small static pool - enough for the eight
+ * the distinctness check asks for, with room over, and released on delete so the reuse
+ * check measures something. */
 #define OBS_HOST_EVF_MAX 32
 typedef struct host_event_flag {
     int in_use;
@@ -561,8 +578,8 @@ int sceKernelCreateEventFlag(SceKernelEventFlag *out, const char *name, uint32_t
             return 0;
         }
     }
-    /* Exhaustion reported as a failure to create, which is what the reuse check reads as
-     * "it worked and then stopped" if release is not happening. */
+    /* Exhaustion reported as a failure to create, which is what the reuse check reads
+     * as "it worked and then stopped" if release is not happening. */
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 
@@ -577,12 +594,13 @@ int sceKernelDeleteEventFlag(SceKernelEventFlag flag) {
 /* Set, clear and poll against the same table.
  *
  * Added when `018-relational/event-flag-state-is-per-object` skipped for want of them.
- * The check that matters here is whether a bit set on one flag is visible on another, and
- * a stub cannot answer that unless its state is genuinely per-object - which is the same
- * property the check exists to measure, so the two would be testing each other if the
- * state lived anywhere but in the entry the handle points at.
+ * The check that matters here is whether a bit set on one flag is visible on another,
+ * and a stub cannot answer that unless its state is genuinely per-object - which is the
+ * same property the check exists to measure, so the two would be testing each other if
+ * the state lived anywhere but in the entry the handle points at.
  *
- * `015-sync/event-flag-round-trip` had been skipping for the same reason and now runs. */
+ * `015-sync/event-flag-round-trip` had been skipping for the same reason and now runs.
+ */
 int sceKernelSetEventFlag(SceKernelEventFlag flag, uint64_t bits) {
     if (flag == NULL) {
         return OBS_HOST_NOT_IMPLEMENTED;
@@ -595,20 +613,23 @@ int sceKernelClearEventFlag(SceKernelEventFlag flag, uint64_t bits) {
     if (flag == NULL) {
         return OBS_HOST_NOT_IMPLEMENTED;
     }
-    /* `&= bits`, and the argument is a mask of what to **keep** - the opposite of what the
-     * name suggests. shadPS4 does `m_bits &= bits`; PS5PCEM does the same and says why in a
-     * comment: "The PS5 ABI supplies the bits to retain, not the bits to remove."
+    /* `&= bits`, and the argument is a mask of what to **keep** - the opposite of what
+     * the name suggests. shadPS4 does `m_bits &= bits`; PS5PCEM does the same and says
+     * why in a comment: "The PS5 ABI supplies the bits to retain, not the bits to
+     * remove."
      *
-     * This was written the other way round for a day, as the complement, on the reasoning
-     * that a host stub should implement the *obvious* semantics so that a console
-     * disagreeing with it would be reporting a real difference. **That reasoning is
-     * backwards** and it cost a wrong verdict: `015-sync/event-flag-round-trip` asserted the
-     * obvious semantics too, so the stub agreed with the check, the check passed here, and a
-     * check that has passed a known-good implementation is what this project calls evidence.
+     * This was written the other way round for a day, as the complement, on the
+     * reasoning that a host stub should implement the *obvious* semantics so that a
+     * console disagreeing with it would be reporting a real difference. **That
+     * reasoning is backwards** and it cost a wrong verdict:
+     * `015-sync/event-flag-round-trip` asserted the obvious semantics too, so the stub
+     * agreed with the check, the check passed here, and a check that has passed a
+     * known-good implementation is what this project calls evidence.
      *
-     * It took a three-way consensus to see - both emulators failing while the host alone
-     * passed. A known-good implementation of the *wrong contract* is worse than none,
-     * because it manufactures exactly the confidence rule 5 exists to supply. (D166) */
+     * It took a three-way consensus to see - both emulators failing while the host
+     * alone passed. A known-good implementation of the *wrong contract* is worse than
+     * none, because it manufactures exactly the confidence rule 5 exists to supply.
+     * (D166) */
     ((host_event_flag *)flag)->bits &= bits;
     return 0;
 }
@@ -622,42 +643,43 @@ int sceKernelPollEventFlag(SceKernelEventFlag flag, uint64_t bits, uint32_t mode
     if (out_pattern != NULL) {
         *out_pattern = held;
     }
-    /* AND is the only mode this program asks for, and the only one implemented. Anything
-     * else returns not-implemented rather than being quietly treated as AND: a stub that
-     * answers a question it was not asked is how a wrong assumption gets confirmed. */
+    /* AND is the only mode this program asks for, and the only one implemented.
+     * Anything else returns not-implemented rather than being quietly treated as AND: a
+     * stub that answers a question it was not asked is how a wrong assumption gets
+     * confirmed. */
     if (mode != OBS_EVF_WAITMODE_AND) {
         return OBS_HOST_NOT_IMPLEMENTED;
     }
     if ((held & bits) == bits) {
         return 0;
     }
-    /* Not set. A distinct code from the not-implemented one, so "the bits are not there"
-     * and "this stub does not do that" never read the same in a report. */
+    /* Not set. A distinct code from the not-implemented one, so "the bits are not
+     * there" and "this stub does not do that" never read the same in a report. */
     return OBS_HOST_NOT_SATISFIED;
 }
 
 /* One buffer-filling call, so 130-layout's dump mechanism is exercised somewhere the
  * right answer is known.
  *
- * The section reports bytes rather than verdicts, which means a bug in the *reporting* -
- * a wrong extent, a mangled hex nibble, a chunk boundary off by one - would produce a
+ * The section reports bytes rather than verdicts, which means a bug in the *reporting*
+ * - a wrong extent, a mangled hex nibble, a chunk boundary off by one - would produce a
  * plausible-looking hexdump of the wrong thing. On hardware that would be indetectable
  * and permanent, because the whole point is that nobody knows what the bytes should be.
  *
  * So this writes a pattern chosen to catch exactly those: a recognisable prefix, a byte
- * that is not its own nibble-swap, a zero in the middle to prove the extent is the *last*
- * non-zero byte and not the first zero, and a run that crosses the sixteen-byte record
- * boundary. */
+ * that is not its own nibble-swap, a zero in the middle to prove the extent is the
+ * *last* non-zero byte and not the first zero, and a run that crosses the sixteen-byte
+ * record boundary. */
 int sceKernelGetSystemSwVersion(void *version) {
     if (version == NULL) {
         return OBS_HOST_NOT_IMPLEMENTED;
     }
     static const unsigned char pattern[] = {
-        0x28, 0x00, 0x00, 0x00,  /* a length, little-endian, as such structures carry */
+        0x28, 0x00, 0x00, 0x00, /* a length, little-endian, as such structures carry */
         'H',  'O',  'S',  'T',
-        0x12, 0x34, 0x56, 0x78,  /* nibble order is visible if it is wrong */
-        0x00, 0x00, 0x00, 0x00,  /* an interior gap the extent must see past */
-        0xDE, 0xAD, 0xBE, 0xEF,  /* and a run past the first record boundary */
+        0x12, 0x34, 0x56, 0x78, /* nibble order is visible if it is wrong */
+        0x00, 0x00, 0x00, 0x00, /* an interior gap the extent must see past */
+        0xDE, 0xAD, 0xBE, 0xEF, /* and a run past the first record boundary */
     };
     unsigned char *out = (unsigned char *)version;
     for (unsigned int i = 0; i < sizeof pattern; i++) {
@@ -670,9 +692,9 @@ int sceKernelGetSystemSwVersion(void *version) {
  * exercised rather than skipped.
  *
  * The host genuinely has both, so nothing is simulated. That matters more here than
- * elsewhere: these checks were deferred for a long time on the grounds that the subsystem
- * could not be tested safely, and shipping them without ever seeing them pass a working
- * implementation would repeat the mistake in the other direction. */
+ * elsewhere: these checks were deferred for a long time on the grounds that the
+ * subsystem could not be tested safely, and shipping them without ever seeing them pass
+ * a working implementation would repeat the mistake in the other direction. */
 #define OBS_HOST_COND_MAX 16
 static struct {
     int in_use;
@@ -729,9 +751,9 @@ int scePthreadCondBroadcast(ScePthreadCond *cond) {
 
 /* The blocking one. Forwarded for the same reason as the rest, and with more riding on
  * it: `015-sync/condvar-wakes-a-waiter` is the only check in this suite whose whole
- * design is about surviving a call that never returns, and a stub could not tell whether
- * that design works. Here a real signal really does wake a real waiter, so a pass means
- * the mechanism was exercised rather than merely not crashed. */
+ * design is about surviving a call that never returns, and a stub could not tell
+ * whether that design works. Here a real signal really does wake a real waiter, so a
+ * pass means the mechanism was exercised rather than merely not crashed. */
 int scePthreadCondWait(ScePthreadCond *cond, ScePthreadMutex *mutex) {
     if (cond == NULL || *cond == NULL || mutex == NULL || *mutex == NULL) {
         return OBS_HOST_NOT_IMPLEMENTED;
@@ -792,10 +814,10 @@ int scePthreadBarrierWait(ScePthreadBarrier *barrier) {
 /* Mutexes: real ones, so 018-relational's two mutex relations are exercised.
  *
  * The handle is an opaque pointer in this project's declarations, which matches how the
- * platform spells it, so a pool of real pthread mutexes fits behind it directly. Distinct
- * handles fall out of using distinct slots, and non-recursiveness falls out of
- * PTHREAD_MUTEX_DEFAULT - neither is simulated, which is the point: a check that has only
- * ever met a fake is not evidence. */
+ * platform spells it, so a pool of real pthread mutexes fits behind it directly.
+ * Distinct handles fall out of using distinct slots, and non-recursiveness falls out of
+ * PTHREAD_MUTEX_DEFAULT - neither is simulated, which is the point: a check that has
+ * only ever met a fake is not evidence. */
 #define OBS_HOST_MUTEX_MAX 16
 static struct {
     int in_use;
@@ -810,10 +832,10 @@ int scePthreadMutexInit(ScePthreadMutex *mutex, const void *attr, const char *na
     /* The attribute is honoured rather than dropped, and that is the whole point of it.
      *
      * This used to pass NULL and ignore the argument, which is harmless for every check
-     * that existed then and would have quietly broken the one that came next: a recursion
-     * probe run against a mutex that never received the recursive attribute reports "not
-     * recursive" on a host where it demonstrably is, and the check would have looked
-     * correct while measuring nothing.
+     * that existed then and would have quietly broken the one that came next: a
+     * recursion probe run against a mutex that never received the recursive attribute
+     * reports "not recursive" on a host where it demonstrably is, and the check would
+     * have looked correct while measuring nothing.
      *
      * `attr` points at the opaque handle, so it is dereferenced once to reach the real
      * attribute object - the same shape the platform's own signature has. */
@@ -836,9 +858,9 @@ int scePthreadMutexInit(ScePthreadMutex *mutex, const void *attr, const char *na
 
 /* Mutex attributes, on the real thing.
  *
- * These exist so the recursion checks can be run against an implementation that is known
- * to be correct before anything they say about a console is believed - step five of the
- * checklist, and the step that has caught a wrong check twice.
+ * These exist so the recursion checks can be run against an implementation that is
+ * known to be correct before anything they say about a console is believed - step five
+ * of the checklist, and the step that has caught a wrong check twice.
  *
  * Backed by a small table for the same reason the mutexes above are: the guest holds a
  * `void *` and the host needs somewhere real to put a `pthread_mutexattr_t`. */
@@ -986,11 +1008,11 @@ int sceKernelPollSema(int sema, int need) {
 
 /* Real threads, because two checks are worthless without them.
  *
- * `015-sync/thread-churn` creates and joins in a loop, and `015-sync/condvar-wakes-a-waiter`
- * is built entirely around a waiter on another thread. Against a stub the first proves
- * nothing and the second cannot run at all - and the second is the one whose *design* is
- * the interesting part, so shipping it unexercised would be exactly the mistake its own
- * section comment warns about.
+ * `015-sync/thread-churn` creates and joins in a loop, and
+ * `015-sync/condvar-wakes-a-waiter` is built entirely around a waiter on another
+ * thread. Against a stub the first proves nothing and the second cannot run at all -
+ * and the second is the one whose *design* is the interesting part, so shipping it
+ * unexercised would be exactly the mistake its own section comment warns about.
  *
  * The handle is an opaque pointer on the target, and `pthread_t` is an integer here, so
  * it goes through a small pool rather than being cast. Casting would work on this
@@ -1103,11 +1125,11 @@ int sceVideoOutSetFlipRate(int handle, int rate) {
 /* Recording. A host has no hardware encoder to drive, so these refuse like the rest -
  * which is what the section reads as a skip rather than as an answer about a console.
  *
- * **Prototyped here rather than in platform.h.** These names are in the mined corpus, and
- * the census declares every corpus name as an opaque `extern const char` in order to take
- * its address; a function declaration in platform.h is a redefinition in the translation
- * unit that sees both. The section that calls them declares them the same way, for the
- * same reason. */
+ * **Prototyped here rather than in platform.h.** These names are in the mined corpus,
+ * and the census declares every corpus name as an opaque `extern const char` in order
+ * to take its address; a function declaration in platform.h is a redefinition in the
+ * translation unit that sees both. The section that calls them declares them the same
+ * way, for the same reason. */
 
 int sceVideoRecordingQueryMemSize(int mode);
 int sceVideoRecordingClose(int handle);

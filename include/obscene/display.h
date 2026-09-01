@@ -36,9 +36,9 @@ extern const unsigned char obs_font[OBS_FONT_COUNT][OBS_FONT_HEIGHT];
 
 /* Packed 0xAARRGGBB, which is what the framebuffer format expects.
  *
- * Prefixed `OBS_COLOUR_` rather than named after the verdicts they draw. The short names
- * collide with the `obs_status` values, and a colour macro quietly shadowing an enum
- * constant turns a `switch` over statuses into a switch over integers - which the
+ * Prefixed `OBS_COLOUR_` rather than named after the verdicts they draw. The short
+ * names collide with the `obs_status` values, and a colour macro quietly shadowing an
+ * enum constant turns a `switch` over statuses into a switch over integers - which the
  * compiler then, correctly, refuses. */
 typedef uint32_t obs_colour;
 
@@ -52,21 +52,23 @@ typedef uint32_t obs_colour;
 #define OBS_COLOUR_ACCENT 0xFF74A8D6u
 /* The three letters in the middle of the name, which are the platform's and not this
  * project's. Drawn apart from the rest of the wordmark rather than mentioned in prose,
- * which is the same reasoning as principle 5: the vendor's name is load-bearing in the ABI
- * and nowhere else, so it is marked rather than spelled out.
+ * which is the same reasoning as principle 5: the vendor's name is load-bearing in the
+ * ABI and nowhere else, so it is marked rather than spelled out.
  *
- * Chosen to sit with the verdict colours rather than shout over them, so the banner reads as
- * one palette.
+ * Chosen to sit with the verdict colours rather than shout over them, so the banner
+ * reads as one palette.
  *
- * The value is the project's own green, taken from `assets/logo.svg` rather than picked to
- * match it - a colour chosen by eye drifts from the artwork the first time either changes,
- * and the two are meant to be the same green. It was a purple until the branding moved.
+ * The value is the project's own green, taken from `assets/logo.svg` rather than picked
+ * to match it - a colour chosen by eye drifts from the artwork the first time either
+ * changes, and the two are meant to be the same green. It was a purple until the
+ * branding moved.
  *
- * **It is now in the same family as `OBS_COLOUR_PASS`**, and the older wording here claimed
- * the mark "deliberately matches no status". That was true of the purple and is not true of
- * this. The two are distinguishable - this one is brighter and more saturated, and the mark
- * only ever appears inside the wordmark where no verdict is drawn - but the claim was worth
- * correcting rather than leaving to read as though it still held. */
+ * **It is now in the same family as `OBS_COLOUR_PASS`**, and the older wording here
+ * claimed the mark "deliberately matches no status". That was true of the purple and is
+ * not true of this. The two are distinguishable - this one is brighter and more
+ * saturated, and the mark only ever appears inside the wordmark where no verdict is
+ * drawn - but the claim was worth correcting rather than leaving to read as though it
+ * still held. */
 #define OBS_COLOUR_MARK 0xFF3DDC84u
 
 /* How the display came up, reported into the stream so a run says whether what is on
@@ -91,9 +93,9 @@ const char *obs_display_status_text(void);
 
 /* The code the platform returned when it refused, or zero if no call reported one.
  *
- * Separate from the text because the text is this program's sentence about the step and the
- * code is the platform's own answer. A reader can look the second one up; the first one only
- * says which step. (D249) */
+ * Separate from the text because the text is this program's sentence about the step and
+ * the code is the platform's own answer. A reader can look the second one up; the first
+ * one only says which step. (D249) */
 uint64_t obs_display_status_code(void);
 
 /* All no-ops unless the state is READY. */
@@ -107,10 +109,10 @@ void obs_display_flip(void);
 
 /* Whether a frame has demonstrably reached the screen: 1 yes, 0 no, -1 not established.
  *
- * Distinct from `obs_display_status`, which says whether the display *accepted* what it was
- * given. A platform can accept an output, a framebuffer and a flip, report success to all
- * three, and show nothing - so a report that only carries the acceptances asserts more than
- * it measured. (D187) */
+ * Distinct from `obs_display_status`, which says whether the display *accepted* what it
+ * was given. A platform can accept an output, a framebuffer and a flip, report success
+ * to all three, and show nothing - so a report that only carries the acceptances
+ * asserts more than it measured. (D187) */
 int obs_display_presented(void);
 
 /* Whether the probe currently holds the main video output.

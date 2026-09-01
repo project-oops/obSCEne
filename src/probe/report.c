@@ -79,14 +79,14 @@ void obs_report_build(void) {
 }
 
 void obs_report_context(const char *name, const char *basis) {
-    /* The execution context a run measured in - "<delivery>/<generation>" - emitted next to
-     * `build` because it is the other half of "where did this come from": `build` says how the
-     * binary was made, `context` says the environment it ran in. Two payload runs a reader
-     * cannot otherwise tell apart - one in the ps4 compatibility host, one injected into a
-     * native process - differ only here, because they are the same binary. Distinct from a
-     * check's OBS_FROM_* tag, which is the provenance of the expectation, not of the
-     * measurement. Derived by obs_run_context from the build, the payload anchor and the
-     * link-map. */
+    /* The execution context a run measured in - "<delivery>/<generation>" - emitted
+     * next to `build` because it is the other half of "where did this come from":
+     * `build` says how the binary was made, `context` says the environment it ran in.
+     * Two payload runs a reader cannot otherwise tell apart - one in the ps4
+     * compatibility host, one injected into a native process - differ only here,
+     * because they are the same binary. Distinct from a check's OBS_FROM_* tag, which
+     * is the provenance of the expectation, not of the measurement. Derived by
+     * obs_run_context from the build, the payload anchor and the link-map. */
     line l;
     line_start(&l, "context");
     line_field(&l, name);
@@ -121,8 +121,8 @@ void obs_report_gpu_op(const char *kernel, unsigned int lane, uint32_t output,
     line_field(&l, kernel);
     line_field_u64(&l, lane);
     line_field_hex(&l, output);
-    /* The inputs trail the fixed fields, one hex field each. A reader that knows the arity
-     * takes that many; one that does not reads to end of line. */
+    /* The inputs trail the fixed fields, one hex field each. A reader that knows the
+     * arity takes that many; one that does not reads to end of line. */
     for (unsigned int i = 0; i < input_count; i++) {
         line_field_hex(&l, inputs[i]);
     }
@@ -159,25 +159,29 @@ void obs_report_sink(const char *path) {
 }
 
 void obs_report_resume(unsigned int skipped, int overflowed) {
-    /* Emitted whether or not anything was carried, because "nothing was skipped" and "this
-     * build cannot skip" are different runs and a reader cannot tell them apart from silence.
+    /* Emitted whether or not anything was carried, because "nothing was skipped" and
+     * "this build cannot skip" are different runs and a reader cannot tell them apart
+     * from silence.
      *
-     * The overflow flag is the important half. The skip set is a fixed table, and a run that
-     * filled it would quietly stop learning - which is exactly the oscillation the set exists
-     * to prevent, returning without a symptom. Reported so it cannot happen unnoticed. */
+     * The overflow flag is the important half. The skip set is a fixed table, and a run
+     * that filled it would quietly stop learning - which is exactly the oscillation the
+     * set exists to prevent, returning without a symptom. Reported so it cannot happen
+     * unnoticed. */
     line l;
     line_start(&l, "resume");
     line_field_u64(&l, skipped);
     line_field(&l, overflowed ? "full" : "ok");
     /* Then every check under watch, by id.
      *
-     * These are the ones that failed to return once and are being tried again rather than
-     * skipped, and this record is the only place the set can live: the report *is* the state
-     * file, there is no second one, and a check that is being retried emits an ordinary result
-     * rather than a skip - so nothing else in the stream would carry it forward. (D181)
+     * These are the ones that failed to return once and are being tried again rather
+     * than skipped, and this record is the only place the set can live: the report *is*
+     * the state file, there is no second one, and a check that is being retried emits
+     * an ordinary result rather than a skip - so nothing else in the stream would carry
+     * it forward. (D181)
      *
-     * Appended to the end of the line, which is what the format permits without a version
-     * bump: a reader that does not know about these stops at the two fields it does. */
+     * Appended to the end of the line, which is what the format permits without a
+     * version bump: a reader that does not know about these stops at the two fields it
+     * does. */
     for (unsigned int w = 0; w < obs_resume_watched_count(); w++) {
         const char *id = obs_resume_watched(w);
         if (id != 0) {
@@ -195,10 +199,10 @@ void obs_report_display(const char *state, const char *detail, uint64_t code) {
      * display never came up and this is a stale frame". The stream says which.
      *
      * The code is the platform's own account of a refusal, appended after the existing
-     * fields so a parser written against the earlier shape keeps working. `detail` names the
-     * step that refused and is this program's sentence; the code is the only part a reader
-     * can look up or compare between two consoles, and the display path threw it away at
-     * seven separate sites. Zero where no call reported one. (D249) */
+     * fields so a parser written against the earlier shape keeps working. `detail`
+     * names the step that refused and is this program's sentence; the code is the only
+     * part a reader can look up or compare between two consoles, and the display path
+     * threw it away at seven separate sites. Zero where no call reported one. (D249) */
     line l;
     line_start(&l, "display");
     line_field(&l, state);
@@ -225,15 +229,14 @@ void obs_report_responsive(const char *library, const char *symbol, const char *
     line_end(&l);
 }
 
-
 void obs_report_call(const char *library, const char *symbol, uint64_t index,
                      const char *outcome, uint64_t returned) {
     /* Library and symbol on every record rather than only on the attempt.
      *
      * The two records are separated by the call, and the call is the thing that may not
-     * return - so a run's output can end between them, and every field the second record
-     * would have carried has to be recoverable from the first alone. Repeating two strings
-     * is what makes the truncated case readable. */
+     * return - so a run's output can end between them, and every field the second
+     * record would have carried has to be recoverable from the first alone. Repeating
+     * two strings is what makes the truncated case readable. */
     line l;
     line_start(&l, "call");
     line_field(&l, library);
@@ -401,8 +404,8 @@ void obs_report_bytes(const char *id, const char *symbol, const char *what,
 void obs_report_buffer(const char *id, const char *symbol, const char *what,
                        const unsigned char *bytes, unsigned int len) {
     /* The extent first, because it is the single most useful number here: a caller who
-     * reads nothing else learns how many bytes the platform touched. Zero means the call
-     * wrote nothing, which is a finding rather than an empty result. */
+     * reads nothing else learns how many bytes the platform touched. Zero means the
+     * call wrote nothing, which is a finding rather than an empty result. */
     unsigned int extent = 0;
     for (unsigned int i = 0; i < len; i++) {
         if (bytes[i] != 0) {
@@ -424,9 +427,9 @@ void obs_report_written(const char *id, const char *symbol, const char *what,
     /* The extent is the last byte that *changed*, not the last that is non-zero.
      *
      * That is the whole difference from `obs_report_buffer`, and it is worth a second
-     * function: under the other rule a structure whose final field is a zeroed reserved word
-     * reads as shorter than it is, and a call that writes nothing but zeroes reads as a call
-     * that writes nothing at all - which is a finding, and the wrong one. */
+     * function: under the other rule a structure whose final field is a zeroed reserved
+     * word reads as shorter than it is, and a call that writes nothing but zeroes reads
+     * as a call that writes nothing at all - which is a finding, and the wrong one. */
     unsigned int extent = 0;
     unsigned int changed = 0;
     for (unsigned int i = 0; i < len; i++) {
@@ -438,14 +441,16 @@ void obs_report_written(const char *id, const char *symbol, const char *what,
     obs_report_bytes(id, symbol, "extent", extent, (const unsigned char *)"", 0);
     obs_report_bytes(id, symbol, "changed", changed, (const unsigned char *)"", 0);
     /* Untouched runs inside the extent are reported, because a hole is a fact a hexdump
-     * cannot show. A structure the call leaves alone at offsets 8..15 says something about
-     * alignment or about a member it does not own, and the values alone look continuous. */
+     * cannot show. A structure the call leaves alone at offsets 8..15 says something
+     * about alignment or about a member it does not own, and the values alone look
+     * continuous. */
     unsigned int run = 0;
     for (unsigned int i = 0; i < extent; i++) {
         if (before[i] == after[i]) {
             run++;
         } else if (run != 0) {
-            obs_report_bytes(id, symbol, "untouched", i - run, (const unsigned char *)"", run);
+            obs_report_bytes(id, symbol, "untouched", i - run,
+                             (const unsigned char *)"", run);
             run = 0;
         }
     }
@@ -481,8 +486,8 @@ void obs_report_resolve(const char *library, const char *symbol, int present,
     line_end(&l);
 }
 
-void obs_report_error_code(const char *library, const char *symbol, const char *argument,
-                           uint64_t returned) {
+void obs_report_error_code(const char *library, const char *symbol,
+                           const char *argument, uint64_t returned) {
     line l;
     line_start(&l, "err");
     line_field(&l, library);
@@ -543,7 +548,8 @@ void obs_report_end(void) {
     line_end(&l);
 }
 
-void obs_report_import(const char *library, const char *symbol, int linked, int resolvable) {
+void obs_report_import(const char *library, const char *symbol, int linked,
+                       int resolvable) {
     /* One of this program's own imports, on two axes that have to be separate.
      *
      * `linked` is whether the loader bound the import slot when the module was loaded.
@@ -563,8 +569,8 @@ void obs_report_import(const char *library, const char *symbol, int linked, int 
      *
      * The census (`sym`) cannot carry this. A censused name is declared as data so it
      * can never be called, and this program's own imports are declared as functions in
-     * `platform.h` - a name cannot be in both places, so the symbols whose status matters
-     * most were exactly the ones the census could not see. (D240) */
+     * `platform.h` - a name cannot be in both places, so the symbols whose status
+     * matters most were exactly the ones the census could not see. (D240) */
     line l;
     line_start(&l, "import");
     line_field(&l, library);

@@ -1,19 +1,22 @@
 /*
- * The decoder - off-console, turns a raw trace into the OBS| records the corpus already reads.
+ * The decoder - off-console, turns a raw trace into the OBS| records the corpus already
+ * reads.
  *
- * This is the half that makes results "meaningful and parseable". The payload emits a stream of
- * fixed 64-byte binary records; this reads them and prints one OBS| line per fact, in the same
- * pipe-delimited shape as the probe's report (docs/OUTPUT.md). That is deliberate: a decoded
- * trace and a probe report then land in one corpus and the same diff/mine tooling works on both.
+ * This is the half that makes results "meaningful and parseable". The payload emits a
+ * stream of fixed 64-byte binary records; this reads them and prints one OBS| line per
+ * fact, in the same pipe-delimited shape as the probe's report (docs/OUTPUT.md). That
+ * is deliberate: a decoded trace and a probe report then land in one corpus and the
+ * same diff/mine tooling works on both.
  *
- * Names: a trace carries NID hashes, not names - resolving them is a join against the corpus,
- * done later. This decoder prints the nid as hex, and if the stream carried a NAME hint it uses
- * it. It never invents a name it was not given.
+ * Names: a trace carries NID hashes, not names - resolving them is a join against the
+ * corpus, done later. This decoder prints the nid as hex, and if the stream carried a
+ * NAME hint it uses it. It never invents a name it was not given.
  *
- * Usage: trace_decode < trace.bin        (reads a stream on stdin, writes OBS| lines to stdout)
+ * Usage: trace_decode < trace.bin        (reads a stream on stdin, writes OBS| lines to
+ * stdout)
  *
- * It is an ordinary host program, so it uses stdio freely - none of the freestanding constraints
- * that bind the encoder apply here.
+ * It is an ordinary host program, so it uses stdio freely - none of the freestanding
+ * constraints that bind the encoder apply here.
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -83,9 +86,11 @@ static void emit(const struct obs_trace_rec *r) {
         break;
     }
     default:
-        /* An unknown kind from a newer payload: report it rather than guess. The record size is
-         * fixed, so one unknown kind does not desynchronise the ones after it. */
-        fprintf(stderr, "trace_decode: unknown record kind %u, skipped\n", (unsigned)r->kind);
+        /* An unknown kind from a newer payload: report it rather than guess. The record
+         * size is fixed, so one unknown kind does not desynchronise the ones after it.
+         */
+        fprintf(stderr, "trace_decode: unknown record kind %u, skipped\n",
+                (unsigned)r->kind);
         break;
     }
 }
@@ -101,19 +106,20 @@ int main(void) {
         return 2;
     }
     if (hdr.endian != OBS_TRACE_ENDIAN) {
-        /* A wrong reading is worse than a refusal: rather than silently byte-swap every field,
-         * refuse a stream written on a different-endian host. */
+        /* A wrong reading is worse than a refusal: rather than silently byte-swap every
+         * field, refuse a stream written on a different-endian host. */
         fprintf(stderr, "trace_decode: stream endianness does not match this host\n");
         return 2;
     }
     if (hdr.version != OBS_TRACE_VERSION) {
-        fprintf(stderr, "trace_decode: unsupported version %u (this decoder speaks %u)\n",
+        fprintf(stderr,
+                "trace_decode: unsupported version %u (this decoder speaks %u)\n",
                 (unsigned)hdr.version, OBS_TRACE_VERSION);
         return 2;
     }
     if (hdr.rec_size != OBS_TRACE_REC_SIZE) {
-        fprintf(stderr, "trace_decode: record size %u, expected %u\n", (unsigned)hdr.rec_size,
-                OBS_TRACE_REC_SIZE);
+        fprintf(stderr, "trace_decode: record size %u, expected %u\n",
+                (unsigned)hdr.rec_size, OBS_TRACE_REC_SIZE);
         return 2;
     }
 
@@ -128,7 +134,8 @@ int main(void) {
             break;
         }
         if (got != sizeof r) {
-            fprintf(stderr, "trace_decode: trailing %zu bytes are not a whole record\n", got);
+            fprintf(stderr, "trace_decode: trailing %zu bytes are not a whole record\n",
+                    got);
             return 2;
         }
         emit(&r);

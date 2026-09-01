@@ -89,12 +89,13 @@ typedef enum obs_generation {
 obs_generation obs_detected_generation(void);
 const char *obs_generation_name(obs_generation generation);
 
-/* The graphics driver(s) that resolve here, for the HUD's GPU field: "gnm", "agc", "gnm+agc",
- * or NULL when neither does. Deliberately NOT the generation verdict: `obs_detected_generation`
- * refuses to name a console when the current generation's driver cannot even be looked at (a
- * ps4_game is refused it, D255) - but the driver that IS resolving is a separate, honest fact,
- * and on a ps4_game it is exactly the one that verdict has to drop. `gnm` names a driver, not a
- * console: a current-generation console in compatibility mode exposes it too. (D272) */
+/* The graphics driver(s) that resolve here, for the HUD's GPU field: "gnm", "agc",
+ * "gnm+agc", or NULL when neither does. Deliberately NOT the generation verdict:
+ * `obs_detected_generation` refuses to name a console when the current generation's
+ * driver cannot even be looked at (a ps4_game is refused it, D255) - but the driver
+ * that IS resolving is a separate, honest fact, and on a ps4_game it is exactly the one
+ * that verdict has to drop. `gnm` names a driver, not a console: a current-generation
+ * console in compatibility mode exposes it too. (D272) */
 const char *obs_gpu_drivers(void);
 
 /* Where a check's expectation came from.
@@ -129,12 +130,12 @@ typedef enum obs_provenance {
      * # Why this rung had to exist
      *
      * `015-sync/event-flag-round-trip` asserted the opposite of what
-     * `sceKernelClearEventFlag` does - the argument is a mask of what to **keep** - and it
-     * carried `OBS_FROM_DOCUMENTED` while doing so. Two emulators failed it, they were
-     * right, and the correction had nowhere honest to go (D166): `ASSUMED` says "this
-     * project guessed", which throws away that somebody's working code says otherwise, and
-     * `DOCUMENTED` claims a citation nobody here can produce, which is the mistake that
-     * caused it.
+     * `sceKernelClearEventFlag` does - the argument is a mask of what to **keep** - and
+     * it carried `OBS_FROM_DOCUMENTED` while doing so. Two emulators failed it, they
+     * were right, and the correction had nowhere honest to go (D166): `ASSUMED` says
+     * "this project guessed", which throws away that somebody's working code says
+     * otherwise, and `DOCUMENTED` claims a citation nobody here can produce, which is
+     * the mistake that caused it.
      *
      * The sibling project raised the same shape on the measurement axis - a value for
      * "measured, but not on the target" - and it was declined on the argument that the
@@ -145,16 +146,16 @@ typedef enum obs_provenance {
      * # Below SPEC, and that placement is the whole caveat
      *
      * Stronger than this project's own guess. Weaker than a document anyone can check,
-     * because **implementations are not independent witnesses**: these projects read each
-     * other's source, and `obscene-tool consensus` says so in its own output - "agreement
-     * is evidence, not four witnesses". Two implementations sharing an ancestor agree about
-     * their ancestor.
+     * because **implementations are not independent witnesses**: these projects read
+     * each other's source, and `obscene-tool consensus` says so in its own output -
+     * "agreement is evidence, not four witnesses". Two implementations sharing an
+     * ancestor agree about their ancestor.
      *
      * # The line to hold
      *
-     * At least two implementations that do not share a codebase, read directly, and named
-     * in the check's comment. One implementation is not this - it is a single opinion, and
-     * `ASSUMED` describes a single opinion accurately whoever holds it. */
+     * At least two implementations that do not share a codebase, read directly, and
+     * named in the check's comment. One implementation is not this - it is a single
+     * opinion, and `ASSUMED` describes a single opinion accurately whoever holds it. */
     OBS_FROM_IMPLEMENTATIONS,
     /* ISO C or POSIX. Settled by a document anyone can check. */
     OBS_FROM_SPEC,
@@ -254,50 +255,52 @@ obs_tally obs_run_all(void);
  * be called. */
 int obs_address_is_callable(const void *address);
 
-/* Load a library by name and hand back a handle, or a negative value if it will not load.
+/* Load a library by name and hand back a handle, or a negative value if it will not
+ * load.
  *
  * # Asking, rather than requiring
  *
- * The other way to find out whether a library is there is to import a symbol from it, which
- * puts it in `DT_NEEDED` and makes a system loader load it **before this program runs**. That
- * is not a question, it is a demand, and a demand a title cannot meet is a console that dies
- * with nothing on record - there is no instruction of ours left to report from. (D226)
+ * The other way to find out whether a library is there is to import a symbol from it,
+ * which puts it in `DT_NEEDED` and makes a system loader load it **before this program
+ * runs**. That is not a question, it is a demand, and a demand a title cannot meet is a
+ * console that dies with nothing on record - there is no instruction of ours left to
+ * report from. (D226)
  *
- * This returns a value instead. A library that will not load becomes a finding, which is what
- * a probe is for. Guard both platform calls before using it: an emulator that implements
- * neither should report a skip rather than a wall of absences.
+ * This returns a value instead. A library that will not load becomes a finding, which
+ * is what a probe is for. Guard both platform calls before using it: an emulator that
+ * implements neither should report a skip rather than a wall of absences.
  *
- * The path is tried in several forms and the one that worked is not reported, because the
- * caller reports the library. See `obs_module_open` in `harness.c` for why no absolute path
- * can be written down.
+ * The path is tried in several forms and the one that worked is not reported, because
+ * the caller reports the library. See `obs_module_open` in `harness.c` for why no
+ * absolute path can be written down.
  */
 int obs_module_open(const char *library);
 
 /* Resolve one name through a handle from [`obs_module_open`], or null.
  *
- * Null both when the resolver refuses and when it returns an address that is not callable:
- * a resolver answering success with a small non-null value would otherwise count as present,
- * which is the trap `obs_address_is_callable` exists for. */
+ * Null both when the resolver refuses and when it returns an address that is not
+ * callable: a resolver answering success with a small non-null value would otherwise
+ * count as present, which is the trap `obs_address_is_callable` exists for. */
 const void *obs_module_symbol(int handle, const char *name);
 
 /* Whether run-time module resolution works on this platform at all.
  *
  * # Without this, every answer it gives is unreadable
  *
- * `obs_module_open` failing has two possible causes and they are opposite findings: the library
- * is genuinely not there, or **this loader does not implement module loading** and no library
- * would ever be found. A census built on the first reading, run on a platform that is the
- * second, reports every library as absent - including the one it is currently making calls
- * into.
+ * `obs_module_open` failing has two possible causes and they are opposite findings: the
+ * library is genuinely not there, or **this loader does not implement module loading**
+ * and no library would ever be found. A census built on the first reading, run on a
+ * platform that is the second, reports every library as absent - including the one it
+ * is currently making calls into.
  *
- * That is not hypothetical. It is what PS5PCEM produced the first time the run-time census met
- * it: `900-surface/kernel fail - this library could not be loaded`, from a process running on
- * `libkernel` at the time.
+ * That is not hypothetical. It is what PS5PCEM produced the first time the run-time
+ * census met it: `900-surface/kernel fail - this library could not be loaded`, from a
+ * process running on `libkernel` at the time.
  *
- * So there is a control, and it is the same argument `check_control` makes one level down: an
- * absence has to mean one thing before a count of absences means anything. `libkernel` is the
- * subject because this program is executing calls into it - if *that* cannot be resolved, the
- * mechanism is what is missing, not the library.
+ * So there is a control, and it is the same argument `check_control` makes one level
+ * down: an absence has to mean one thing before a count of absences means anything.
+ * `libkernel` is the subject because this program is executing calls into it - if
+ * *that* cannot be resolved, the mechanism is what is missing, not the library.
  *
  * Decided once and remembered, because it cannot change during a run. (D232)
  */
@@ -309,9 +312,9 @@ int obs_module_resolution_works(void);
  * still sees it stop being run. See harness.c for why this exists and why the default
  * list is empty. */
 /* Nonzero when a check must not run. The value says which mechanism decided:
- * `OBS_EXCLUDED_AT_BUILD` is an operator list compiled in, `OBS_EXCLUDED_BY_PREVIOUS_RUN`
- * is this program noticing that the last run of the same binary announced it and never
- * finished. Only the second is a finding. */
+ * `OBS_EXCLUDED_AT_BUILD` is an operator list compiled in,
+ * `OBS_EXCLUDED_BY_PREVIOUS_RUN` is this program noticing that the last run of the same
+ * binary announced it and never finished. Only the second is a finding. */
 #define OBS_EXCLUDED_AT_BUILD 1
 #define OBS_EXCLUDED_BY_PREVIOUS_RUN 2
 int obs_check_is_excluded(const char *id);
@@ -333,13 +336,14 @@ extern const unsigned int obs_section_count;
  *
  * # And why that is worse than a crash
  *
- * A check announces its table-row symbol before running. `015-sync/event-flag-round-trip`
- * announced `sceKernelPollEventFlag` and called `sceKernelCreateEventFlag` as its first
- * statement; had Create been the null one, the last line of the report would have named a
- * function that was never reached.
+ * A check announces its table-row symbol before running.
+ * `015-sync/event-flag-round-trip` announced `sceKernelPollEventFlag` and called
+ * `sceKernelCreateEventFlag` as its first statement; had Create been the null one, the
+ * last line of the report would have named a function that was never reached.
  *
  * Announce-before-attempting is the property this whole program is arranged around. An
- * unguarded call does not just risk the run, it makes the report lie about where it died.
+ * unguarded call does not just risk the run, it makes the report lie about where it
+ * died.
  *
  * # Use
  *
@@ -352,15 +356,16 @@ extern const unsigned int obs_section_count;
  * address the body mentions as guarded, however that address is spelled.
  *
  * The rule was written down in D058 and enforced nowhere, and thirty-eight checks
- * violated it. `scripts/guards.py` runs in `verify.sh` now, so it cannot drift again. */
-#define OBS_REQUIRE(...)                                                                 \
-    do {                                                                                 \
-        const void *const obs_required_[] = {__VA_ARGS__};                               \
-        for (unsigned int obs_i_ = 0; obs_i_ < OBS_COUNT(obs_required_); obs_i_++) {     \
-            if (obs_required_[obs_i_] == 0) {                                            \
-                return obs_skip("a symbol this check also calls is not present");        \
-            }                                                                            \
-        }                                                                                \
+ * violated it. `scripts/guards.py` runs in `verify.sh` now, so it cannot drift again.
+ */
+#define OBS_REQUIRE(...)                                                               \
+    do {                                                                               \
+        const void *const obs_required_[] = {__VA_ARGS__};                             \
+        for (unsigned int obs_i_ = 0; obs_i_ < OBS_COUNT(obs_required_); obs_i_++) {   \
+            if (obs_required_[obs_i_] == 0) {                                          \
+                return obs_skip("a symbol this check also calls is not present");      \
+            }                                                                          \
+        }                                                                              \
     } while (0)
 
 #endif /* OBSCENE_HARNESS_H */

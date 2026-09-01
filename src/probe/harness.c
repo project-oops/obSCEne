@@ -1,7 +1,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Empty unless the build names checks or sections to exclude. See obs_check_is_excluded. */
+/* Empty unless the build names checks or sections to exclude. See
+ * obs_check_is_excluded. */
 #ifndef OBSCENE_EXCLUDE
 #define OBSCENE_EXCLUDE ""
 #endif
@@ -11,10 +12,11 @@
 #include "obscene/harness.h"
 /* For `sceKernelLoadStartModule` and `sceKernelDlsym`, which `obs_module_open` uses.
  *
- * The harness did not need a platform declaration before: it runs checks, and the checks
- * called the platform. Asking whether a *library* is there is the harness's business rather
- * than any one check's - it is the guard that D226 showed was missing, at the layer where the
- * existing one could not reach - so the two calls that make it possible live here. */
+ * The harness did not need a platform declaration before: it runs checks, and the
+ * checks called the platform. Asking whether a *library* is there is the harness's
+ * business rather than any one check's - it is the guard that D226 showed was missing,
+ * at the layer where the existing one could not reach - so the two calls that make it
+ * possible live here. */
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/runtime.h"
@@ -68,9 +70,9 @@
  * buys the rest of the suite. Both runs are worth having and they answer different
  * questions.
  *
- * Set with `make module EXCLUDE="010-kernel/foo 040-file/bar"`. An entry with no `/` names
- * a whole section - `EXCLUDE="035-libc"` - for a loader that fails a layer rather than a
- * check.
+ * Set with `make module EXCLUDE="010-kernel/foo 040-file/bar"`. An entry with no `/`
+ * names a whole section - `EXCLUDE="035-libc"` - for a loader that fails a layer rather
+ * than a check.
  */
 static int obs_id_matches(const char *id, const char *list, size_t id_len) {
     size_t at = 0;
@@ -101,18 +103,20 @@ static int obs_id_matches(const char *id, const char *list, size_t id_len) {
         }
         /* A bare section name excludes the whole section.
          *
-         * An entry with no `/` is a section rather than a check, and matches any id that
-         * begins with it and continues with `/`. The slash is required so `035-libc` cannot
-         * swallow a hypothetical `035-libc-wide`; a prefix test alone would.
+         * An entry with no `/` is a section rather than a check, and matches any id
+         * that begins with it and continues with `/`. The slash is required so
+         * `035-libc` cannot swallow a hypothetical `035-libc-wide`; a prefix test alone
+         * would.
          *
-         * This exists because a loader can fail a whole layer rather than a check. fpPS4
-         * does not return from *any* of the twenty checks in `035-libc`, and the exclusion
-         * walk found that one check at a time, two runs apiece - forty runs to learn one
-         * fact, ending in a report whose libc section is twenty separate skips.
+         * This exists because a loader can fail a whole layer rather than a check.
+         * fpPS4 does not return from *any* of the twenty checks in `035-libc`, and the
+         * exclusion walk found that one check at a time, two runs apiece - forty runs
+         * to learn one fact, ending in a report whose libc section is twenty separate
+         * skips.
          *
-         * One entry says the true thing instead: the section does not run on this loader.
-         * That is a better report as well as a cheaper sweep, because twenty skips invite
-         * the reader to look for twenty causes.
+         * One entry says the true thing instead: the section does not run on this
+         * loader. That is a better report as well as a cheaper sweep, because twenty
+         * skips invite the reader to look for twenty causes.
          */
         if (!has_slash && id_len > len && id[len] == '/') {
             size_t i = 0;
@@ -140,11 +144,11 @@ int obs_check_is_excluded(const char *id) {
     }
     /* The runtime half, and the one that matters.
      *
-     * `OBSCENE_EXCLUDE` above is a build-time list, which means a loader that crashes needs
-     * its own module - and then two reports are two programs rather than two measurements.
-     * This asks the previous run instead: it announced a check and never finished it, so this
-     * run skips that one and gets further. Same binary on every loader, converging over
-     * repeats rather than over rebuilds. (D172) */
+     * `OBSCENE_EXCLUDE` above is a build-time list, which means a loader that crashes
+     * needs its own module - and then two reports are two programs rather than two
+     * measurements. This asks the previous run instead: it announced a check and never
+     * finished it, so this run skips that one and gets further. Same binary on every
+     * loader, converging over repeats rather than over rebuilds. (D172) */
     return obs_resume_is_skipped(id) ? OBS_EXCLUDED_BY_PREVIOUS_RUN : 0;
 }
 
@@ -185,15 +189,15 @@ int obs_address_is_callable(const void *address) {
 
 /* Where a library might be, tried in order.
  *
- * The bare name first, for a loader that searches. **No absolute path can be written down
- * here**: the sandbox prefix is randomised per boot - a crash dump showed
- * `/muU0ZXGZGP/common/lib/libkernel.sprx` - so the two below are the documented locations
- * rather than the one a title is actually given, and whether either is accepted is exactly
- * the sort of thing this program exists to find out.
+ * The bare name first, for a loader that searches. **No absolute path can be written
+ * down here**: the sandbox prefix is randomised per boot - a crash dump showed
+ * `/muU0ZXGZGP/common/lib/libkernel.sprx` - so the two below are the documented
+ * locations rather than the one a title is actually given, and whether either is
+ * accepted is exactly the sort of thing this program exists to find out.
  *
- * Candidates tried in order with the caller reporting the outcome is the same shape `sink.c`
- * uses for its write path and `runtime.c` for its output channel. Guessing one and failing
- * silently is what that shape exists to avoid. */
+ * Candidates tried in order with the caller reporting the outcome is the same shape
+ * `sink.c` uses for its write path and `runtime.c` for its output channel. Guessing one
+ * and failing silently is what that shape exists to avoid. */
 static const char *const obs_module_prefixes[] = {
     "",
     "/system/common/lib/",
@@ -203,9 +207,9 @@ static const char *const obs_module_prefixes[] = {
 
 /* Build `<prefix><library>.sprx` into `dest`, or 0 if it will not fit.
  *
- * By hand rather than with `snprintf`, for the reason `host_main.c` gives about `atoi`: this
- * program measures that function, and a runtime that borrowed the thing it is testing would
- * be reporting on itself. Bounded at every step for the same reason. */
+ * By hand rather than with `snprintf`, for the reason `host_main.c` gives about `atoi`:
+ * this program measures that function, and a runtime that borrowed the thing it is
+ * testing would be reporting on itself. Bounded at every step for the same reason. */
 static int obs_module_path(char *dest, unsigned int size, const char *prefix,
                            const char *library) {
     static const char suffix[] = ".sprx";
@@ -238,18 +242,12 @@ typedef struct {
 } obs_sysmodule_id_map;
 
 static const obs_sysmodule_id_map obs_sysmodules[] = {
-    {"libSceNet", 0x0001},
-    {"libSceHttp", 0x0002},
-    {"libSceSsl", 0x0003},
-    {"libSceUserService", 0x0004},
-    {"libSceSaveData", 0x0006},
-    {"libSceAudioOut", 0x000c},
-    {"libSceVoice", 0x000e},
-    {"libSceAppInstUtil", 0x0014},
-    {"libSceIme", 0x0017},
-    {"libSceCamera", 0x001d},
-    {"libScePad", 0x0027},
-    {"libSceVideoOut", 0x0028},
+    {"libSceNet", 0x0001},      {"libSceHttp", 0x0002},
+    {"libSceSsl", 0x0003},      {"libSceUserService", 0x0004},
+    {"libSceSaveData", 0x0006}, {"libSceAudioOut", 0x000c},
+    {"libSceVoice", 0x000e},    {"libSceAppInstUtil", 0x0014},
+    {"libSceIme", 0x0017},      {"libSceCamera", 0x001d},
+    {"libScePad", 0x0027},      {"libSceVideoOut", 0x0028},
 };
 
 int obs_module_open(const char *library) {
@@ -260,7 +258,8 @@ int obs_module_open(const char *library) {
 #if defined(OBS_UNSAFE_LIBRARIES)
     const char *at = OBS_UNSAFE_LIBRARIES;
     while (*at != '\0') {
-        while (*at == ' ') at++;
+        while (*at == ' ')
+            at++;
         const char *name = library;
         const char *scan = at;
         while (*scan != '\0' && *scan != ' ' && *name != '\0' && *scan == *name) {
@@ -270,7 +269,8 @@ int obs_module_open(const char *library) {
         if (*name == '\0' && (*scan == '\0' || *scan == ' ')) {
             return -1;
         }
-        while (*at != '\0' && *at != ' ') at++;
+        while (*at != '\0' && *at != ' ')
+            at++;
     }
 #endif
 
@@ -282,9 +282,11 @@ int obs_module_open(const char *library) {
         if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 && mod_count > 0) {
             for (size_t i = 0; i < mod_count && i < 128; i++) {
                 int mod_id = mod_list[i];
-                if (mod_id <= 0) continue;
+                if (mod_id <= 0)
+                    continue;
                 unsigned char info[512];
-                for (size_t k = 0; k < sizeof(info); k++) info[k] = 0;
+                for (size_t k = 0; k < sizeof(info); k++)
+                    info[k] = 0;
                 *(size_t *)info = sizeof(info);
                 if (sceKernelGetModuleInfo(mod_id, info) == 0) {
                     const char *mod_name = (const char *)(info + 8);
@@ -324,16 +326,21 @@ int obs_module_open(const char *library) {
             if (obs_strcmp(library, obs_sysmodules[i].name) == 0) {
                 int rc = sceSysmoduleLoadModule(obs_sysmodules[i].id);
                 if (rc == 0 || rc == (int)0x80540001) {
-                    if (obs_address_is_callable((const void *)&sceKernelGetModuleList) &&
-                        obs_address_is_callable((const void *)&sceKernelGetModuleInfo)) {
+                    if (obs_address_is_callable(
+                            (const void *)&sceKernelGetModuleList) &&
+                        obs_address_is_callable(
+                            (const void *)&sceKernelGetModuleInfo)) {
                         int mod_list[128];
                         size_t mod_count = 0;
-                        if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 && mod_count > 0) {
+                        if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 &&
+                            mod_count > 0) {
                             for (size_t k = 0; k < mod_count && k < 128; k++) {
                                 int mod_id = mod_list[k];
-                                if (mod_id <= 0) continue;
+                                if (mod_id <= 0)
+                                    continue;
                                 unsigned char info[512];
-                                for (size_t z = 0; z < sizeof(info); z++) info[z] = 0;
+                                for (size_t z = 0; z < sizeof(info); z++)
+                                    info[z] = 0;
                                 *(size_t *)info = sizeof(info);
                                 if (sceKernelGetModuleInfo(mod_id, info) == 0) {
                                     const char *mod_name = (const char *)(info + 8);
@@ -360,10 +367,12 @@ const void *obs_module_symbol(int handle, const char *name) {
     char nid[12];
     obs_compute_nid(name, nid);
 
-    /* 0. Try kernel-extracted export table first if available (bypasses retail game DRM block) */
+    /* 0. Try kernel-extracted export table first if available (bypasses retail game DRM
+     * block) */
     const payload_args_t *pargs = obs_get_payload_args();
     if (pargs != NULL && pargs->kexport_table != NULL) {
-        const void *kaddr = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+        const void *kaddr =
+            obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
         if (kaddr != NULL && obs_address_is_callable(kaddr)) {
             return kaddr;
         }
@@ -374,11 +383,13 @@ const void *obs_module_symbol(int handle, const char *name) {
     }
     void *address = NULL;
     /* 1. Try NID encoding (Sony SPRX export tables store 11-char NIDs) */
-    if (handle >= 0 && sceKernelDlsym(handle, nid, &address) == 0 && obs_address_is_callable(address)) {
+    if (handle >= 0 && sceKernelDlsym(handle, nid, &address) == 0 &&
+        obs_address_is_callable(address)) {
         return address;
     }
     /* 2. Fallback: try plain ASCII name */
-    if (handle >= 0 && sceKernelDlsym(handle, name, &address) == 0 && obs_address_is_callable(address)) {
+    if (handle >= 0 && sceKernelDlsym(handle, name, &address) == 0 &&
+        obs_address_is_callable(address)) {
         return address;
     }
     /* 3. Global search handle 1 fallback */
@@ -402,11 +413,14 @@ const void *obs_module_symbol(int handle, const char *name) {
         if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 && mod_count > 0) {
             for (size_t i = 0; i < mod_count && i < 128; i++) {
                 int mod_id = mod_list[i];
-                if (mod_id <= 0) continue;
-                if (sceKernelDlsym(mod_id, nid, &address) == 0 && obs_address_is_callable(address)) {
+                if (mod_id <= 0)
+                    continue;
+                if (sceKernelDlsym(mod_id, nid, &address) == 0 &&
+                    obs_address_is_callable(address)) {
                     return address;
                 }
-                if (sceKernelDlsym(mod_id, name, &address) == 0 && obs_address_is_callable(address)) {
+                if (sceKernelDlsym(mod_id, name, &address) == 0 &&
+                    obs_address_is_callable(address)) {
                     return address;
                 }
             }
@@ -420,8 +434,8 @@ int obs_module_resolution_works(void) {
     if (pargs != NULL && pargs->kexport_table != NULL) {
         return 1;
     }
-    /* Three states, because "not asked yet" and "asked, and no" are different and zero can
-     * only mean one of them. */
+    /* Three states, because "not asked yet" and "asked, and no" are different and zero
+     * can only mean one of them. */
     static int decided = 0;
     if (decided == 0) {
         decided = obs_module_open("libkernel") >= 0 ? 1 : -1;
@@ -458,34 +472,36 @@ obs_tally obs_run_all(void) {
     /* Opened before the first record is written, so the file holds the whole report
      * rather than everything after the point somebody remembered to open it.
      *
-     * The result is reported either way. A run whose sink silently failed and a run built
-     * without one look identical afterwards, and the difference is whether the findings
-     * survived being switched off - so the ambiguity is removed here rather than left for
-     * whoever goes looking for a file that is not there. */
+     * The result is reported either way. A run whose sink silently failed and a run
+     * built without one look identical afterwards, and the difference is whether the
+     * findings survived being switched off - so the ambiguity is removed here rather
+     * than left for whoever goes looking for a file that is not there. */
     /* The previous report, read **before** the sink opens and truncates it.
      *
-     * Ordering is the whole of the mechanism: `obs_sink_open` opens `O_TRUNC`, so one line
-     * later there is nothing left to learn. What it learns is the check the last run
-     * announced and never finished, which this run then skips. (D172) */
+     * Ordering is the whole of the mechanism: `obs_sink_open` opens `O_TRUNC`, so one
+     * line later there is nothing left to learn. What it learns is the check the last
+     * run announced and never finished, which this run then skips. (D172) */
     obs_resume_load(OBSCENE_BUILD_ID, checks);
     const char *sink = obs_sink_open();
 
     obs_report_meta(obs_section_count, checks);
     obs_report_build();
-    /* The measured context, next to the build: which environment this run's findings came from
-     * (host, ps4-compat payload, ps5-native, a title eboot). The same binary reports different
-     * things in each, and a reader diffing two runs needs to know which is which. */
+    /* The measured context, next to the build: which environment this run's findings
+     * came from (host, ps4-compat payload, ps5-native, a title eboot). The same binary
+     * reports different things in each, and a reader diffing two runs needs to know
+     * which is which. */
     {
         char context_name[40];
         char context_basis[112];
-        obs_run_context(context_name, sizeof context_name, context_basis, sizeof context_basis);
+        obs_run_context(context_name, sizeof context_name, context_basis,
+                        sizeof context_basis);
         obs_report_context(context_name, context_basis);
     }
     obs_report_sink(sink);
     obs_report_resume(obs_resume_skipped_count(), obs_resume_overflowed());
-    /* The status readout the HUD draws, mirrored into the report so a reader that never sees
-     * the screen gets the same facts (memory, VRAM, generation, gaps and all). Observations,
-     * not verdicts - see obs_report_sysinfo. */
+    /* The status readout the HUD draws, mirrored into the report so a reader that never
+     * sees the screen gets the same facts (memory, VRAM, generation, gaps and all).
+     * Observations, not verdicts - see obs_report_sysinfo. */
     obs_sysinfo_report();
 
     /* Output is seeded as available rather than proven: this report is being
@@ -495,8 +511,8 @@ obs_tally obs_run_all(void) {
     unsigned int available = OBS_CAP_OUTPUT;
 
     /* For the frontier record. `blocked` counts checks that never ran because something
-     * they needed was never established - the suite behind the floor - and `deepest` the
-     * last wholly green section. */
+     * they needed was never established - the suite behind the floor - and `deepest`
+     * the last wholly green section. */
     unsigned int blocked = 0;
     unsigned int deepest = 0;
 
@@ -520,41 +536,50 @@ obs_tally obs_run_all(void) {
                  * as a skip with the reason, so a reader can see it was deliberate and
                  * a diff can see it stopped being run. */
                 /* Two mechanisms, two messages, because they mean different things to a
-                 * reader. One is an operator's judgement baked into this build; the other is
-                 * this program's own observation from the last run of the same binary, and
-                 * only the second is a *finding*. Sharing a sentence would also make the
-                 * compatibility table's count of build-time exclusions silently wrong. */
-                result = excluded == OBS_EXCLUDED_AT_BUILD
-                             ? obs_skip("excluded at build time: known to end the process on "
-                                        "this platform")
-                             : obs_skip("did not return on the previous run of this build, so "
-                                        "it is skipped to get past it");
+                 * reader. One is an operator's judgement baked into this build; the
+                 * other is this program's own observation from the last run of the same
+                 * binary, and only the second is a *finding*. Sharing a sentence would
+                 * also make the compatibility table's count of build-time exclusions
+                 * silently wrong. */
+                result =
+                    excluded == OBS_EXCLUDED_AT_BUILD
+                        ? obs_skip(
+                              "excluded at build time: known to end the process on "
+                              "this platform")
+                        : obs_skip(
+                              "did not return on the previous run of this build, so "
+                              "it is skipped to get past it");
             } else if (!obs_address_is_callable(check->address)) {
-                /* The loader did not resolve the symbol - which is **not** the same as the
-                 * platform not having it, and saying so cost a whole afternoon's report.
+                /* The loader did not resolve the symbol - which is **not** the same as
+                 * the platform not having it, and saying so cost a whole afternoon's
+                 * report.
                  *
                  * On a console this program is a title, and a title is given far fewer
-                 * libraries than it asks for: of twelve `DT_NEEDED`, five were mapped. Every
-                 * check behind the other seven reported "the symbol is not present on this
-                 * platform" - and the run's own census, resolving the same libraries at run
-                 * time through `sceKernelLoadStartModule`, found `libScePad`,
-                 * `libSceAudioOut`, `libSceUserService`, `libSceGnmDriver`, `libSceNetCtl`
-                 * and `libSceVideoOut` all partly present. The symbols were there. The
-                 * sentence was wrong, and it was wrong in the direction that reads as a
-                 * finding about the platform. (D235)
+                 * libraries than it asks for: of twelve `DT_NEEDED`, five were mapped.
+                 * Every check behind the other seven reported "the symbol is not
+                 * present on this platform" - and the run's own census, resolving the
+                 * same libraries at run time through `sceKernelLoadStartModule`, found
+                 * `libScePad`, `libSceAudioOut`, `libSceUserService`,
+                 * `libSceGnmDriver`, `libSceNetCtl` and `libSceVideoOut` all partly
+                 * present. The symbols were there. The sentence was wrong, and it was
+                 * wrong in the direction that reads as a finding about the platform.
+                 * (D235)
                  *
-                 * The fix is to stop claiming, **not** to go and find out here. Loading the
-                 * library to answer it was tried and it is the wrong place: it turns a skip -
-                 * the one path in this loop that is supposed to do nothing - into one with
-                 * side effects, in a program whose first principle is that a check announces
-                 * before it acts. On hardware it loaded `libSceVideoRecording` on the way past
-                 * `105-record`, which is one of the ten libraries that end the process, and
-                 * took a thirteen-thousand-record run down to three hundred. (D235)
+                 * The fix is to stop claiming, **not** to go and find out here. Loading
+                 * the library to answer it was tried and it is the wrong place: it
+                 * turns a skip - the one path in this loop that is supposed to do
+                 * nothing - into one with side effects, in a program whose first
+                 * principle is that a check announces before it acts. On hardware it
+                 * loaded `libSceVideoRecording` on the way past `105-record`, which is
+                 * one of the ten libraries that end the process, and took a
+                 * thirteen-thousand-record run down to three hundred. (D235)
                  *
-                 * So this says only what it saw. Whether the symbol exists is a question the
-                 * census answers, by library, in the same report - and a reader who wants to
-                 * know can look, which is the arrangement that was always available. */
-                result = obs_skip("the loader did not resolve this symbol for this build");
+                 * So this says only what it saw. Whether the symbol exists is a
+                 * question the census answers, by library, in the same report - and a
+                 * reader who wants to know can look, which is the arrangement that was
+                 * always available. */
+                result =
+                    obs_skip("the loader did not resolve this symbol for this build");
             } else if (missing != 0) {
                 /* Not attempted, so nothing is announced - a `try` line with no
                  * result would look like a crash to anything reading the tail. */
@@ -564,15 +589,16 @@ obs_tally obs_run_all(void) {
                 obs_report_attempt(check);
                 /* And on screen, before the call.
                  *
-                 * The screen only ever showed results, which are recorded *after* a check
-                 * returns - so a check that never returns left the last completed section up
-                 * and nothing naming what was in flight. On a console the screen is the only
-                 * channel, and "it stopped somewhere" is a much worse thing to carry off a
-                 * hardware run than "it stopped in 015-sync/thread-churn".
+                 * The screen only ever showed results, which are recorded *after* a
+                 * check returns - so a check that never returns left the last completed
+                 * section up and nothing naming what was in flight. On a console the
+                 * screen is the only channel, and "it stopped somewhere" is a much
+                 * worse thing to carry off a hardware run than "it stopped in
+                 * 015-sync/thread-churn".
                  *
-                 * This is announce-before-attempting applied to the display, for the same
-                 * reason the report does it: the announcement is only useful if it is made
-                 * before the risk. (D174) */
+                 * This is announce-before-attempting applied to the display, for the
+                 * same reason the report does it: the announcement is only useful if it
+                 * is made before the risk. (D174) */
                 /* Recorded without a redraw: see obs_screen_attempt. */
                 obs_screen_attempt(check->id);
                 result = check->run();

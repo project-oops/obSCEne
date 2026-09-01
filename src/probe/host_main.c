@@ -43,14 +43,16 @@ static void obs_print_symbol_manifest(void) {
 /*
  * The manifest without the census, for a build that does not link it.
  *
- * The census is 339 of the 352 libraries and none of them is called by name - it takes each
- * name's address to ask whether it resolved, which imports the name and requires its library.
- * An eboot is built with `OBS_CENSUS_LINKED=0` for that reason (D227), so its undefined symbols
- * are only the ones the checks actually call, and this is the list that covers them.
+ * The census is 339 of the 352 libraries and none of them is called by name - it takes
+ * each name's address to ask whether it resolved, which imports the name and requires
+ * its library. An eboot is built with `OBS_CENSUS_LINKED=0` for that reason (D227), so
+ * its undefined symbols are only the ones the checks actually call, and this is the
+ * list that covers them.
  *
- * Two lists rather than one filtered afterwards: `mkmodule` fails on a symbol the manifest does
- * not claim, so the manifest and the link have to be produced from the same statement about
- * what is compiled in. A filter would be a third place for that to be decided.
+ * Two lists rather than one filtered afterwards: `mkmodule` fails on a symbol the
+ * manifest does not claim, so the manifest and the link have to be produced from the
+ * same statement about what is compiled in. A filter would be a third place for that to
+ * be decided.
  */
 static void obs_print_platform_manifest(void) {
     obs_platform_each_symbol(obs_print_one);
@@ -71,8 +73,8 @@ int main(int argc, char **argv) {
      *
      * The same code path a console will run, on a machine that has neither console nor
      * handheld attached. That is the whole reason the protocol is specified rather than
-     * improvised: `docs/PROTOCOL.md` plus the captured exchanges are enough to build and
-     * test a driver here, months before there is any hardware to point it at.
+     * improvised: `docs/PROTOCOL.md` plus the captured exchanges are enough to build
+     * and test a driver here, months before there is any hardware to point it at.
      *
      * A port may follow, so a second probe can be run alongside without a collision. */
     if (argc > 1 && strcmp(argv[1], "--serve") == 0) {
@@ -100,10 +102,12 @@ int main(int argc, char **argv) {
         }
         /* Generated before the socket opens, so there is never a window where the probe
          * is listening without one. A failure is reported and serving continues: the
-         * alternative is refusing to run at all on a platform with no entropy, which would
-         * take away a working instrument to enforce a control that platform cannot have. */
+         * alternative is refusing to run at all on a platform with no entropy, which
+         * would take away a working instrument to enforce a control that platform
+         * cannot have. */
         if (obs_net_secret_generate() < 0) {
-            fprintf(stderr, "could not generate a session secret: serving unauthenticated\n");
+            fprintf(stderr,
+                    "could not generate a session secret: serving unauthenticated\n");
         } else {
             fprintf(stderr, "session secret: %s\n", obs_net_secret_text());
         }

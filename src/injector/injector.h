@@ -14,4 +14,3 @@ void klog_write_hex(const char *prefix, uint64_t val);
 void klog_write_num(const char *prefix, int64_t num);
 
 #endif /* OBSCENE_INJECTOR_INJECTOR_H */
-

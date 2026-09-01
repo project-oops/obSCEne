@@ -56,26 +56,25 @@ int sys_get_errno(void) {
 long sys_call(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
     long ret;
     register long r10_arg __asm__("r10") = a4;
-    register long r8_arg  __asm__("r8")  = a5;
-    register long r9_arg  __asm__("r9")  = a6;
+    register long r8_arg __asm__("r8") = a5;
+    register long r9_arg __asm__("r9") = a6;
 
     if (s_direct_enabled) {
         long err = 0;
-        __asm__ volatile(
-            "movq %6, %%rax\n"
-            "movq %7, %%r10\n"
-            "syscall\n"
-            "jnc 1f\n"
-            "movq %%rax, %1\n"
-            "movq $-1, %0\n"
-            "jmp 2f\n"
-            "1:\n"
-            "movq %%rax, %0\n"
-            "2:\n"
-            : "=r"(ret), "=r"(err)
-            : "D"(a1), "S"(a2), "d"(a3), "r"(r8_arg), "r"(num), "r"(r10_arg), "r"(r9_arg)
-            : "rcx", "r11", "memory"
-        );
+        __asm__ volatile("movq %6, %%rax\n"
+                         "movq %7, %%r10\n"
+                         "syscall\n"
+                         "jnc 1f\n"
+                         "movq %%rax, %1\n"
+                         "movq $-1, %0\n"
+                         "jmp 2f\n"
+                         "1:\n"
+                         "movq %%rax, %0\n"
+                         "2:\n"
+                         : "=r"(ret), "=r"(err)
+                         : "D"(a1), "S"(a2), "d"(a3), "r"(r8_arg), "r"(num),
+                           "r"(r10_arg), "r"(r9_arg)
+                         : "rcx", "r11", "memory");
         if (err != 0) {
             s_last_errno = (int)err;
         } else {
@@ -88,14 +87,12 @@ long sys_call(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
         return -1;
     }
 
-    __asm__ volatile(
-        "movq %7, %%rax\n"
-        "movq %8, %%r10\n"
-        "callq *%9\n"
-        : "=a"(ret)
-        : "D"(a1), "S"(a2), "d"(a3), "r"(r10_arg), "r"(r8_arg), "r"(r9_arg), "r"(num), "r"(a4), "r"(s_ptr_syscall)
-        : "rcx", "r11", "memory"
-    );
+    __asm__ volatile("movq %7, %%rax\n"
+                     "movq %8, %%r10\n"
+                     "callq *%9\n"
+                     : "=a"(ret)
+                     : "D"(a1), "S"(a2), "d"(a3), "r"(r10_arg), "r"(r8_arg),
+                       "r"(r9_arg), "r"(num), "r"(a4), "r"(s_ptr_syscall)
+                     : "rcx", "r11", "memory");
     return ret;
 }
-

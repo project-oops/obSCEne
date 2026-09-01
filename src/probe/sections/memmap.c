@@ -13,8 +13,8 @@
  * Walking an enumeration means knowing where the next offset lives in the structure the
  * query returns - and that is a layout, which D008 forbids assuming. A wrong guess here
  * does not fail loudly: it either loops forever on the same region or walks off into
- * nonsense while producing plausible-looking output, which is the worst possible failure
- * for a record whose whole purpose is to be believed later.
+ * nonsense while producing plausible-looking output, which is the worst possible
+ * failure for a record whose whole purpose is to be believed later.
  *
  * So the walk **states its hypothesis and checks itself against it**:
  *
@@ -33,9 +33,10 @@
  *
  * # Captured twice, deliberately
  *
- * At entry, and again after an allocation. The document asks for both, and the reason is
- * that the *shape of a change* says things a snapshot cannot - which region an allocation
- * came out of, whether the map is split or annotated, whether anything moves.
+ * At entry, and again after an allocation. The document asks for both, and the reason
+ * is that the *shape of a change* says things a snapshot cannot - which region an
+ * allocation came out of, whether the map is split or annotated, whether anything
+ * moves.
  */
 
 #include "obscene/harness.h"
@@ -48,8 +49,9 @@
 #define OBS_REGION_GUARD 32u
 #define OBS_REGION_PATTERN 0x5Au
 
-/* A map with more regions than this is either enormous or a walk that is not converging.
- * Either way, stopping and saying how many were seen beats filling a report. */
+/* A map with more regions than this is either enormous or a walk that is not
+ * converging. Either way, stopping and saying how many were seen beats filling a
+ * report. */
 #define OBS_REGION_MAX 64u
 
 static uint64_t read_u64(const unsigned char *bytes, unsigned int offset) {
@@ -61,7 +63,8 @@ static uint64_t read_u64(const unsigned char *bytes, unsigned int offset) {
 }
 
 /* Walks the map from `start`, dumping each region. Returns how many were seen. */
-static unsigned int walk_map(const char *id, sce_off_t start, unsigned int *stalled_at) {
+static unsigned int walk_map(const char *id, sce_off_t start,
+                             unsigned int *stalled_at) {
     unsigned char buffer[OBS_REGION_BUFFER + OBS_REGION_GUARD];
     sce_off_t offset = start;
     uint64_t previous = 0;
@@ -78,8 +81,9 @@ static unsigned int walk_map(const char *id, sce_off_t start, unsigned int *stal
 
         int rc = sceKernelDirectMemoryQuery(offset, 0, buffer, OBS_REGION_BUFFER);
         if (rc != 0) {
-            /* The ordinary end of a walk: a query past the last region is refused. Not a
-             * failure, and the code is worth having, so it goes in the error table. */
+            /* The ordinary end of a walk: a query past the last region is refused. Not
+             * a failure, and the code is worth having, so it goes in the error table.
+             */
             obs_report_error_code("libkernel", "sceKernelDirectMemoryQuery",
                                   "offset past the last region",
                                   (uint64_t)(uint32_t)rc);
@@ -87,8 +91,8 @@ static unsigned int walk_map(const char *id, sce_off_t start, unsigned int *stal
         }
         for (unsigned int i = 0; i < OBS_REGION_GUARD; i++) {
             if (buffer[OBS_REGION_BUFFER + i] != OBS_REGION_PATTERN) {
-                /* Overran its buffer. Stop at once: everything after this point in memory
-                 * is suspect and continuing would compound it. */
+                /* Overran its buffer. Stop at once: everything after this point in
+                 * memory is suspect and continuing would compound it. */
                 *stalled_at = seen;
                 return seen;
             }
@@ -124,12 +128,13 @@ static obs_result check_memory_map(void) {
         return obs_fail("the map could not be queried at all");
     }
     if (stalled != 0) {
-        /* The honest outcome when the layout hypothesis does not hold: one or two regions
-         * and a statement that the walk stopped, rather than sixty-four plausible lines
-         * of nonsense. */
-        return obs_partial_value("the walk stopped advancing; the offset hypothesis may "
-                                 "be wrong for this platform",
-                                 (uint64_t)seen);
+        /* The honest outcome when the layout hypothesis does not hold: one or two
+         * regions and a statement that the walk stopped, rather than sixty-four
+         * plausible lines of nonsense. */
+        return obs_partial_value(
+            "the walk stopped advancing; the offset hypothesis may "
+            "be wrong for this platform",
+            (uint64_t)seen);
     }
     return obs_pass_value((uint64_t)seen);
 }
@@ -140,13 +145,13 @@ static obs_result check_memory_map_after_allocation(void) {
 
     /* The same walk with something taken out of it. The document asks for two captures
      * because the difference is what says which region an allocation came from, and
-     * whether the map is split, annotated or unchanged - none of which a single snapshot
-     * can show. */
+     * whether the map is split, annotated or unchanged - none of which a single
+     * snapshot can show. */
     const size_t size = 0x4000;
     sce_off_t physical = 0;
-    int rc = sceKernelAllocateDirectMemory(0, (sce_off_t)sceKernelGetDirectMemorySize(),
-                                           size, 0x4000, OBS_MEM_TYPE_WB_ONION,
-                                           &physical);
+    int rc =
+        sceKernelAllocateDirectMemory(0, (sce_off_t)sceKernelGetDirectMemorySize(),
+                                      size, 0x4000, OBS_MEM_TYPE_WB_ONION, &physical);
     if (rc != 0) {
         return obs_skip("nothing could be allocated, so there is no change to see");
     }
@@ -159,8 +164,8 @@ static obs_result check_memory_map_after_allocation(void) {
         return obs_fail("the map could not be queried after an allocation");
     }
     /* Deliberately not compared against the first walk. What changed is for a reader
-     * diffing two sets of records, and a verdict claiming to know what a difference means
-     * would be this check inventing the layout it spent the section avoiding. */
+     * diffing two sets of records, and a verdict claiming to know what a difference
+     * means would be this check inventing the layout it spent the section avoiding. */
     return obs_pass_value((uint64_t)seen);
 }
 
@@ -176,7 +181,8 @@ static const obs_check memmap_checks[] = {
 const obs_section obs_section_memmap = {
     "150-memory-map",
     "The map, walked",
-    "Every region the platform will describe, dumped as bytes and listed by position. The "
+    "Every region the platform will describe, dumped as bytes and listed by position. "
+    "The "
     "walk states where it believes the next offset lives and stops the moment it stops "
     "advancing, so a wrong guess yields one region rather than sixty-four wrong ones.",
     memmap_checks,

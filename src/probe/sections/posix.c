@@ -56,12 +56,14 @@ typedef union {
 
 /* 1 and 2 are SIGHUP and SIGINT on every system in this family, and neither is ever
  * raised here - the set is a data structure and these are just indices into it. Two are
- * needed rather than one so that adding a signal can be shown not to add every signal. */
+ * needed rather than one so that adding a signal can be shown not to add every signal.
+ */
 #define OBS_SIGNAL_A 1
 #define OBS_SIGNAL_B 2
 
 static obs_result check_signal_sets(void) {
-    OBS_REQUIRE(&posix_sigaddset, &posix_sigdelset, &posix_sigfillset, &posix_sigismember);
+    OBS_REQUIRE(&posix_sigaddset, &posix_sigdelset, &posix_sigfillset,
+                &posix_sigismember);
     obs_sigset set;
     for (size_t i = 0; i < sizeof(set.bytes); i++) {
         set.bytes[i] = 0xA5;
@@ -171,10 +173,8 @@ static obs_result check_short_sleep(void) {
 }
 
 static obs_result check_rwlock(void) {
-    OBS_REQUIRE(&posix_pthread_rwlock_destroy,
-                &posix_pthread_rwlock_tryrdlock,
-                &posix_pthread_rwlock_trywrlock,
-                &posix_pthread_rwlock_unlock);
+    OBS_REQUIRE(&posix_pthread_rwlock_destroy, &posix_pthread_rwlock_tryrdlock,
+                &posix_pthread_rwlock_trywrlock, &posix_pthread_rwlock_unlock);
     ObsPosixRwlock lock = 0;
     if (posix_pthread_rwlock_init(&lock, 0) != 0) {
         return obs_fail("a POSIX read/write lock could not be created");
@@ -213,10 +213,8 @@ static obs_result check_rwlock(void) {
 }
 
 static obs_result check_spellings_agree(void) {
-    OBS_REQUIRE(&posix_pthread_rwlock_destroy,
-                &posix_pthread_rwlock_init,
-                &posix_pthread_rwlock_trywrlock,
-                &posix_pthread_rwlock_unlock);
+    OBS_REQUIRE(&posix_pthread_rwlock_destroy, &posix_pthread_rwlock_init,
+                &posix_pthread_rwlock_trywrlock, &posix_pthread_rwlock_unlock);
     /* The check this whole section exists for.
      *
      * These are two names for one thing. Nothing here asks for a particular answer -
@@ -241,7 +239,8 @@ static obs_result check_spellings_agree(void) {
         (const void *)&scePthreadRwlockTrywrlock == 0 ||
         (const void *)&scePthreadRwlockUnlock == 0 ||
         (const void *)&scePthreadRwlockDestroy == 0) {
-        return obs_skip("the vendor spelling is absent, so there is nothing to compare");
+        return obs_skip(
+            "the vendor spelling is absent, so there is nothing to compare");
     }
 
     ScePthreadRwlock vendor = 0;

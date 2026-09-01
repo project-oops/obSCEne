@@ -14,15 +14,15 @@
 #define IPV6_PKTINFO 46
 #define IN6_PKTINFOSZ 5
 
-#define SYS_read        3
-#define SYS_write       4
-#define SYS_getpid      20
-#define SYS_setsockopt  105
+#define SYS_read 3
+#define SYS_write 4
+#define SYS_getpid 20
+#define SYS_setsockopt 105
 #define SYS_dynlib_get_obj_member 649
 
 #define EINVAL 22
 #define EFAULT 14
-#define ESRCH  3
+#define ESRCH 3
 
 typedef union kernel_pipebuf {
     unsigned int n[IN6_PKTINFOSZ];
@@ -48,38 +48,38 @@ typedef union kernel_pipebuf {
 /* State variables */
 static int s_master_sock = -1;
 static int s_victim_sock = -1;
-static int s_rwpipe[2]   = {-1, -1};
+static int s_rwpipe[2] = {-1, -1};
 static uintptr_t s_pipe_addr = 0;
 static uintptr_t s_kdata_base = 0;
 static uintptr_t s_ktext_base = 0;
 static uintptr_t s_allproc_addr = 0;
-static uint32_t  s_fw_version = 0;
+static uint32_t s_fw_version = 0;
 static int s_ready = 0;
 
 /* Saved original credentials of injector process */
-static uint64_t  s_orig_authid = 0;
-static uint8_t   s_orig_caps[16];
-static uint8_t   s_orig_attrs[32];
-static int       s_elevated = 0;
-static uint32_t  s_orig_my_uids[3] = {0};
-static int       s_my_uids_elevated = 0;
-static uint32_t  s_orig_target_uids[3] = {0};
-static int       s_target_uids_elevated = 0;
-static pid_t     s_elevated_target_pid = 0;
+static uint64_t s_orig_authid = 0;
+static uint8_t s_orig_caps[16];
+static uint8_t s_orig_attrs[32];
+static int s_elevated = 0;
+static uint32_t s_orig_my_uids[3] = {0};
+static int s_my_uids_elevated = 0;
+static uint32_t s_orig_target_uids[3] = {0};
+static int s_target_uids_elevated = 0;
+static pid_t s_elevated_target_pid = 0;
 static uintptr_t s_orig_ucred_ptr = 0;
 static uintptr_t s_orig_td_ptr = 0;
 static uintptr_t s_orig_td_ucred_offset = 0;
 static uintptr_t s_orig_td_ucred_ptr = 0;
 
 /* Offsets pinned from ps5-payload-dev-sdk */
-static const uintptr_t KERNEL_OFFSET_PROC_P_UCRED   = 0x40;
-static const uintptr_t KERNEL_OFFSET_PROC_P_FD      = 0x48;
-static const uintptr_t KERNEL_OFFSET_PROC_P_PID     = 0xBC;
+static const uintptr_t KERNEL_OFFSET_PROC_P_UCRED = 0x40;
+static const uintptr_t KERNEL_OFFSET_PROC_P_FD = 0x48;
+static const uintptr_t KERNEL_OFFSET_PROC_P_PID = 0xBC;
 static const uintptr_t KERNEL_OFFSET_PROC_P_VMSPACE = 0x200;
 
 static const uintptr_t KERNEL_OFFSET_UCRED_CR_SCEAUTHID = 0x58;
-static const uintptr_t KERNEL_OFFSET_UCRED_CR_SCECAPS   = 0x60;
-static const uintptr_t KERNEL_OFFSET_UCRED_CR_SCEATTRS  = 0x80;
+static const uintptr_t KERNEL_OFFSET_UCRED_CR_SCECAPS = 0x60;
+static const uintptr_t KERNEL_OFFSET_UCRED_CR_SCEATTRS = 0x80;
 
 static uintptr_t s_offset_vmspace_p_root = 0x1d0;
 static uintptr_t s_offset_vmspace_vm_pmap = 0x2e8;
@@ -94,7 +94,8 @@ static uint32_t detect_fw_version(void) {
         unsigned int sdk_ps5_ver;
     } *param = NULL;
 
-    if (sys_call(SYS_dynlib_get_obj_member, 0x2, 8, (long)&param, 0, 0, 0) == 0 && param != NULL) {
+    if (sys_call(SYS_dynlib_get_obj_member, 0x2, 8, (long)&param, 0, 0, 0) == 0 &&
+        param != NULL) {
         return param->sdk_ps5_ver;
     }
     return 0x02000000; /* Fallback default */
@@ -116,10 +117,10 @@ int krw_init(const payload_args_t *args) {
 
     s_master_sock = args->rwpair[0];
     s_victim_sock = args->rwpair[1];
-    s_rwpipe[0]   = args->rwpipe[0];
-    s_rwpipe[1]   = args->rwpipe[1];
-    s_pipe_addr   = (uintptr_t)args->kpipe_addr;
-    s_kdata_base  = (uintptr_t)args->kdata_base_addr;
+    s_rwpipe[0] = args->rwpipe[0];
+    s_rwpipe[1] = args->rwpipe[1];
+    s_pipe_addr = (uintptr_t)args->kpipe_addr;
+    s_kdata_base = (uintptr_t)args->kdata_base_addr;
 
     s_fw_version = detect_fw_version();
 
@@ -258,11 +259,13 @@ static int raw_kernel_write(uintptr_t kaddr, const void *data, size_t len) {
     }
 
     buf.vbuf.kaddr = kaddr;
-    if (sys_call(SYS_setsockopt, s_master_sock, IPPROTO_IPV6, IPV6_PKTINFO, (long)&buf, sizeof(buf), 0) != 0) {
+    if (sys_call(SYS_setsockopt, s_master_sock, IPPROTO_IPV6, IPV6_PKTINFO, (long)&buf,
+                 sizeof(buf), 0) != 0) {
         return -1;
     }
 
-    if (sys_call(SYS_setsockopt, s_victim_sock, IPPROTO_IPV6, IPV6_PKTINFO, (long)data, (long)len, 0) != 0) {
+    if (sys_call(SYS_setsockopt, s_victim_sock, IPPROTO_IPV6, IPV6_PKTINFO, (long)data,
+                 (long)len, 0) != 0) {
         return -1;
     }
 
@@ -435,7 +438,8 @@ int krw_set_ucred_authid(pid_t pid, uint64_t authid) {
     if (ucred == 0) {
         return -1;
     }
-    return krw_copyin(&authid, ucred + KERNEL_OFFSET_UCRED_CR_SCEAUTHID, sizeof(authid));
+    return krw_copyin(&authid, ucred + KERNEL_OFFSET_UCRED_CR_SCEAUTHID,
+                      sizeof(authid));
 }
 
 int krw_get_ucred_caps(pid_t pid, uint8_t caps[16]) {
@@ -485,9 +489,11 @@ uintptr_t krw_get_root_vnode(void) {
 
 uintptr_t krw_get_proc_rootdir(pid_t pid) {
     uintptr_t proc = krw_get_proc(pid);
-    if (proc == 0) return 0;
+    if (proc == 0)
+        return 0;
     uintptr_t fd = 0;
-    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0) return 0;
+    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0)
+        return 0;
     uintptr_t rdir = 0;
     krw_copyout(fd + 0x18, &rdir, sizeof(rdir));
     return rdir;
@@ -495,17 +501,21 @@ uintptr_t krw_get_proc_rootdir(pid_t pid) {
 
 int krw_set_proc_rootdir(pid_t pid, uintptr_t vnode) {
     uintptr_t proc = krw_get_proc(pid);
-    if (proc == 0) return -1;
+    if (proc == 0)
+        return -1;
     uintptr_t fd = 0;
-    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0) return -1;
+    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0)
+        return -1;
     return krw_copyin(&vnode, fd + 0x18, sizeof(vnode));
 }
 
 uintptr_t krw_get_proc_jaildir(pid_t pid) {
     uintptr_t proc = krw_get_proc(pid);
-    if (proc == 0) return 0;
+    if (proc == 0)
+        return 0;
     uintptr_t fd = 0;
-    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0) return 0;
+    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0)
+        return 0;
     uintptr_t jdir = 0;
     krw_copyout(fd + 0x20, &jdir, sizeof(jdir));
     return jdir;
@@ -513,9 +523,11 @@ uintptr_t krw_get_proc_jaildir(pid_t pid) {
 
 int krw_set_proc_jaildir(pid_t pid, uintptr_t vnode) {
     uintptr_t proc = krw_get_proc(pid);
-    if (proc == 0) return -1;
+    if (proc == 0)
+        return -1;
     uintptr_t fd = 0;
-    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0) return -1;
+    if (krw_copyout(proc + KERNEL_OFFSET_PROC_P_FD, &fd, sizeof(fd)) != 0 || fd == 0)
+        return -1;
     return krw_copyin(&vnode, fd + 0x20, sizeof(vnode));
 }
 
@@ -580,7 +592,8 @@ int krw_elevate_current_process(void) {
         }
     }
 
-    /* Apply kernel ptrace patch to enable game PT_ATTACH without AppContext gating rejection */
+    /* Apply kernel ptrace patch to enable game PT_ATTACH without AppContext gating
+     * rejection */
     if (krw_apply_ptrace_kernel_patch() != 0) {
         klog_write("WARNING: krw_apply_ptrace_kernel_patch failed");
     } else {
@@ -593,11 +606,13 @@ int krw_elevate_current_process(void) {
         pid_t shellpid = 0;
         krw_copyout(shellproc + KERNEL_OFFSET_PROC_P_PID, &shellpid, sizeof(shellpid));
         uintptr_t shellucred = 0;
-        krw_copyout(shellproc + KERNEL_OFFSET_PROC_P_UCRED, &shellucred, sizeof(shellucred));
+        krw_copyout(shellproc + KERNEL_OFFSET_PROC_P_UCRED, &shellucred,
+                    sizeof(shellucred));
         uint64_t shellauthid = 0;
         uintptr_t shellprison = 0;
         if (shellucred != 0) {
-            krw_copyout(shellucred + KERNEL_OFFSET_UCRED_CR_SCEAUTHID, &shellauthid, sizeof(shellauthid));
+            krw_copyout(shellucred + KERNEL_OFFSET_UCRED_CR_SCEAUTHID, &shellauthid,
+                        sizeof(shellauthid));
             krw_copyout(shellucred + 0x30, &shellprison, sizeof(shellprison));
         }
         klog_write_num("SceShellCore pid=", (int64_t)shellpid);
@@ -643,19 +658,23 @@ int krw_elevate_process(pid_t pid) {
     /* Elevate target UIDs to root (0) to satisfy priv_check_cred(PRIV_DEBUG_UNPRIV) */
     uintptr_t target_ucred = krw_get_ucred(pid);
     if (target_ucred != 0 && !s_target_uids_elevated) {
-        krw_copyout(target_ucred + 0x04, s_orig_target_uids, sizeof(s_orig_target_uids));
+        krw_copyout(target_ucred + 0x04, s_orig_target_uids,
+                    sizeof(s_orig_target_uids));
         s_target_uids_elevated = 1;
         uint32_t zeros[3] = {0};
         krw_copyin(zeros, target_ucred + 0x04, sizeof(zeros));
         klog_write_num("target orig cr_uid=", (int64_t)s_orig_target_uids[0]);
     }
 
-    /* Note: preserve target game rootdir/jaildir vnodes so game asset reads remain intact */
+    /* Note: preserve target game rootdir/jaildir vnodes so game asset reads remain
+     * intact */
 
-    /* Clear P_SUGID (0x100), P_TRACED (0x800), P_STOPPED_TRACE (0x20000), P_STOPPED_SIG (0x40000) on target proc */
+    /* Clear P_SUGID (0x100), P_TRACED (0x800), P_STOPPED_TRACE (0x20000), P_STOPPED_SIG
+     * (0x40000) on target proc */
     uint32_t p_flag = 0;
     if (krw_copyout(kproc + 0xB0, &p_flag, sizeof(p_flag)) == 0) {
-        uint32_t clear_mask = 0x00060900; /* P_SUGID | P_TRACED | P_STOPPED_TRACE | P_STOPPED_SIG */
+        uint32_t clear_mask =
+            0x00060900; /* P_SUGID | P_TRACED | P_STOPPED_TRACE | P_STOPPED_SIG */
         if (p_flag & clear_mask) {
             p_flag &= ~clear_mask;
             krw_copyin(&p_flag, kproc + 0xB0, sizeof(p_flag));
@@ -694,10 +713,14 @@ int krw_swap_ucred(pid_t target_pid) {
 
     uintptr_t my_ucred = 0;
     uintptr_t target_ucred = 0;
-    if (krw_copyout(my_kproc + KERNEL_OFFSET_PROC_P_UCRED, &my_ucred, sizeof(my_ucred)) != 0 || my_ucred == 0) {
+    if (krw_copyout(my_kproc + KERNEL_OFFSET_PROC_P_UCRED, &my_ucred,
+                    sizeof(my_ucred)) != 0 ||
+        my_ucred == 0) {
         return -1;
     }
-    if (krw_copyout(target_kproc + KERNEL_OFFSET_PROC_P_UCRED, &target_ucred, sizeof(target_ucred)) != 0 || target_ucred == 0) {
+    if (krw_copyout(target_kproc + KERNEL_OFFSET_PROC_P_UCRED, &target_ucred,
+                    sizeof(target_ucred)) != 0 ||
+        target_ucred == 0) {
         return -1;
     }
 
@@ -717,7 +740,8 @@ int krw_swap_ucred(pid_t target_pid) {
         klog_write("joined target prison");
     }
 
-    /* Keep my_kproc->p_ucred pointing to our elevated my_ucred (with SYSTEM_AUTHID and all caps) */
+    /* Keep my_kproc->p_ucred pointing to our elevated my_ucred (with SYSTEM_AUTHID and
+     * all caps) */
     krw_copyin(&my_ucred, my_kproc + KERNEL_OFFSET_PROC_P_UCRED, sizeof(my_ucred));
 
     /* Ensure all threads of my_kproc have td_ucred pointing to our elevated my_ucred */
@@ -728,12 +752,14 @@ int krw_swap_ucred(pid_t target_pid) {
             krw_copyin(&my_ucred, td + 0x140, sizeof(my_ucred));
             thread_count++;
             uintptr_t next_td = 0;
-            if (krw_copyout(td + 0x10, &next_td, sizeof(next_td)) != 0 || next_td == td) {
+            if (krw_copyout(td + 0x10, &next_td, sizeof(next_td)) != 0 ||
+                next_td == td) {
                 break;
             }
             td = next_td;
         }
-        klog_write_num("synchronized my threads with my_ucred, count=", (int64_t)thread_count);
+        klog_write_num("synchronized my threads with my_ucred, count=",
+                       (int64_t)thread_count);
     }
 
     return 0;
@@ -741,7 +767,8 @@ int krw_swap_ucred(pid_t target_pid) {
 
 int krw_restore_ucred(void) {
     if (s_orig_td_ptr != 0 && s_orig_td_ucred_offset != 0) {
-        krw_copyin(&s_orig_td_ucred_ptr, s_orig_td_ptr + s_orig_td_ucred_offset, sizeof(s_orig_td_ucred_ptr));
+        krw_copyin(&s_orig_td_ucred_ptr, s_orig_td_ptr + s_orig_td_ucred_offset,
+                   sizeof(s_orig_td_ucred_ptr));
         s_orig_td_ptr = 0;
         s_orig_td_ucred_offset = 0;
         s_orig_td_ucred_ptr = 0;
@@ -749,7 +776,8 @@ int krw_restore_ucred(void) {
     if (s_target_uids_elevated && s_elevated_target_pid > 0) {
         uintptr_t target_ucred = krw_get_ucred(s_elevated_target_pid);
         if (target_ucred != 0) {
-            krw_copyin(s_orig_target_uids, target_ucred + 0x04, sizeof(s_orig_target_uids));
+            krw_copyin(s_orig_target_uids, target_ucred + 0x04,
+                       sizeof(s_orig_target_uids));
         }
         s_target_uids_elevated = 0;
         s_elevated_target_pid = 0;
@@ -762,7 +790,8 @@ int krw_restore_ucred(void) {
     if (my_kproc == 0) {
         return -1;
     }
-    int ret = krw_copyin(&s_orig_ucred_ptr, my_kproc + KERNEL_OFFSET_PROC_P_UCRED, sizeof(s_orig_ucred_ptr));
+    int ret = krw_copyin(&s_orig_ucred_ptr, my_kproc + KERNEL_OFFSET_PROC_P_UCRED,
+                         sizeof(s_orig_ucred_ptr));
     s_orig_ucred_ptr = 0;
     return ret;
 }
@@ -791,15 +820,19 @@ int krw_restore_current_process(void) {
 int krw_mprotect(pid_t pid, uintptr_t addr, size_t len, int prot) {
     (void)prot;
     uintptr_t kproc = krw_get_proc(pid);
-    if (kproc == 0) return -1;
+    if (kproc == 0)
+        return -1;
     uintptr_t vmspace = 0;
-    if (krw_copyout(kproc + KERNEL_OFFSET_PROC_P_VMSPACE, &vmspace, sizeof(vmspace)) != 0 || vmspace == 0) {
+    if (krw_copyout(kproc + KERNEL_OFFSET_PROC_P_VMSPACE, &vmspace, sizeof(vmspace)) !=
+            0 ||
+        vmspace == 0) {
         return -1;
     }
 
     /* Walk vm_map entries to locate the region covering addr and adjust protection */
     uintptr_t root = 0;
-    if (krw_copyout(vmspace + s_offset_vmspace_p_root, &root, sizeof(root)) != 0 || root == 0) {
+    if (krw_copyout(vmspace + s_offset_vmspace_p_root, &root, sizeof(root)) != 0 ||
+        root == 0) {
         return -1;
     }
 
@@ -834,45 +867,79 @@ int krw_apply_ptrace_kernel_patch(void) {
     uintptr_t patch_offset = 0;
     uint32_t fw = s_fw_version & 0xffff0000u;
     switch (fw) {
-    case 0x03000000u: case 0x03100000u: case 0x03200000u: case 0x03210000u:
+    case 0x03000000u:
+    case 0x03100000u:
+    case 0x03200000u:
+    case 0x03210000u:
         patch_offset = 0x6466498ULL;
         break;
     case 0x04020000u:
         patch_offset = 0x6505498ULL;
         break;
-    case 0x04000000u: case 0x04030000u: case 0x04500000u: case 0x04510000u:
+    case 0x04000000u:
+    case 0x04030000u:
+    case 0x04500000u:
+    case 0x04510000u:
         patch_offset = 0x6506498ULL;
         break;
-    case 0x05000000u: case 0x05020000u: case 0x05100000u: case 0x05500000u:
+    case 0x05000000u:
+    case 0x05020000u:
+    case 0x05100000u:
+    case 0x05500000u:
         patch_offset = 0x6646710ULL;
         break;
-    case 0x06000000u: case 0x06020000u: case 0x06500000u:
+    case 0x06000000u:
+    case 0x06020000u:
+    case 0x06500000u:
         patch_offset = 0x6596910ULL;
         break;
-    case 0x07000000u: case 0x07010000u: case 0x07010100u: case 0x07200000u:
-    case 0x07400000u: case 0x07600000u: case 0x07610000u:
+    case 0x07000000u:
+    case 0x07010000u:
+    case 0x07010100u:
+    case 0x07200000u:
+    case 0x07400000u:
+    case 0x07600000u:
+    case 0x07610000u:
         patch_offset = 0xAC8088ULL;
         break;
-    case 0x08000000u: case 0x08200000u: case 0x08400000u: case 0x08600000u:
+    case 0x08000000u:
+    case 0x08200000u:
+    case 0x08400000u:
+    case 0x08600000u:
         patch_offset = 0xAC3088ULL;
         break;
     case 0x09000000u:
         patch_offset = 0xD72088ULL;
         break;
-    case 0x09050000u: case 0x09200000u: case 0x09400000u: case 0x09600000u:
+    case 0x09050000u:
+    case 0x09200000u:
+    case 0x09400000u:
+    case 0x09600000u:
         patch_offset = 0xD73088ULL;
         break;
-    case 0x10000000u: case 0x10010000u: case 0x10200000u: case 0x10400000u: case 0x10600000u:
+    case 0x10000000u:
+    case 0x10010000u:
+    case 0x10200000u:
+    case 0x10400000u:
+    case 0x10600000u:
         patch_offset = 0xD79088ULL;
         break;
-    case 0x11000000u: case 0x11200000u: case 0x11400000u: case 0x11600000u:
+    case 0x11000000u:
+    case 0x11200000u:
+    case 0x11400000u:
+    case 0x11600000u:
         patch_offset = 0xD8C088ULL;
         break;
-    case 0x12000000u: case 0x12020000u: case 0x12200000u: case 0x12400000u:
-    case 0x12600000u: case 0x12700000u:
+    case 0x12000000u:
+    case 0x12020000u:
+    case 0x12200000u:
+    case 0x12400000u:
+    case 0x12600000u:
+    case 0x12700000u:
         patch_offset = 0xD83088ULL;
         break;
-    case 0x13000000u: case 0x13200000u:
+    case 0x13000000u:
+    case 0x13200000u:
         patch_offset = 0xD99088ULL;
         break;
     default:
@@ -923,7 +990,8 @@ uintptr_t krw_find_target_libkernel_base(uintptr_t target_kproc, uintptr_t rip_h
                     uint64_t mapbase = 0;
                     krw_copyout(node + 0x30, &mapbase, sizeof(mapbase));
                     if ((entry_sel == 0x2001 || entry_sel == 1) && mapbase != 0) {
-                        klog_write_hex("found target libkernel mapbase via sel=", (uint64_t)entry_sel);
+                        klog_write_hex("found target libkernel mapbase via sel=",
+                                       (uint64_t)entry_sel);
                         klog_write_hex("target libkernel mapbase=", mapbase);
                         return (uintptr_t)mapbase;
                     }
@@ -947,7 +1015,8 @@ uintptr_t krw_find_target_libkernel_base(uintptr_t target_kproc, uintptr_t rip_h
 
 uintptr_t krw_dynlib_resolve(pid_t pid, int sprx_handle, const char *nid) {
     uintptr_t kproc = krw_get_proc(pid);
-    if (kproc == 0) return 0;
+    if (kproc == 0)
+        return 0;
 
     uintptr_t kaddr = 0;
     if (krw_copyout(kproc + 0x3E8, &kaddr, sizeof(kaddr)) != 0 || kaddr == 0)
@@ -962,7 +1031,8 @@ uintptr_t krw_dynlib_resolve(pid_t pid, int sprx_handle, const char *nid) {
     int count = 0;
     while (cur != 0 && count < 64) {
         uint32_t sel = 0;
-        if (krw_copyout(cur + 0x28, &sel, sizeof(sel)) != 0) break;
+        if (krw_copyout(cur + 0x28, &sel, sizeof(sel)) != 0)
+            break;
         if (sel == (uint32_t)sprx_handle) {
             if (krw_copyout(cur, module_record, sizeof(module_record)) == 0) {
                 found = 1;
@@ -970,37 +1040,45 @@ uintptr_t krw_dynlib_resolve(pid_t pid, int sprx_handle, const char *nid) {
             break;
         }
         uintptr_t next = 0;
-        if (krw_copyout(cur, &next, sizeof(next)) != 0 || next == cur) break;
+        if (krw_copyout(cur, &next, sizeof(next)) != 0 || next == cur)
+            break;
         cur = next;
         count++;
     }
-    if (!found) return 0;
+    if (!found)
+        return 0;
 
     uintptr_t dispatch_kaddr = *(uintptr_t *)(module_record + 0x148);
-    if (dispatch_kaddr == 0) return 0;
+    if (dispatch_kaddr == 0)
+        return 0;
 
     uint8_t dispatch_table[0x120] = {0};
     if (krw_copyout(dispatch_kaddr, dispatch_table, sizeof(dispatch_table)) != 0)
         return 0;
 
     uint64_t kaddr_table = *(uint64_t *)(dispatch_table + 0x28);
-    uint64_t table_size  = *(uint64_t *)(dispatch_table + 0x30);
+    uint64_t table_size = *(uint64_t *)(dispatch_table + 0x30);
     uint64_t nid_strbase = *(uint64_t *)(dispatch_table + 0x38);
-    uint64_t module_base = *(uint64_t *)(module_record  + 0x30);
+    uint64_t module_base = *(uint64_t *)(module_record + 0x30);
 
-    if (kaddr_table == 0 || table_size == 0 || nid_strbase == 0) return 0;
+    if (kaddr_table == 0 || table_size == 0 || nid_strbase == 0)
+        return 0;
 
     static uint8_t s_table_buf[32768];
     static uint8_t s_nid_buf[32768];
 
-    size_t copy_table_sz = (table_size > sizeof(s_table_buf)) ? sizeof(s_table_buf) : (size_t)table_size;
-    if (krw_copyout((uintptr_t)kaddr_table, s_table_buf, copy_table_sz) != 0) return 0;
-    if (krw_copyout((uintptr_t)nid_strbase, s_nid_buf, sizeof(s_nid_buf)) != 0) return 0;
+    size_t copy_table_sz =
+        (table_size > sizeof(s_table_buf)) ? sizeof(s_table_buf) : (size_t)table_size;
+    if (krw_copyout((uintptr_t)kaddr_table, s_table_buf, copy_table_sz) != 0)
+        return 0;
+    if (krw_copyout((uintptr_t)nid_strbase, s_nid_buf, sizeof(s_nid_buf)) != 0)
+        return 0;
 
     for (size_t off_ent = 0; off_ent + 0x18 <= copy_table_sz; off_ent += 0x18) {
         const uint8_t *entry = s_table_buf + off_ent;
         uint32_t off = *(const uint32_t *)entry;
-        if (off + 12 > sizeof(s_nid_buf)) continue;
+        if (off + 12 > sizeof(s_nid_buf))
+            continue;
         const char *nid_read = (const char *)(s_nid_buf + off);
 
         int matched = 1;
@@ -1009,7 +1087,8 @@ uintptr_t krw_dynlib_resolve(pid_t pid, int sprx_handle, const char *nid) {
                 matched = 0;
                 break;
             }
-            if (nid[i] == '\0') break;
+            if (nid[i] == '\0')
+                break;
         }
         if (matched) {
             uint64_t func_offset = *(const uint64_t *)(entry + 0x08);
@@ -1025,12 +1104,14 @@ uintptr_t krw_dynlib_resolve(pid_t pid, int sprx_handle, const char *nid) {
 }
 
 uintptr_t krw_dynlib_resolve_any(pid_t pid, const char *sname) {
-    if (sname == NULL || sname[0] == '\0') return 0;
+    if (sname == NULL || sname[0] == '\0')
+        return 0;
     char nid[12];
     obs_compute_nid(sname, nid);
 
     uintptr_t kproc = krw_get_proc(pid);
-    if (kproc == 0) return 0;
+    if (kproc == 0)
+        return 0;
 
     uintptr_t kaddr = 0;
     if (krw_copyout(kproc + 0x3E8, &kaddr, sizeof(kaddr)) != 0 || kaddr == 0)
@@ -1043,7 +1124,8 @@ uintptr_t krw_dynlib_resolve_any(pid_t pid, const char *sname) {
     int count = 0;
     while (cur != 0 && count < 128) {
         uint32_t sel = 0;
-        if (krw_copyout(cur + 0x28, &sel, sizeof(sel)) != 0) break;
+        if (krw_copyout(cur + 0x28, &sel, sizeof(sel)) != 0)
+            break;
         if (sel != 0) {
             uintptr_t addr = krw_dynlib_resolve(pid, (int)sel, nid);
             if (addr != 0) {
@@ -1051,7 +1133,8 @@ uintptr_t krw_dynlib_resolve_any(pid_t pid, const char *sname) {
             }
         }
         uintptr_t next = 0;
-        if (krw_copyout(cur, &next, sizeof(next)) != 0 || next == cur) break;
+        if (krw_copyout(cur, &next, sizeof(next)) != 0 || next == cur)
+            break;
         cur = next;
         count++;
     }
@@ -1081,12 +1164,14 @@ static void sort_kexport_entries(obs_kexport_entry_t *arr, int low, int high) {
 }
 
 int krw_dump_all_exports(pid_t pid, obs_kexport_table_t *table) {
-    if (table == NULL) return -1;
+    if (table == NULL)
+        return -1;
     table->count = 0;
     table->capacity = OBS_KEXPORT_MAX;
 
     uintptr_t kproc = krw_get_proc(pid);
-    if (kproc == 0) return -1;
+    if (kproc == 0)
+        return -1;
 
     uintptr_t kaddr = 0;
     if (krw_copyout(kproc + 0x3E8, &kaddr, sizeof(kaddr)) != 0 || kaddr == 0)
@@ -1102,7 +1187,8 @@ int krw_dump_all_exports(pid_t pid, obs_kexport_table_t *table) {
     int mod_count = 0;
     while (cur != 0 && mod_count < 128) {
         uint8_t module_record[0x180] = {0};
-        if (krw_copyout(cur, module_record, sizeof(module_record)) != 0) break;
+        if (krw_copyout(cur, module_record, sizeof(module_record)) != 0)
+            break;
 
         uint32_t sel = 0;
         krw_copyout(cur + 0x28, &sel, sizeof(sel));
@@ -1111,26 +1197,36 @@ int krw_dump_all_exports(pid_t pid, obs_kexport_table_t *table) {
 
         if (dispatch_kaddr != 0 && module_base != 0) {
             uint8_t dispatch_table[0x120] = {0};
-            if (krw_copyout(dispatch_kaddr, dispatch_table, sizeof(dispatch_table)) == 0) {
+            if (krw_copyout(dispatch_kaddr, dispatch_table, sizeof(dispatch_table)) ==
+                0) {
                 uint64_t kaddr_table = *(uint64_t *)(dispatch_table + 0x28);
-                uint64_t table_size  = *(uint64_t *)(dispatch_table + 0x30);
+                uint64_t table_size = *(uint64_t *)(dispatch_table + 0x30);
                 uint64_t nid_strbase = *(uint64_t *)(dispatch_table + 0x38);
 
                 if (kaddr_table != 0 && table_size != 0 && nid_strbase != 0) {
-                    size_t copy_table_sz = (table_size > sizeof(s_table_buf)) ? sizeof(s_table_buf) : (size_t)table_size;
-                    if (krw_copyout((uintptr_t)kaddr_table, s_table_buf, copy_table_sz) == 0 &&
-                        krw_copyout((uintptr_t)nid_strbase, s_nid_buf, sizeof(s_nid_buf)) == 0) {
+                    size_t copy_table_sz = (table_size > sizeof(s_table_buf))
+                                               ? sizeof(s_table_buf)
+                                               : (size_t)table_size;
+                    if (krw_copyout((uintptr_t)kaddr_table, s_table_buf,
+                                    copy_table_sz) == 0 &&
+                        krw_copyout((uintptr_t)nid_strbase, s_nid_buf,
+                                    sizeof(s_nid_buf)) == 0) {
 
-                        for (size_t off_ent = 0; off_ent + 0x18 <= copy_table_sz; off_ent += 0x18) {
-                            if (table->count >= table->capacity) break;
+                        for (size_t off_ent = 0; off_ent + 0x18 <= copy_table_sz;
+                             off_ent += 0x18) {
+                            if (table->count >= table->capacity)
+                                break;
                             const uint8_t *entry = s_table_buf + off_ent;
                             uint32_t off = *(const uint32_t *)entry;
-                            if (off + 12 > sizeof(s_nid_buf)) continue;
+                            if (off + 12 > sizeof(s_nid_buf))
+                                continue;
                             const char *nid_read = (const char *)(s_nid_buf + off);
-                            if (nid_read[0] == '\0') continue;
+                            if (nid_read[0] == '\0')
+                                continue;
 
                             uint64_t func_offset = *(const uint64_t *)(entry + 0x08);
-                            if (func_offset == 0) continue;
+                            if (func_offset == 0)
+                                continue;
 
                             obs_kexport_entry_t *out = &table->entries[table->count];
                             memcpy(out->nid, nid_read, 11);
@@ -1145,7 +1241,8 @@ int krw_dump_all_exports(pid_t pid, obs_kexport_table_t *table) {
         }
 
         uintptr_t next = 0;
-        if (krw_copyout(cur, &next, sizeof(next)) != 0 || next == cur) break;
+        if (krw_copyout(cur, &next, sizeof(next)) != 0 || next == cur)
+            break;
         cur = next;
         mod_count++;
     }
@@ -1157,4 +1254,3 @@ int krw_dump_all_exports(pid_t pid, obs_kexport_table_t *table) {
     klog_write_hex("krw_dump_all_exports collected exports: ", (uint64_t)table->count);
     return 0;
 }
-

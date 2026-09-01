@@ -80,9 +80,9 @@ static obs_result check_write_rejects_bad_descriptor(void) {
 
 /* Reads the stack pointer as the caller of this function saw it.
  *
- * `__builtin_frame_address(0)` is the frame base of this function. On x86-64 SysV that is
- * a known distance from the stack pointer at entry, but the distance depends on what the
- * compiler did with the frame - so the value is not used absolutely, only for its
+ * `__builtin_frame_address(0)` is the frame base of this function. On x86-64 SysV that
+ * is a known distance from the stack pointer at entry, but the distance depends on what
+ * the compiler did with the frame - so the value is not used absolutely, only for its
  * alignment, which the ABI fixes regardless. */
 static uintptr_t obs_frame_alignment(void) {
     return (uintptr_t)__builtin_frame_address(0) & 0x0Fu;
@@ -91,31 +91,31 @@ static uintptr_t obs_frame_alignment(void) {
 static obs_result check_stack_alignment(void) {
     /* # Why this is worth a check of its own
      *
-     * x86-64 SysV requires the stack to be sixteen-byte aligned at a `call`, which leaves
-     * `rsp % 16 == 8` on entry to the callee once the return address is pushed. Compiled
-     * code assumes it, and uses the assumption to place aligned spills - so a violation
-     * does not fail immediately. It fails the first time something spills a vector
-     * register, which may be in a completely different function, long afterwards, and only
-     * once the implementation is large enough to want one.
+     * x86-64 SysV requires the stack to be sixteen-byte aligned at a `call`, which
+     * leaves `rsp % 16 == 8` on entry to the callee once the return address is pushed.
+     * Compiled code assumes it, and uses the assumption to place aligned spills - so a
+     * violation does not fail immediately. It fails the first time something spills a
+     * vector register, which may be in a completely different function, long
+     * afterwards, and only once the implementation is large enough to want one.
      *
-     * That makes it invisible until it is expensive. The orbistoun side found exactly this
-     * shape: 370 of 372 guest calls arriving misaligned for the entire life of the project,
-     * undetected until an implementation grew big enough to hit it.
+     * That makes it invisible until it is expensive. The orbistoun side found exactly
+     * this shape: 370 of 372 guest calls arriving misaligned for the entire life of the
+     * project, undetected until an implementation grew big enough to hit it.
      *
      * **No loader passes this by accident**, and a loader that jumps to an entry point
      * rather than calling one gets it wrong without any other symptom.
      *
      * # What it can and cannot see
      *
-     * It reads its own frame, so it measures the alignment this program is running with -
-     * which is what a platform function called from here will inherit. It cannot see how a
-     * *callback* is entered, so a loader that gets ordinary calls right and callbacks wrong
-     * would pass. Stated rather than implied. */
+     * It reads its own frame, so it measures the alignment this program is running with
+     * - which is what a platform function called from here will inherit. It cannot see
+     * how a *callback* is entered, so a loader that gets ordinary calls right and
+     * callbacks wrong would pass. Stated rather than implied. */
     uintptr_t offset = obs_frame_alignment();
 
-    /* A frame base is sixteen-byte aligned in a correctly entered function, whatever the
-     * compiler chose to do above it. Anything else means the stack was already skewed
-     * before this program started running. */
+    /* A frame base is sixteen-byte aligned in a correctly entered function, whatever
+     * the compiler chose to do above it. Anything else means the stack was already
+     * skewed before this program started running. */
     if (offset != 0) {
         return obs_fail_code("the stack is not sixteen-byte aligned", (uint64_t)offset);
     }
@@ -126,9 +126,11 @@ static const obs_check boot_checks[] = {
     {"000-boot/number-formatting", "obscene", "obs_format_u64", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_formatting, OBS_FROM_ASSUMED},
     {"000-boot/write-returns-count", "libkernel", "sceKernelWrite", OBS_CAP_NONE,
-     OBS_CAP_OUTPUT, (const void *)&sceKernelWrite, check_write_returns_count, OBS_FROM_DERIVED},
+     OBS_CAP_OUTPUT, (const void *)&sceKernelWrite, check_write_returns_count,
+     OBS_FROM_DERIVED},
     {"000-boot/write-rejects-bad-fd", "libkernel", "sceKernelWrite", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceKernelWrite, check_write_rejects_bad_descriptor, OBS_FROM_DERIVED},
+     OBS_CAP_NONE, (const void *)&sceKernelWrite, check_write_rejects_bad_descriptor,
+     OBS_FROM_DERIVED},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };
@@ -194,12 +196,14 @@ static obs_result check_tsc_frequency(void) {
 
 static const obs_check kernel_checks[] = {
     {"010-kernel/process-time", "libkernel", "sceKernelGetProcessTime", OBS_CAP_NONE,
-     OBS_CAP_TIME, (const void *)&sceKernelGetProcessTime, check_process_time, OBS_FROM_ASSUMED},
+     OBS_CAP_TIME, (const void *)&sceKernelGetProcessTime, check_process_time,
+     OBS_FROM_ASSUMED},
     {"010-kernel/process-time-counter", "libkernel", "sceKernelGetProcessTimeCounter",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelGetProcessTimeCounter,
      check_process_time_counter, OBS_FROM_ASSUMED},
     {"010-kernel/tsc-frequency", "libkernel", "sceKernelGetTscFrequency", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceKernelGetTscFrequency, check_tsc_frequency, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, (const void *)&sceKernelGetTscFrequency, check_tsc_frequency,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_kernel = {

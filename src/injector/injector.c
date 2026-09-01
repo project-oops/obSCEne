@@ -20,9 +20,11 @@ extern const uint8_t __obscene_payload_start[] __attribute__((visibility("hidden
 extern const uint8_t __obscene_payload_end[] __attribute__((visibility("hidden")));
 
 void klog_write(const char *msg) {
-    if (msg == NULL) return;
+    if (msg == NULL)
+        return;
     size_t len = obs_strlen(msg);
-    if (len == 0) return;
+    if (len == 0)
+        return;
 
     char buf[256];
     static const char prefix[] = "<118>[injector] ";
@@ -72,7 +74,8 @@ void klog_write_hex(const char *prefix, uint64_t hex) {
     klog_write(buf);
 }
 
-static int read_file_from_disk(const char *path, uint8_t *buffer, size_t max_size, size_t *out_size) {
+static int read_file_from_disk(const char *path, uint8_t *buffer, size_t max_size,
+                               size_t *out_size) {
     long fd = sys_call(SYS_open, (long)path, O_RDONLY, 0, 0, 0, 0);
     if (fd < 0) {
         return -1;
@@ -80,7 +83,8 @@ static int read_file_from_disk(const char *path, uint8_t *buffer, size_t max_siz
 
     size_t total = 0;
     while (total < max_size) {
-        long n = sys_call(SYS_read, fd, (long)(buffer + total), (long)(max_size - total), 0, 0, 0);
+        long n = sys_call(SYS_read, fd, (long)(buffer + total),
+                          (long)(max_size - total), 0, 0, 0);
         if (n <= 0) {
             break;
         }
@@ -94,14 +98,16 @@ static int read_file_from_disk(const char *path, uint8_t *buffer, size_t max_siz
     return (total > 0) ? 0 : -1;
 }
 
-static void build_restore_trampoline(uint8_t *code, size_t *code_len, const struct reg *r) {
+static void build_restore_trampoline(uint8_t *code, size_t *code_len,
+                                     const struct reg *r) {
     size_t idx = 0;
-    #define EMIT_MOVABS(reg_prefix, opcode, val) do { \
-        code[idx++] = (uint8_t)(reg_prefix); \
-        code[idx++] = (uint8_t)(opcode); \
-        uint64_t v = (uint64_t)(val); \
-        memcpy(&code[idx], &v, 8); \
-        idx += 8; \
+#define EMIT_MOVABS(reg_prefix, opcode, val)                                           \
+    do {                                                                               \
+        code[idx++] = (uint8_t)(reg_prefix);                                           \
+        code[idx++] = (uint8_t)(opcode);                                               \
+        uint64_t v = (uint64_t)(val);                                                  \
+        memcpy(&code[idx], &v, 8);                                                     \
+        idx += 8;                                                                      \
     } while (0)
 
     EMIT_MOVABS(0x48, 0xb8, r->r_rax);
@@ -139,7 +145,7 @@ static void build_restore_trampoline(uint8_t *code, size_t *code_len, const stru
     /* ret : c3 */
     code[idx++] = 0xc3;
 
-    #undef EMIT_MOVABS
+#undef EMIT_MOVABS
     *code_len = idx;
 }
 
@@ -206,17 +212,22 @@ int injector_start(payload_args_t *args) {
 
     static uint8_t disk_buffer[0x200000]; /* 2 MiB staging buffer */
 
-    size_t embedded_size = (size_t)((uintptr_t)__obscene_payload_end - (uintptr_t)__obscene_payload_start);
+    size_t embedded_size =
+        (size_t)((uintptr_t)__obscene_payload_end - (uintptr_t)__obscene_payload_start);
     if (embedded_size > 0) {
         payload_data = __obscene_payload_start;
         payload_size = embedded_size;
         klog_write_num("using embedded payload blob, size: ", (int64_t)payload_size);
     } else {
-        /* Try reading from /data/obscene-payload.elf, /data/obscene.elf, or /data/payload.elf */
+        /* Try reading from /data/obscene-payload.elf, /data/obscene.elf, or
+         * /data/payload.elf */
         klog_write("embedded blob absent, trying /data/ paths...");
-        if (read_file_from_disk("/data/obscene-payload.elf", disk_buffer, sizeof(disk_buffer), &payload_size) == 0 ||
-            read_file_from_disk("/data/obscene.elf", disk_buffer, sizeof(disk_buffer), &payload_size) == 0 ||
-            read_file_from_disk("/data/payload.elf", disk_buffer, sizeof(disk_buffer), &payload_size) == 0) {
+        if (read_file_from_disk("/data/obscene-payload.elf", disk_buffer,
+                                sizeof(disk_buffer), &payload_size) == 0 ||
+            read_file_from_disk("/data/obscene.elf", disk_buffer, sizeof(disk_buffer),
+                                &payload_size) == 0 ||
+            read_file_from_disk("/data/payload.elf", disk_buffer, sizeof(disk_buffer),
+                                &payload_size) == 0) {
             payload_data = disk_buffer;
             klog_write_num("loaded payload from disk, size: ", (int64_t)payload_size);
         }
@@ -255,7 +266,8 @@ int injector_start(payload_args_t *args) {
 
     /* 7. Resolve target libkernel base and setup remote syscall gadget */
     uintptr_t target_kproc = krw_get_proc(target_pid);
-    uintptr_t target_libkernel_base = krw_find_target_libkernel_base(target_kproc, (uintptr_t)bak_reg.r_rip);
+    uintptr_t target_libkernel_base =
+        krw_find_target_libkernel_base(target_kproc, (uintptr_t)bak_reg.r_rip);
     klog_write_hex("target libkernel_base=", target_libkernel_base);
     procctl_find_syscall_gadget(target_pid, target_libkernel_base);
 
@@ -263,10 +275,9 @@ int injector_start(payload_args_t *args) {
     klog_write("mapping ELF segments into target process...");
     uintptr_t target_base = 0;
     size_t target_size = 0;
-    uintptr_t entry_addr = loader_load_into_proc(target_pid, payload_data, payload_size,
-                                                 target_libkernel_base,
-                                                 &s_kexport_table,
-                                                 &target_base, &target_size);
+    uintptr_t entry_addr = loader_load_into_proc(
+        target_pid, payload_data, payload_size, target_libkernel_base, &s_kexport_table,
+        &target_base, &target_size);
     if (entry_addr == 0) {
         klog_write("ERROR: loader_load_into_proc failed");
         procctl_detach(target_pid, 0);
@@ -276,13 +287,11 @@ int injector_start(payload_args_t *args) {
     klog_write_hex("payload mapped, base=", target_base);
     klog_write_hex("payload mapped, entry=", entry_addr);
 
-    /* 9. Setup dedicated stack + payload_args + kexport table in target process memory */
-    uintptr_t alloc_remote = procctl_remote_mmap(
-        target_pid, 0, 0x100000,
-        PROC_PROT_READ | PROC_PROT_WRITE,
-        PROC_MAP_ANONYMOUS | PROC_MAP_PRIVATE,
-        -1, 0
-    );
+    /* 9. Setup dedicated stack + payload_args + kexport table in target process memory
+     */
+    uintptr_t alloc_remote =
+        procctl_remote_mmap(target_pid, 0, 0x100000, PROC_PROT_READ | PROC_PROT_WRITE,
+                            PROC_MAP_ANONYMOUS | PROC_MAP_PRIVATE, -1, 0);
 
     if (alloc_remote == 0) {
         klog_write("ERROR: remote_mmap for payload stack failed");
@@ -292,7 +301,8 @@ int injector_start(payload_args_t *args) {
     }
 
     uintptr_t kexport_remote = alloc_remote + 0x1000;
-    size_t kexport_size = sizeof(uint32_t) * 2 + sizeof(obs_kexport_entry_t) * s_kexport_table.count;
+    size_t kexport_size =
+        sizeof(uint32_t) * 2 + sizeof(obs_kexport_entry_t) * s_kexport_table.count;
     procctl_copyin(target_pid, &s_kexport_table, kexport_remote, kexport_size);
     klog_write_hex("kexport table staged at remote ", kexport_remote);
 
@@ -300,7 +310,8 @@ int injector_start(payload_args_t *args) {
     payload_args_t target_args;
     memset(&target_args, 0, sizeof(target_args));
     if (target_libkernel_base != 0) {
-        target_args.sys_dynlib_dlsym = (int (*)(int, const char *, void *))(target_libkernel_base + 0x5b0);
+        target_args.sys_dynlib_dlsym =
+            (int (*)(int, const char *, void *))(target_libkernel_base + 0x5b0);
     }
     target_args.kpipe_addr = args->kpipe_addr;
     target_args.kdata_base_addr = args->kdata_base_addr;

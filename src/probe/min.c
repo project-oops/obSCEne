@@ -65,21 +65,22 @@ __attribute__((weak)) long sceKernelWrite(int fd, const void *buf, unsigned long
 #ifdef OBSCENE_MIN_FILE
 /* The file route, for a console.
  *
- * Descriptors 1 and 2 are an emulator convenience: the host process catches them. A console
- * has no parent listening, so the same run that proves everything works produces no evidence
- * that it did - which is indistinguishable from failing. Writing a file the FTP server can
- * hand back closes that gap.
+ * Descriptors 1 and 2 are an emulator convenience: the host process catches them. A
+ * console has no parent listening, so the same run that proves everything works
+ * produces no evidence that it did - which is indistinguishable from failing. Writing a
+ * file the FTP server can hand back closes that gap.
  *
  * `/data` is the first entry in the full build's sink candidate list and was confirmed
- * writable on hardware before this was written, so the two agree about where a report goes.
+ * writable on hardware before this was written, so the two agree about where a report
+ * goes.
  *
- * Same rule as sceKernelWrite above: declared here, not included, and both signatures are
- * the ones already confirmed for the full build rather than new guesses. (D008) */
+ * Same rule as sceKernelWrite above: declared here, not included, and both signatures
+ * are the ones already confirmed for the full build rather than new guesses. (D008) */
 __attribute__((weak)) int sceKernelOpen(const char *path, int flags, int mode);
 __attribute__((weak)) int sceKernelClose(int fd);
 #define OBS_MIN_O_WRONLY 0x0001
-#define OBS_MIN_O_CREAT  0x0200
-#define OBS_MIN_O_TRUNC  0x0400
+#define OBS_MIN_O_CREAT 0x0200
+#define OBS_MIN_O_TRUNC 0x0400
 #endif
 #endif
 
@@ -128,13 +129,14 @@ void obscene_start(void) {
          * the same line goes to stderr as well. Cheap, and it is the difference between
          * "the probe cannot report" and "the report went somewhere I did not look". */
 #ifdef OBSCENE_MIN_FILE
-        /* Attempted before the descriptor writes, not after: on a console this is the only
-         * channel that leaves anything behind, so it must not sit behind a call that might
-         * not return. Same ordering principle as the sink in the full build. */
+        /* Attempted before the descriptor writes, not after: on a console this is the
+         * only channel that leaves anything behind, so it must not sit behind a call
+         * that might not return. Same ordering principle as the sink in the full build.
+         */
         if (&sceKernelOpen != 0 && &sceKernelClose != 0) {
-            const int fd = sceKernelOpen("/data/obscene-report.txt",
-                                         OBS_MIN_O_WRONLY | OBS_MIN_O_CREAT | OBS_MIN_O_TRUNC,
-                                         0666);
+            const int fd = sceKernelOpen(
+                "/data/obscene-report.txt",
+                OBS_MIN_O_WRONLY | OBS_MIN_O_CREAT | OBS_MIN_O_TRUNC, 0666);
             if (fd >= 0) {
                 (void)sceKernelWrite(fd, message, sizeof message - 1);
                 (void)sceKernelClose(fd);
@@ -155,15 +157,16 @@ void obscene_start(void) {
 #ifdef OBSCENE_MIN_FILE
     /* On a console the loop below is the wrong ending.
      *
-     * It exists because on an emulator "it hangs here" is the *result*: reaching the loop
-     * proves guest instructions executed, and returning would fault in a way that reads as
-     * never having started. That reasoning depends on somebody watching the emulator.
+     * It exists because on an emulator "it hangs here" is the *result*: reaching the
+     * loop proves guest instructions executed, and returning would fault in a way that
+     * reads as never having started. That reasoning depends on somebody watching the
+     * emulator.
      *
-     * A console has nobody watching, and the evidence is already on disk by this point - so
-     * spinning buys nothing and costs a core pegged at 100% until someone kills the process.
-     * Falling out of the entry faults instead, which under a homebrew loader is an ordinary
-     * process death and leaves the file behind. A clean end beats an observable one when the
-     * observation has already been made. */
+     * A console has nobody watching, and the evidence is already on disk by this point
+     * - so spinning buys nothing and costs a core pegged at 100% until someone kills
+     * the process. Falling out of the entry faults instead, which under a homebrew
+     * loader is an ordinary process death and leaves the file behind. A clean end beats
+     * an observable one when the observation has already been made. */
     return;
 #else
     /* Deliberate: an emulator that hangs here has executed guest instructions, and

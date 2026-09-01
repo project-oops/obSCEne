@@ -47,17 +47,17 @@ typedef void *ScePthread;
 /* Overridable, because a loader may refuse to resolve a weak symbol at all.
  *
  * On a real console, elfldr left every weak import null and the probe jumped to zero at
- * entry - the ELF specification says an unresolved weak symbol resolves to zero *without
- * error*, so a strict resolver leaving them alone is correct behaviour, not a bug in it.
- * `-DOBS_WEAK=` builds the same sources with strong undefined symbols, which a resolver must
- * either satisfy or fail loudly over. Both are more useful than silence. (D205)
+ * entry - the ELF specification says an unresolved weak symbol resolves to zero
+ * *without error*, so a strict resolver leaving them alone is correct behaviour, not a
+ * bug in it.
+ * `-DOBS_WEAK=` builds the same sources with strong undefined symbols, which a resolver
+ * must either satisfy or fail loudly over. Both are more useful than silence. (D205)
  *
- * The default stays weak: that is what lets this program report "not present" rather than
- * fail to load, and it is right everywhere the loader resolves what it can. */
+ * The default stays weak: that is what lets this program report "not present" rather
+ * than fail to load, and it is right everywhere the loader resolves what it can. */
 #ifndef OBS_WEAK
 #define OBS_WEAK __attribute__((weak))
 #endif
-
 
 /* Calls `fn` once per import declared outside the census, with the library it comes
  * from. Defined in imports.c; see the note there on why the association cannot be
@@ -90,9 +90,9 @@ OBS_WEAK uint64_t sceKernelReadTsc(void);
 
 /* ---- calls that fill a buffer, for 130-layout --------------------------------
  *
- * Declared with the buffer as `void *` and never as a named structure. That is the whole
- * point: 130-layout dumps what these write and does not interpret it, so no layout is
- * assumed and D008 is not being bent.
+ * Declared with the buffer as `void *` and never as a named structure. That is the
+ * whole point: 130-layout dumps what these write and does not interpret it, so no
+ * layout is assumed and D008 is not being bent.
  *
  * Arities from the OpenOrbis toolchain headers, which is published interface
  * documentation. The arity is the part that must be right - a wrong one corrupts the
@@ -105,23 +105,25 @@ OBS_WEAK int sceKernelGetSystemSwVersion(void *version);
  *
  * # Why this is worth a declaration of its own
  *
- * Nothing in this program has ever asked the platform a sysctl, and the sibling emulator is
- * blocked on exactly one answer: a payload calls `kern.osrelease` once, does not like what an
- * unimplemented call gives it, reports that firmware detection failed and turns a feature off.
- * That emulator refuses to invent the string, correctly, so the value has to come from a
- * machine - and this is the program that runs on one.
+ * Nothing in this program has ever asked the platform a sysctl, and the sibling
+ * emulator is blocked on exactly one answer: a payload calls `kern.osrelease` once,
+ * does not like what an unimplemented call gives it, reports that firmware detection
+ * failed and turns a feature off. That emulator refuses to invent the string,
+ * correctly, so the value has to come from a machine - and this is the program that
+ * runs on one.
  *
- * Arity and shape are POSIX, which the target kernel derives from; the names asked for are
- * this program's choice and every one of them is reported whether it answers or not, so a
- * refusal is data rather than a gap. */
-OBS_WEAK int sysctlbyname(const char *name, void *oldp, size_t *oldlenp, const void *newp,
-                          size_t newlen);
+ * Arity and shape are POSIX, which the target kernel derives from; the names asked for
+ * are this program's choice and every one of them is reported whether it answers or
+ * not, so a refusal is data rather than a gap. */
+OBS_WEAK int sysctlbyname(const char *name, void *oldp, size_t *oldlenp,
+                          const void *newp, size_t newlen);
 
-/* Free storage, for the HUD's DISK field. `statfs(path, buf)` fills a `struct statfs`; only two
- * fields are read, at FreeBSD's stable offsets (`f_bsize` at 0x10, `f_bavail` at 0x30 -
- * sys/mount.h), out of an over-sized buffer, so the layout past them is never depended on. Arity
- * and shape are POSIX/FreeBSD, which the target kernel derives from; a `void *` buffer keeps this
- * program from carrying the vendor struct it deliberately does not have. (D272) */
+/* Free storage, for the HUD's DISK field. `statfs(path, buf)` fills a `struct statfs`;
+ * only two fields are read, at FreeBSD's stable offsets (`f_bsize` at 0x10, `f_bavail`
+ * at 0x30 - sys/mount.h), out of an over-sized buffer, so the layout past them is never
+ * depended on. Arity and shape are POSIX/FreeBSD, which the target kernel derives from;
+ * a `void *` buffer keeps this program from carrying the vendor struct it deliberately
+ * does not have. (D272) */
 OBS_WEAK int statfs(const char *path, void *buf);
 OBS_WEAK int sceVideoOutGetResolutionStatus(int handle, void *status);
 
@@ -129,31 +131,33 @@ OBS_WEAK int sceVideoOutGetResolutionStatus(int handle, void *status);
  *
  * # Why this one is worth the risk of a struct
  *
- * Every other display call reports whether it was *accepted*. None of them reports whether
- * anything was *shown*, and those are different facts on a platform whose display library is
- * only partly implemented: obSCEne opened an output, registered a framebuffer, submitted a
- * flip, was told yes four times, and drew a black window for the whole run - then reported
- * `display|ready|1920x1080 framebuffer`, which was a claim it had no evidence for.
+ * Every other display call reports whether it was *accepted*. None of them reports
+ * whether anything was *shown*, and those are different facts on a platform whose
+ * display library is only partly implemented: obSCEne opened an output, registered a
+ * framebuffer, submitted a flip, was told yes four times, and drew a black window for
+ * the whole run - then reported `display|ready|1920x1080 framebuffer`, which was a
+ * claim it had no evidence for.
  *
  * The counter is the evidence. Submit a flip, read it, and if it has not moved then the
- * platform accepted a frame and presented nothing. That is a behavioural test in the same
- * shape as the rest of this program - call it and look at what happened, rather than trust
- * the return code - and it needs no knowledge of which loader is running.
+ * platform accepted a frame and presented nothing. That is a behavioural test in the
+ * same shape as the rest of this program - call it and look at what happened, rather
+ * than trust the return code - and it needs no knowledge of which loader is running.
  *
  * # The layout, and why reading one field is defensible
  *
- * The status structure is large and the two implementations available disagree about most of
- * it. They agree about the **first field**, which is the only one read here:
+ * The status structure is large and the two implementations available disagree about
+ * most of it. They agree about the **first field**, which is the only one read here:
  *
  *     Kyty       uint64_t count;   // first member
  *     PS5PCEM    count: u64,       // first member, in two separate files
  *
- * Two independent readings agreeing on the field being used is the same standard D111 set for
- * the buffer descriptor. Everything after it is left alone. The caller passes a buffer far
- * larger than either implementation writes, so a third implementation writing more cannot
- * reach past it.
+ * Two independent readings agreeing on the field being used is the same standard D111
+ * set for the buffer descriptor. Everything after it is left alone. The caller passes a
+ * buffer far larger than either implementation writes, so a third implementation
+ * writing more cannot reach past it.
  *
- * `IMPLEMENTATIONS`. Hardware settles whether the first field is the frame count. (D187)
+ * `IMPLEMENTATIONS`. Hardware settles whether the first field is the frame count.
+ * (D187)
  */
 OBS_WEAK int sceVideoOutGetFlipStatus(int handle, void *status);
 
@@ -161,22 +165,24 @@ OBS_WEAK int sceVideoOutGetFlipStatus(int handle, void *status);
  *
  * A second allocation path, and one obSCEne had no coverage of at all.
  *
- * Direct memory - which `020-memory` exercises - is physical memory reserved by offset and
- * mapped explicitly. Flexible memory is the other kind: the system finds the pages, and
- * the caller asks for a size rather than a location. A title uses both, and an emulator
- * implementing one and not the other passes every memory check in this suite.
+ * Direct memory - which `020-memory` exercises - is physical memory reserved by offset
+ * and mapped explicitly. Flexible memory is the other kind: the system finds the pages,
+ * and the caller asks for a size rather than a location. A title uses both, and an
+ * emulator implementing one and not the other passes every memory check in this suite.
  *
  * Found by asking which functions the current-generation emulators implement that this
  * program does not know about (`scripts/ps5-gap.py`). Signatures from the OpenOrbis
  * toolchain headers.
  */
 OBS_WEAK int sceKernelAvailableFlexibleMemorySize(size_t *out);
-/* The configured total, distinct from the available figure above (available = configured minus
- * what is mapped). The vendor libkernel exports both; mined across eight independent sources
- * (PS5PCEM, SharpEMU, aerolib, fpPS4, ps4libdoc, shadPS4, ...), and the signature mirrors its
- * available sibling - one `size_t` out-parameter. */
+/* The configured total, distinct from the available figure above (available =
+ * configured minus what is mapped). The vendor libkernel exports both; mined across
+ * eight independent sources (PS5PCEM, SharpEMU, aerolib, fpPS4, ps4libdoc, shadPS4,
+ * ...), and the signature mirrors its available sibling - one `size_t` out-parameter.
+ */
 OBS_WEAK int sceKernelConfiguredFlexibleMemorySize(size_t *out);
-OBS_WEAK int sceKernelMapFlexibleMemory(void **address, size_t len, int prot, int flags);
+OBS_WEAK int sceKernelMapFlexibleMemory(void **address, size_t len, int prot,
+                                        int flags);
 OBS_WEAK int sceKernelReleaseFlexibleMemory(void *address, size_t len);
 
 /* ---- more of libkernel, from the emulator gap analysis -----------------------
@@ -184,15 +190,15 @@ OBS_WEAK int sceKernelReleaseFlexibleMemory(void *address, size_t len);
  * Signatures from the OpenOrbis toolchain headers, each implemented by two or more
  * independent emulators. `reports/gap-checkable.txt` lists the rest.
  *
- * `sceKernelGetCompiledSdkVersion` is deliberately absent: the header declares it with no
- * arguments and a void return, which is the toolchain saying it does not know either.
- * Calling it on that basis is what D008 forbids. */
+ * `sceKernelGetCompiledSdkVersion` is deliberately absent: the header declares it with
+ * no arguments and a void return, which is the toolchain saying it does not know
+ * either. Calling it on that basis is what D008 forbids. */
 
 /* Whether an address is on the calling thread's stack, and the region it lies in.
  *
- * The two out-pointers are almost certainly the bounds of that region. `almost certainly`
- * is why 130-layout would be the place to establish it and this is not - the check below
- * uses only the return value, which is the part the name settles. */
+ * The two out-pointers are almost certainly the bounds of that region. `almost
+ * certainly` is why 130-layout would be the place to establish it and this is not - the
+ * check below uses only the return value, which is the part the name settles. */
 OBS_WEAK int sceKernelIsStack(void *address, void **low, void **high);
 
 /* Thread attributes. Opaque handle, as every other pthread object here is. */
@@ -229,17 +235,17 @@ OBS_WEAK int sceKernelOpen(const char *path, int flags, uint16_t mode);
 OBS_WEAK int sceKernelClose(int fd);
 OBS_WEAK sce_off_t sceKernelLseek(int fd, sce_off_t offset, int whence);
 
-/* Read directory entries from an open directory descriptor into `buf`, returning the number of
- * bytes filled, 0 at end of directory, or negative on error. This is how a probe discovers what
- * is on the filesystem rather than being told - 048-selfaudit walks the application directories
- * to find a real container instead of naming one.
+/* Read directory entries from an open directory descriptor into `buf`, returning the
+ * number of bytes filled, 0 at end of directory, or negative on error. This is how a
+ * probe discovers what is on the filesystem rather than being told - 048-selfaudit
+ * walks the application directories to find a real container instead of naming one.
  *
- * Signature and the dirent layout below are FreeBSD's, from `freebsd-src` `sys/sys/dirent.h`
- * (the FreeBSD-11-and-earlier `struct dirent`, which is what this generation's kernel derives
- * from - the newer 12+ layout widens d_fileno and inserts d_off). The vendor rename is confirmed
- * by open-source aerolib symbol tables. It is a hypothesis until the walk returns readable names;
- * a wrong layout yields rubbish rather than a crash, because the parser is bounded by d_reclen.
- * (selfish#D087) */
+ * Signature and the dirent layout below are FreeBSD's, from `freebsd-src`
+ * `sys/sys/dirent.h` (the FreeBSD-11-and-earlier `struct dirent`, which is what this
+ * generation's kernel derives from - the newer 12+ layout widens d_fileno and inserts
+ * d_off). The vendor rename is confirmed by open-source aerolib symbol tables. It is a
+ * hypothesis until the walk returns readable names; a wrong layout yields rubbish
+ * rather than a crash, because the parser is bounded by d_reclen. (selfish#D087) */
 OBS_WEAK sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes);
 
 /* The dirent packed into that buffer, one per entry, each `d_reclen` bytes long.
@@ -248,11 +254,12 @@ OBS_WEAK sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes);
  *   0x04  d_reclen   u16   how many bytes this record occupies - advance by this
  *   0x06  d_type     u8    what kind of entry it is (see below)
  *   0x07  d_namlen   u8    how long the name is
- *   0x08  d_name     ...   the name, `d_namlen` bytes, not necessarily NUL-terminated */
+ *   0x08  d_name     ...   the name, `d_namlen` bytes, not necessarily NUL-terminated
+ */
 #define OBS_DIRENT_RECLEN 0x04
-#define OBS_DIRENT_TYPE   0x06
+#define OBS_DIRENT_TYPE 0x06
 #define OBS_DIRENT_NAMLEN 0x07
-#define OBS_DIRENT_NAME   0x08
+#define OBS_DIRENT_NAME 0x08
 /* d_type values, FreeBSD's. A directory is what the walk descends into. */
 #define OBS_DT_DIR 4
 #define OBS_DT_REG 8
@@ -272,7 +279,8 @@ OBS_WEAK int sceKernelReleaseDirectMemory(sce_off_t start, size_t len);
 OBS_WEAK int sceKernelMapDirectMemory(void **addr, size_t len, int prot, int flags,
                                       sce_off_t direct_memory_start,
                                       size_t max_page_size);
-OBS_WEAK int sceKernelVirtualQuery(const void *addr, int flags, void *info, size_t info_size);
+OBS_WEAK int sceKernelVirtualQuery(const void *addr, int flags, void *info,
+                                   size_t info_size);
 OBS_WEAK int sceKernelMunmap(void *addr, size_t len);
 
 /* ---- libkernel: scheduling ------------------------------------------------- */
@@ -293,8 +301,8 @@ OBS_WEAK int scePthreadJoin(ScePthread thread, void **value_out);
 /* ---- libkernel: POSIX synchronisation --------------------------------------
  *
  * Mutexes, read/write locks and semaphores. POSIX specifies what these do, so the
- * expectations are `spec` rather than beliefs - a platform that gets them wrong is wrong
- * against a document anyone can read.
+ * expectations are `spec` rather than beliefs - a platform that gets them wrong is
+ * wrong against a document anyone can read.
  *
  * # Try, never block
  *
@@ -308,16 +316,17 @@ OBS_WEAK int scePthreadJoin(ScePthread thread, void **value_out);
  * forms stay in the census, where being present is all that is claimed of them.
  */
 
-/* Opaque handles. The platform makes them and takes them back; nothing here reads one. */
+/* Opaque handles. The platform makes them and takes them back; nothing here reads one.
+ */
 typedef void *ScePthreadMutex;
 typedef void *ScePthreadRwlock;
 
 /* Mutex attributes, and the one question in this header that a probe exists to settle.
  *
- * A mutex's recursion policy is decided here and nowhere else, and getting it wrong is not
- * a wrong answer - it is a deadlock. A guest that takes a lock it already holds either
- * proceeds (recursive) or stops forever (not), and an implementation that guesses the
- * default has a whole-process hang waiting on the guess.
+ * A mutex's recursion policy is decided here and nowhere else, and getting it wrong is
+ * not a wrong answer - it is a deadlock. A guest that takes a lock it already holds
+ * either proceeds (recursive) or stops forever (not), and an implementation that
+ * guesses the default has a whole-process hang waiting on the guess.
  *
  * **The `Get` counterpart is what makes this checkable.** `Settype` alone can only be
  * probed by its return code, which says the call was accepted and nothing about whether
@@ -325,10 +334,11 @@ typedef void *ScePthreadRwlock;
  * and compare. That is a positive check in the sense of principle 7 - it proves the
  * attribute object carries state, where a return code proves argument validation.
  *
- * The type constants are deliberately **not** declared. POSIX names three and fixes none
- * of their values, so writing one here would be inventing the thing the check is for
- * (D008). `015-sync/mutexattr-round-trip` sweeps candidates and records which the platform
- * accepts, which costs nothing and answers the question the constant would have assumed.
+ * The type constants are deliberately **not** declared. POSIX names three and fixes
+ * none of their values, so writing one here would be inventing the thing the check is
+ * for (D008). `015-sync/mutexattr-round-trip` sweeps candidates and records which the
+ * platform accepts, which costs nothing and answers the question the constant would
+ * have assumed.
  */
 typedef void *ScePthreadMutexattr;
 
@@ -356,8 +366,8 @@ OBS_WEAK int scePthreadRwlockUnlock(ScePthreadRwlock *lock);
  *
  * Testing either *meaningfully* needs a second thread that waits, and a waiter needs a
  * timeout or a broken implementation hangs the run - the failure the try-only rule in
- * 015-sync exists to prevent. That is still true, and `scePthreadCondTimedwait` is still
- * out of reach because it takes a `timespec` (D008).
+ * 015-sync exists to prevent. That is still true, and `scePthreadCondTimedwait` is
+ * still out of reach because it takes a `timespec` (D008).
  *
  * What was missed is that two operations here **cannot block at all**:
  *
@@ -372,11 +382,12 @@ OBS_WEAK int scePthreadRwlockUnlock(ScePthreadRwlock *lock);
  *
  * # Signatures
  *
- * From the OpenOrbis toolchain headers, which are published interface documentation, and
- * the condition-variable half is confirmed independently by an emulator's own
- * declaration. The arity of `BarrierInit` in particular - handle, attributes, count, name
- * - is read rather than inferred from the POSIX shape, because inferring an arity is what
- * D008 forbids.
+ * From the OpenOrbis toolchain headers, which are published interface documentation,
+ * and the condition-variable half is confirmed independently by an emulator's own
+ * declaration. The arity of `BarrierInit` in particular - handle, attributes, count,
+ * name
+ * - is read rather than inferred from the POSIX shape, because inferring an arity is
+ * what D008 forbids.
  *
  * Opaque handles, as every other lock in this file is. */
 typedef void *ScePthreadCond;
@@ -479,8 +490,8 @@ OBS_WEAK int sceKernelCreateEventFlag(SceKernelEventFlag *out, const char *name,
 OBS_WEAK int sceKernelDeleteEventFlag(SceKernelEventFlag flag);
 OBS_WEAK int sceKernelSetEventFlag(SceKernelEventFlag flag, uint64_t bits);
 OBS_WEAK int sceKernelClearEventFlag(SceKernelEventFlag flag, uint64_t bits);
-OBS_WEAK int sceKernelPollEventFlag(SceKernelEventFlag flag, uint64_t bits, uint32_t mode,
-                                    uint64_t *out_pattern);
+OBS_WEAK int sceKernelPollEventFlag(SceKernelEventFlag flag, uint64_t bits,
+                                    uint32_t mode, uint64_t *out_pattern);
 
 /* Single-waiter, first-in-first-out. The simplest attribute combination, so a failure
  * is a failure of event flags rather than of a particular queuing policy. */
@@ -764,10 +775,10 @@ OBS_WEAK int sceVideoOutSetFlipRate(int handle, int rate);
  * Enough of the display path to draw the report. See src/display.c for why a probe
  * draws anything at all.
  *
- * The attribute structure's layout is deliberately not declared. `sceVideoOutSetBufferAttribute`
- * fills it, so this program never has to know what is in it - which is the difference
- * between a confident signature and an invented struct (D008). It is passed as an
- * opaque buffer, generously sized.
+ * The attribute structure's layout is deliberately not declared.
+ * `sceVideoOutSetBufferAttribute` fills it, so this program never has to know what is
+ * in it - which is the difference between a confident signature and an invented struct
+ * (D008). It is passed as an opaque buffer, generously sized.
  */
 
 /* Fills an attribute structure. The one call here that writes through its first
@@ -786,8 +797,8 @@ OBS_WEAK int sceVideoOutRegisterBuffers(int handle, int start_index,
  *
  * # Why both, rather than detecting the generation
  *
- * The two generations do not merely prefer different entry points - they expose different
- * ones, and neither exposes the other's:
+ * The two generations do not merely prefer different entry points - they expose
+ * different ones, and neither exposes the other's:
  *
  *   shadPS4 (previous)   sceVideoOutRegisterBuffers        and not the `2` form
  *   PS5PCEM (current)    sceVideoOutRegisterBuffers2       and not the plain form
@@ -795,12 +806,12 @@ OBS_WEAK int sceVideoOutRegisterBuffers(int handle, int start_index,
  * So a module built for one generation and run on the other finds nothing, which is
  * exactly what `display|absent` meant on a current-generation loader (D127, D110).
  *
- * The obvious repair is to ask `005-generation` which console this is and branch. That is
- * the wrong instrument: it infers the generation from *other* symbols, when the question
- * "can I call this" is answered directly and without inference by whether this symbol
- * resolved. A weak import that came back null has already said no. So `display.c` takes
- * whichever pair is present, and a platform offering both - SharpEMU tags both forms
- * `Gen4 | Gen5` - simply gets the newer one.
+ * The obvious repair is to ask `005-generation` which console this is and branch. That
+ * is the wrong instrument: it infers the generation from *other* symbols, when the
+ * question "can I call this" is answered directly and without inference by whether this
+ * symbol resolved. A weak import that came back null has already said no. So
+ * `display.c` takes whichever pair is present, and a platform offering both - SharpEMU
+ * tags both forms `Gen4 | Gen5` - simply gets the newer one.
  *
  * # These signatures are corroborated, not inferred
  *
@@ -811,14 +822,14 @@ OBS_WEAK int sceVideoOutRegisterBuffers(int handle, int start_index,
  *   SharpEMU register-by-register - rdi, rsi, rdx, rcx, r8, r9, then the stack
  *
  * Both give the same eight arguments in the same order for the attribute call, and the
- * same eight for the register call. They also agree on where each field lands inside the
- * structure, which is the part a wrong guess would corrupt.
+ * same eight for the register call. They also agree on where each field lands inside
+ * the structure, which is the part a wrong guess would corrupt.
  *
  * The structure is still passed as an opaque buffer for the same reason the previous
  * generation's is: the platform fills it, so this program never needs its layout - only
- * that the buffer is large enough. Knowing the layout and declining to declare it is the
- * stronger position, because the agreement above is about two emulators rather than about
- * hardware.
+ * that the buffer is large enough. Knowing the layout and declining to declare it is
+ * the stronger position, because the agreement above is about two emulators rather than
+ * about hardware.
  */
 OBS_WEAK void sceVideoOutSetBufferAttribute2(void *attribute, uint64_t pixel_format,
                                              uint32_t tiling_mode, uint32_t width,
@@ -849,23 +860,26 @@ OBS_WEAK int scePadOpen(int user_id, int type, int index, const void *param);
 OBS_WEAK int scePadClose(int handle);
 /* Reads the controller's current state into a caller-provided buffer.
  *
- * The buffer is `void *`, not a struct, on purpose: this program reads one field from it -
- * the button bitfield at offset 0 - and declaring the whole `ScePadData` layout would be
- * inventing the parts it does not use (D008). The caller passes a buffer comfortably larger
- * than the real structure and reads the first word; over-sizing a stack buffer is safe, and
- * under-sizing it is what the size guess would risk. The button offset and masks come from the
- * OpenOrbis SDK, an open-source toolchain, which is a permitted provenance source. */
+ * The buffer is `void *`, not a struct, on purpose: this program reads one field from
+ * it - the button bitfield at offset 0 - and declaring the whole `ScePadData` layout
+ * would be inventing the parts it does not use (D008). The caller passes a buffer
+ * comfortably larger than the real structure and reads the first word; over-sizing a
+ * stack buffer is safe, and under-sizing it is what the size guess would risk. The
+ * button offset and masks come from the OpenOrbis SDK, an open-source toolchain, which
+ * is a permitted provenance source. */
 OBS_WEAK int scePadReadState(int handle, void *data);
 
 /* ---- libSceKeyboard -------------------------------------------------------- */
 
-/* A USB keyboard, so the report can be paged from something other than a DualSense - a KVM
- * sends keys, not pad input, which is how this gets driven and verified without a controller.
+/* A USB keyboard, so the report can be paged from something other than a DualSense - a
+ * KVM sends keys, not pad input, which is how this gets driven and verified without a
+ * controller.
  *
- * `sceKeyboardReadState` takes a `void *` for the same reason `scePadReadState` does: only the
- * keycode array is read, at the offset the OpenOrbis sample validates by using it, and the
- * fields that header marks uncertain (`XXX: is it 64-bit?`) are never touched. Arities and the
- * keycode layout are from the OpenOrbis toolchain and its working keyboard sample. */
+ * `sceKeyboardReadState` takes a `void *` for the same reason `scePadReadState` does:
+ * only the keycode array is read, at the offset the OpenOrbis sample validates by using
+ * it, and the fields that header marks uncertain (`XXX: is it 64-bit?`) are never
+ * touched. Arities and the keycode layout are from the OpenOrbis toolchain and its
+ * working keyboard sample. */
 OBS_WEAK int sceKeyboardInit(void);
 OBS_WEAK int sceKeyboardOpen(int user_id, int type, int index, void *param);
 OBS_WEAK int sceKeyboardReadState(int handle, void *data);
@@ -885,41 +899,44 @@ OBS_WEAK int sceKeyboardReadState(int handle, void *data);
  *
  * # What "onion" and "garlic" are, since the names explain nothing on their own
  *
- * They are **AMD's own names for the two buses on an APU**, not console terminology, and they
- * are described in AMD's published APU architecture material and in open-source graphics
- * driver work. Anything with an AMD APU has both; this console is one.
+ * They are **AMD's own names for the two buses on an APU**, not console terminology,
+ * and they are described in AMD's published APU architecture material and in
+ * open-source graphics driver work. Anything with an AMD APU has both; this console is
+ * one.
  *
- * On an APU the CPU and GPU share physical memory, and there are two paths between the GPU
- * and that memory:
+ * On an APU the CPU and GPU share physical memory, and there are two paths between the
+ * GPU and that memory:
  *
- *   **Onion** - the *coherent* path. It runs through the CPU's cache-coherency fabric, so GPU
- *   accesses snoop CPU caches and the two always agree about what is in memory. Lower
- *   bandwidth for the GPU, and nothing has to be flushed.
+ *   **Onion** - the *coherent* path. It runs through the CPU's cache-coherency fabric,
+ * so GPU accesses snoop CPU caches and the two always agree about what is in memory.
+ * Lower bandwidth for the GPU, and nothing has to be flushed.
  *
  *   **Garlic** - the *fast* path. It goes straight to memory, bypassing the CPU cache
- *   hierarchy. Full bandwidth for the GPU, and **not coherent**: what the CPU has written is
- *   not necessarily visible until the CPU's write buffers drain. CPU *reads* over it are
- *   famously slow, because nothing is cached.
+ *   hierarchy. Full bandwidth for the GPU, and **not coherent**: what the CPU has
+ * written is not necessarily visible until the CPU's write buffers drain. CPU *reads*
+ * over it are famously slow, because nothing is cached.
  *
- * The `WB`/`WC` half of each name is the CPU-side caching policy - write-back (cached) or
- * write-combining (uncached, buffered until a buffer fills or is fenced).
+ * The `WB`/`WC` half of each name is the CPU-side caching policy - write-back (cached)
+ * or write-combining (uncached, buffered until a buffer fills or is fenced).
  *
  * # Which one a framebuffer this program draws wants
  *
- * `WC_GARLIC` is the conventional choice for a framebuffer, and that convention assumes the
- * *GPU* is filling it. This program fills it with the CPU, one pixel at a time, and then
- * submits a flip - so the display can scan out write-combined data that has not finished
- * draining. `WB_ONION` is cached and coherent, which is what a CPU-drawn buffer wants.
+ * `WC_GARLIC` is the conventional choice for a framebuffer, and that convention assumes
+ * the *GPU* is filling it. This program fills it with the CPU, one pixel at a time, and
+ * then submits a flip - so the display can scan out write-combined data that has not
+ * finished draining. `WB_ONION` is cached and coherent, which is what a CPU-drawn
+ * buffer wants.
  *
- * Measured here: **both are accepted** by `sceVideoOutRegisterBuffers` once the buffer is
- * aligned to `0x10000` (D253), so the choice is about what the display *sees* rather than
- * about whether it accepts the buffer at all.
+ * Measured here: **both are accepted** by `sceVideoOutRegisterBuffers` once the buffer
+ * is aligned to `0x10000` (D253), so the choice is about what the display *sees* rather
+ * than about whether it accepts the buffer at all.
  *
  * # Provenance
  *
- * The bus semantics above are public AMD architecture, independent of any console. The three
- * *numbers* below are this platform's own encoding and are ABI constants like every other
- * value in this section - only ones this project is confident about appear here. (D254)
+ * The bus semantics above are public AMD architecture, independent of any console. The
+ * three *numbers* below are this platform's own encoding and are ABI constants like
+ * every other value in this section - only ones this project is confident about appear
+ * here. (D254)
  */
 #define OBS_MEM_TYPE_WB_ONION 0
 #define OBS_MEM_TYPE_WC_GARLIC 3
@@ -942,9 +959,9 @@ OBS_WEAK int sceKeyboardReadState(int handle, void *data);
  * nothing and needs no buffer, which makes it the least invasive way to ask. */
 /* The main video output. Zero, and the only bus any of these calls is given.
  *
- * Was defined separately in `src/display.c` and `src/sections/media.c`, and a third copy
- * was about to be written. An ABI constant with two definitions is two things to get
- * wrong; it lives here with the rest of them now. */
+ * Was defined separately in `src/display.c` and `src/sections/media.c`, and a third
+ * copy was about to be written. An ABI constant with two definitions is two things to
+ * get wrong; it lives here with the rest of them now. */
 #define OBS_VIDEO_BUS_MAIN 0
 
 #define OBS_SEEK_SET 0
@@ -971,30 +988,30 @@ OBS_WEAK int sceKeyboardReadState(int handle, void *data);
 /* ---- networking (libSceNet) ---------------------------------------------------------
  *
  * The first platform functions obSCEne *calls* over the network rather than merely
- * censuses, so the signatures are held to D008: a wrong arity here corrupts the stack and
- * surfaces somewhere unrelated to networking, which is the worst kind of wrong to debug on
- * a target that took effort to reach.
+ * censuses, so the signatures are held to D008: a wrong arity here corrupts the stack
+ * and surfaces somewhere unrelated to networking, which is the worst kind of wrong to
+ * debug on a target that took effort to reach.
  *
- * They are confirmed from two independent public sources that agree exactly - the OpenOrbis
- * toolchain headers (`include/orbis/Net.h`) and shadPS4's own `libSceNet` implementation -
- * including the unusual first argument to `sceNetSocket`: a name string the platform keeps
- * for its own debugging. Two sources rather than one, the same control discipline D097
- * applies to loaders.
+ * They are confirmed from two independent public sources that agree exactly - the
+ * OpenOrbis toolchain headers (`include/orbis/Net.h`) and shadPS4's own `libSceNet`
+ * implementation - including the unusual first argument to `sceNetSocket`: a name
+ * string the platform keeps for its own debugging. Two sources rather than one, the
+ * same control discipline D097 applies to loaders.
  *
  * These back the console socket transport in `src/net_target.c`. It works against an
  * emulator whose net layer maps guest sockets onto host sockets - shadPS4 does, its
- * `PosixSocket::bind` calls the host `::bind` - so a guest `sceNetListen` opens a real host
- * port and the driver connects from outside with no console present. */
+ * `PosixSocket::bind` calls the host `::bind` - so a guest `sceNetListen` opens a real
+ * host port and the driver connects from outside with no console present. */
 #define OBS_NET_AF_INET 2
 #define OBS_NET_SOCK_STREAM 1
 #define OBS_NET_IPPROTO_TCP 6
 
 /* The platform's sockaddr_in, and **not** the host's layout.
  *
- * A leading length byte, a one-byte family, and a `sin_vport` the host form does not carry.
- * Copied field-for-field from the confirmed definition: guessing it matches the host would
- * misread the port and address silently, which is a bound socket on the wrong endpoint
- * rather than an error. */
+ * A leading length byte, a one-byte family, and a `sin_vport` the host form does not
+ * carry. Copied field-for-field from the confirmed definition: guessing it matches the
+ * host would misread the port and address silently, which is a bound socket on the
+ * wrong endpoint rather than an error. */
 typedef struct obs_net_sockaddr_in {
     uint8_t sin_len;
     uint8_t sin_family;
@@ -1009,13 +1026,13 @@ OBS_WEAK int sceNetTerm(void);
 
 /* ---- libSceNetCtl: the network configuration ------------------------------
  *
- * For the console's own IP address. `sceNetCtlGetInfo` takes a selector code and fills a
- * `void *` info union; only code 14 (the IP address) is used and only the string at offset 0
- * of what it writes is read, so the union's full layout is not depended on - the buffer is
- * over-sized past the union's largest member so the call cannot overrun it. Codes and the
- * union from the OpenOrbis toolchain headers, an open-source source. `sceNetCtlInit` is
- * idempotent: calling it when it is already initialised returns an already-done code, which
- * this ignores. */
+ * For the console's own IP address. `sceNetCtlGetInfo` takes a selector code and fills
+ * a `void *` info union; only code 14 (the IP address) is used and only the string at
+ * offset 0 of what it writes is read, so the union's full layout is not depended on -
+ * the buffer is over-sized past the union's largest member so the call cannot overrun
+ * it. Codes and the union from the OpenOrbis toolchain headers, an open-source source.
+ * `sceNetCtlInit` is idempotent: calling it when it is already initialised returns an
+ * already-done code, which this ignores. */
 OBS_WEAK int sceNetCtlInit(void);
 OBS_WEAK int sceNetCtlGetInfo(int code, void *info);
 OBS_WEAK int sceNetSocket(const char *name, int family, int type, int protocol);
@@ -1028,18 +1045,22 @@ OBS_WEAK int sceNetSocketClose(int s);
 
 /* The GPU command-building half of libSceGnmDriver.
  *
- * These two build PM4 command packets into a caller-supplied buffer and return - they touch no
- * GPU and submit nothing, so they are safe to call, and their output is the PM4 encoding a
- * command-processor emulator must parse. Only these two: their arities are confirmed by two
- * independent open reimplementations that agree exactly (shadPS4 and GPCS4). `sceGnmSetCsShader`
- * is deliberately absent - those two sources disagree on whether it takes three arguments or
- * four (a trailing modifier), and D008 forbids calling a function whose arity is uncertain. The
- * submitting and shader-binding calls stay in the census, uncalled, for the same reason.
+ * These two build PM4 command packets into a caller-supplied buffer and return - they
+ * touch no GPU and submit nothing, so they are safe to call, and their output is the
+ * PM4 encoding a command-processor emulator must parse. Only these two: their arities
+ * are confirmed by two independent open reimplementations that agree exactly (shadPS4
+ * and GPCS4). `sceGnmSetCsShader` is deliberately absent - those two sources disagree
+ * on whether it takes three arguments or four (a trailing modifier), and D008 forbids
+ * calling a function whose arity is uncertain. The submitting and shader-binding calls
+ * stay in the census, uncalled, for the same reason.
  *
- * The provenance is OBS_FROM_ASSUMED, not a spec: the vendor documents none of this, and the
- * confirmation is two emulators agreeing, which is strong evidence but not a document. */
-OBS_WEAK uint32_t sceGnmDispatchInitDefaultHardwareState(uint32_t *cmdbuf, uint32_t size);
-OBS_WEAK int32_t sceGnmDispatchDirect(uint32_t *cmdbuf, uint32_t size, uint32_t threads_x,
-                                      uint32_t threads_y, uint32_t threads_z, uint32_t flags);
+ * The provenance is OBS_FROM_ASSUMED, not a spec: the vendor documents none of this,
+ * and the confirmation is two emulators agreeing, which is strong evidence but not a
+ * document. */
+OBS_WEAK uint32_t sceGnmDispatchInitDefaultHardwareState(uint32_t *cmdbuf,
+                                                         uint32_t size);
+OBS_WEAK int32_t sceGnmDispatchDirect(uint32_t *cmdbuf, uint32_t size,
+                                      uint32_t threads_x, uint32_t threads_y,
+                                      uint32_t threads_z, uint32_t flags);
 
 #endif /* OBSCENE_PLATFORM_H */

@@ -9,42 +9,44 @@
 #include "common/freestd.h"
 #include "common/syscall.h"
 
-#define SYS_wait4      7
-#define SYS_ptrace     26
-#define SYS_mmap       477
-#define SYS_munmap     73
-#define SYS_mprotect   74
+#define SYS_wait4 7
+#define SYS_ptrace 26
+#define SYS_mmap 477
+#define SYS_munmap 73
+#define SYS_mprotect 74
 
 #define PT_CONTINUE 7
-#define PT_STEP     9
-#define PT_ATTACH   10
-#define PT_DETACH   11
-#define PT_IO       12
+#define PT_STEP 9
+#define PT_ATTACH 10
+#define PT_DETACH 11
+#define PT_IO 12
 #define PT_GETNUMLWPS 14
 #define PT_GETLWPLIST 15
-#define PT_GETREGS  33
-#define PT_SETREGS  34
+#define PT_GETREGS 33
+#define PT_SETREGS 34
 
-#define PIOD_READ_D  1
+#define PIOD_READ_D 1
 #define PIOD_WRITE_D 2
-#define PIOD_READ_I  3
+#define PIOD_READ_I 3
 #define PIOD_WRITE_I 4
 
 struct ptrace_io_desc {
-    int    piod_op;
-    void  *piod_offs;
-    void  *piod_addr;
+    int piod_op;
+    void *piod_offs;
+    void *piod_addr;
     size_t piod_len;
 };
 
 static const uintptr_t KERNEL_OFFSET_PROC_P_PID = 0xBC;
 
 static int sys_ptrace(int request, pid_t pid, void *addr, int data) {
-    return (int)sys_call(SYS_ptrace, (long)request, (long)pid, (long)addr, (long)data, 0, 0);
+    return (int)sys_call(SYS_ptrace, (long)request, (long)pid, (long)addr, (long)data,
+                         0, 0);
 }
 
 static pid_t sys_wait4(pid_t pid, int *status, int options, void *rusage) {
-    return (pid_t)sys_call(SYS_wait4, (long)pid, (long)status, (long)options, (long)rusage, 0, 0);
+    return (pid_t)sys_call(SYS_wait4, (long)pid, (long)status, (long)options,
+                           (long)rusage, 0, 0);
 }
 
 #include "injector/injector.h"
@@ -126,7 +128,8 @@ static int get_target_lwp(pid_t pid) {
     int numlwps = sys_ptrace(PT_GETNUMLWPS, pid, NULL, 0);
     if (numlwps > 0) {
         int lwps[32];
-        if (numlwps > 32) numlwps = 32;
+        if (numlwps > 32)
+            numlwps = 32;
         if (sys_ptrace(PT_GETLWPLIST, pid, (void *)lwps, numlwps) > 0) {
             klog_write_num("resolved target LWP=", (int64_t)lwps[0]);
             s_target_lwp = lwps[0];
@@ -178,7 +181,8 @@ int procctl_getregs(pid_t pid, struct reg *r) {
     int lwps[32] = {0};
     int count = 0;
     if (numlwps > 0) {
-        if (numlwps > 32) numlwps = 32;
+        if (numlwps > 32)
+            numlwps = 32;
         count = sys_ptrace(PT_GETLWPLIST, pid, (void *)lwps, numlwps);
         klog_write_num("fetched LWP count=", (int64_t)count);
     }
@@ -204,7 +208,8 @@ int procctl_getregs(pid_t pid, struct reg *r) {
 
     for (int attempt = 0; attempt < 20; attempt++) {
         volatile int spin = 0;
-        for (int j = 0; j < 200000; j++) spin++;
+        for (int j = 0; j < 200000; j++)
+            spin++;
 
         for (int i = 0; i < count; i++) {
             ret = sys_ptrace(PT_GETREGS, lwps[i], r, 0);
@@ -246,10 +251,10 @@ int procctl_copyin(pid_t pid, const void *src, uintptr_t dst_addr, size_t len) {
         return -1;
     }
     struct ptrace_io_desc iod;
-    iod.piod_op   = PIOD_WRITE_D;
+    iod.piod_op = PIOD_WRITE_D;
     iod.piod_offs = (void *)dst_addr;
     iod.piod_addr = (void *)src;
-    iod.piod_len  = len;
+    iod.piod_len = len;
     int ret = sys_ptrace(PT_IO, pid, &iod, 0);
     if (ret != 0) {
         klog_write_hex("procctl_copyin failed at dst=", dst_addr);
@@ -263,10 +268,10 @@ int procctl_copyout(pid_t pid, uintptr_t src_addr, void *dst, size_t len) {
         return -1;
     }
     struct ptrace_io_desc iod;
-    iod.piod_op   = PIOD_READ_D;
+    iod.piod_op = PIOD_READ_D;
     iod.piod_offs = (void *)src_addr;
     iod.piod_addr = dst;
-    iod.piod_len  = len;
+    iod.piod_len = len;
     int ret = sys_ptrace(PT_IO, pid, &iod, 0);
     if (ret != 0) {
         /* Fall back to PIOD_READ_I for instruction/text pages */
@@ -314,7 +319,8 @@ uintptr_t procctl_find_syscall_gadget(pid_t pid, uintptr_t libkernel_base) {
     }
     if (sym != 0) {
         s_remote_syscall_gadget = sym + 0x0A;
-        klog_write_hex("resolved syscall gadget via kernel NID: ", s_remote_syscall_gadget);
+        klog_write_hex("resolved syscall gadget via kernel NID: ",
+                       s_remote_syscall_gadget);
         return s_remote_syscall_gadget;
     }
 
@@ -351,8 +357,8 @@ long procctl_remote_syscall(pid_t pid, int sysno, uint64_t a1, uint64_t a2, uint
     jmp_reg.r_rsi = a2;
     jmp_reg.r_rdx = a3;
     jmp_reg.r_r10 = a4;
-    jmp_reg.r_r8  = a5;
-    jmp_reg.r_r9  = a6;
+    jmp_reg.r_r8 = a5;
+    jmp_reg.r_r9 = a6;
 
     if (s_remote_syscall_gadget != 0) {
         jmp_reg.r_rip = s_remote_syscall_gadget;
@@ -388,7 +394,8 @@ long procctl_remote_syscall(pid_t pid, int sysno, uint64_t a1, uint64_t a2, uint
         int steps = 0;
         while (jmp_reg.r_rsp <= bak_reg.r_rsp) {
             if (procctl_step(pid) != 0) {
-                klog_write_num("remote_syscall: procctl_step failed at step ", (int64_t)steps);
+                klog_write_num("remote_syscall: procctl_step failed at step ",
+                               (int64_t)steps);
                 procctl_setregs(pid, &bak_reg);
                 return -1;
             }
@@ -410,25 +417,30 @@ long procctl_remote_syscall(pid_t pid, int sysno, uint64_t a1, uint64_t a2, uint
     }
 }
 
-uintptr_t procctl_remote_mmap(pid_t pid, uintptr_t addr, size_t len, int prot, int flags, int fd, off_t off) {
+uintptr_t procctl_remote_mmap(pid_t pid, uintptr_t addr, size_t len, int prot,
+                              int flags, int fd, off_t off) {
     klog_write_hex("remote_mmap req_addr=", addr);
     klog_write_hex("remote_mmap req_len=", (uint64_t)len);
     long ret = procctl_remote_syscall(pid, SYS_mmap, (uint64_t)addr, (uint64_t)len,
-                                      (uint64_t)prot, (uint64_t)flags, (uint64_t)fd, (uint64_t)off);
+                                      (uint64_t)prot, (uint64_t)flags, (uint64_t)fd,
+                                      (uint64_t)off);
     klog_write_hex("remote_mmap ret=", (uint64_t)ret);
-    if (ret <= 0 || (uintptr_t)ret < 0x10000ULL || (uintptr_t)ret > 0x00007fffffffffffULL) {
+    if (ret <= 0 || (uintptr_t)ret < 0x10000ULL ||
+        (uintptr_t)ret > 0x00007fffffffffffULL) {
         return 0;
     }
     return (uintptr_t)ret;
 }
 
 int procctl_remote_munmap(pid_t pid, uintptr_t addr, size_t len) {
-    return (int)procctl_remote_syscall(pid, SYS_munmap, (uint64_t)addr, (uint64_t)len, 0, 0, 0, 0);
+    return (int)procctl_remote_syscall(pid, SYS_munmap, (uint64_t)addr, (uint64_t)len,
+                                       0, 0, 0, 0);
 }
 
 int procctl_remote_mprotect(pid_t pid, uintptr_t addr, size_t len, int prot) {
     /* Try remote syscall first, fall back to direct kernel R/W mprotect */
-    int ret = (int)procctl_remote_syscall(pid, SYS_mprotect, (uint64_t)addr, (uint64_t)len, (uint64_t)prot, 0, 0, 0);
+    int ret = (int)procctl_remote_syscall(pid, SYS_mprotect, (uint64_t)addr,
+                                          (uint64_t)len, (uint64_t)prot, 0, 0, 0);
     if (ret != 0 && krw_is_ready()) {
         ret = krw_mprotect(pid, addr, len, prot);
     }

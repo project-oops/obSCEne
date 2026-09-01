@@ -47,19 +47,21 @@
 #define OBS_FB_HEIGHT 1080
 #define OBS_FB_PIXELS ((size_t)OBS_FB_WIDTH * (size_t)OBS_FB_HEIGHT)
 
-/* The framebuffer's alignment, and this number is the whole reason the display never came up.
+/* The framebuffer's alignment, and this number is the whole reason the display never
+ * came up.
  *
- * `0x4000` was refused with `0x80290015` on every attempt this project ever made - through two
- * memory types, both generations' entry points, two resolutions, four pixel formats and two
- * pitches. Measured by `085-videobuf/buffer-shape`, which varies one thing per call:
+ * `0x4000` was refused with `0x80290015` on every attempt this project ever made -
+ * through two memory types, both generations' entry points, two resolutions, four pixel
+ * formats and two pitches. Measured by `085-videobuf/buffer-shape`, which varies one
+ * thing per call:
  *
  *     onion,0x4000,1     0x80290015
  *     garlic,0x4000,1    0x80290015
  *     garlic,0x10000,1   0x0          accepted
  *
- * So `0x80290015` is the display saying the buffer is not aligned coarsely enough, and it says
- * it identically whatever else is wrong or right - which is why five sessions of varying the
- * *attribute* never moved it. (D253) */
+ * So `0x80290015` is the display saying the buffer is not aligned coarsely enough, and
+ * it says it identically whatever else is wrong or right - which is why five sessions
+ * of varying the *attribute* never moved it. (D253) */
 #define OBS_FB_ALIGN 0x10000u
 
 /* Rounded up to the granularity, because a direct-memory length that is not a multiple
@@ -76,17 +78,19 @@
  * would be untraceable. */
 #define OBS_ATTR_BYTES 256
 
-/* Which generation's register/attribute pair the display uses. See the tie-break below. */
+/* Which generation's register/attribute pair the display uses. See the tie-break below.
+ */
 #ifndef OBS_DISPLAY_PAIR
 #define OBS_DISPLAY_PAIR 0
 #endif
 
 /* Which direct-memory type the framebuffer is allocated from.
  *
- * `WB_ONION` is write-back and CPU-cached; `WC_GARLIC` is write-combined and the one a GPU
- * scans out of. This allocated onion memory and handed it to the display, which is a plausible
- * reason for a refusal that has nothing to do with the entry point or the attributes - and it
- * was never varied, so it was never eliminated. A flag, so it can be. (D252) */
+ * `WB_ONION` is write-back and CPU-cached; `WC_GARLIC` is write-combined and the one a
+ * GPU scans out of. This allocated onion memory and handed it to the display, which is
+ * a plausible reason for a refusal that has nothing to do with the entry point or the
+ * attributes - and it was never varied, so it was never eliminated. A flag, so it can
+ * be. (D252) */
 #ifndef OBS_DISPLAY_MEM
 #define OBS_DISPLAY_MEM OBS_MEM_TYPE_WC_GARLIC
 #endif
@@ -106,14 +110,14 @@
  *
  * Not a widening of the value above: it sits in the *upper* half. Passing the
  * previous generation's `0x80000000` into `sceVideoOutSetBufferAttribute2` therefore
- * describes a format nothing recognises, and this program did exactly that for as long as
- * the current-generation path has existed - undetected, because the only loader that
+ * describes a format nothing recognises, and this program did exactly that for as long
+ * as the current-generation path has existed - undetected, because the only loader that
  * reaches it and checks is one obSCEne could not previously get this far on.
  *
  * `IMPLEMENTATIONS`: Kyty accepts `0x8000000000000000` or `0x8000000022000000` here and
- * refuses everything else. The plain one is chosen because it is the same identifier the
- * previous generation uses, in the wider field; the second differs in bits this program has
- * no way to interpret and no reason to set. */
+ * refuses everything else. The plain one is chosen because it is the same identifier
+ * the previous generation uses, in the wider field; the second differs in bits this
+ * program has no way to interpret and no reason to set. */
 #define OBS_PIXEL_FORMAT_2 0x8000000000000000ULL
 
 /* The protection to map display memory with. The memory type comes from platform.h,
@@ -129,26 +133,27 @@ static int obs_video_handle = -1;
 
 /* How many framebuffers are registered.
  *
- * **One is why the screen tore.** With a single buffer this program draws into the very memory
- * the display is scanning out of, continuously and with no synchronisation - so a frame shows
- * whatever had been written by the time the scanout beam reached each row. The symptom is
- * exact: the bottom of the screen is clean, because by the time the beam gets there the CPU
- * has finished, and the top is shredded.
+ * **One is why the screen tore.** With a single buffer this program draws into the very
+ * memory the display is scanning out of, continuously and with no synchronisation - so
+ * a frame shows whatever had been written by the time the scanout beam reached each
+ * row. The symptom is exact: the bottom of the screen is clean, because by the time the
+ * beam gets there the CPU has finished, and the top is shredded.
  *
- * Two buffers removes it without introducing a wait. Draw into the one the display is *not*
- * showing, submit it, then draw into the other. Nothing blocks, so the rule that no probe may
- * hang (CLAUDE.md) is untouched - the flip stays mode 1, which does not wait for a vertical
- * blank.
+ * Two buffers removes it without introducing a wait. Draw into the one the display is
+ * *not* showing, submit it, then draw into the other. Nothing blocks, so the rule that
+ * no probe may hang (CLAUDE.md) is untouched - the flip stays mode 1, which does not
+ * wait for a vertical blank.
  *
- * This is not a consequence of building without an SDK. It is an ordinary choice about how
- * many buffers to allocate, and every real implementation makes it the other way. (D256) */
+ * This is not a consequence of building without an SDK. It is an ordinary choice about
+ * how many buffers to allocate, and every real implementation makes it the other way.
+ * (D256) */
 #define OBS_FB_COUNT 2
 
 /* Where the whole registered region begins, and which buffer is being drawn into.
  *
- * `obs_fb` points at the back buffer and moves on every flip; this is what it moves within.
- * Kept separately so the drawing code needs no changes at all - it writes to `obs_fb` and does
- * not know there are two. */
+ * `obs_fb` points at the back buffer and moves on every flip; this is what it moves
+ * within. Kept separately so the drawing code needs no changes at all - it writes to
+ * `obs_fb` and does not know there are two. */
 static uint32_t *obs_fb_base = 0;
 static unsigned int obs_fb_index = 0;
 /* Held so the allocation can be identified in a debugger. Nothing releases it: the
@@ -164,15 +169,15 @@ int obs_display_holds_output(void) {
     /* Whether the output handle is open, not whether the display came up.
      *
      * These are different, and reading the second for the first produced a finding this
-     * program invented about the platform. The display opened the output, failed three steps
-     * later at the framebuffer, and **never closed the handle** - so it was holding the main
-     * output while answering "no" here. `080-video/open` then tried to open the same output,
-     * got `0x80290009`, and reported "the main video output would not open" as a fact about
-     * the console.
+     * program invented about the platform. The display opened the output, failed three
+     * steps later at the framebuffer, and **never closed the handle** - so it was
+     * holding the main output while answering "no" here. `080-video/open` then tried to
+     * open the same output, got `0x80290009`, and reported "the main video output would
+     * not open" as a fact about the console.
      *
-     * The output is released on every give-up below now, so this is usually moot. It is still
-     * written against the handle rather than the state, because the two questions are not the
-     * same one and the caller is asking this one. (D250) */
+     * The output is released on every give-up below now, so this is usually moot. It is
+     * still written against the handle rather than the state, because the two questions
+     * are not the same one and the caller is asking this one. (D250) */
     return obs_video_handle > 0;
 #endif
 }
@@ -195,27 +200,29 @@ const char *obs_display_status_text(void) {
 
 /* The code the platform returned when it refused, or zero where there was no call.
  *
- * Seven places gave up here and not one of them kept the number. "The display refused the
- * framebuffer" is a sentence about a step; `0x80290009` is the platform's own account of why,
- * and it is the only part a reader can look up or compare between two consoles. Throwing it
- * away is the same fault as a check reporting `fail` with no code, which this program has
- * never done - the display path simply grew its own reporting and did not inherit the rule.
- * (D249) */
+ * Seven places gave up here and not one of them kept the number. "The display refused
+ * the framebuffer" is a sentence about a step; `0x80290009` is the platform's own
+ * account of why, and it is the only part a reader can look up or compare between two
+ * consoles. Throwing it away is the same fault as a check reporting `fail` with no
+ * code, which this program has never done - the display path simply grew its own
+ * reporting and did not inherit the rule. (D249) */
 static uint64_t obs_state_code;
 
 /* Hand the main output back if this program is holding it.
  *
  * Called from every give-up, because a give-up is a decision to stop and stopping while
- * holding the output is never right - it leaves the console's main display owned by a process
- * that has decided it cannot use it, for the life of that process. The video checks then
- * measure this program rather than the platform. (D250)
+ * holding the output is never right - it leaves the console's main display owned by a
+ * process that has decided it cannot use it, for the life of that process. The video
+ * checks then measure this program rather than the platform. (D250)
  *
- * The framebuffer itself is deliberately *not* released; see `obs_fb_physical`. Handing back
- * memory the display may still be scanning out of is worse than leaking it at exit. The output
- * handle is different: nothing is scanning out of an output whose buffers were refused. */
+ * The framebuffer itself is deliberately *not* released; see `obs_fb_physical`. Handing
+ * back memory the display may still be scanning out of is worse than leaking it at
+ * exit. The output handle is different: nothing is scanning out of an output whose
+ * buffers were refused. */
 static void obs_release_output(void) {
 #if !defined(OBSCENE_HOST_BUILD)
-    if (obs_video_handle > 0 && obs_address_is_callable((const void *)&sceVideoOutClose)) {
+    if (obs_video_handle > 0 &&
+        obs_address_is_callable((const void *)&sceVideoOutClose)) {
         (void)sceVideoOutClose(obs_video_handle);
     }
     obs_video_handle = -1;
@@ -230,14 +237,16 @@ static obs_display_state obs_give_up(obs_display_state state, const char *why) {
     return state;
 }
 
-/* Give up on a call that returned a code. Separate from `obs_give_up` rather than an extra
- * argument on it, so a site with nothing to report cannot pass a stale value by accident.
+/* Give up on a call that returned a code. Separate from `obs_give_up` rather than an
+ * extra argument on it, so a site with nothing to report cannot pass a stale value by
+ * accident.
  *
- * Target-only: the host build draws into ordinary memory and has no platform call to get a
- * code from. Guarded rather than left for the linker to drop, because `-Werror` on an unused
- * static is what the build is for. */
+ * Target-only: the host build draws into ordinary memory and has no platform call to
+ * get a code from. Guarded rather than left for the linker to drop, because `-Werror`
+ * on an unused static is what the build is for. */
 #if !defined(OBSCENE_HOST_BUILD)
-static obs_display_state obs_give_up_code(obs_display_state state, const char *why, int rc) {
+static obs_display_state obs_give_up_code(obs_display_state state, const char *why,
+                                          int rc) {
     obs_release_output();
     obs_state = state;
     obs_state_text = why;
@@ -260,7 +269,8 @@ obs_display_state obs_display_open(void) {
     }
     obs_fb = (uint32_t *)malloc(OBS_FB_BYTES);
     if (obs_fb == NULL) {
-        return obs_give_up(OBS_DISPLAY_FAILED, "the host could not allocate a framebuffer");
+        return obs_give_up(OBS_DISPLAY_FAILED,
+                           "the host could not allocate a framebuffer");
     }
     obs_state = OBS_DISPLAY_READY;
     obs_state_text = "host framebuffer";
@@ -297,7 +307,8 @@ static void obs_put_be32(unsigned char *p, unsigned long v) {
     p[3] = (unsigned char)v;
 }
 
-static void obs_png_chunk(FILE *f, const char *tag, const unsigned char *data, size_t len) {
+static void obs_png_chunk(FILE *f, const char *tag, const unsigned char *data,
+                          size_t len) {
     unsigned char head[8];
     obs_put_be32(head, (unsigned long)len);
     memcpy(head + 4, tag, 4);
@@ -312,9 +323,9 @@ static void obs_png_chunk(FILE *f, const char *tag, const unsigned char *data, s
     fwrite(tail, 1, 4, f);
 }
 
-/* The host build always presents: it writes the frame to a PNG, so "did anything reach a
- * screen" has a definite answer and it is yes. Stated here rather than left to the target
- * definition so the harness sees the same interface on both builds. */
+/* The host build always presents: it writes the frame to a PNG, so "did anything reach
+ * a screen" has a definite answer and it is yes. Stated here rather than left to the
+ * target definition so the harness sees the same interface on both builds. */
 int obs_display_presented(void) {
     return 1;
 }
@@ -336,8 +347,8 @@ void obs_display_flip(void) {
     unsigned char ihdr[13];
     obs_put_be32(ihdr, OBS_FB_WIDTH);
     obs_put_be32(ihdr + 4, OBS_FB_HEIGHT);
-    ihdr[8] = 8;  /* bit depth */
-    ihdr[9] = 2;  /* truecolour */
+    ihdr[8] = 8; /* bit depth */
+    ihdr[9] = 2; /* truecolour */
     ihdr[10] = 0;
     ihdr[11] = 0;
     ihdr[12] = 0;
@@ -411,14 +422,17 @@ obs_display_state obs_display_open(void) {
     /* Every symbol first. An absent display is not a failure - it is a platform
      * without one - and saying so costs nothing. */
     /* Either generation's pair will do, so the register and attribute calls are checked
-     * as *pairs* rather than individually. Requiring the previous generation's by name -
-     * which this did - meant a current-generation platform reported "the display symbols
-     * are not present" while carrying a complete set of them under different names. */
-    int previous_pair = &sceVideoOutRegisterBuffers != 0 && &sceVideoOutSetBufferAttribute != 0;
-    int current_pair = &sceVideoOutRegisterBuffers2 != 0 && &sceVideoOutSetBufferAttribute2 != 0;
+     * as *pairs* rather than individually. Requiring the previous generation's by name
+     * - which this did - meant a current-generation platform reported "the display
+     * symbols are not present" while carrying a complete set of them under different
+     * names. */
+    int previous_pair =
+        &sceVideoOutRegisterBuffers != 0 && &sceVideoOutSetBufferAttribute != 0;
+    int current_pair =
+        &sceVideoOutRegisterBuffers2 != 0 && &sceVideoOutSetBufferAttribute2 != 0;
     if (&sceVideoOutOpen == 0 || (!previous_pair && !current_pair) ||
-        &sceVideoOutSubmitFlip == 0 ||
-        &sceKernelAllocateDirectMemory == 0 || &sceKernelMapDirectMemory == 0 ||
+        &sceVideoOutSubmitFlip == 0 || &sceKernelAllocateDirectMemory == 0 ||
+        &sceKernelMapDirectMemory == 0 ||
         /* Missed by the original list, and the one that mattered most: it is called
          * inline as an argument to the allocation below, so it runs before anything
          * this function has said. This code path is the *first* platform interaction in
@@ -435,15 +449,15 @@ obs_display_state obs_display_open(void) {
      * Initialised first, which this did not do.
      *
      * `070-user/initialise` calls `sceUserServiceInitialize` and then
-     * `070-user/initial-user` succeeds - but the display runs *before* any section, as the
-     * program's first platform interaction, so it was asking an uninitialised service. One
-     * loader answered anyway and another refused, and the refusal read as "this platform
-     * has no users" when the report two hundred lines later said `initial-user pass
-     * 0x10000000`.
+     * `070-user/initial-user` succeeds - but the display runs *before* any section, as
+     * the program's first platform interaction, so it was asking an uninitialised
+     * service. One loader answered anyway and another refused, and the refusal read as
+     * "this platform has no users" when the report two hundred lines later said
+     * `initial-user pass 0x10000000`.
      *
-     * Initialising before use is right on every platform, so this is not a workaround for
-     * the strict one - it is the order the interface documents, which the lenient one let
-     * this program get away with ignoring. */
+     * Initialising before use is right on every platform, so this is not a workaround
+     * for the strict one - it is the order the interface documents, which the lenient
+     * one let this program get away with ignoring. */
     int32_t user = 0;
     if (&sceUserServiceGetInitialUser == 0) {
         return obs_give_up(OBS_DISPLAY_ABSENT, "no initial user to open an output for");
@@ -452,17 +466,18 @@ obs_display_state obs_display_open(void) {
         /* Only now, and this order is the whole point.
          *
          * Initialising first broke a loader that was working: it hangs inside
-         * `sceUserServiceInitialize`, and the run stopped at `display|opening` with four
-         * records where it had been drawing the full report. Asking first and initialising
-         * only on refusal leaves every platform that already answers completely untouched,
-         * and is a smaller claim besides - "this needed initialising" rather than "this
-         * always needs initialising".
+         * `sceUserServiceInitialize`, and the run stopped at `display|opening` with
+         * four records where it had been drawing the full report. Asking first and
+         * initialising only on refusal leaves every platform that already answers
+         * completely untouched, and is a smaller claim besides - "this needed
+         * initialising" rather than "this always needs initialising".
          *
-         * The result of the initialise is not checked: already-initialised is a legitimate
-         * answer that some platforms report as an error. What matters is whether the retry
-         * below can name a user. */
+         * The result of the initialise is not checked: already-initialised is a
+         * legitimate answer that some platforms report as an error. What matters is
+         * whether the retry below can name a user. */
         if (!obs_address_is_callable((const void *)&sceUserServiceInitialize)) {
-            return obs_give_up(OBS_DISPLAY_ABSENT, "no initial user to open an output for");
+            return obs_give_up(OBS_DISPLAY_ABSENT,
+                               "no initial user to open an output for");
         }
         (void)sceUserServiceInitialize(0);
         if (sceUserServiceGetInitialUser(&user) != 0) {
@@ -481,16 +496,17 @@ obs_display_state obs_display_open(void) {
                                            OBS_FB_BYTES * OBS_FB_COUNT, OBS_FB_ALIGN,
                                            OBS_DISPLAY_MEM, &physical);
     if (rc != 0) {
-        return obs_give_up_code(OBS_DISPLAY_FAILED, "no direct memory for a framebuffer", rc);
+        return obs_give_up_code(OBS_DISPLAY_FAILED,
+                                "no direct memory for a framebuffer", rc);
     }
     obs_fb_physical = physical;
 
     void *mapped = 0;
     rc = sceKernelMapDirectMemory(&mapped, OBS_FB_BYTES * OBS_FB_COUNT, OBS_PROT_RW, 0,
-                                  physical,
-                                  OBS_FB_ALIGN);
+                                  physical, OBS_FB_ALIGN);
     if (rc != 0 || mapped == 0) {
-        return obs_give_up_code(OBS_DISPLAY_FAILED, "the framebuffer would not map", rc);
+        return obs_give_up_code(OBS_DISPLAY_FAILED, "the framebuffer would not map",
+                                rc);
     }
     obs_fb_base = (uint32_t *)mapped;
     obs_fb_index = 0;
@@ -501,48 +517,50 @@ obs_display_state obs_display_open(void) {
     for (int i = 0; i < OBS_ATTR_BYTES; i++) {
         attribute[i] = 0;
     }
-    /* Whichever generation's pair this platform actually has; the build generation breaks
-     * a tie.
+    /* Whichever generation's pair this platform actually has; the build generation
+     * breaks a tie.
      *
-     * "Did this symbol resolve" is still the primary signal, because the two generations
-     * expose different entry points and that answers the question directly where
-     * `005-generation` would only infer it (D110).
+     * "Did this symbol resolve" is still the primary signal, because the two
+     * generations expose different entry points and that answers the question directly
+     * where `005-generation` would only infer it (D110).
      *
      * # Why a tie exists at all, and why the older one used to win it
      *
-     * Preferring the newer form once broke a loader that had been working: **fpPS4 installs
-     * a logging stub for every import it cannot resolve**, so
-     * `sceVideoOutSetBufferAttribute2` has a perfectly good non-null address there and does
-     * nothing:
+     * Preferring the newer form once broke a loader that had been working: **fpPS4
+     * installs a logging stub for every import it cannot resolve**, so
+     * `sceVideoOutSetBufferAttribute2` has a perfectly good non-null address there and
+     * does nothing:
      *
      *     nop nid:libSceVideoOut:3E34B9B804B0715F:sceVideoOutSetBufferAttribute2
      *
-     * An address proves a symbol resolved. It does not prove anything is behind it - the
-     * thesis of `007-responsive` and `910-bulk`, arriving here uninvited.
+     * An address proves a symbol resolved. It does not prove anything is behind it -
+     * the thesis of `007-responsive` and `910-bulk`, arriving here uninvited.
      *
      * # The premise that justified always preferring the older one is false
      *
-     * It was this: *"a current-generation platform does not offer the older form at all, so
-     * there is no tie to lose."* Kyty offers both. It registers VideoOut twice - a
-     * twelve-function set under module version `0.0` and a three-function set under `1.1` -
-     * and patches every unresolved import to a trampoline, so **both pairs have non-null
-     * addresses and only one of them is real**. A current-generation module then took the
-     * previous-generation path into functions that do nothing, reported the display ready,
-     * and drew a black window for the rest of the run.
+     * It was this: *"a current-generation platform does not offer the older form at
+     * all, so there is no tie to lose."* Kyty offers both. It registers VideoOut twice
+     * - a twelve-function set under module version `0.0` and a three-function set under
+     * `1.1` - and patches every unresolved import to a trampoline, so **both pairs have
+     * non-null addresses and only one of them is real**. A current-generation module
+     * then took the previous-generation path into functions that do nothing, reported
+     * the display ready, and drew a black window for the rest of the run.
      *
-     * So the tie is broken by what this module actually is. `OBSCENE_GEN` is the generation
-     * written into `EI_ABIVERSION`, which a loader reads before the first guest instruction -
-     * it is a build fact, not a runtime one, and it is the only thing here that cannot be
-     * faked by a stub. A platform offering exactly one pair is unaffected either way. */
-    /* The tie-break, overridable, because the rule below was written against emulators and
-     * hardware is a case it did not have.
+     * So the tie is broken by what this module actually is. `OBSCENE_GEN` is the
+     * generation written into `EI_ABIVERSION`, which a loader reads before the first
+     * guest instruction - it is a build fact, not a runtime one, and it is the only
+     * thing here that cannot be faked by a stub. A platform offering exactly one pair
+     * is unaffected either way. */
+    /* The tie-break, overridable, because the rule below was written against emulators
+     * and hardware is a case it did not have.
      *
-     * `OBS_DISPLAY_PAIR` is 0 to keep the rule, 1 to force the previous generation's pair, 2
-     * to force the current one. On a real console both pairs resolve and the rule picks the
-     * previous one from `EI_ABIVERSION 0`, which is a fact about what this module *is* rather
-     * than about which entry point the console's `libSceVideoOut` actually implements. Those
-     * were assumed to be the same question. Whether they are is a measurement, so it is a
-     * flag and the experiment is one word. (D251) */
+     * `OBS_DISPLAY_PAIR` is 0 to keep the rule, 1 to force the previous generation's
+     * pair, 2 to force the current one. On a real console both pairs resolve and the
+     * rule picks the previous one from `EI_ABIVERSION 0`, which is a fact about what
+     * this module *is* rather than about which entry point the console's
+     * `libSceVideoOut` actually implements. Those were assumed to be the same question.
+     * Whether they are is a measurement, so it is a flag and the experiment is one
+     * word. (D251) */
     int use_current = current_pair && (!previous_pair || OBSCENE_GEN >= 5);
 #if OBS_DISPLAY_PAIR == 1
     use_current = 0;
@@ -552,30 +570,33 @@ obs_display_state obs_display_open(void) {
 
     /* Which pair was found and which was taken, before either is called.
      *
-     * The display's own imports are named by no check, so nothing in the report said whether
-     * they had bound - and when registration refused with `0x80290015` there was no way to
-     * tell a bad parameter from a call into a function that was never there. The two need
-     * completely different work.
+     * The display's own imports are named by no check, so nothing in the report said
+     * whether they had bound - and when registration refused with `0x80290015` there
+     * was no way to tell a bad parameter from a call into a function that was never
+     * there. The two need completely different work.
      *
      * Announced before the call for the same reason every check is (CLAUDE.md, first
-     * principle): if the registration does not return, this line is what says which of the
-     * two entry points it did not return from. (D251) */
+     * principle): if the registration does not return, this line is what says which of
+     * the two entry points it did not return from. (D251) */
     obs_report_display(use_current ? "path-current" : "path-previous",
 #if OBS_DISPLAY_PAIR != 0
                        "the build forced this pair, so no tie was broken",
 #else
-                       previous_pair && current_pair
-                           ? "both generations' entry points resolved; the build generation "
-                             "broke the tie"
-                       : previous_pair ? "only the previous generation's entry points resolved"
-                       : current_pair  ? "only the current generation's entry points resolved"
-                                       : "neither generation's entry points resolved",
+                       previous_pair && current_pair ? "both generations' entry points "
+                                                       "resolved; the build generation "
+                                                       "broke the tie"
+                       : previous_pair
+                           ? "only the previous generation's entry points resolved"
+                       : current_pair
+                           ? "only the current generation's entry points resolved"
+                           : "neither generation's entry points resolved",
 #endif
                        0);
     if (use_current) {
         /* The current generation's form: no aspect ratio and no pitch, and three extra
          * arguments carrying compression settings this program has no opinion about.
-         * Zero for all of them is "none", which is what a linear untiled buffer wants. */
+         * Zero for all of them is "none", which is what a linear untiled buffer wants.
+         */
         sceVideoOutSetBufferAttribute2(attribute, OBS_PIXEL_FORMAT_2, OBS_TILING_LINEAR,
                                        OBS_FB_WIDTH, OBS_FB_HEIGHT, 0, 0, 0);
 
@@ -583,11 +604,11 @@ obs_display_state obs_display_open(void) {
          * bytes each, the address first and a metadata pointer second. That difference
          * is the reason this cannot be a one-line swap of the function called.
          *
-         * Declared here rather than in platform.h because it is a structure this program
-         * fills, not one the platform fills: the layout has to be right or the display
-         * reads our stack as a pointer. Two independent implementations agree on the
-         * stride and on the first field, which is what makes writing it defensible at
-         * all (D111). */
+         * Declared here rather than in platform.h because it is a structure this
+         * program fills, not one the platform fills: the layout has to be right or the
+         * display reads our stack as a pointer. Two independent implementations agree
+         * on the stride and on the first field, which is what makes writing it
+         * defensible at all (D111). */
         struct obs_video_buffer {
             void *data;
             void *metadata;
@@ -598,8 +619,8 @@ obs_display_state obs_display_open(void) {
         }
         buffers[0].data = mapped;
 
-        rc = sceVideoOutRegisterBuffers2(obs_video_handle, 0, 0, buffers, 1, attribute, 0,
-                                         0);
+        rc = sceVideoOutRegisterBuffers2(obs_video_handle, 0, 0, buffers, 1, attribute,
+                                         0, 0);
     } else {
         sceVideoOutSetBufferAttribute(attribute, OBS_PIXEL_FORMAT, OBS_TILING_LINEAR,
                                       OBS_ASPECT_16_9, OBS_FB_WIDTH, OBS_FB_HEIGHT,
@@ -614,7 +635,8 @@ obs_display_state obs_display_open(void) {
     }
     if (rc != 0) {
         obs_fb = 0;
-        return obs_give_up_code(OBS_DISPLAY_FAILED, "the display refused the framebuffer", rc);
+        return obs_give_up_code(OBS_DISPLAY_FAILED,
+                                "the display refused the framebuffer", rc);
     }
 
     obs_state = OBS_DISPLAY_READY;
@@ -624,17 +646,18 @@ obs_display_state obs_display_open(void) {
 
 /* Room for the whole status structure and then some.
  *
- * The two implementations here write 96 and 128 bytes; only the first eight are read. Sized
- * far past both because the risk is entirely one-sided - a platform writing more than
- * expected corrupts whatever follows a short buffer, and a few unused bytes cost nothing. */
+ * The two implementations here write 96 and 128 bytes; only the first eight are read.
+ * Sized far past both because the risk is entirely one-sided - a platform writing more
+ * than expected corrupts whatever follows a short buffer, and a few unused bytes cost
+ * nothing. */
 #define OBS_FLIP_STATUS_BYTES 256
 
 /* Frames the display says it has presented, or zero when it will not say.
  *
- * Zero is indistinguishable from "none yet", which is correct: before the first flip there
- * genuinely have been none, and a platform that refuses the call is telling us nothing rather
- * than telling us none. Only a *change* in this number is evidence, which is why the caller
- * compares two readings rather than testing one. */
+ * Zero is indistinguishable from "none yet", which is correct: before the first flip
+ * there genuinely have been none, and a platform that refuses the call is telling us
+ * nothing rather than telling us none. Only a *change* in this number is evidence,
+ * which is why the caller compares two readings rather than testing one. */
 static uint64_t obs_flip_count(void) {
     if (!obs_address_is_callable((const void *)&sceVideoOutGetFlipStatus)) {
         return 0;
@@ -647,8 +670,8 @@ static uint64_t obs_flip_count(void) {
         return 0;
     }
     /* The first field, assembled a byte at a time rather than read through a cast: the
-     * buffer is a plain array with no alignment guarantee, and a misaligned 64-bit load is
-     * undefined even where it happens to work. */
+     * buffer is a plain array with no alignment guarantee, and a misaligned 64-bit load
+     * is undefined even where it happens to work. */
     uint64_t count = 0;
     for (unsigned int i = 0; i < 8; i++) {
         count |= (uint64_t)status[i] << (i * 8);
@@ -658,13 +681,13 @@ static uint64_t obs_flip_count(void) {
 
 /* Whether a frame has ever demonstrably reached the screen.
  *
- * Three states, because two would lie. `-1` is "not established" - nothing has been shown
- * *and* nothing says it has not, which is where a platform without a working status call
- * stays forever. */
+ * Three states, because two would lie. `-1` is "not established" - nothing has been
+ * shown *and* nothing says it has not, which is where a platform without a working
+ * status call stays forever. */
 static int obs_presented = -1;
 
-/* Whether the question has been asked yet, kept separate from the answer: `obs_presented`
- * has three values and none of them means "not tried". */
+/* Whether the question has been asked yet, kept separate from the answer:
+ * `obs_presented` has three values and none of them means "not tried". */
 static int obs_present_tested;
 
 int obs_display_presented(void) {
@@ -673,29 +696,30 @@ int obs_display_presented(void) {
 
 /* Wait, briefly and with a hard bound, for a submitted flip to take effect.
  *
- * Two buffers alone do not stop tearing. Submitting a flip does not mean the display has
- * switched - it means the request was accepted - so with no wait at all this program starts
- * drawing into the other buffer immediately, and if the switch has not happened yet that other
- * buffer is still the one on screen. The result is exactly what a single buffer does, arriving
- * one frame later.
+ * Two buffers alone do not stop tearing. Submitting a flip does not mean the display
+ * has switched - it means the request was accepted - so with no wait at all this
+ * program starts drawing into the other buffer immediately, and if the switch has not
+ * happened yet that other buffer is still the one on screen. The result is exactly what
+ * a single buffer does, arriving one frame later.
  *
  * **Bounded, never blocking.** `CLAUDE.md` is explicit that anything which can block is
- * written as a try or not at all, and a probe that waits forever for a vertical blank on a
- * platform whose vblank never arrives loses the entire report it is holding. So this gives up
- * after a fixed number of polls and returns; the worst case is the tearing that was there
- * before, on a platform that cannot present anyway.
+ * written as a try or not at all, and a probe that waits forever for a vertical blank
+ * on a platform whose vblank never arrives loses the entire report it is holding. So
+ * this gives up after a fixed number of polls and returns; the worst case is the
+ * tearing that was there before, on a platform that cannot present anyway.
  *
- * `sceKernelUsleep` is not used to pace the polls: it is a function this program *measures*
- * (`050-time`), and a display path that depended on it would be reporting on itself. The poll
- * is a plain read of the counter the platform already exposes. (D257)
+ * `sceKernelUsleep` is not used to pace the polls: it is a function this program
+ * *measures*
+ * (`050-time`), and a display path that depended on it would be reporting on itself.
+ * The poll is a plain read of the counter the platform already exposes. (D257)
  */
 static void obs_wait_for_flip(uint64_t before) {
     if (!obs_address_is_callable((const void *)&sceVideoOutGetFlipStatus)) {
         return;
     }
-    /* Sized to be comfortably longer than one frame at any rate a display in this class runs
-     * at, and short enough that a platform which never advances the counter costs a bounded
-     * pause per flip rather than a run. */
+    /* Sized to be comfortably longer than one frame at any rate a display in this class
+     * runs at, and short enough that a platform which never advances the counter costs
+     * a bounded pause per flip rather than a run. */
     for (unsigned int spin = 0; spin < 200000u; spin++) {
         if (obs_flip_count() != before) {
             return;
@@ -713,13 +737,14 @@ void obs_display_flip(void) {
     /* Submit the buffer that was just drawn, then move to the other one.
      *
      * The index is advanced *before* the outcome is known deliberately: if the flip is
-     * refused the display is being given up on anyway, and if it succeeds the buffer just
-     * submitted is the one being scanned out - so nothing may draw into it again. Advancing
-     * only on success would leave the failure path drawing into the live buffer, which is the
-     * exact fault two buffers exist to remove. */
+     * refused the display is being given up on anyway, and if it succeeds the buffer
+     * just submitted is the one being scanned out - so nothing may draw into it again.
+     * Advancing only on success would leave the failure path drawing into the live
+     * buffer, which is the exact fault two buffers exist to remove. */
     unsigned int shown = obs_fb_index;
     obs_fb_index = (obs_fb_index + 1u) % OBS_FB_COUNT;
-    obs_fb = (uint32_t *)((unsigned char *)obs_fb_base + (size_t)obs_fb_index * OBS_FB_BYTES);
+    obs_fb = (uint32_t *)((unsigned char *)obs_fb_base +
+                          (size_t)obs_fb_index * OBS_FB_BYTES);
 
     uint64_t before = obs_flip_count();
     int rc = sceVideoOutSubmitFlip(obs_video_handle, (int)shown, 1, 0);
@@ -733,40 +758,43 @@ void obs_display_flip(void) {
          * into a lost screen, rather than into a lost run.
          *
          * What is already drawn stays on the display. */
-        (void)obs_give_up(OBS_DISPLAY_FAILED, "a flip was refused; the screen is frozen");
+        (void)obs_give_up(OBS_DISPLAY_FAILED,
+                          "a flip was refused; the screen is frozen");
         return;
     }
 
     /* Accepted. Now find out whether anything was actually shown.
      *
-     * These are different questions and the platform can answer yes to the first while the
-     * answer to the second is no - which is exactly what a partly implemented display library
-     * does. Every call succeeds, nothing appears, and a report built from return codes says
-     * the display is fine.
+     * These are different questions and the platform can answer yes to the first while
+     * the answer to the second is no - which is exactly what a partly implemented
+     * display library does. Every call succeeds, nothing appears, and a report built
+     * from return codes says the display is fine.
      *
-     * Recorded once, on the first flip that moves the counter, and never revisited: what is
-     * being established is *whether this platform can present at all*, and one frame settles
-     * that. Checking every flip would turn a report into a frame counter. */
+     * Recorded once, on the first flip that moves the counter, and never revisited:
+     * what is being established is *whether this platform can present at all*, and one
+     * frame settles that. Checking every flip would turn a report into a frame counter.
+     */
     if (!obs_present_tested) {
         obs_present_tested = 1;
         if (!obs_address_is_callable((const void *)&sceVideoOutGetFlipStatus)) {
-            /* Not a failure - a silence. A platform with no way to report frame counts has
-             * not told us it cannot present, it has told us nothing, and a report that
-             * confused those would be making the same overclaim in the other direction. */
+            /* Not a failure - a silence. A platform with no way to report frame counts
+             * has not told us it cannot present, it has told us nothing, and a report
+             * that confused those would be making the same overclaim in the other
+             * direction. */
             obs_presented = -1;
         } else {
             /* Polled, not read once, and this was the first version's mistake.
              *
-             * A flip is *queued*. The counter moves when a presenter picks it up, which has
-             * not happened yet at the instant the call returns - so reading immediately
-             * reported "blind" for shadPS4, which draws the report perfectly well and whose
-             * implementation of this call is entirely correct. A test that says a working
-             * display is broken is worse than no test.
+             * A flip is *queued*. The counter moves when a presenter picks it up, which
+             * has not happened yet at the instant the call returns - so reading
+             * immediately reported "blind" for shadPS4, which draws the report
+             * perfectly well and whose implementation of this call is entirely correct.
+             * A test that says a working display is broken is worse than no test.
              *
-             * Bounded, and short: twenty tries at five milliseconds is a tenth of a second,
-             * which is several frames at any refresh rate a display has. A platform slower
-             * than that is not one this can measure, and waiting longer to find out would
-             * cost every run. */
+             * Bounded, and short: twenty tries at five milliseconds is a tenth of a
+             * second, which is several frames at any refresh rate a display has. A
+             * platform slower than that is not one this can measure, and waiting longer
+             * to find out would cost every run. */
             for (int i = 0; i < 20; i++) {
                 if (obs_flip_count() != before) {
                     obs_presented = 1;

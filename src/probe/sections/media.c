@@ -93,7 +93,8 @@ static const obs_check video_checks[] = {
      OBS_CAP_VIDEO, (const void *)&sceVideoOutOpen, check_video_open, OBS_FROM_ASSUMED},
     {"080-video/flip-rate-rejects-bad-handle", "libSceVideoOut",
      "sceVideoOutSetFlipRate", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sceVideoOutSetFlipRate, check_video_flip_rate_rejects_bad_handle, OBS_FROM_ASSUMED},
+     (const void *)&sceVideoOutSetFlipRate, check_video_flip_rate_rejects_bad_handle,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_video = {
@@ -187,7 +188,8 @@ static const obs_check input_checks[] = {
     {"100-input/open", "libScePad", "scePadOpen", OBS_CAP_INPUT, OBS_CAP_NONE,
      (const void *)&scePadOpen, check_pad_open, OBS_FROM_ASSUMED},
     {"100-input/close-rejects-bad-handle", "libScePad", "scePadClose", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&scePadClose, check_pad_close_rejects_bad_handle, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, (const void *)&scePadClose, check_pad_close_rejects_bad_handle,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_input = {

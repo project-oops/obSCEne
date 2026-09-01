@@ -53,15 +53,16 @@ extern const obs_section obs_section_oracle;
 extern const obs_section obs_section_memmap;
 /* How many section rows the screen can hold.
  *
- * **This lives here, beside the sections, because it was in `screen.c` and drifted.** It was
- * 32 while the registry grew to 33, and the thirty-third row was dropped by a bounds test with
- * nothing said - the text stream stayed complete and the screen quietly showed
- * `SECTION 32 OF 33` forever.
+ * **This lives here, beside the sections, because it was in `screen.c` and drifted.**
+ * It was 32 while the registry grew to 33, and the thirty-third row was dropped by a
+ * bounds test with nothing said - the text stream stayed complete and the screen
+ * quietly showed `SECTION 32 OF 33` forever.
  *
- * The comment above the old constant described that exact failure as the reason for the value.
- * Describing a hazard is not the same as preventing it: the number still had to be maintained
- * by hand against a list in another file, and it was not. `registry.c` now asserts the two
- * agree at compile time, so the next section added either fits or fails the build. (D259) */
+ * The comment above the old constant described that exact failure as the reason for the
+ * value. Describing a hazard is not the same as preventing it: the number still had to
+ * be maintained by hand against a list in another file, and it was not. `registry.c`
+ * now asserts the two agree at compile time, so the next section added either fits or
+ * fails the build. (D259) */
 #define OBS_SCREEN_MAX 48
 
 extern const obs_section obs_section_modules;

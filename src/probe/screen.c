@@ -10,35 +10,35 @@
  *
  * One row per section: the identifier, a proportion bar, and the four counts.
  *
- * **The row spacing is computed, not fixed.** It used to be a constant 46 pixels, chosen
- * when there were fifteen sections and correct for as long as that lasted. At twenty-one
- * the totals row lands at y=1184 on a 1080-high framebuffer, and because `obs_display_rect`
- * clips rather than faults, nothing broke - the totals and the footer were simply drawn
- * into nothing and the last section ran off the bottom.
+ * **The row spacing is computed, not fixed.** It used to be a constant 46 pixels,
+ * chosen when there were fifteen sections and correct for as long as that lasted. At
+ * twenty-one the totals row lands at y=1184 on a 1080-high framebuffer, and because
+ * `obs_display_rect` clips rather than faults, nothing broke - the totals and the
+ * footer were simply drawn into nothing and the last section ran off the bottom.
  *
  * That is the worst way for this to fail. The screen exists for when the text stream
  * cannot be read, so a screen that silently omits the totals is showing a confident,
  * incomplete answer. The spacing now shrinks to fit whatever the registry holds.
  *
- * **And past a point the list wraps into two columns.** Shrinking the rows has a floor -
- * below OBS_ROW_H_MIN the identifiers stop being readable across a room, which is the screen's
- * only advantage over the stream - and at thirty-seven sections a single column reaches it and
- * the last rows land back on the totals. So beyond what one column holds, the sections run in
- * two instead: the rows keep their height, and the whole run still fits in one photograph.
- * (D271)
+ * **And past a point the list wraps into two columns.** Shrinking the rows has a floor
+ * - below OBS_ROW_H_MIN the identifiers stop being readable across a room, which is the
+ * screen's only advantage over the stream - and at thirty-seven sections a single
+ * column reaches it and the last rows land back on the totals. So beyond what one
+ * column holds, the sections run in two instead: the rows keep their height, and the
+ * whole run still fits in one photograph. (D271)
  *
- * **The summary shows no individual checks, and the detail pages do.** A hundred and thirty
- * identifiers at a readable size does not fit on one screen, and a screen that needs
- * squinting at has lost the only advantage it has over the text stream - so the summary
- * stays the shape of the run, and the presenter cycles paged lists behind it, eighteen
- * checks at a time.
+ * **The summary shows no individual checks, and the detail pages do.** A hundred and
+ * thirty identifiers at a readable size does not fit on one screen, and a screen that
+ * needs squinting at has lost the only advantage it has over the text stream - so the
+ * summary stays the shape of the run, and the presenter cycles paged lists behind it,
+ * eighteen checks at a time.
  *
  * Each of those rows carries its reason beside the marker where the result had one. The
  * screen exists for the case where the stream cannot be read, and that is precisely the
  * case where `FAIL` without the reason costs the most - the stream would have said
  * `FAIL: the attribute object could not be initialised` and the screen said only the
- * colour. Nothing is invented for the rows that have none; most passes do not carry one,
- * and an empty column is the honest render of "nothing more is known".
+ * colour. Nothing is invented for the rows that have none; most passes do not carry
+ * one, and an empty column is the honest render of "nothing more is known".
  */
 
 #include "obscene/screen.h"
@@ -49,8 +49,9 @@
 #include "obscene/sections.h"
 #include "obscene/sysinfo.h"
 
-/* `OBS_SCREEN_MAX` comes from `obscene/sections.h`, beside the list it has to be larger than,
- * and `registry.c` asserts the two agree. It was defined here and drifted. (D259) */
+/* `OBS_SCREEN_MAX` comes from `obscene/sections.h`, beside the list it has to be larger
+ * than, and `registry.c` asserts the two agree. It was defined here and drifted. (D259)
+ */
 
 #define OBS_MARGIN 48
 #define OBS_TOP 190
@@ -58,8 +59,8 @@
 /* The comfortable row height, used whenever the sections fit at it. */
 #define OBS_ROW_H_MAX 46
 /* Below this the identifier and its counts stop being readable across a room, which is
- * the only reason this screen exists. If the sections will not fit even here, the answer
- * is fewer rows on screen rather than smaller ones - not a problem yet, and the
+ * the only reason this screen exists. If the sections will not fit even here, the
+ * answer is fewer rows on screen rather than smaller ones - not a problem yet, and the
  * reservation below says what to do when it is. */
 #define OBS_ROW_H_MIN 24
 /* What the totals block and footer need beneath the last row. Reserved rather than
@@ -100,25 +101,27 @@ typedef struct row {
  * with the identifiers still readable across a room - which is the only thing a screen
  * does better than the stream. */
 #define OBS_PAGE_ROWS 18
-/* Where the reason column starts, measured from the end of the marker. Wide enough for the
- * longest check identifier in the registry at this text size; a longer one pushes its own
- * reason right rather than being overdrawn. */
+/* Where the reason column starts, measured from the end of the marker. Wide enough for
+ * the longest check identifier in the registry at this text size; a longer one pushes
+ * its own reason right rather than being overdrawn. */
 #define OBS_REASON_COLUMN (44 * OBS_FONT_WIDTH * 2)
 
 /* One sleep the platform is known to survive.
  *
- * The page pacing asked for three seconds in a single call, and PS5PCEM stopped advancing:
- * the screen froze on whatever page was up, for as long as anyone watched. The evidence was
- * already in this project's own reports - `050-time/usleep` sleeps **2 ms** and passes there,
- * while `120-measure/sleep-fidelity`, which asks for longer, is excluded as *known to end the
- * process*. Three seconds is 1500 times the duration that is known to work.
+ * The page pacing asked for three seconds in a single call, and PS5PCEM stopped
+ * advancing: the screen froze on whatever page was up, for as long as anyone watched.
+ * The evidence was already in this project's own reports - `050-time/usleep` sleeps **2
+ * ms** and passes there, while `120-measure/sleep-fidelity`, which asks for longer, is
+ * excluded as *known to end the process*. Three seconds is 1500 times the duration that
+ * is known to work.
  *
- * So a page waits by repeating the short sleep rather than asking for one long one. Same total
- * time on a platform where either works, and it keeps the display advancing on one where only
- * the small one does.
+ * So a page waits by repeating the short sleep rather than asking for one long one.
+ * Same total time on a platform where either works, and it keeps the display advancing
+ * on one where only the small one does.
  *
- * This is presence-versus-behaviour inside our own display loop: the guard above tests that
- * `sceKernelUsleep` *exists*, which says nothing about whether it returns. (D174) */
+ * This is presence-versus-behaviour inside our own display loop: the guard above tests
+ * that `sceKernelUsleep` *exists*, which says nothing about whether it returns. (D174)
+ */
 #define OBS_SLEEP_STEP_MICROSECONDS 2000u
 
 /* Long enough to read a page, short enough that waiting for a particular one is not a
@@ -133,8 +136,8 @@ typedef struct row {
 typedef struct entry {
     const char *id;
     obs_status status;
-    /* Static storage only, the same contract the harness holds for `obs_result.detail` -
-     * nothing here copies it. */
+    /* Static storage only, the same contract the harness holds for `obs_result.detail`
+     * - nothing here copies it. */
     const char *detail;
 } entry;
 
@@ -157,8 +160,8 @@ void obs_screen_begin(unsigned int sections, unsigned int checks) {
      * Opening the display is the most involved platform interaction in the program -
      * video-out, then a direct-memory reserve, map and register - and it happens
      * *first*, ahead of the boot section that establishes the report can be trusted at
-     * all. Until this record existed, a fault in there ended the run with `OBS|build` as
-     * the last line: no try, no section, nothing naming the display.
+     * all. Until this record existed, a fault in there ended the run with `OBS|build`
+     * as the last line: no try, no section, nothing naming the display.
      *
      * That is exactly the failure announce-before-attempting exists to prevent, in the
      * one place the harness's own `try` records do not reach. */
@@ -171,27 +174,30 @@ void obs_screen_begin(unsigned int sections, unsigned int checks) {
      * results" from "the display never came up"; this record can. An "opening" with no
      * outcome after it names the display as what killed the run. */
     static const char *const names[] = {"untried", "ready", "absent", "failed"};
-    obs_report_display(names[(int)state], obs_display_status_text(), obs_display_status_code());
+    obs_report_display(names[(int)state], obs_display_status_text(),
+                       obs_display_status_code());
 
     if (obs_live) {
         obs_screen_redraw(0);
 
         /* And whether that redraw was actually seen.
          *
-         * `ready` above means the platform accepted an output, a framebuffer and a flip. It
-         * does not mean a frame reached a screen, and on a partly implemented display library
-         * those come apart completely: every call succeeds and the window stays black. The
-         * report used to carry only the acceptances, so it asserted a working display on a
-         * platform that cannot present - the one claim in it with no measurement behind it.
+         * `ready` above means the platform accepted an output, a framebuffer and a
+         * flip. It does not mean a frame reached a screen, and on a partly implemented
+         * display library those come apart completely: every call succeeds and the
+         * window stays black. The report used to carry only the acceptances, so it
+         * asserted a working display on a platform that cannot present - the one claim
+         * in it with no measurement behind it.
          *
-         * Emitted after the first redraw because that is the first moment there is anything
-         * to have presented. (D187) */
+         * Emitted after the first redraw because that is the first moment there is
+         * anything to have presented. (D187) */
         static const char *const seen[] = {"blind", "presenting", "unestablished"};
         int p = obs_display_presented();
         obs_report_display(seen[p == 1 ? 1 : (p == 0 ? 0 : 2)],
-                           p == 1    ? "a submitted frame reached the display"
-                           : p == 0  ? "flips are accepted and the frame count never moves"
-                                     : "the platform will not say whether a frame was shown",
+                           p == 1 ? "a submitted frame reached the display"
+                           : p == 0
+                               ? "flips are accepted and the frame count never moves"
+                               : "the platform will not say whether a frame was shown",
                            0);
     }
 }
@@ -203,16 +209,17 @@ void obs_screen_attempt(const char *id) {
     obs_in_flight = id;
     /* Recorded, **not** redrawn.
      *
-     * The first version redrew here, reasoning that an in-flight name is only useful if it is
-     * on screen during the call. That is true and the cost is not affordable:
-     * `obs_screen_redraw` ends in `obs_display_flip`, so it added a full present per check -
-     * 515 of them - and shadPS4 began dying in `120-measure`, three checks it had never
-     * crashed on before.
+     * The first version redrew here, reasoning that an in-flight name is only useful if
+     * it is on screen during the call. That is true and the cost is not affordable:
+     * `obs_screen_redraw` ends in `obs_display_flip`, so it added a full present per
+     * check - 515 of them - and shadPS4 began dying in `120-measure`, three checks it
+     * had never crashed on before.
      *
-     * A flip per check is also the wrong shape for what this is for. The screen is redrawn at
-     * every section boundary anyway, so the name is on screen for the section that contains
-     * the hang; narrowing it to the exact check is not worth changing how often the guest
-     * presents, on a probe whose whole purpose is to not perturb what it measures. (D174) */
+     * A flip per check is also the wrong shape for what this is for. The screen is
+     * redrawn at every section boundary anyway, so the name is on screen for the
+     * section that contains the hang; narrowing it to the exact check is not worth
+     * changing how often the guest presents, on a probe whose whole purpose is to not
+     * perturb what it measures. (D174) */
 }
 
 void obs_screen_check(const char *id, obs_result result) {
@@ -238,14 +245,14 @@ void obs_screen_section(const char *id, obs_tally tally) {
 
 /* The wordmark, in two colours.
  *
- * The three letters in the middle belong to the platform rather than to this project, and
- * the name has always been built around that. Drawing them apart says so at a glance, and
- * says it the way principle 5 prefers - marked, not spelled out in prose.
+ * The three letters in the middle belong to the platform rather than to this project,
+ * and the name has always been built around that. Drawing them apart says so at a
+ * glance, and says it the way principle 5 prefers - marked, not spelled out in prose.
  *
- * Three runs rather than one string, which is what `obs_display_text` returning the next x
- * is for. It also retires the `8 * 6 * 7` that two call sites carried to work out where the
- * wordmark ended: the width is now whatever was actually drawn, so changing the scale or
- * the name cannot leave the HUD overlapping it.
+ * Three runs rather than one string, which is what `obs_display_text` returning the
+ * next x is for. It also retires the `8 * 6 * 7` that two call sites carried to work
+ * out where the wordmark ended: the width is now whatever was actually drawn, so
+ * changing the scale or the name cannot leave the HUD overlapping it.
  */
 static int obs_draw_wordmark(int x, int y, int scale) {
     int at = obs_display_text(x, y, "OB", OBS_COLOUR_INK, scale);
@@ -282,10 +289,12 @@ static void obs_number(int right_x, int y, unsigned int value, obs_colour colour
 
 /* The platform HUD: every system fact obSCEne can name, each showing its value or the
  * honest `unknown`. The colour is the finding - ink for a known value, accent for "the
- * platform has this query but we have not wired its signature", dim for "not here at all".
- * That an emulator shows a wall of dim is the point, not a defect (see obscene/sysinfo.h).
+ * platform has this query but we have not wired its signature", dim for "not here at
+ * all". That an emulator shows a wall of dim is the point, not a defect (see
+ * obscene/sysinfo.h).
  *
- * Two rows of four, starting at (x0, y0), fitted to the width to the right of the title. */
+ * Two rows of four, starting at (x0, y0), fitted to the width to the right of the
+ * title. */
 static void obs_draw_hud(int x0, int y0, int width) {
     int col_w = (width - x0 - OBS_MARGIN) / 4;
     if (col_w < 180) {
@@ -294,13 +303,13 @@ static void obs_draw_hud(int x0, int y0, int width) {
     for (unsigned int i = 0; i < (unsigned int)OBS_SYS_COUNT; i++) {
         char value[32];
         obs_sys_state state = obs_sysinfo_value((obs_sys_field)i, value, sizeof(value));
-        obs_colour colour = state == OBS_SYS_KNOWN        ? OBS_COLOUR_INK
+        obs_colour colour = state == OBS_SYS_KNOWN         ? OBS_COLOUR_INK
                             : state == OBS_SYS_UNCONFIRMED ? OBS_COLOUR_ACCENT
                                                            : OBS_COLOUR_DIM;
         int x = x0 + (int)(i % 4u) * col_w;
         int y = y0 + (int)(i / 4u) * 24;
-        int vx = obs_display_text(x, y, obs_sysinfo_label((obs_sys_field)i), OBS_COLOUR_DIM,
-                                  2);
+        int vx = obs_display_text(x, y, obs_sysinfo_label((obs_sys_field)i),
+                                  OBS_COLOUR_DIM, 2);
         (void)obs_display_text(vx + 12, y, value, colour, 2);
     }
 }
@@ -308,9 +317,9 @@ static void obs_draw_hud(int x0, int y0, int width) {
 /* A HUD-only screen, for a serving build that never runs the suite (src/start.c).
  *
  * Opens the display if the suite did not, draws the title and the platform facts, and
- * flips once. This is what puts the listening port - and, once its signature is confirmed,
- * the machine's own IP - in front of the person who has to point a driver at it. A single
- * draw, not a redraw loop: nothing changes while it waits on `accept`. */
+ * flips once. This is what puts the listening port - and, once its signature is
+ * confirmed, the machine's own IP - in front of the person who has to point a driver at
+ * it. A single draw, not a redraw loop: nothing changes while it waits on `accept`. */
 void obs_screen_hud(void) {
     if (!obs_live) {
         /* Announced, and its outcome recorded, exactly as obs_screen_begin does - so a
@@ -320,7 +329,8 @@ void obs_screen_hud(void) {
         obs_display_state state = obs_display_open();
         obs_live = (state == OBS_DISPLAY_READY);
         static const char *const names[] = {"untried", "ready", "absent", "failed"};
-        obs_report_display(names[(int)state], obs_display_status_text(), obs_display_status_code());
+        obs_report_display(names[(int)state], obs_display_status_text(),
+                           obs_display_status_code());
     }
     if (!obs_live) {
         return;
@@ -331,7 +341,8 @@ void obs_screen_hud(void) {
      * handful of identical frames is cheap and makes the HUD actually appear. */
     for (int frame = 0; frame < 3; frame++) {
         obs_display_clear(OBS_COLOUR_GROUND);
-        obs_draw_hud(obs_draw_wordmark(OBS_MARGIN, 56, 6) + 24, 50, obs_display_width());
+        obs_draw_hud(obs_draw_wordmark(OBS_MARGIN, 56, 6) + 24, 50,
+                     obs_display_width());
         obs_display_flip();
     }
 }
@@ -346,7 +357,8 @@ static void obs_bar(int x, int y, int w, int h, obs_tally t) {
         return;
     }
     unsigned int counts[4] = {t.pass, t.partial, t.fail, t.skip};
-    obs_colour colours[4] = {OBS_COLOUR_PASS, OBS_COLOUR_PARTIAL, OBS_COLOUR_FAIL, OBS_COLOUR_SKIP};
+    obs_colour colours[4] = {OBS_COLOUR_PASS, OBS_COLOUR_PARTIAL, OBS_COLOUR_FAIL,
+                             OBS_COLOUR_SKIP};
     int widths[4];
     int used = 0;
     int biggest = 0;
@@ -369,10 +381,11 @@ static void obs_bar(int x, int y, int w, int h, obs_tally t) {
 
 /* One section's row - identifier, proportion bar, four counts - laid within the column
  * [x0, x0 + col_w). Split out so the summary can run the sections in two columns: at
- * thirty-seven sections a single column hits the row-height floor and the last rows overrun
- * the totals (D271). The geometry is the single-column layout's, parameterised by the column,
- * so one column reproduces the original screen pixel for pixel and two columns only narrow the
- * bar - the counts, which carry the numbers, keep their size and spacing. */
+ * thirty-seven sections a single column hits the row-height floor and the last rows
+ * overrun the totals (D271). The geometry is the single-column layout's, parameterised
+ * by the column, so one column reproduces the original screen pixel for pixel and two
+ * columns only narrow the bar - the counts, which carry the numbers, keep their size
+ * and spacing. */
 static void obs_draw_summary_row(int x0, int col_w, int y, const row *r) {
     int bar_x = x0 + 380;
     int bar_w = col_w - 380 - 340;
@@ -431,9 +444,9 @@ void obs_screen_redraw(const char *footer) {
 
     /* What is happening right now, in words.
      *
-     * A run in progress names the check it is inside; a finished one says so. Between them
-     * is the case this exists for: a screen that has stopped changing, where the two are
-     * indistinguishable without it. */
+     * A run in progress names the check it is inside; a finished one says so. Between
+     * them is the case this exists for: a screen that has stopped changing, where the
+     * two are indistinguishable without it. */
     if (obs_in_flight != NULL) {
         int rx = obs_display_text(OBS_MARGIN, 176, "RUNNING ", OBS_COLOUR_ACCENT, 2);
         (void)obs_display_text(rx + 8 * 2, 176, obs_in_flight, OBS_COLOUR_INK, 2);
@@ -443,14 +456,15 @@ void obs_screen_redraw(const char *footer) {
 
     /* The sections, in as many columns as it takes to keep them above the totals.
      *
-     * One column while they fit in it at a readable height; two once a single column would
-     * overrun the footer, which is where thirty-seven sections put it - that many rows want
-     * more height than there is even at the OBS_ROW_H_MIN floor, so the last of them used to be
-     * drawn over the totals. Splitting the list holds the count without shrinking the rows, and
-     * keeps the property the screen exists for: one photograph is the whole answer, which a
-     * paged summary would lose. Two columns hold about sixty sections; a third is the next step
-     * and not needed yet. The left column fills first, top to bottom, so the order still reads
-     * down and then across. (D271) */
+     * One column while they fit in it at a readable height; two once a single column
+     * would overrun the footer, which is where thirty-seven sections put it - that many
+     * rows want more height than there is even at the OBS_ROW_H_MIN floor, so the last
+     * of them used to be drawn over the totals. Splitting the list holds the count
+     * without shrinking the rows, and keeps the property the screen exists for: one
+     * photograph is the whole answer, which a paged summary would lose. Two columns
+     * hold about sixty sections; a third is the next step and not needed yet. The left
+     * column fills first, top to bottom, so the order still reads down and then across.
+     * (D271) */
     int available = h - OBS_TOP - OBS_FOOTER_RESERVE;
     if (available < 0) {
         available = 0;
@@ -500,14 +514,15 @@ void obs_screen_redraw(const char *footer) {
  *
  * Cycled *and* driven by input, with the cycle as the floor.
  *
- * The auto-cycle stays because a controller is one more thing that has to work on a platform
- * being tested precisely because things do not, and a run being photographed has nobody to
- * press a button - so the pages must advance on their own or a headless capture gets one
- * frame forever. But waiting out a thirty-second cycle to reach page nine is its own problem,
- * so the D-pad is layered on top: left and right page immediately, and any press resets the
- * auto-advance timer. Nothing depends on the pad; it only makes an attended run faster. The
- * pad is read through the same weak-symbol guard as everything else, so a platform that does
- * not resolve it simply keeps cycling. (D259)
+ * The auto-cycle stays because a controller is one more thing that has to work on a
+ * platform being tested precisely because things do not, and a run being photographed
+ * has nobody to press a button - so the pages must advance on their own or a headless
+ * capture gets one frame forever. But waiting out a thirty-second cycle to reach page
+ * nine is its own problem, so the D-pad is layered on top: left and right page
+ * immediately, and any press resets the auto-advance timer. Nothing depends on the pad;
+ * it only makes an attended run faster. The pad is read through the same weak-symbol
+ * guard as everything else, so a platform that does not resolve it simply keeps
+ * cycling. (D259)
  */
 
 static obs_colour colour_of(obs_status status) {
@@ -561,7 +576,8 @@ static void draw_page(unsigned int page) {
         last = obs_entry_count;
     }
 
-    int x = obs_display_text(OBS_MARGIN + 8 * 6 * 7 + 24, 74, "CHECKS ", OBS_COLOUR_ACCENT, 2);
+    int x = obs_display_text(OBS_MARGIN + 8 * 6 * 7 + 24, 74, "CHECKS ",
+                             OBS_COLOUR_ACCENT, 2);
     obs_number(x + 8 * 2 * 4, 74, first + 1u, OBS_COLOUR_INK, 2);
     x = obs_display_text(x + 8 * 2 * 5, 74, "TO ", OBS_COLOUR_DIM, 2);
     obs_number(x + 8 * 2 * 4, 74, last, OBS_COLOUR_INK, 2);
@@ -575,26 +591,28 @@ static void draw_page(unsigned int page) {
         obs_colour colour = colour_of(obs_entries[i].status);
         /* The verdict in its own column, so a page can be read down the left edge
          * without reading any identifier at all. */
-        (void)obs_display_text(OBS_MARGIN, y, marker_of(obs_entries[i].status), colour, 2);
-        int after = obs_display_text(OBS_MARGIN + 110, y, obs_entries[i].id, OBS_COLOUR_INK,
-                                     2);
+        (void)obs_display_text(OBS_MARGIN, y, marker_of(obs_entries[i].status), colour,
+                               2);
+        int after =
+            obs_display_text(OBS_MARGIN + 110, y, obs_entries[i].id, OBS_COLOUR_INK, 2);
         /* The reason, where there is one.
          *
-         * A fixed column so the reasons line up and can be read down, but never closer than
-         * a space after the identifier - the longest ids would otherwise be drawn straight
-         * through the text, and `obs_display_rect` clips rather than faulting, so it would
-         * have looked like a font bug rather than a layout one.
+         * A fixed column so the reasons line up and can be read down, but never closer
+         * than a space after the identifier - the longest ids would otherwise be drawn
+         * straight through the text, and `obs_display_rect` clips rather than faulting,
+         * so it would have looked like a font bug rather than a layout one.
          *
-         * Drawn dim: the identifier and the marker are what the eye should catch first, and
-         * a wall of equally bright prose beside them undoes that. Nothing is invented for
-         * the rows that have no detail - most passes do not carry one, and the honest render
-         * of "nothing more is known" is an empty column. */
+         * Drawn dim: the identifier and the marker are what the eye should catch first,
+         * and a wall of equally bright prose beside them undoes that. Nothing is
+         * invented for the rows that have no detail - most passes do not carry one, and
+         * the honest render of "nothing more is known" is an empty column. */
         int reason_x = OBS_MARGIN + 110 + OBS_REASON_COLUMN;
         if (after + OBS_FONT_WIDTH * 2 > reason_x) {
             reason_x = after + OBS_FONT_WIDTH * 2;
         }
         if (obs_entries[i].detail != 0) {
-            (void)obs_display_text(reason_x, y, obs_entries[i].detail, OBS_COLOUR_DIM, 2);
+            (void)obs_display_text(reason_x, y, obs_entries[i].detail, OBS_COLOUR_DIM,
+                                   2);
         }
     }
 
@@ -606,15 +624,17 @@ static void draw_page(unsigned int page) {
 
     /* The run state, on **every** page.
      *
-     * It used to appear only on page zero, beside the summary. A detail page therefore said
-     * nothing about whether the suite had finished, so someone looking at page seven of
-     * fifteen could not tell a completed run cycling its results from a run stopped dead in
-     * the middle - and the honest reading, when a page sits there unchanged, is the second.
+     * It used to appear only on page zero, beside the summary. A detail page therefore
+     * said nothing about whether the suite had finished, so someone looking at page
+     * seven of fifteen could not tell a completed run cycling its results from a run
+     * stopped dead in the middle - and the honest reading, when a page sits there
+     * unchanged, is the second.
      *
-     * These pages are only ever drawn after the suite ends, so the word is a constant here.
-     * That is exactly why it is worth printing: the reader does not know what the code
-     * knows. (D174) */
-    x = obs_display_text(x + 8 * 2 * 8, h - 56, "SUITE COMPLETE - ", OBS_COLOUR_PASS, 2);
+     * These pages are only ever drawn after the suite ends, so the word is a constant
+     * here. That is exactly why it is worth printing: the reader does not know what the
+     * code knows. (D174) */
+    x = obs_display_text(x + 8 * 2 * 8, h - 56, "SUITE COMPLETE - ", OBS_COLOUR_PASS,
+                         2);
     (void)obs_display_text(x, h - 56, "DPAD LEFT/RIGHT TO PAGE", OBS_COLOUR_ACCENT, 2);
 
     obs_display_flip();
@@ -622,9 +642,9 @@ static void draw_page(unsigned int page) {
 
 /* Wait roughly `microseconds`, in steps the platform is known to survive.
  *
- * Nothing here can detect a sleep that never returns - a call that blocks blocks - but a
- * platform that handles 2 ms and not 3 s is served by this and was not served by the single
- * long call it replaces. */
+ * Nothing here can detect a sleep that never returns - a call that blocks blocks - but
+ * a platform that handles 2 ms and not 3 s is served by this and was not served by the
+ * single long call it replaces. */
 static void obs_screen_wait(unsigned int microseconds) {
     unsigned int steps = microseconds / OBS_SLEEP_STEP_MICROSECONDS;
     for (unsigned int i = 0; i < steps; i++) {
@@ -634,11 +654,13 @@ static void obs_screen_wait(unsigned int microseconds) {
 
 /* D-pad and shoulder-button masks, and the button word's offset in the pad state.
  *
- * From the OpenOrbis SDK's `OrbisPadButtonDataOffset` and `OrbisPadData` - an open-source
- * toolchain, which is a permitted provenance source (D008 allows a declaration whose origin
- * can be named). Only the button word at offset 0 is read; the rest of the structure is left
- * untouched, which is why `scePadReadState` takes a `void *` and this reads four bytes. */
-#define OBS_PAD_STATE_BYTES 1024u /* >> sizeof(OrbisPadData) (0x230); over-sized on purpose */
+ * From the OpenOrbis SDK's `OrbisPadButtonDataOffset` and `OrbisPadData` - an
+ * open-source toolchain, which is a permitted provenance source (D008 allows a
+ * declaration whose origin can be named). Only the button word at offset 0 is read; the
+ * rest of the structure is left untouched, which is why `scePadReadState` takes a `void
+ * *` and this reads four bytes. */
+#define OBS_PAD_STATE_BYTES                                                            \
+    1024u /* >> sizeof(OrbisPadData) (0x230); over-sized on purpose */
 #define OBS_PAD_UP 0x00000010u
 #define OBS_PAD_RIGHT 0x00000020u
 #define OBS_PAD_DOWN 0x00000040u
@@ -647,24 +669,27 @@ static void obs_screen_wait(unsigned int microseconds) {
 #define OBS_PAD_R1 0x00000800u
 #define OBS_PAD_CIRCLE 0x00002000u
 
-/* ~90 ms a poll: responsive to a press without spinning the CPU on a screen that is idle. */
+/* ~90 ms a poll: responsive to a press without spinning the CPU on a screen that is
+ * idle. */
 #define OBS_PAD_POLL_MICROSECONDS 90000u
-/* Polls of a held direction before it repeats, and how often it repeats after that. Holding
- * right then scrolls forward rather than moving one page per press. */
+/* Polls of a held direction before it repeats, and how often it repeats after that.
+ * Holding right then scrolls forward rather than moving one page per press. */
 #define OBS_PAD_REPEAT_DELAY 4u
 #define OBS_PAD_REPEAT_EVERY 2u
-/* Polls with no input before the auto-cycle advances. The summary is held far longer than a
- * detail page because it is the one screen that answers "what happened" on its own - and an
- * automated capture polling for the run to finish lands several pages late, so a short hold
- * would be gone before it caught it. */
+/* Polls with no input before the auto-cycle advances. The summary is held far longer
+ * than a detail page because it is the one screen that answers "what happened" on its
+ * own - and an automated capture polling for the run to finish lands several pages
+ * late, so a short hold would be gone before it caught it. */
 #define OBS_PAD_SUMMARY_IDLE 333u /* ~30 s */
 #define OBS_PAD_DETAIL_IDLE 44u   /* ~4 s */
 
-/* The keyboard's keycode array lives at this byte offset in the state buffer, and each entry
- * is a USB HID usage id. The offset is the one thing depended on, and the OpenOrbis keyboard
- * sample validates it by reading `keycodes` there in working code; the fields before it that
- * the header marks uncertain are never read. Arrow ids are the standard HID usages. */
-#define OBS_KB_STATE_BYTES 256u /* >> sizeof(OrbisKeyboardData) (96); over-sized on purpose */
+/* The keyboard's keycode array lives at this byte offset in the state buffer, and each
+ * entry is a USB HID usage id. The offset is the one thing depended on, and the
+ * OpenOrbis keyboard sample validates it by reading `keycodes` there in working code;
+ * the fields before it that the header marks uncertain are never read. Arrow ids are
+ * the standard HID usages. */
+#define OBS_KB_STATE_BYTES                                                             \
+    256u /* >> sizeof(OrbisKeyboardData) (96); over-sized on purpose */
 #define OBS_KB_KEYCODES_OFFSET 32u
 #define OBS_KB_KEYCODE_COUNT 32u
 #define OBS_KB_KEY_RIGHT 79u
@@ -676,17 +701,18 @@ static void obs_screen_wait(unsigned int microseconds) {
 static int obs_pad_handle = -1;
 static int obs_kb_handle = -1;
 
-/* Open the controller for the initial user, or leave the handle closed and page on a timer.
+/* Open the controller for the initial user, or leave the handle closed and page on a
+ * timer.
  *
- * Every call is guarded: a platform that resolves none of these keeps the auto-cycle and
- * loses nothing. The user service is asked, not initialised - `070-user` and the display
- * path have already done that by the time this runs, and re-initialising a working service is
- * how the display path once hung (D174's neighbour). */
+ * Every call is guarded: a platform that resolves none of these keeps the auto-cycle
+ * and loses nothing. The user service is asked, not initialised - `070-user` and the
+ * display path have already done that by the time this runs, and re-initialising a
+ * working service is how the display path once hung (D174's neighbour). */
 static void obs_pad_open(void) {
-    if (!obs_address_is_callable((const void *)&scePadInit)
-        || !obs_address_is_callable((const void *)&scePadOpen)
-        || !obs_address_is_callable((const void *)&scePadReadState)
-        || !obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
+    if (!obs_address_is_callable((const void *)&scePadInit) ||
+        !obs_address_is_callable((const void *)&scePadOpen) ||
+        !obs_address_is_callable((const void *)&scePadReadState) ||
+        !obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
         return;
     }
     (void)scePadInit();
@@ -702,10 +728,11 @@ static void obs_pad_open(void) {
 
 /* The button word, or zero if there is no pad or the read failed.
  *
- * The buffer is zeroed and over-sized every call: `scePadReadState` writes the whole pad
- * structure and this reads only its first word, so a buffer larger than any real structure
- * cannot be overrun and a failed read leaves the zeros in place - which reads as "no buttons",
- * the safe answer. Assembled a byte at a time because the buffer has no alignment guarantee. */
+ * The buffer is zeroed and over-sized every call: `scePadReadState` writes the whole
+ * pad structure and this reads only its first word, so a buffer larger than any real
+ * structure cannot be overrun and a failed read leaves the zeros in place - which reads
+ * as "no buttons", the safe answer. Assembled a byte at a time because the buffer has
+ * no alignment guarantee. */
 static uint32_t obs_pad_buttons(void) {
     if (obs_pad_handle < 0) {
         return 0;
@@ -726,14 +753,14 @@ static uint32_t obs_pad_buttons(void) {
 
 /* Open the keyboard for the initial user, or leave it closed and rely on the pad.
  *
- * Guarded exactly like the pad: a platform without these keeps working, and neither input
- * device is required. Both are opened because a KVM offers a keyboard and not a controller,
- * so this is the path that gets driven without a DualSense to hand. */
+ * Guarded exactly like the pad: a platform without these keeps working, and neither
+ * input device is required. Both are opened because a KVM offers a keyboard and not a
+ * controller, so this is the path that gets driven without a DualSense to hand. */
 static void obs_kb_open(void) {
-    if (!obs_address_is_callable((const void *)&sceKeyboardInit)
-        || !obs_address_is_callable((const void *)&sceKeyboardOpen)
-        || !obs_address_is_callable((const void *)&sceKeyboardReadState)
-        || !obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
+    if (!obs_address_is_callable((const void *)&sceKeyboardInit) ||
+        !obs_address_is_callable((const void *)&sceKeyboardOpen) ||
+        !obs_address_is_callable((const void *)&sceKeyboardReadState) ||
+        !obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
         return;
     }
     (void)sceKeyboardInit();
@@ -747,12 +774,13 @@ static void obs_kb_open(void) {
     }
 }
 
-/* Arrow keys held on the keyboard, returned as the same nav bits the pad uses so the loop
- * below needs to know nothing about which device produced them.
+/* Arrow keys held on the keyboard, returned as the same nav bits the pad uses so the
+ * loop below needs to know nothing about which device produced them.
  *
- * Every keycode slot is scanned rather than trusting a reported count: an unused slot is zero
- * and zero is no key, so scanning all of them cannot invent a press, and it avoids depending
- * on the `nkeys` field's offset - only the keycode array's offset, which the sample validates. */
+ * Every keycode slot is scanned rather than trusting a reported count: an unused slot
+ * is zero and zero is no key, so scanning all of them cannot invent a press, and it
+ * avoids depending on the `nkeys` field's offset - only the keycode array's offset,
+ * which the sample validates. */
 static uint32_t obs_kb_nav(void) {
     if (obs_kb_handle < 0) {
         return 0;
@@ -817,11 +845,12 @@ void obs_screen_present(void) {
     uint32_t previous = 0;
     unsigned int idle = 0;
     unsigned int held = 0;
-    /* Latched by the first press and never cleared. The screen auto-cycles until somebody
-     * touches the controller; from then on it is theirs, and it holds whatever page they left
-     * it on rather than drifting off it a few seconds later. Resuming the cycle would mean
-     * fighting a viewer who has just stopped pressing to read something. A relaunch is how you
-     * get the cycle back, which is a clear and reversible action. (D259) */
+    /* Latched by the first press and never cleared. The screen auto-cycles until
+     * somebody touches the controller; from then on it is theirs, and it holds whatever
+     * page they left it on rather than drifting off it a few seconds later. Resuming
+     * the cycle would mean fighting a viewer who has just stopped pressing to read
+     * something. A relaunch is how you get the cycle back, which is a clear and
+     * reversible action. (D259) */
     int driven = 0;
 
     obs_screen_redraw("REPORT COMPLETE");
@@ -835,9 +864,9 @@ void obs_screen_present(void) {
         uint32_t pressed = now & ~previous;
         previous = now;
 
-        /* Any button ends the auto-cycle. "Intervenes" is read broadly on purpose: someone
-         * holding the controller and pressing anything is present, and a screen that kept
-         * drifting under them would be the exact annoyance this removes. */
+        /* Any button ends the auto-cycle. "Intervenes" is read broadly on purpose:
+         * someone holding the controller and pressing anything is present, and a screen
+         * that kept drifting under them would be the exact annoyance this removes. */
         if (pressed != 0) {
             driven = 1;
         }
@@ -855,15 +884,16 @@ void obs_screen_present(void) {
             changed = 1;
             held = 0;
         } else if (forward != 0 || backward != 0) {
-            /* A direction is being held: repeat it after a short delay so scrolling works. */
+            /* A direction is being held: repeat it after a short delay so scrolling
+             * works. */
             held++;
             if (held > OBS_PAD_REPEAT_DELAY && (held % OBS_PAD_REPEAT_EVERY) == 0u) {
                 delta = (forward != 0) ? 1 : -1;
             }
         } else {
             held = 0;
-            /* Hands-off only. Once `driven`, the cycle is over and the page holds until the
-             * next press. */
+            /* Hands-off only. Once `driven`, the cycle is over and the page holds until
+             * the next press. */
             if (!driven) {
                 idle++;
                 unsigned int threshold =
@@ -877,8 +907,8 @@ void obs_screen_present(void) {
         }
 
         if (delta != 0) {
-            /* `+ pages` keeps the operand positive before the modulo, so left from page zero
-             * wraps to the last page rather than underflowing. */
+            /* `+ pages` keeps the operand positive before the modulo, so left from page
+             * zero wraps to the last page rather than underflowing. */
             page = (page + (unsigned int)((int)pages + delta)) % pages;
             changed = 1;
         }

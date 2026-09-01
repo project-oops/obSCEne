@@ -61,8 +61,8 @@ int krw_is_ready(void);
 uintptr_t krw_kdata_base(void);
 uintptr_t krw_ktext_base(void);
 uintptr_t krw_allproc_addr(void);
-void      krw_set_allproc_addr(uintptr_t addr);
-uint32_t  krw_fw_version(void);
+void krw_set_allproc_addr(uintptr_t addr);
+uint32_t krw_fw_version(void);
 
 /**
  * Copy data between user and kernel address space.
@@ -76,7 +76,7 @@ int krw_copyout(uintptr_t kaddr, void *uaddr, size_t len);
 uint64_t krw_read64(uintptr_t kaddr);
 uint32_t krw_read32(uintptr_t kaddr);
 uint16_t krw_read16(uintptr_t kaddr);
-uint8_t  krw_read8(uintptr_t kaddr);
+uint8_t krw_read8(uintptr_t kaddr);
 
 int krw_write64(uintptr_t kaddr, uint64_t val);
 int krw_write32(uintptr_t kaddr, uint32_t val);
@@ -91,7 +91,7 @@ uintptr_t krw_find_proc_by_name(const char *name);
 uintptr_t krw_get_ucred(pid_t pid);
 
 uint64_t krw_get_ucred_authid(pid_t pid);
-int      krw_set_ucred_authid(pid_t pid, uint64_t authid);
+int krw_set_ucred_authid(pid_t pid, uint64_t authid);
 
 int krw_get_ucred_caps(pid_t pid, uint8_t caps[16]);
 int krw_set_ucred_caps(pid_t pid, const uint8_t caps[16]);
@@ -101,9 +101,9 @@ int krw_set_ucred_attrs(pid_t pid, const uint8_t attrs[32]);
 
 uintptr_t krw_get_root_vnode(void);
 uintptr_t krw_get_proc_rootdir(pid_t pid);
-int       krw_set_proc_rootdir(pid_t pid, uintptr_t vnode);
+int krw_set_proc_rootdir(pid_t pid, uintptr_t vnode);
 uintptr_t krw_get_proc_jaildir(pid_t pid);
-int       krw_set_proc_jaildir(pid_t pid, uintptr_t vnode);
+int krw_set_proc_jaildir(pid_t pid, uintptr_t vnode);
 
 /**
  * Privilege elevation helpers for ptrace and syscall bypass.
@@ -124,4 +124,3 @@ uintptr_t krw_dynlib_resolve(pid_t pid, int sprx_handle, const char *nid);
 uintptr_t krw_dynlib_resolve_any(pid_t pid, const char *sname);
 
 #endif /* OBSCENE_COMMON_KRW_H */
-

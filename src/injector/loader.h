@@ -29,4 +29,3 @@ uintptr_t loader_load_into_proc(pid_t pid, const uint8_t *elf_data, size_t elf_s
                                 uintptr_t *out_base_addr, size_t *out_base_size);
 
 #endif /* OBSCENE_INJECTOR_LOADER_H */
-

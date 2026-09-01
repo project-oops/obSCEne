@@ -1,21 +1,22 @@
 /*
  * The GPU backend on Vulkan compute.
  *
- * Covers the host (llvmpipe in the build VM - software, for proving the pipeline) and the
- * Steam Deck's native build (radv on gfx1033 - real RDNA2). The code is identical; the
- * device underneath is the whole difference, which is why `obs_gpu_device_name` is carried
- * onto every result. Standard public Vulkan - nothing here is vendor-specific.
+ * Covers the host (llvmpipe in the build VM - software, for proving the pipeline) and
+ * the Steam Deck's native build (radv on gfx1033 - real RDNA2). The code is identical;
+ * the device underneath is the whole difference, which is why `obs_gpu_device_name` is
+ * carried onto every result. Standard public Vulkan - nothing here is vendor-specific.
  *
  * # Init is cached, work is per-run
  *
  * The instance, device, queue and command pool are brought up once and kept. Each
- * `obs_gpu_run` creates and destroys only what is specific to that dispatch - the buffer,
- * the shader module, the pipeline - so a thousand kernels do not re-enumerate the device a
- * thousand times.
+ * `obs_gpu_run` creates and destroys only what is specific to that dispatch - the
+ * buffer, the shader module, the pipeline - so a thousand kernels do not re-enumerate
+ * the device a thousand times.
  *
  * # Only the host/native build compiles this
  *
- * It is in the native source lists, never the module's - the console gets `gpu_gnm.c`. So
+ * It is in the native source lists, never the module's - the console gets `gpu_gnm.c`.
+ * So
  * `<vulkan/vulkan.h>` and `-lvulkan` never touch the freestanding build.
  */
 
@@ -51,7 +52,8 @@ const char *obs_gpu_device_type(void) {
 }
 
 /* The device type as a stable word, so provenance is gradable without parsing a name.
- * `cpu` is the one a consumer rejects for a hardware claim; the Deck's APU is `integrated`. */
+ * `cpu` is the one a consumer rejects for a hardware claim; the Deck's APU is
+ * `integrated`. */
 static const char *device_type_name(VkPhysicalDeviceType type) {
     switch (type) {
     case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
@@ -69,15 +71,16 @@ static const char *device_type_name(VkPhysicalDeviceType type) {
 
 /* Finds a host-visible, host-coherent memory type the buffer accepts.
  *
- * Coherent so no explicit flush is needed around the map - a probe values simplicity over
- * the marginal speed of non-coherent memory. Returns the index, or UINT32_MAX. */
+ * Coherent so no explicit flush is needed around the map - a probe values simplicity
+ * over the marginal speed of non-coherent memory. Returns the index, or UINT32_MAX. */
 static uint32_t find_host_memory(uint32_t type_bits) {
     VkPhysicalDeviceMemoryProperties mp;
     vkGetPhysicalDeviceMemoryProperties(g_phys, &mp);
     const VkMemoryPropertyFlags want =
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     for (uint32_t i = 0; i < mp.memoryTypeCount; i++) {
-        if ((type_bits & (1u << i)) && (mp.memoryTypes[i].propertyFlags & want) == want) {
+        if ((type_bits & (1u << i)) &&
+            (mp.memoryTypes[i].propertyFlags & want) == want) {
             return i;
         }
     }
@@ -106,15 +109,17 @@ static int ensure_init(void) {
     }
     /* Prefer real silicon over a software rasteriser.
      *
-     * A Steam Deck with the Mesa software driver also installed enumerates both its APU and
-     * llvmpipe. Taking the first device would sometimes pick llvmpipe and quietly report CPU
-     * results for a run meant to measure gfx1033 - the exact provenance failure the whole
-     * GPU effort guards against. So the first non-CPU device wins, and a machine that only
-     * has llvmpipe (the build VM) still falls back to it. The device *type* is recorded
-     * alongside the name so a consumer can reject a `cpu` result without string-sniffing. */
+     * A Steam Deck with the Mesa software driver also installed enumerates both its APU
+     * and llvmpipe. Taking the first device would sometimes pick llvmpipe and quietly
+     * report CPU results for a run meant to measure gfx1033 - the exact provenance
+     * failure the whole GPU effort guards against. So the first non-CPU device wins,
+     * and a machine that only has llvmpipe (the build VM) still falls back to it. The
+     * device *type* is recorded alongside the name so a consumer can reject a `cpu`
+     * result without string-sniffing. */
     VkPhysicalDevice devs[8];
     uint32_t take = ndev < 8 ? ndev : 8;
-    if (vkEnumeratePhysicalDevices(g_instance, &take, devs) != VK_SUCCESS || take == 0) {
+    if (vkEnumeratePhysicalDevices(g_instance, &take, devs) != VK_SUCCESS ||
+        take == 0) {
         return 0;
     }
     g_phys = devs[0];
@@ -168,7 +173,8 @@ static int ensure_init(void) {
     vkGetDeviceQueue(g_device, family, 0, &g_queue);
 
     VkCommandPoolCreateInfo cpci = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-                                    .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                                    .flags =
+                                        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                     .queueFamilyIndex = family};
     if (vkCreateCommandPool(g_device, &cpci, NULL, &g_pool) != VK_SUCCESS) {
         return 0;
@@ -219,8 +225,8 @@ int obs_gpu_run(const uint32_t *spirv, size_t spirv_bytes, uint32_t *data,
     VkMemoryAllocateInfo mai = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
                                 .allocationSize = mr.size,
                                 .memoryTypeIndex = mem_type};
-    if (vkAllocateMemory(g_device, &mai, NULL, &memory) != VK_SUCCESS
-        || vkBindBufferMemory(g_device, buffer, memory, 0) != VK_SUCCESS) {
+    if (vkAllocateMemory(g_device, &mai, NULL, &memory) != VK_SUCCESS ||
+        vkBindBufferMemory(g_device, buffer, memory, 0) != VK_SUCCESS) {
         goto done;
     }
 
@@ -232,7 +238,8 @@ int obs_gpu_run(const uint32_t *spirv, size_t spirv_bytes, uint32_t *data,
     memcpy(mapped, data, (size_t)bytes);
     vkUnmapMemory(g_device, memory);
 
-    VkShaderModuleCreateInfo smci = {.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+    VkShaderModuleCreateInfo smci = {.sType =
+                                         VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                                      .codeSize = spirv_bytes,
                                      .pCode = spirv};
     if (vkCreateShaderModule(g_device, &smci, NULL, &shader) != VK_SUCCESS) {
@@ -248,13 +255,14 @@ int obs_gpu_run(const uint32_t *spirv, size_t spirv_bytes, uint32_t *data,
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .bindingCount = 1,
         .pBindings = &binding};
-    if (vkCreateDescriptorSetLayout(g_device, &dslci, NULL, &set_layout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(g_device, &dslci, NULL, &set_layout) !=
+        VK_SUCCESS) {
         goto done;
     }
-    VkPipelineLayoutCreateInfo plci = {.sType =
-                                           VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-                                       .setLayoutCount = 1,
-                                       .pSetLayouts = &set_layout};
+    VkPipelineLayoutCreateInfo plci = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 1,
+        .pSetLayouts = &set_layout};
     if (vkCreatePipelineLayout(g_device, &plci, NULL, &pipe_layout) != VK_SUCCESS) {
         goto done;
     }
@@ -264,30 +272,30 @@ int obs_gpu_run(const uint32_t *spirv, size_t spirv_bytes, uint32_t *data,
         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
         .module = shader,
         .pName = "main"};
-    VkComputePipelineCreateInfo cpci = {.sType =
-                                            VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-                                        .stage = stage,
-                                        .layout = pipe_layout};
-    if (vkCreateComputePipelines(g_device, VK_NULL_HANDLE, 1, &cpci, NULL, &pipeline)
-        != VK_SUCCESS) {
+    VkComputePipelineCreateInfo cpci = {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .stage = stage,
+        .layout = pipe_layout};
+    if (vkCreateComputePipelines(g_device, VK_NULL_HANDLE, 1, &cpci, NULL, &pipeline) !=
+        VK_SUCCESS) {
         goto done;
     }
 
     VkDescriptorPoolSize pool_size = {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                       .descriptorCount = 1};
-    VkDescriptorPoolCreateInfo dpci = {.sType =
-                                           VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-                                       .maxSets = 1,
-                                       .poolSizeCount = 1,
-                                       .pPoolSizes = &pool_size};
+    VkDescriptorPoolCreateInfo dpci = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = 1,
+        .poolSizeCount = 1,
+        .pPoolSizes = &pool_size};
     if (vkCreateDescriptorPool(g_device, &dpci, NULL, &desc_pool) != VK_SUCCESS) {
         goto done;
     }
-    VkDescriptorSetAllocateInfo dsai = {.sType =
-                                            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                                        .descriptorPool = desc_pool,
-                                        .descriptorSetCount = 1,
-                                        .pSetLayouts = &set_layout};
+    VkDescriptorSetAllocateInfo dsai = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = desc_pool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &set_layout};
     VkDescriptorSet set = VK_NULL_HANDLE;
     if (vkAllocateDescriptorSets(g_device, &dsai, &set) != VK_SUCCESS) {
         goto done;
@@ -309,16 +317,15 @@ int obs_gpu_run(const uint32_t *spirv, size_t spirv_bytes, uint32_t *data,
     if (vkAllocateCommandBuffers(g_device, &cbai, &cmd) != VK_SUCCESS) {
         goto done;
     }
-    VkCommandBufferBeginInfo cbbi = {.sType =
-                                         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                                     .flags =
-                                         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
+    VkCommandBufferBeginInfo cbbi = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
     if (vkBeginCommandBuffer(cmd, &cbbi) != VK_SUCCESS) {
         goto done;
     }
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipe_layout, 0, 1, &set, 0,
-                            NULL);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipe_layout, 0, 1,
+                            &set, 0, NULL);
     /* One workgroup per 64 lanes, rounded up. The shader bounds-checks the tail. */
     vkCmdDispatch(cmd, (count + 63u) / 64u, 1, 1);
     if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
@@ -328,8 +335,8 @@ int obs_gpu_run(const uint32_t *spirv, size_t spirv_bytes, uint32_t *data,
     VkSubmitInfo si = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                        .commandBufferCount = 1,
                        .pCommandBuffers = &cmd};
-    if (vkQueueSubmit(g_queue, 1, &si, VK_NULL_HANDLE) != VK_SUCCESS
-        || vkQueueWaitIdle(g_queue) != VK_SUCCESS) {
+    if (vkQueueSubmit(g_queue, 1, &si, VK_NULL_HANDLE) != VK_SUCCESS ||
+        vkQueueWaitIdle(g_queue) != VK_SUCCESS) {
         goto done;
     }
 

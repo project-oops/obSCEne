@@ -93,7 +93,8 @@ static void probe_atol(uint64_t *a, uint64_t *b) {
 
 static void probe_isdigit(uint64_t *a, uint64_t *b) {
     /* Only the zero/non-zero distinction is specified, so a platform is free to return
-     * any non-zero value - which is fine here, because equality is all that is tested. */
+     * any non-zero value - which is fine here, because equality is all that is tested.
+     */
     *a = (uint64_t)(isdigit('5') != 0);
     *b = (uint64_t)(isdigit('x') != 0);
 }
@@ -210,9 +211,9 @@ static void probe_ceil(uint64_t *a, uint64_t *b) {
 
 static void probe_fmod(uint64_t *a, uint64_t *b) {
     /* 7 mod 4 is 3 and 11 mod 4 is also 3, which is how the first version of this probe
-     * reported a working fmod as silent. The inputs to a responsiveness probe have to be
-     * checked against a real implementation, or the probe invents stubs - and the host
-     * build caught exactly that before this ran anywhere else. */
+     * reported a working fmod as silent. The inputs to a responsiveness probe have to
+     * be checked against a real implementation, or the probe invents stubs - and the
+     * host build caught exactly that before this ran anywhere else. */
     *a = bits_of(fmod(7.0, 4.0));
     *b = bits_of(fmod(9.0, 4.0));
 }
@@ -231,7 +232,6 @@ static void probe_cos(uint64_t *a, uint64_t *b) {
     *a = bits_of(cos(0.0));
     *b = bits_of(cos(1.0));
 }
-
 
 /* ---- the surface promoted in D051 -------------------------------------------
  *
@@ -404,7 +404,8 @@ static const probe probes[] = {
     {"libSceLibcInternal", "atoll", (const void *)&atoll, probe_atoll},
     {"libSceLibcInternal", "strtoull", (const void *)&strtoull, probe_strtoull},
     {"libSceLibcInternal", "llabs", (const void *)&llabs, probe_llabs},
-    {"libSceLibcInternal", "strncasecmp", (const void *)&strncasecmp, probe_strncasecmp},
+    {"libSceLibcInternal", "strncasecmp", (const void *)&strncasecmp,
+     probe_strncasecmp},
     {"libSceLibcInternal", "sprintf", (const void *)&sprintf, probe_sprintf},
 };
 
@@ -491,8 +492,8 @@ static obs_result walk(const probe *table, unsigned int count) {
                              (uint64_t)silent);
     }
     if (silent > 0) {
-        return obs_partial_value("some of the library is stubbed rather than implemented",
-                                 (uint64_t)silent);
+        return obs_partial_value(
+            "some of the library is stubbed rather than implemented", (uint64_t)silent);
     }
     if (responding == 0) {
         return obs_skip("none of these symbols is present to probe");
