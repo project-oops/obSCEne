@@ -48,7 +48,13 @@ if [ -z "${TITLE_ID:-}" ]; then
     t="${CONTENT_ID#*-}"
     TITLE_ID="${t%%_*}"
 fi
-DEEPLINK="${DEEPLINK:-http://127.0.0.1:8080/}"
+deeplink_arg=()
+category_arg=(--category 0)
+if [ "${NO_EBOOT:-0}" = "1" ]; then
+    DEEPLINK="${DEEPLINK:-http://127.0.0.1:8080/}"
+    deeplink_arg=(--deeplink "$DEEPLINK")
+    category_arg=(--category 65536)
+fi
 
 out="$BUILD/native"
 rm -rf "$out"
@@ -82,7 +88,8 @@ selfish native \
     --title-id "$TITLE_ID" \
     --title "$TITLE" \
     --content-id "$CONTENT_ID" \
-    --deeplink "$DEEPLINK" \
+    "${category_arg[@]}" \
+    "${deeplink_arg[@]}" \
     "${root_arg[@]}" \
     "${icon_arg[@]}"
 

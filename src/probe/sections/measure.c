@@ -369,6 +369,16 @@ static obs_result check_cpuid_topology(void) {
 }
 
 static obs_result check_timer_ratio(void) {
+    /* Three of the four symbols this check calls are not its table row, so each is tested
+     * here rather than through `clock_present()`. The gate reads the body of the check
+     * itself and cannot follow into a helper - and neither can a reader deciding whether
+     * this check is safe on a platform missing one of them. `sceKernelUsleep` was not
+     * covered by that helper at all. (D058) */
+    if (!obs_address_is_callable((const void *)&sceKernelGetProcessTime) ||
+        !obs_address_is_callable((const void *)&sceKernelGetProcessTimeCounter) ||
+        !obs_address_is_callable((const void *)&sceKernelUsleep)) {
+        return obs_skip("a clock or sleep entry point is not callable");
+    }
     if (!clock_present(&clocks[0]) || !clock_present(&clocks[1]) || !clock_present(&clocks[2])) {
         return obs_skip("required clock sources unavailable");
     }

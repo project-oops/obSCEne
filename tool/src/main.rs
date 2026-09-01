@@ -2349,7 +2349,7 @@ fn run_hw_install_native(
     // path; the report-file default that `into` otherwise carries is not one, so it falls through.
     let base = match into.to_str() {
         Some(p) if p.starts_with('/') => p.trim_end_matches('/'),
-        _ => "/user/data",
+        _ => "/user/data/homebrew",
     };
     let remote = format!("{base}/{appid}");
     let console = hardware::resolve(hardware::load()?, name)?;

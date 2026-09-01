@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the native title and push it to a scan root on the target (default /user/data/<TITLE_ID>/)
+# Build the native title and push it to a scan root on the target (default /user/data/homebrew/<TITLE_ID>/)
 # via prosperous, where an auto-mounter registers it into /user/app.
 #
 # The native counterpart to `deploy` (which builds and installs the package). A native title is a
@@ -8,7 +8,7 @@
 # directories made as needed). All out-connections, so it stays in WSL - unlike the package
 # `hw install`, which the console must connect *in* to fetch.
 #
-# It lands the directory in a scan root (default /user/data) - one of the directories an
+# It lands the directory in a scan root (default /user/data/homebrew) - one of the directories an
 # auto-mounter (ShadowMountPlus) scans and registers into /user/app for you. It does not touch the
 # app database itself. Note /user/app is NOT scanned, so it is not the target.
 #
