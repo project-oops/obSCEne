@@ -26,6 +26,7 @@ if [ "${1:-}" = "--deploy-only" ]; then build=0; shift; fi
 
 # The title id, from the one place it lives (data/identity.toml), derived the same way the builds do.
 cid="$(sed -n 's/^content_id_native[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' data/identity.toml)"
+appid="${TITLE_ID:-$(echo "$cid" | cut -d- -f2 | cut -d_ -f1)}"
 
 if [ "$build" = 1 ]; then
     make native BUILD="$BUILD"

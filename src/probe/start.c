@@ -77,7 +77,6 @@ OBS_WEAK int sceKernelDebugOutText(int channel, const char *text);
  * so a driver later asking for a full run would wipe exactly the record of the boot
  * that preceded it. */
 
-
 /* A boot breadcrumb, to the kernel log **and** to disk.
  *
  * Principle 1 applied to the boot sequence itself, and the disk half is the half that
@@ -101,15 +100,7 @@ static void obs_boot_note(const char *text) {
     size_t len = obs_strlen(text);
     if (len == 0)
         return;
-
-    unsigned long base = obs_libkernel_base();
-    if (base != 0) {
-        typedef void (*fn_debug_t)(int, const char *);
-        fn_debug_t kdebug = (fn_debug_t)(base + 0x2b020UL);
-        kdebug(0, text);
-    } else if (obs_address_is_callable((const void *)&sceKernelDebugOutText)) {
-        (void)sceKernelDebugOutText(0, text);
-    }
+    obs_write(text, len);
 }
 
 void obscene_start(void);
@@ -195,6 +186,8 @@ void obscene_start(void) {
     }
     obs_boot_note("obscene: serve path ended (net backend down or serve returned)\n");
 #else
+    obs_boot_note("obscene: binding dynamic symbols\n");
+    obs_bind_dynamic_symbols();
     obs_boot_note("obscene: running full suite\n");
     obscene_last_tally = obs_run_all();
     obs_boot_note("obscene: suite complete\n");

@@ -49,7 +49,7 @@
  * Deliberately generous rather than clever. The cost of rejecting a real function here
  * is one check reported absent; the cost of accepting a bad one is every check after
  * it. */
-#define OBS_LOWEST_CALLABLE 0x1000u
+#define OBS_LOWEST_CALLABLE 0x400000UL
 
 /* Checks named at build time as ones that take the process down.
  *
@@ -378,32 +378,39 @@ const void *obs_module_symbol(int handle, const char *name) {
         }
     }
 
-    if (!obs_address_is_callable((const void *)&sceKernelDlsym)) {
+    int (*fn_dlsym)(int, const char *, void **) = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        fn_dlsym = (int (*)(int, const char *, void **))&sceKernelDlsym;
+    } else if (pargs != NULL &&
+               obs_address_is_callable((const void *)pargs->sys_dynlib_dlsym)) {
+        fn_dlsym = (int (*)(int, const char *, void **))pargs->sys_dynlib_dlsym;
+    }
+    if (fn_dlsym == NULL) {
         return NULL;
     }
     void *address = NULL;
     /* 1. Try NID encoding (Sony SPRX export tables store 11-char NIDs) */
-    if (handle >= 0 && sceKernelDlsym(handle, nid, &address) == 0 &&
+    if (handle >= 0 && fn_dlsym(handle, nid, &address) == 0 &&
         obs_address_is_callable(address)) {
         return address;
     }
     /* 2. Fallback: try plain ASCII name */
-    if (handle >= 0 && sceKernelDlsym(handle, name, &address) == 0 &&
+    if (handle >= 0 && fn_dlsym(handle, name, &address) == 0 &&
         obs_address_is_callable(address)) {
         return address;
     }
     /* 3. Global search handle 1 fallback */
-    if (sceKernelDlsym(1, nid, &address) == 0 && obs_address_is_callable(address)) {
+    if (fn_dlsym(1, nid, &address) == 0 && obs_address_is_callable(address)) {
         return address;
     }
-    if (sceKernelDlsym(1, name, &address) == 0 && obs_address_is_callable(address)) {
+    if (fn_dlsym(1, name, &address) == 0 && obs_address_is_callable(address)) {
         return address;
     }
     /* 4. Global search handle 2 fallback */
-    if (sceKernelDlsym(2, nid, &address) == 0 && obs_address_is_callable(address)) {
+    if (fn_dlsym(2, nid, &address) == 0 && obs_address_is_callable(address)) {
         return address;
     }
-    if (sceKernelDlsym(2, name, &address) == 0 && obs_address_is_callable(address)) {
+    if (fn_dlsym(2, name, &address) == 0 && obs_address_is_callable(address)) {
         return address;
     }
     /* 5. Iterate all loaded module IDs */
@@ -415,11 +422,11 @@ const void *obs_module_symbol(int handle, const char *name) {
                 int mod_id = mod_list[i];
                 if (mod_id <= 0)
                     continue;
-                if (sceKernelDlsym(mod_id, nid, &address) == 0 &&
+                if (fn_dlsym(mod_id, nid, &address) == 0 &&
                     obs_address_is_callable(address)) {
                     return address;
                 }
-                if (sceKernelDlsym(mod_id, name, &address) == 0 &&
+                if (fn_dlsym(mod_id, name, &address) == 0 &&
                     obs_address_is_callable(address)) {
                     return address;
                 }

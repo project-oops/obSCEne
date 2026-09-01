@@ -2369,9 +2369,16 @@ fn run_hw_install_native(
         eprintln!("  skipped {}: {}", skipped.path, skipped.why);
     }
     if !sum.skipped.is_empty() {
-        return Err(format!("upload completed with {} skipped entries", sum.skipped.len()).into());
+        return Err(format!(
+            "upload completed with {} skipped entries",
+            sum.skipped.len()
+        )
+        .into());
     }
-    println!("installed {appid} -> {remote} ({} files, {} bytes)", sum.files, sum.bytes);
+    println!(
+        "installed {appid} -> {remote} ({} files, {} bytes)",
+        sum.files, sum.bytes
+    );
     Ok(ExitCode::SUCCESS)
 }
 

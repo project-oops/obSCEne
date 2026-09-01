@@ -68,6 +68,8 @@ typedef enum obs_channel {
  * treats as "no base, skip". Only the setter (in the payload block below) is
  * payload-specific. */
 static unsigned long obs_libkernel_base_value;
+static void (*obs_write_tee)(void *ctx, const char *bytes, size_t len);
+static void *obs_write_tee_ctx;
 
 unsigned long obs_libkernel_base(void) {
     return obs_libkernel_base_value;
@@ -91,12 +93,26 @@ extern const obs_elf64_dyn _DYNAMIC[];
  * NUL-terminated into a bounded buffer because this takes a string rather than a
  * length, and a record longer than the buffer is refused rather than truncated: half a
  * record still parses, which is worse than none. (D233) */
+static long s_libkernel_syscall_gadget = 0;
+
 long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
                         long a6) {
-    long ret;
+    long ret = -1;
     register long r10_arg __asm__("r10") = a4;
     register long r8_arg __asm__("r8") = a5;
     register long r9_arg __asm__("r9") = a6;
+
+    /* clang-format off */
+    if (s_libkernel_syscall_gadget != 0) {
+        __asm__ volatile("movq %7, %%rax\n"
+                         "movq %8, %%r10\n"
+                         "callq *%9\n"
+                         : "=a"(ret)
+                         : "D"(a1), "S"(a2), "d"(a3), "r"(r10_arg), "r"(r8_arg),
+                           "r"(r9_arg), "r"(num), "r"(a4), "r"(s_libkernel_syscall_gadget)
+                         : "rcx", "r11", "memory");
+        return ret;
+    }
 
     __asm__ volatile("movq %5, %%rax\n"
                      "movq %6, %%r10\n"
@@ -111,8 +127,26 @@ long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
                      : "D"(a1), "S"(a2), "d"(a3), "r"(r8_arg), "r"(num),
                        "r"(r10_arg), "r"(r9_arg)
                      : "rax", "rcx", "r11", "memory");
+    /* clang-format on */
     return ret;
 }
+
+typedef void (*fn_debug_out_t)(int, const char *);
+typedef sce_ssize_t (*fn_write_t)(int, const void *, size_t);
+typedef int (*fn_open_t)(const char *, int, uint16_t);
+typedef int (*fn_close_t)(int);
+typedef sce_ssize_t (*fn_read_t)(int, void *, size_t);
+typedef int (*fn_usleep_t)(unsigned int);
+typedef int (*fn_dlsym_t)(int, const char *, void **);
+
+static int obs_payload_output_bootstrapped;
+static fn_debug_out_t s_fn_debug_out;
+static fn_write_t s_fn_write;
+static fn_open_t s_fn_open;
+static fn_close_t s_fn_close;
+static fn_read_t s_fn_read;
+static fn_usleep_t s_fn_usleep;
+static fn_dlsym_t s_fn_dlsym;
 
 static void obs_debug_out_write(const char *bytes, size_t len) {
     static char scratch[512];
@@ -124,49 +158,58 @@ static void obs_debug_out_write(const char *bytes, size_t len) {
     }
     scratch[len] = '\0';
 
-    unsigned long base = obs_libkernel_base();
-    if (base != 0) {
-        typedef void (*fn_debug_t)(int, const char *);
-        fn_debug_t kdebug = (fn_debug_t)(base + 0x2b020UL);
-        kdebug(0, scratch);
+    if (s_fn_debug_out != NULL) {
+        s_fn_debug_out(0, scratch);
     } else if (obs_address_is_callable((const void *)&sceKernelDebugOutText)) {
         (void)sceKernelDebugOutText(0, scratch);
     }
+    obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
 }
 
 static obs_channel obs_output_channel = OBS_CHANNEL_UNTRIED;
 
-/* A write bootstrapped from payload_args, for the raw-payload context.
- *
- * # The bug this fixes
- *
- * Loaded by elfldr, a payload has *no imports resolved* - the loader applies only
- * relocations and resolves nothing (D209). So the weak `sceKernelWrite` the channel
- * below calls is null, every text channel is absent, and the whole report goes nowhere.
- * The minimal `boot.c` avoids this by computing a write from `payload_args[0]` and
- * calling it directly; the full suite never did, so a suite run as a payload produced
- * silence.
- *
- * This is that same computation, made available to the channel: set once at entry, from
- * `getpid` (which elfldr hands as `payload_args[0]`) plus the vaddrs selfish read off
- * the real 12.40 `libkernel_sys.sprx` - `getpid` at `0x5b0`, `sceKernelWrite` at
- * `0x16e00` (D209). Null on every other build, where the ordinary channel selection
- * stands untouched.
- */
-static int obs_payload_output_bootstrapped;
+static void *obs_payload_resolve(const char *name) {
+    if (s_fn_dlsym == NULL || name == NULL)
+        return NULL;
+    void *addr = NULL;
+    char nid[12];
+    obs_compute_nid(name, nid);
+
+    if (s_fn_dlsym(0x2001, nid, &addr) == 0 && obs_address_is_callable(addr))
+        return addr;
+    if (s_fn_dlsym(0x2001, name, &addr) == 0 && obs_address_is_callable(addr))
+        return addr;
+    if (s_fn_dlsym(0x2, nid, &addr) == 0 && obs_address_is_callable(addr))
+        return addr;
+    if (s_fn_dlsym(0x2, name, &addr) == 0 && obs_address_is_callable(addr))
+        return addr;
+    if (s_fn_dlsym(0x1, nid, &addr) == 0 && obs_address_is_callable(addr))
+        return addr;
+    if (s_fn_dlsym(0x1, name, &addr) == 0 && obs_address_is_callable(addr))
+        return addr;
+    return NULL;
+}
 
 void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
-    /* Only from something shaped like a libkernel export address. A build that is not a
-     * payload has argc or a stack pointer in word zero, and computing a call target
-     * from that and jumping to it is the one thing this must never do - so it is
-     * refused unless the value is a canonical, sixteen-aligned low-half address, which
-     * getpid is and neither of those is. */
     if (payload_args_word0 < 0x10000UL || payload_args_word0 >= 0x0000800000000000UL ||
-        (payload_args_word0 & 0xfUL) != 0) {
+        (payload_args_word0 & 0x7UL) != 0) {
         return;
     }
-    unsigned long base = payload_args_word0 - 0x5b0UL;
-    obs_libkernel_base_value = base;
+    s_fn_dlsym = (fn_dlsym_t)payload_args_word0;
+    s_libkernel_syscall_gadget = (long)payload_args_word0 + 0xa;
+    s_fn_debug_out = (fn_debug_out_t)obs_payload_resolve("sceKernelDebugOutText");
+    s_fn_write = (fn_write_t)obs_payload_resolve("sceKernelWrite");
+    s_fn_open = (fn_open_t)obs_payload_resolve("sceKernelOpen");
+    s_fn_close = (fn_close_t)obs_payload_resolve("sceKernelClose");
+    s_fn_read = (fn_read_t)obs_payload_resolve("sceKernelRead");
+    s_fn_usleep = (fn_usleep_t)obs_payload_resolve("sceKernelUsleep");
+    void *getpid_ptr = obs_payload_resolve("getpid");
+    if (getpid_ptr != NULL) {
+        s_libkernel_syscall_gadget = (long)getpid_ptr + 0xa;
+        obs_libkernel_base_value = (unsigned long)getpid_ptr - 0x5b0UL;
+    }
+    obs_write_tee = NULL;
+    obs_write_tee_ctx = NULL;
     obs_payload_output_bootstrapped = 1;
 }
 
@@ -180,24 +223,26 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
 
     switch (channel) {
     case OBS_CHANNEL_KERNEL_WRITE: {
-        /* The bootstrapped write first, when a payload set one: in that context the
-         * weak symbol is null and this is the only working write there is (see
-         * obs_bootstrap_payload_output). */
-        if (obs_payload_output_bootstrapped) {
-            unsigned long base = obs_libkernel_base();
-            if (base != 0) {
-                typedef long (*fn_write_t)(int, const void *, size_t);
-                fn_write_t kwrite = (fn_write_t)(base + 0x16e00UL);
-                long n = kwrite(OBS_FD_STDOUT, bytes, len);
-                return n > 0 ? (size_t)n : 0;
-            }
-            return 0;
+        if (s_fn_write != NULL) {
+            long n = (long)s_fn_write(OBS_FD_STDOUT, bytes, len);
+            if (n > 0)
+                return (size_t)n;
         }
-        if (&sceKernelWrite == 0) {
-            return 0;
+        if (s_fn_debug_out != NULL) {
+            if (len >= sizeof(scratch))
+                len = sizeof(scratch) - 1;
+            for (size_t i = 0; i < len; i++)
+                scratch[i] = bytes[i];
+            scratch[len] = '\0';
+            s_fn_debug_out(0, scratch);
+            return len;
         }
-        long n = (long)sceKernelWrite(OBS_FD_STDOUT, bytes, len);
-        return n > 0 ? (size_t)n : 0;
+        if (&sceKernelWrite != 0 &&
+            obs_address_is_callable((const void *)&sceKernelWrite)) {
+            long n = (long)sceKernelWrite(OBS_FD_STDOUT, bytes, len);
+            return n > 0 ? (size_t)n : 0;
+        }
+        return 0;
     }
     case OBS_CHANNEL_PUTS: {
         if (&puts == 0) {
@@ -299,8 +344,6 @@ static void obs_debug_out_write(const char *bytes, size_t len) {
  * A single function pointer rather than a channel in the enum: the enum picks *one*
  * text channel, and this is deliberately additive - the report still goes to stdout and
  * the file sink while a copy goes down the socket. */
-static void (*obs_write_tee)(void *ctx, const char *bytes, size_t len);
-static void *obs_write_tee_ctx;
 
 void obs_set_write_tee(void (*fn)(void *ctx, const char *bytes, size_t len),
                        void *ctx) {
@@ -312,7 +355,7 @@ void obs_write(const char *bytes, size_t len) {
     /* The tee first, so a record reaches the driver that asked for it even if a text
      * channel below hangs or the process then dies - same durable-write-ahead-of-risky
      * ordering as the sink. */
-    if (obs_write_tee != NULL) {
+    if (obs_address_is_callable((const void *)obs_write_tee)) {
         obs_write_tee(obs_write_tee_ctx, bytes, len);
     }
 
@@ -802,53 +845,38 @@ int sceKernelVirtualQuery(const void *address, int flags, void *info,
 }
 
 int sceKernelUsleep(unsigned int microseconds) {
-    unsigned long base = obs_libkernel_base();
-    if (base != 0) {
-        typedef int (*fn_t)(unsigned int);
-        return ((fn_t)(base + 0x16f00UL))(microseconds);
+    if (s_fn_usleep != NULL) {
+        return s_fn_usleep(microseconds);
     }
-    long ret = obs_invoke_syscall(240, (long)microseconds, 0, 0, 0, 0, 0);
-    return (int)ret;
+    return 0;
 }
 
 int sceKernelOpen(const char *path, int flags, uint16_t mode) {
-    unsigned long base = obs_libkernel_base();
-    if (base != 0) {
-        typedef int (*fn_t)(const char *, int, uint16_t);
-        return ((fn_t)(base + 0x16d60UL))(path, flags, mode);
+    if (s_fn_open != NULL) {
+        return s_fn_open(path, flags, mode);
     }
-    long ret = obs_invoke_syscall(5, (long)path, (long)flags, (long)mode, 0, 0, 0);
-    return (int)ret;
+    return -1;
 }
 
 int sceKernelClose(int fd) {
-    unsigned long base = obs_libkernel_base();
-    if (base != 0) {
-        typedef int (*fn_t)(int);
-        return ((fn_t)(base + 0x16dc0UL))(fd);
+    if (s_fn_close != NULL) {
+        return s_fn_close(fd);
     }
-    long ret = obs_invoke_syscall(6, (long)fd, 0, 0, 0, 0, 0);
-    return (int)ret;
+    return -1;
 }
 
 sce_ssize_t sceKernelRead(int fd, void *buf, size_t count) {
-    unsigned long base = obs_libkernel_base();
-    if (base != 0) {
-        typedef sce_ssize_t (*fn_t)(int, void *, size_t);
-        return ((fn_t)(base + 0x16da0UL))(fd, buf, count);
+    if (s_fn_read != NULL) {
+        return s_fn_read(fd, buf, count);
     }
-    long ret = obs_invoke_syscall(3, (long)fd, (long)buf, (long)count, 0, 0, 0);
-    return (sce_ssize_t)ret;
+    return -1;
 }
 
 sce_ssize_t sceKernelWrite(int fd, const void *buf, size_t count) {
-    unsigned long base = obs_libkernel_base();
-    if (base != 0) {
-        typedef sce_ssize_t (*fn_t)(int, const void *, size_t);
-        return ((fn_t)(base + 0x16e00UL))(fd, buf, count);
+    if (s_fn_write != NULL) {
+        return s_fn_write(fd, buf, count);
     }
-    long ret = obs_invoke_syscall(4, (long)fd, (long)buf, (long)count, 0, 0, 0);
-    return (sce_ssize_t)ret;
+    return -1;
 }
 
 sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes) {
