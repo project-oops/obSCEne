@@ -94,15 +94,17 @@ static const char *const obs_layout_names[] = {
  * Tries the global search first, then the libkernel handle, exactly as the payloads do - so a
  * name reported absent here is one they would not have resolved either. */
 static int obs_layout_resolve(const char *name) {
-    void *address = 0;
-    int rc = sceKernelDlsym(OBS_SEARCH_HANDLE, name, &address);
-    if (rc != 0 || address == 0) {
-        rc = sceKernelDlsym(OBS_LIBKERNEL_HANDLE, name, &address);
+    void *address = (void *)obs_module_symbol(1, name);
+    if (address == NULL) {
+        int rc = sceKernelDlsym(OBS_SEARCH_HANDLE, name, &address);
+        if (rc != 0 || address == 0) {
+            rc = sceKernelDlsym(OBS_LIBKERNEL_HANDLE, name, &address);
+        }
     }
-    if (rc != 0 || address == 0) {
+    if (address == 0) {
         return 0;
     }
-    obs_report_measure("138-layout/addresses", name, "address", (uint64_t)address, "address");
+    obs_report_measure("138-layout/addresses", name, "address", (uint64_t)(uintptr_t)address, "address");
     return 1;
 }
 

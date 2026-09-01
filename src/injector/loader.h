@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "common/freestd.h"
+#include "common/krw.h"
 
 /**
  * Validate that in-memory bytes form a valid ELF64 x86_64 object.
@@ -24,6 +25,7 @@ int loader_validate_elf(const uint8_t *elf_data, size_t elf_size);
  */
 uintptr_t loader_load_into_proc(pid_t pid, const uint8_t *elf_data, size_t elf_size,
                                 uintptr_t target_libkernel_base,
+                                const obs_kexport_table_t *kexport_table,
                                 uintptr_t *out_base_addr, size_t *out_base_size);
 
 #endif /* OBSCENE_INJECTOR_LOADER_H */

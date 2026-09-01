@@ -7,6 +7,7 @@
 
 #include "obscene/harness.h"
 #include "obscene/platform.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 /* ---- 040-file -------------------------------------------------------------- */
@@ -229,11 +230,15 @@ static obs_result check_dlsym_resolves_a_known_symbol(void) {
     if (handle < 0) {
         return obs_skip("libScePad could not be loaded, so there is no valid handle to resolve from");
     }
-    void *address = NULL;
-    int rc = sceKernelDlsym(handle, "scePadOpen", &address);
-    if (rc != 0) {
-        return obs_fail_code("a known symbol did not resolve from a valid module handle",
-                             (uint64_t)(uint32_t)rc);
+    void *address = (void *)obs_module_symbol(handle, "scePadOpen");
+    if (address == NULL) {
+        char nid[12];
+        obs_compute_nid("scePadOpen", nid);
+        int rc = sceKernelDlsym(handle, nid, &address);
+        if (rc != 0) {
+            return obs_fail_code("a known symbol did not resolve from a valid module handle",
+                                 (uint64_t)(uint32_t)rc);
+        }
     }
     /* Non-null is not enough: a placeholder is non-null too, and a jump to one ends the run. The
      * address must be inside a mapped, executable region. */

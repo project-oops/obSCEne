@@ -57,6 +57,11 @@ size_t obs_format_i64(char *dest, int64_t value);
 size_t obs_format_hex(char *dest, uint64_t value);
 
 size_t obs_strlen(const char *s);
+int obs_strcmp(const char *a, const char *b);
+void obs_compute_nid(const char *name, char out_nid[12]);
+
+struct payload_args;
+const struct payload_args *obs_get_payload_args(void);
 
 /* Exists solely so the symbol census has something that must resolve. */
 extern const char obs_census_control_present;

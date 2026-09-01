@@ -819,7 +819,12 @@ eboot: tool eboot-libs-guard $(BUILD)/symbols-no-census.txt $(EBOOT_OBJ) | $(BUI
 	$(CC) $(TARGET_LINK) -o $(BUILD)/obscene.eboot.elf $(EBOOT_OBJ)
 	@$(TOOL) mkmodule $(BUILD)/obscene.eboot.elf --symbols $(BUILD)/symbols-no-census.txt \
 	    --generation $(EBOOT_GEN) --table $(EBOOT_TABLE) --kind $(EBOOT_KIND)
-	@$(TOOL) mkself $(BUILD)/obscene.eboot.elf --out $(BUILD)/eboot.bin --generation 4
+	@# The container generation follows EBOOT_GEN, the same knob the module above uses and the one
+	@# EBOOT_GEN's comment already describes as "what the file says it is". It was hardcoded 4 while
+	@# mkmodule took the variable, so EBOOT_GEN=5 stamped a gen-5 module inside a gen-4 container.
+	@# Default stays 4 (the proven fake-signed container); EBOOT_GEN=5 builds the current-generation
+	@# container, whose structure selfish still calls a hypothesis until hardware accepts one. (D289)
+	@$(TOOL) mkself $(BUILD)/obscene.eboot.elf --out $(BUILD)/eboot.bin --generation $(EBOOT_GEN)
 
 # The installable package.
 #
@@ -866,6 +871,14 @@ pkg: eboot sce-module | $(BUILD)
 # code runs outside the compatibility sandbox already, as a payload; this gives it somewhere to
 # be launched from.
 .PHONY: native
+# The native title's eboot uses the container a real current-generation title's eboot uses, which
+# hardware measurement showed is `4F 15 3D 1D` (the default EBOOT_GEN=4) - NOT the `54 14 F5 EE`
+# magic selfish's table (a stated hypothesis) labels "current generation" and that no installed
+# title on hardware actually carries: `048-selfaudit/metadata-differential` measured
+# gen4_containers=1, gen5_containers=0 on a ps5 native title (PPSA02664). So `native` takes the
+# default gen-4 container, same as `pkg`; what makes it a ps5 native title is `param.json` + native
+# registration, not the eboot magic. `make native EBOOT_GEN=5` still builds the `54 14 F5 EE`
+# variant to try against hardware, but it matches nothing measured so far. (D289, D293)
 native: eboot | $(BUILD)
 	@SELFISH=$(SELFISH) bash scripts/build-native.sh $(BUILD)
 

@@ -12,6 +12,8 @@ single entry point; none of these is run by its path directly** (D269):
 | script | verb | what it crosses |
 |---|---|---|
 | `oops-rebuild-pkg.sh` | `deploy` | build in WSL, install/launch from Windows, capture the report |
+| `build-native.sh` | `native` (via `make native`) | lay out the ps5 native title dir through `selfish native` |
+| `native-deploy.sh` | `native --deploy` | build the native title and upload it to a scan root over FTP via prosperous |
 | `payload-run.sh` | `payload` | build the plain-ELF payload, run it via elfldr, capture the raw log |
 | `oops-recover.sh` | `recover` | ask a real console what it recorded, read-only |
 | `oops-hwsweep.sh` | `hwsweep` | iterate against hardware, excluding each call that hangs |

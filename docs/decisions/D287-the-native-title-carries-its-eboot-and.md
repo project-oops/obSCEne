@@ -16,10 +16,17 @@ Three changes, so the native path produces a droppable, self-launching current-g
    PS5 title has, and exactly what an auto-mounter (ShadowMountPlus) scans for: a directory whose
    `sce_sys/param.json` names a title id. `NO_EBOOT=1` keeps the old deeplink-only launcher layout.
 
-2. **A PS5-shaped id.** The default title id moved from `OBSC00001` to `PPSA00001` (overridable),
-   with a matching `contentId` (`UP0000-<TITLE_ID>_00-OBSCENE000000000`), so the entry reads as
-   current-generation and an auto-mounter accepts it. Override to avoid colliding with an installed
-   title.
+2. **The same identity as the package, not a new one.** The native title reuses obSCEne's
+   established id - `OBSC00001` / `IV0002-OBSC00001_00-STOREUPD00000000`, the package's own
+   (build-pkg.sh) - so the two artifacts are one app and installing the native title updates that
+   one entry rather than adding a second icon. An earlier draft here invented a `PPSA00001`, on the
+   assumption that the native path wants a PS5-format id. That was a guess and is dropped: the
+   current-generation badge comes from the registration path (`AppInstallTitleDir`), not the id's
+   prefix. Whether the app-db rejects a non-`PPSA` id at native registration is unconfirmed and
+   measurable (the `/user/app` probes show what installed PS5 titles use); if it turns out to
+   require `PPSA`, that is a single deliberate change to obSCEne's one identity, not a second id
+   carried alongside the first. Override exists only for the stuck-title case the package's
+   `CONTENT_ID` override is for (D223).
 
 3. **A first-class verb.** `./bin/obscene native` runs `make native`, which now declares `eboot`
    as a prerequisite (it did not) so the executable the title carries is built before it is staged.

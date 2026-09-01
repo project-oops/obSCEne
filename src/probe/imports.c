@@ -91,6 +91,12 @@ static const obs_import obs_platform_imports[] = {
     {"libSceLibcInternal", "isalpha"},
     {"libSceLibcInternal", "isspace"},
     {"libSceLibcInternal", "isupper"},
+    /* The ctype table accessors the isxxx/toxxx macros expand to - undefined references the checks
+     * above pull in by using ctype, resolved from the same library. The mined corpus places them
+     * here. (D290) */
+    {"libSceLibcInternal", "_Getpctype"},
+    {"libSceLibcInternal", "_Getptolower"},
+    {"libSceLibcInternal", "_Getptoupper"},
     {"libSceLibcInternal", "sqrt"},
     {"libSceLibcInternal", "pow"},
     {"libSceLibcInternal", "fabs"},
@@ -155,9 +161,6 @@ static const obs_import obs_platform_imports[] = {
     {"libSceLibcInternal", "strncasecmp"},
     {"libSceLibcInternal", "strdup"},
     {"libSceLibcInternal", "sprintf"},
-    {"libSceLibcInternal", "_Getpctype"},
-    {"libSceLibcInternal", "_Getptolower"},
-    {"libSceLibcInternal", "_Getptoupper"},
 
     /* The rest of the maths library. See src/sections/math.c. */
     {"libSceLibcInternal", "round"},

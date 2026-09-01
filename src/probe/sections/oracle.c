@@ -28,9 +28,12 @@
  * same reason: an instrument that cannot be shown to work is not evidence.
  */
 
+#include "common/freestd.h"
+#include "common/krw.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 /* A handle meaning "the running process" rather than a loaded module.
@@ -156,35 +159,22 @@ static obs_result check_error_codes(void) {
                               (uint64_t)(uint32_t)sceKernelDeleteEventFlag(NULL));
         recorded++;
     }
+    if (obs_address_is_callable((const void *)&sceKernelPollEventFlag)) {
+        obs_report_error_code("libkernel", "sceKernelPollEventFlag", "null handle",
+                              (uint64_t)(uint32_t)sceKernelPollEventFlag(NULL, 1, 0, NULL));
+        recorded++;
+    }
+    if (obs_address_is_callable((const void *)&sceKernelSetEventFlag)) {
+        obs_report_error_code("libkernel", "sceKernelSetEventFlag", "null handle",
+                              (uint64_t)(uint32_t)sceKernelSetEventFlag(NULL, 1));
+        recorded++;
+    }
 
     /* Never a failure. Nothing here has an expectation to violate - the section exists to
      * fill a table, and an empty table would be the only bad outcome. */
     return obs_pass_value((uint64_t)recorded);
 }
 
-/* The census, asked one name at a time - what the oracle is *for*.
- *
- * `check_resolve_by_name` above establishes whether the platform answers honestly, using two
- * controls. That is the instrument check. This is the measurement: if the instrument works,
- * every name this program carries gets asked, and each answer is a `resolve` record.
- *
- * Several hundred names are already compiled in - `obs_surface_each_symbol` walks the census -
- * so this costs no data and no corpus, only calls. On a platform with no by-name interface it
- * costs nothing at all, because the controls are re-checked first and the walk never starts.
- *
- * # Why this is separate from the check that validates the oracle
- *
- * A crash part-way through several hundred calls would otherwise destroy the control result
- * too, and "does this platform resolve by name" is the more important of the two answers. Kept
- * apart, a failure here loses the walk and keeps the finding - and the resume mechanism skips
- * this check on the next run and carries on. (D172)
- *
- * # Two things the addresses give away for free
- *
- * Two names resolving to **one address** are aliases, which no amount of hashing reveals. And
- * the ordering of the addresses is the export layout, which is a second measurement nobody had
- * to ask for. Both are why the address is reported rather than a bare yes.
- */
 static unsigned int oracle_census_asked;
 static unsigned int oracle_census_resolved;
 
@@ -197,9 +187,6 @@ static void oracle_ask_one(const char *library, const char *symbol) {
         oracle_census_resolved++;
     }
     obs_report_resolve(library, symbol, present, (uint64_t)(uintptr_t)address);
-    /* Progress every thirty-two names, because a crash inside a loop otherwise names only the
-     * check - and "died on the first" and "died on the four hundredth" are different bugs
-     * pointing at different functions. */
     if ((oracle_census_asked & 31u) == 0u) {
         obs_report_progress("140-oracle/resolve-census", (uint64_t)oracle_census_asked);
     }
@@ -208,9 +195,6 @@ static void oracle_ask_one(const char *library, const char *symbol) {
 static obs_result check_resolve_census(void) {
     OBS_REQUIRE(&sceKernelDlsym);
 
-    /* The controls again, and cheaply: two calls to decide whether the next several hundred
-     * are worth making. Repeated rather than remembered, so this check is meaningful on its
-     * own and does not depend on another one having run first. */
     void *present_address = 0;
     void *absent_address = 0;
     int present_rc = sceKernelDlsym(OBS_HANDLE_SELF, "sceKernelWrite", &present_address);
@@ -237,6 +221,19 @@ static obs_result check_resolve_census(void) {
     return obs_pass_value((uint64_t)oracle_census_resolved);
 }
 
+static obs_result check_kernel_exports_stream(void) {
+    const payload_args_t *pargs = obs_get_payload_args();
+    if (pargs == NULL || pargs->kexport_table == NULL) {
+        return obs_skip("no kernel export table available in this execution context");
+    }
+    const obs_kexport_table_t *table = (const obs_kexport_table_t *)pargs->kexport_table;
+    for (uint32_t i = 0; i < table->count; i++) {
+        const obs_kexport_entry_t *entry = &table->entries[i];
+        obs_report_measure("140-oracle/kexport-table", entry->nid, "vaddr", entry->vaddr, "offset");
+    }
+    return obs_pass_value((uint64_t)table->count);
+}
+
 static const obs_check oracle_checks[] = {
     {"140-oracle/resolve-by-name", "libkernel", "sceKernelDlsym", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelDlsym, check_resolve_by_name,
@@ -246,6 +243,8 @@ static const obs_check oracle_checks[] = {
      OBS_FROM_ASSUMED},
     {"140-oracle/error-codes", "libkernel", "sceKernelClose", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&sceKernelClose, check_error_codes, OBS_FROM_ASSUMED},
+    {"140-oracle/kexport-stream", "obscene", "kexport_table", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)&obs_get_payload_args, check_kernel_exports_stream, OBS_FROM_HARDWARE},
 };
 
 const obs_section obs_section_oracle = {

@@ -53,18 +53,81 @@ static uintptr_t detect_p_comm_offset(uintptr_t my_proc) {
         return DEFAULT_OFFSET_PROC_P_COMM;
     }
 
-    for (uintptr_t off = 0x80; off <= sizeof(buf) - 9; off++) {
-        if (obs_strcmp(buf + off, "eboot.bin") == 0) {
+    for (uintptr_t off = 0x80; off <= sizeof(buf) - 16; off++) {
+        if (obs_strcmp(buf + off, "eboot.bin") == 0 ||
+            obs_strcmp(buf + off, "payload.elf") == 0 ||
+            obs_strcmp(buf + off, "obscene.elf") == 0 ||
+            obs_strcmp(buf + off, "obscene-injector.elf") == 0) {
             return off;
         }
     }
-    for (uintptr_t off = 0x80; off <= sizeof(buf) - 13; off++) {
-        if (obs_strncmp(buf + off, "SceSpZeroConf", 13) == 0) {
+    for (uintptr_t off = 0x80; off <= sizeof(buf) - 16; off++) {
+        if (obs_strncmp(buf + off, "SceSpZeroConf", 13) == 0 ||
+            obs_strncmp(buf + off, "NPXS", 4) == 0) {
             return off;
         }
     }
 
     return DEFAULT_OFFSET_PROC_P_COMM;
+}
+
+static uintptr_t find_allproc_kaddr(pid_t mypid) {
+    uintptr_t kdata = krw_kdata_base();
+    if (kdata == 0) return krw_allproc_addr();
+
+    uintptr_t start = kdata + 0x2700000;
+    uintptr_t end   = kdata + 0x2A00000;
+
+    uintptr_t user_allproc = 0;
+    int max_user_chain = 0;
+
+    for (uintptr_t addr = start; addr < end; addr += 8) {
+        uintptr_t p = krw_read64(addr);
+        if ((p >> 40) != 0xffffcd && (p >> 40) != 0xffffff) {
+            continue;
+        }
+
+        int user_chain_len = 0;
+        int has_mypid = 0;
+        uintptr_t curr = p;
+        for (int i = 0; i < 200; i++) {
+            if (curr == 0 || (curr >> 40) != 0xffffcd) {
+                break;
+            }
+            pid_t pid = (pid_t)krw_read32(curr + KERNEL_OFFSET_PROC_P_PID);
+            if (pid < 0 || pid > 65535) {
+                break;
+            }
+            if (pid > 54) {
+                user_chain_len++;
+            }
+            if (mypid > 0 && pid == mypid) {
+                has_mypid = 1;
+            }
+            uintptr_t next = krw_read64(curr);
+            if (next == 0 || next == curr) {
+                break;
+            }
+            curr = next;
+        }
+
+        if (has_mypid) {
+            user_allproc = addr;
+            break;
+        }
+
+        if (user_chain_len > max_user_chain && user_chain_len >= 5) {
+            user_allproc = addr;
+            max_user_chain = user_chain_len;
+        }
+    }
+
+    if (user_allproc != 0) {
+        krw_set_allproc_addr(user_allproc);
+        return user_allproc;
+    }
+
+    return krw_allproc_addr();
 }
 
 static const char *obs_strstr(const char *haystack, const char *needle) {
@@ -121,7 +184,7 @@ pid_t target_find_by_name(const char *name) {
     }
 
     pid_t mypid = (pid_t)sys_call(SYS_getpid, 0, 0, 0, 0, 0, 0);
-    uintptr_t allproc = krw_allproc_addr();
+    uintptr_t allproc = find_allproc_kaddr(mypid);
     if (allproc == 0) {
         return -1;
     }
@@ -162,12 +225,14 @@ pid_t target_find_foreground_app(void) {
     }
 
     pid_t mypid = (pid_t)sys_call(SYS_getpid, 0, 0, 0, 0, 0, 0);
-    uintptr_t allproc = krw_allproc_addr();
+    uintptr_t allproc = find_allproc_kaddr(mypid);
     if (allproc == 0) {
         return -1;
     }
+    klog_write_hex("resolved allproc=", allproc);
 
     uintptr_t myproc = krw_get_proc(mypid);
+    klog_write_hex("myproc=", myproc);
     uintptr_t comm_offset = detect_p_comm_offset(myproc);
     klog_write_hex("p_comm offset=", comm_offset);
 
@@ -189,24 +254,49 @@ pid_t target_find_foreground_app(void) {
     uintptr_t proc = krw_read64(allproc);
     while (proc != 0) {
         pid_t pid = (pid_t)krw_read32(proc + KERNEL_OFFSET_PROC_P_PID);
-        uintptr_t p_fd = krw_read64(proc + 0x48);
-        uintptr_t p_vmspace = krw_read64(proc + 0x200);
-        uint32_t p_flag = (uint32_t)krw_read32(proc + 0xB0);
-        if (pid > 0 && pid != mypid && p_fd != 0 && p_vmspace != 0 && (p_flag & 0x4000) == 0) {
+        if (pid > 0 && pid != mypid) {
+            char pbuf[2048];
+            memset(pbuf, 0, sizeof(pbuf));
+            krw_copyout(proc, pbuf, sizeof(pbuf));
+
             char comm[32];
             memset(comm, 0, sizeof(comm));
-            krw_copyout(proc + name_off, comm, sizeof(comm) - 1);
+            krw_copyout(proc + comm_offset, comm, sizeof(comm) - 1);
             if (comm[0] == '\0') {
-                krw_copyout(proc + comm_offset, comm, sizeof(comm) - 1);
+                krw_copyout(proc + name_off, comm, sizeof(comm) - 1);
             }
 
             char raw_tid[16];
             memset(raw_tid, 0, sizeof(raw_tid));
-            krw_copyout(proc + titleid_off, raw_tid, sizeof(raw_tid));
+            krw_copyout(proc + titleid_off, raw_tid, sizeof(raw_tid) - 1);
 
-            char app_path[64];
+            char app_path[128];
             memset(app_path, 0, sizeof(app_path));
-            krw_copyout(proc + path_off, app_path, sizeof(app_path));
+            krw_copyout(proc + path_off, app_path, sizeof(app_path) - 1);
+
+            /* If raw_tid is empty, scan pbuf for PPSA / CUSA */
+            if (raw_tid[0] == '\0') {
+                for (uintptr_t off = 0x400; off < sizeof(pbuf) - 16; off++) {
+                    if ((pbuf[off] == 'P' && pbuf[off+1] == 'P' && pbuf[off+2] == 'S' && pbuf[off+3] == 'A') ||
+                        (pbuf[off] == 'C' && pbuf[off+1] == 'U' && pbuf[off+2] == 'S' && pbuf[off+3] == 'A')) {
+                        obs_strncpy(raw_tid, pbuf + off, sizeof(raw_tid) - 1);
+                        break;
+                    }
+                }
+            }
+
+            /* If app_path is empty, scan pbuf for path strings */
+            if (app_path[0] == '\0') {
+                for (uintptr_t off = 0x500; off < sizeof(pbuf) - 32; off++) {
+                    if (obs_strncmp(pbuf + off, "/app0", 5) == 0 ||
+                        obs_strncmp(pbuf + off, "/user/app", 9) == 0 ||
+                        obs_strncmp(pbuf + off, "/mnt/sandbox", 12) == 0 ||
+                        obs_strncmp(pbuf + off, "/system/vsh/app", 15) == 0) {
+                        obs_strncpy(app_path, pbuf + off, sizeof(app_path) - 1);
+                        break;
+                    }
+                }
+            }
 
             /* 1. Skip our own injector / WebKit container (NPXS40112) */
             if (obs_strstr(app_path, "NPXS40112") != NULL ||

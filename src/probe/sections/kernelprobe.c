@@ -35,6 +35,8 @@
  *    people's consoles.
  */
 
+#include "common/freestd.h"
+#include "common/krw.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -54,6 +56,14 @@ static unsigned long obs_payload_args = 0;
 void obs_capture_payload_args(unsigned long args);
 void obs_capture_payload_args(unsigned long args) {
     obs_payload_args = args;
+}
+
+const payload_args_t *obs_get_payload_args(void);
+const payload_args_t *obs_get_payload_args(void) {
+    if (obs_payload_args >= 0x10000UL && obs_payload_args < 0x0000800000000000UL && (obs_payload_args & 0x7UL) == 0) {
+        return (const payload_args_t *)obs_payload_args;
+    }
+    return NULL;
 }
 
 /* How many words of the struct to read. Past the escape primitives with room to spare, and

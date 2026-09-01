@@ -12,9 +12,23 @@
 #include <stdint.h>
 #include "common/freestd.h"
 
+#define OBS_KEXPORT_MAX 16384
+
+typedef struct {
+    char nid[12];
+    uint32_t handle;
+    uint64_t vaddr;
+} obs_kexport_entry_t;
+
+typedef struct {
+    uint32_t count;
+    uint32_t capacity;
+    obs_kexport_entry_t entries[OBS_KEXPORT_MAX];
+} obs_kexport_table_t;
+
 /**
- * Payload entry arguments provided by kstuff-lite / elfldr.
- * Pinned against ps5-payload-dev-sdk/crt/payload.h.
+ * Payload entry arguments provided by kstuff-lite / elfldr / obscene-injector.
+ * Pinned against ps5-payload-dev-sdk/crt/payload.h, with kexport_table extension.
  */
 typedef struct payload_args {
     int (*sys_dynlib_dlsym)(int, const char *, void *);
@@ -23,7 +37,11 @@ typedef struct payload_args {
     long kpipe_addr;
     long kdata_base_addr;
     int *payloadout;
+    void *kexport_table;
 } payload_args_t;
+
+int krw_dump_all_exports(pid_t pid, obs_kexport_table_t *table);
+const void *obs_kexport_lookup(const obs_kexport_table_t *table, const char *nid);
 
 /**
  * Initialize kernel R/W from payload arguments.
@@ -43,6 +61,7 @@ int krw_is_ready(void);
 uintptr_t krw_kdata_base(void);
 uintptr_t krw_ktext_base(void);
 uintptr_t krw_allproc_addr(void);
+void      krw_set_allproc_addr(uintptr_t addr);
 uint32_t  krw_fw_version(void);
 
 /**

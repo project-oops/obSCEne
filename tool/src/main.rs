@@ -825,6 +825,12 @@ fn run_hw(
         // the interface the target can actually reach, and stops when the file has been taken.
         // (prosperous D021)
         "install" => run_hw_install(name, address, seconds),
+        // The native counterpart to `install`: a native title is a *directory* (eboot.bin plus
+        // sce_sys/{param.json,icon0.png}), so deploying it is a directory upload, not a package
+        // fetch. It lands in a scan root (default /user/data) where an auto-mounter registers it -
+        // not /user/app, which is never scanned. Every byte goes through prosperous's
+        // transfer::upload, the same call `pros-cli restore` makes. (D291)
+        "install-native" => run_hw_install_native(name, address, into),
         // Launch an installed app by its title id, into the foreground - which owns the display
         // and a user session, the two things an elfldr-injected background payload never gets.
         "launch" => run_hw_launch(name, address, seconds),
@@ -841,7 +847,7 @@ fn run_hw(
         "deploy" => run_hw_deploy(name, address, into, seconds),
         other => Err(format!(
             "unknown action `{other}`: try register, list, check, logs, send, sh, ls, pull, \
-             push, install, launch or deploy"
+             push, install, install-native, launch or deploy"
         )
         .into()),
     }
@@ -2307,6 +2313,57 @@ fn run_hw_push(
     let bytes = std::fs::read(local)?;
     pros_link::files::store(&pros_link::Link::to(&console.address), remote, &bytes)?;
     println!("pushed {} bytes -> {remote}", bytes.len());
+    Ok(ExitCode::SUCCESS)
+}
+
+/// `hw install-native` - upload a native title directory to a scan root on the target.
+///
+/// `make native` writes `<BUILD>/native/<TITLE_ID>/`, so the id is the directory's own name and the
+/// remote is `<base>/<TITLE_ID>`. The upload is prosperous's `transfer::upload` - an FTP STOR per
+/// file, a directory made as needed - the same call `pros-cli restore` uses.
+///
+/// The base defaults to `/user/data`, which is one of the directories an auto-mounter
+/// (`ShadowMountPlus`) *scans* - it registers what it finds there into `/user/app` for you. **Not**
+/// `/user/app` itself, which is where titles are registered *to* and is never scanned, so a copy
+/// there is inert. Pass `--into <path>` (an absolute path such as `/mnt/usb0`) to target a
+/// different scan root - a USB drive, or a titles subfolder.
+///
+/// It copies the bytes; registration into the app database is the auto-mounter's job (or
+/// `sceAppInstUtilAppInstallTitleDir` from a privileged payload). (D291)
+fn run_hw_install_native(
+    name: Option<&str>,
+    address: Option<&str>,
+    into: &std::path::Path,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let Some(local) = address else {
+        return Err(
+            "install-native needs a title directory: obscene-tool hw install-native <dir>".into(),
+        );
+    };
+    let dir = std::path::Path::new(local);
+    let appid = dir
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or("the title directory has no name to install under")?;
+    // A scan root, so the auto-mounter finds and registers it. `--into` overrides with any absolute
+    // path; the report-file default that `into` otherwise carries is not one, so it falls through.
+    let base = match into.to_str() {
+        Some(p) if p.starts_with('/') => p.trim_end_matches('/'),
+        _ => "/user/data",
+    };
+    let remote = format!("{base}/{appid}");
+    let console = hardware::resolve(hardware::load()?, name)?;
+    let mut session = pros_link::files::Session::open(&pros_link::Link::to(&console.address))?;
+    let summary = pros_core::transfer::upload(
+        &mut session,
+        dir,
+        &remote,
+        &mut |progress| println!("  {}", progress.current),
+        &|| false,
+    );
+    session.close();
+    summary?;
+    println!("installed {appid} -> {remote}");
     Ok(ExitCode::SUCCESS)
 }
 

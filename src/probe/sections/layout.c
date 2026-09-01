@@ -43,6 +43,7 @@
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 /* Far larger than anything these calls are documented to write. */
@@ -537,6 +538,139 @@ static obs_result check_query_short_buffer_overrun(void) {
     return obs_pass_value((uint64_t)bounded);
 }
 
+static obs_result check_user_service_layout(void) {
+    int32_t (*fn_get_user_list)(int32_t *userIdList) =
+        (int32_t (*)(int32_t *))obs_module_symbol(OBS_HANDLE_SELF, "sceUserServiceGetLoginUserIdList");
+    int32_t (*fn_get_initial_user)(int32_t *userId) =
+        (int32_t (*)(int32_t *))obs_module_symbol(OBS_HANDLE_SELF, "sceUserServiceGetInitialUser");
+    int32_t (*fn_get_user_name)(int32_t userId, char *userName, size_t size) =
+        (int32_t (*)(int32_t, char *, size_t))obs_module_symbol(OBS_HANDLE_SELF, "sceUserServiceGetUserName");
+
+    if (fn_get_user_list == NULL && fn_get_initial_user == NULL) {
+        return obs_skip("libSceUserService symbols not available in this context");
+    }
+
+    int32_t initial_user_id = -1;
+    if (fn_get_initial_user != NULL && obs_address_is_callable((const void *)fn_get_initial_user)) {
+        int rc = fn_get_initial_user(&initial_user_id);
+        obs_report_measure("130-layout/user-service", "sceUserServiceGetInitialUser", "user_id",
+                           (uint64_t)(uint32_t)initial_user_id, "id");
+        obs_report_measure("130-layout/user-service", "sceUserServiceGetInitialUser", "return_code",
+                           (uint64_t)(uint32_t)rc, "code");
+    }
+
+    layout_probe probe;
+    layout_prepare(&probe);
+    if (fn_get_user_list != NULL && obs_address_is_callable((const void *)fn_get_user_list)) {
+        int rc = fn_get_user_list((int32_t *)probe.buffer);
+        obs_report_measure("130-layout/user-service", "sceUserServiceGetLoginUserIdList", "return_code",
+                           (uint64_t)(uint32_t)rc, "code");
+        obs_report_bytes("130-layout/user-service", "sceUserServiceGetLoginUserIdList", "user_id_list",
+                         0, probe.buffer, 64);
+    }
+
+    if (initial_user_id >= 0 && fn_get_user_name != NULL && obs_address_is_callable((const void *)fn_get_user_name)) {
+        char name_buf[128];
+        for (unsigned int i = 0; i < sizeof(name_buf); i++) name_buf[i] = 0;
+        int rc = fn_get_user_name(initial_user_id, name_buf, sizeof(name_buf));
+        obs_report_measure("130-layout/user-service", "sceUserServiceGetUserName", "return_code",
+                           (uint64_t)(uint32_t)rc, "code");
+        obs_report_bytes("130-layout/user-service", "sceUserServiceGetUserName", "user_name_raw",
+                         0, (const unsigned char *)name_buf, 64);
+    }
+
+    return obs_pass_value((uint64_t)(uint32_t)initial_user_id);
+}
+
+static obs_result check_pad_controller_layout(void) {
+    int32_t (*fn_pad_init)(void) =
+        (int32_t (*)(void))obs_module_symbol(OBS_HANDLE_SELF, "scePadInit");
+    int32_t (*fn_pad_get_handle)(int32_t userId, int32_t type, int32_t index) =
+        (int32_t (*)(int32_t, int32_t, int32_t))obs_module_symbol(OBS_HANDLE_SELF, "scePadGetHandle");
+    int32_t (*fn_pad_get_info)(int32_t handle, void *info) =
+        (int32_t (*)(int32_t, void *))obs_module_symbol(OBS_HANDLE_SELF, "scePadGetControllerInformation");
+
+    if (fn_pad_get_handle == NULL) {
+        return obs_skip("libScePad symbols not available in this context");
+    }
+
+    if (fn_pad_init != NULL && obs_address_is_callable((const void *)fn_pad_init)) {
+        (void)fn_pad_init();
+    }
+
+    int32_t handle = -1;
+    if (obs_address_is_callable((const void *)fn_pad_get_handle)) {
+        handle = fn_pad_get_handle(0xFF, 0, 0); /* Primary / active user, standard pad 0 */
+        obs_report_measure("130-layout/pad-controller", "scePadGetHandle", "handle",
+                           (uint64_t)(uint32_t)handle, "handle");
+    }
+
+    if (handle >= 0 && fn_pad_get_info != NULL && obs_address_is_callable((const void *)fn_pad_get_info)) {
+        layout_probe probe;
+        layout_prepare(&probe);
+        int rc = fn_pad_get_info(handle, probe.buffer);
+        obs_report_measure("130-layout/pad-controller", "scePadGetControllerInformation", "return_code",
+                           (uint64_t)(uint32_t)rc, "code");
+        obs_report_bytes("130-layout/pad-controller", "scePadGetControllerInformation", "controller_info",
+                         0, probe.buffer, 128);
+    }
+
+    return obs_pass_value((uint64_t)(uint32_t)handle);
+}
+
+struct obs_ifaddrs_entry {
+    struct obs_ifaddrs_entry *ifa_next;
+    char *ifa_name;
+    uint32_t ifa_flags;
+    void *ifa_addr;
+    void *ifa_netmask;
+    void *ifa_dstaddr;
+    void *ifa_data;
+};
+
+static obs_result check_network_interface_layout(void) {
+    int32_t (*fn_getifaddrs)(struct obs_ifaddrs_entry **ifap) =
+        (int32_t (*)(struct obs_ifaddrs_entry **))obs_module_symbol(OBS_HANDLE_SELF, "getifaddrs");
+    void (*fn_freeifaddrs)(struct obs_ifaddrs_entry *ifap) =
+        (void (*)(struct obs_ifaddrs_entry *))obs_module_symbol(OBS_HANDLE_SELF, "freeifaddrs");
+
+    if (fn_getifaddrs == NULL) {
+        fn_getifaddrs = (int32_t (*)(struct obs_ifaddrs_entry **))obs_module_symbol(OBS_HANDLE_SELF, "sceNetGetifaddrs");
+        fn_freeifaddrs = (void (*)(struct obs_ifaddrs_entry *))obs_module_symbol(OBS_HANDLE_SELF, "sceNetFreeifaddrs");
+    }
+
+    if (fn_getifaddrs == NULL || !obs_address_is_callable((const void *)fn_getifaddrs)) {
+        return obs_skip("getifaddrs / sceNetGetifaddrs not callable");
+    }
+
+    struct obs_ifaddrs_entry *ifap = NULL;
+    int rc = fn_getifaddrs(&ifap);
+    obs_report_measure("130-layout/net-interfaces", "getifaddrs", "return_code",
+                       (uint64_t)(uint32_t)rc, "code");
+
+    uint32_t count = 0;
+    if (rc == 0 && ifap != NULL) {
+        struct obs_ifaddrs_entry *curr = ifap;
+        while (curr != NULL && count < 16) {
+            if (curr->ifa_name != NULL) {
+                obs_report_measure("130-layout/net-interfaces", curr->ifa_name, "flags",
+                                   (uint64_t)curr->ifa_flags, "flags");
+            }
+            if (curr->ifa_addr != NULL) {
+                obs_report_bytes("130-layout/net-interfaces", curr->ifa_name ? curr->ifa_name : "iface",
+                                 "sockaddr", 0, (const unsigned char *)curr->ifa_addr, 16);
+            }
+            curr = curr->ifa_next;
+            count++;
+        }
+        if (fn_freeifaddrs != NULL && obs_address_is_callable((const void *)fn_freeifaddrs)) {
+            fn_freeifaddrs(ifap);
+        }
+    }
+
+    return obs_pass_value((uint64_t)count);
+}
+
 static const obs_check layout_checks[] = {
     /* Assumed, uniformly, and the field is being used honestly: nothing here has an
      * expectation at all, and `assumed` is the closest the vocabulary comes to saying
@@ -571,6 +705,15 @@ static const obs_check layout_checks[] = {
     {"130-layout/short-buffer-overrun", "libkernel", "sceKernelDirectMemoryQuery",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelDirectMemoryQuery,
      check_query_short_buffer_overrun, OBS_FROM_DERIVED},
+    {"130-layout/user-service-layout", "libSceUserService", "sceUserServiceGetLoginUserIdList",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_user_service_layout,
+     check_user_service_layout, OBS_FROM_ASSUMED},
+    {"130-layout/pad-controller-layout", "libScePad", "scePadGetControllerInformation",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_pad_controller_layout,
+     check_pad_controller_layout, OBS_FROM_ASSUMED},
+    {"130-layout/network-interfaces", "libSceNet", "getifaddrs",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_network_interface_layout,
+     check_network_interface_layout, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_layout = {

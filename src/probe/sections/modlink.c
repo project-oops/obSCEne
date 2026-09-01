@@ -97,10 +97,10 @@ static int modlink_report_cb(const char *name, unsigned long base, void *user) {
     unsigned int have = obs_copy_cstr(name, buf, sizeof buf);
     obs_report_module(have ? buf : "?", (uint64_t)base);
     if (have) {
-        if (obs_contains(buf, "libSceAgc")) {
+        if (obs_contains(buf, "libSceAgc") || obs_contains(buf, "AgcDriver") || obs_contains(buf, "libSceAgcDriver")) {
             s->agc = 1;
         }
-        if (obs_contains(buf, "libSceGnm")) {
+        if (obs_contains(buf, "libSceGnm") || obs_contains(buf, "GnmDriver") || obs_contains(buf, "libSceGnmDriver")) {
             s->gnm = 1;
         }
     }

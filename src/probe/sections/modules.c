@@ -217,16 +217,19 @@ static obs_result check_module_names(void) {
 static const char *const obs_module_paths[] = {
     "/system/common/lib/libc.prx",
     "/system/common/lib/libSceFios2.prx",
+    "/system/common/lib/libSceLibcInternal.sprx",
+    "/system/common/lib/libSceSysmodule.sprx",
     "/app0/sce_module/libc.prx",
     "/app0/sce_module/libSceFios2.prx",
     "libkernel.prx",
+    "libkernel.sprx",
 };
 
 /* One quantity name per path, because a report emitting the same quantity five times can
  * say a module loaded without saying which. Built as a table rather than formatted: the
  * runtime has no string formatting and should not grow any for this. */
 static const char *const obs_module_quantity[] = {
-    "system-libc", "system-fios2", "app0-libc", "app0-fios2", "libkernel",
+    "system-libc", "system-fios2", "system-libc-internal", "system-sysmodule", "app0-libc", "app0-fios2", "libkernel-prx", "libkernel-sprx",
 };
 
 static obs_result check_module_load(void) {
@@ -280,8 +283,16 @@ static obs_result check_module_symbol(void) {
         return obs_skip("no module loaded, so there is no handle to ask");
     }
 
-    void *address = 0;
-    int rc = sceKernelDlsym(handle, "memcpy", &address);
+    void *address = (void *)obs_module_symbol(handle, "memcpy");
+    int rc = (address != NULL) ? 0 : -1;
+    if (address == NULL) {
+        char nid[12];
+        obs_compute_nid("memcpy", nid);
+        rc = sceKernelDlsym(handle, nid, &address);
+        if (rc != 0) {
+            rc = sceKernelDlsym(handle, "memcpy", &address);
+        }
+    }
     obs_report_measure("110-modules/symbol", "sceKernelDlsym", "memcpy",
                        (uint64_t)(int64_t)rc, "code");
     if (rc != 0) {

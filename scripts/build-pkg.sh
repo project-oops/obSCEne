@@ -13,7 +13,12 @@ set -e
 BUILD="${1:?usage: build-pkg.sh <BUILD>}"
 SELFISH="${SELFISH:-../selfish}"
 GEN="${GEN:-4}"
-CONTENT_ID="${CONTENT_ID:-IV0002-OBSC00001_00-STOREUPD00000000}"
+# The title identity lives in one place, read by both this and build-native.sh (data/identity.toml),
+# so the package and the native title are the same app rather than two copies of one id that drift.
+identity="$(dirname "$0")/../data/identity.toml"
+toml_str() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\"[[:space:]]*\$/\1/p" "$identity"; }
+CONTENT_ID="${CONTENT_ID:-$(toml_str content_id)}"
+TITLE="${TITLE:-$(toml_str title)}"
 
 # The title id is *inside* the content id, so it is taken from there rather than written twice.
 #
@@ -180,7 +185,7 @@ fi
 
 selfish pack --image "$image" --content-id "$CONTENT_ID" --out "$out" \
     --title-id "$TITLE_ID" \
-    --title "obSCEne" \
+    --title "$TITLE" \
     --entry "0x200=$ent/names.bin" \
     --entry "0x1001=$ent/playgo-chunk.dat" \
     "${icon_arg[@]}"

@@ -40,6 +40,8 @@
 #include "obscene/sections.h"
 #include "obscene/status.h"
 
+OBS_WEAK int getpid(void);
+
 /* Longer than any of these values is expected to be, and small enough to sit on the stack
  * beside a guard. A value that does not fit is reported as not fitting rather than
  * truncated into something that reads like a complete answer. */
@@ -57,21 +59,34 @@
 static const char *const obs_sysctl_names[] = {
     /* The one something is actually blocked on. */
     "kern.osrelease",
+    "kern.osrevision",
+    "kern.sdk_version",
+    "kern.hostname",
     /* Says whether the kernel identifies as its upstream at all, which decides how far the
      * documented analogue can be relied on for everything else. */
     "kern.ostype",
     /* The long form, which conventionally carries a build date and configuration. */
     "kern.version",
+    /* Hardware model and processor architecture. */
+    "hw.model",
+    "hw.machine",
     /* A core count, which the sibling emulator currently invents. */
     "hw.ncpu",
+    "hw.byteorder",
     /* Assumed rather than measured everywhere it is used. */
     "hw.pagesize",
     /* A second opinion on memory size, from a different subsystem than the one answering
      * sceKernelGetDirectMemorySize - worth having precisely because it is separate. */
     "hw.physmem",
-    /* A third independent route to the counter frequency. Two agreeing measurements made it
-     * believable; a third from another subsystem would settle it. */
+    "hw.realmem",
+    "hw.usermem",
+    "hw.availpages",
+    /* SIMD capabilities and counter frequencies. */
+    "machdep.sse",
+    "machdep.avx",
     "machdep.tsc_freq",
+    /* Sandbox containment status. */
+    "security.jail.jailed",
 };
 
 /* What one name did. Distinguished so the verdict can say which failure happened rather
@@ -82,6 +97,30 @@ typedef enum {
     OBS_SYSCTL_OVERRAN,
 } obs_sysctl_outcome;
 
+static int obs_do_sysctlbyname(const char *name, void *oldp, size_t *oldlenp, const void *newp, size_t newlen) {
+    int (*fn_sysctlbyname)(const char *, void *, size_t *, const void *, size_t) =
+        (int (*)(const char *, void *, size_t *, const void *, size_t))obs_module_symbol(OBS_HANDLE_SELF, "sysctlbyname");
+    if (fn_sysctlbyname != NULL && obs_address_is_callable((const void *)fn_sysctlbyname)) {
+        return fn_sysctlbyname(name, oldp, oldlenp, newp, newlen);
+    }
+    if ((const void *)&sysctlbyname != NULL && obs_address_is_callable((const void *)&sysctlbyname)) {
+        return sysctlbyname(name, oldp, oldlenp, (void *)newp, newlen);
+    }
+    return -1;
+}
+
+static int obs_has_sysctlbyname(void) {
+    int (*fn_sysctlbyname)(const char *, void *, size_t *, const void *, size_t) =
+        (int (*)(const char *, void *, size_t *, const void *, size_t))obs_module_symbol(OBS_HANDLE_SELF, "sysctlbyname");
+    if (fn_sysctlbyname != NULL && obs_address_is_callable((const void *)fn_sysctlbyname)) {
+        return 1;
+    }
+    if ((const void *)&sysctlbyname != NULL && obs_address_is_callable((const void *)&sysctlbyname)) {
+        return 1;
+    }
+    return 0;
+}
+
 /* Asks for one name and reports whatever came back. */
 static obs_sysctl_outcome obs_sysctl_ask(const char *id, const char *name) {
     unsigned char value[OBS_SYSCTL_MAX + 1];
@@ -91,7 +130,7 @@ static obs_sysctl_outcome obs_sysctl_ask(const char *id, const char *name) {
     value[OBS_SYSCTL_MAX] = OBS_SYSCTL_GUARD;
 
     size_t len = OBS_SYSCTL_MAX;
-    int rc = sysctlbyname(name, value, &len, (void *)0, 0);
+    int rc = obs_do_sysctlbyname(name, value, &len, (void *)0, 0);
 
     if (value[OBS_SYSCTL_MAX] != OBS_SYSCTL_GUARD) {
         /* Said first, and the value deliberately not reported: the call wrote past a length
@@ -127,8 +166,9 @@ static obs_sysctl_outcome obs_sysctl_ask(const char *id, const char *name) {
  * refuses is easy to miss, and this one is the reason the section was written.
  */
 static obs_result check_sysctl_osrelease(void) {
-    OBS_REQUIRE(&sysctlbyname);
-
+    if (!obs_has_sysctlbyname()) {
+        return obs_skip("sysctlbyname is not exported by loaded modules in target process");
+    }
     switch (obs_sysctl_ask("135-sysctl/osrelease", "kern.osrelease")) {
     case OBS_SYSCTL_OVERRAN:
         return obs_fail("the call wrote past the length it was given");
@@ -142,8 +182,9 @@ static obs_result check_sysctl_osrelease(void) {
 
 /* Everything else worth asking, in one pass. */
 static obs_result check_sysctl_names(void) {
-    OBS_REQUIRE(&sysctlbyname);
-
+    if (!obs_has_sysctlbyname()) {
+        return obs_skip("sysctlbyname is not exported by loaded modules in target process");
+    }
     unsigned int answered = 0;
     unsigned int overran = 0;
     for (unsigned int i = 0; i < OBS_COUNT(obs_sysctl_names); i++) {
@@ -179,9 +220,9 @@ static obs_result check_sysctl_names(void) {
 
 static const obs_check sysctl_checks[] = {
     {"135-sysctl/osrelease", "libkernel", "sysctlbyname", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sysctlbyname, check_sysctl_osrelease, OBS_FROM_DERIVED},
+     (const void *)check_sysctl_osrelease, check_sysctl_osrelease, OBS_FROM_DERIVED},
     {"135-sysctl/names", "libkernel", "sysctlbyname", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sysctlbyname, check_sysctl_names, OBS_FROM_DERIVED},
+     (const void *)check_sysctl_names, check_sysctl_names, OBS_FROM_DERIVED},
 };
 
 const obs_section obs_section_sysctl = {

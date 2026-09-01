@@ -6,6 +6,7 @@
  */
 
 #include "common/freestd.h"
+#include "common/krw.h"
 
 size_t obs_strlen(const char *s) {
     size_t n = 0;
@@ -253,5 +254,24 @@ void obs_compute_nid(const char *name, char out_nid[12]) {
         out_nid[10 - pos] = alphabet[idx];
     }
     out_nid[11] = '\0';
+}
+
+const void *obs_kexport_lookup(const obs_kexport_table_t *table, const char *nid) {
+    if (table == NULL || nid == NULL) return NULL;
+    if (table->count == 0 || table->count > 16384) return NULL;
+    int low = 0;
+    int high = (int)table->count - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        int cmp = obs_strcmp(table->entries[mid].nid, nid);
+        if (cmp == 0) {
+            return (const void *)(uintptr_t)table->entries[mid].vaddr;
+        } else if (cmp < 0) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return NULL;
 }
 

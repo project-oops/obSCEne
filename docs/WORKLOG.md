@@ -159,3 +159,4 @@ slow way.
 | 2026-09-01 | [dlsym gains a positive check; sysmodule positive left out (no citable id)](worklog/147-dlsym-gains-a-positive-check-sysmodule.md) |
 | 2026-09-01 | [flexible-configured probe added (unblocks orbistoun's allocator work)](worklog/148-flexible-configured-probe-added.md) |
 | 2026-09-01 | [(native process injection & retail container probe) - obSCEne runs live inside retail title](worklog/149-native-process-injection-retail.md) |
+| 2026-09-02 | [(ps5 native title) gen-5 eboot, two-id identity, and native --deploy to a scan root](worklog/150-ps5-native-title-gen5-and-native-deploy.md) |

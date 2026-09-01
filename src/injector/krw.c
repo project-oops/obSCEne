@@ -241,6 +241,10 @@ uintptr_t krw_allproc_addr(void) {
     return s_allproc_addr;
 }
 
+void krw_set_allproc_addr(uintptr_t addr) {
+    s_allproc_addr = addr;
+}
+
 uint32_t krw_fw_version(void) {
     return s_fw_version;
 }
@@ -984,27 +988,35 @@ uintptr_t krw_dynlib_resolve(pid_t pid, int sprx_handle, const char *nid) {
     uint64_t nid_strbase = *(uint64_t *)(dispatch_table + 0x38);
     uint64_t module_base = *(uint64_t *)(module_record  + 0x30);
 
-    uint64_t end = kaddr_table + table_size;
-    if (kaddr_table >= end) return 0;
+    if (kaddr_table == 0 || table_size == 0 || nid_strbase == 0) return 0;
 
-    uint8_t entry[0x18];
-    uint8_t nid_read[0x10];
+    static uint8_t s_table_buf[32768];
+    static uint8_t s_nid_buf[32768];
 
-    for (uint64_t pos = kaddr_table; pos < end; pos += sizeof(entry)) {
-        if (krw_copyout((uintptr_t)pos, entry, sizeof(entry)) != 0) return 0;
-        uint32_t off = *(uint32_t *)entry;
-        if (krw_copyout((uintptr_t)(off + nid_strbase), nid_read, 12) != 0) return 0;
+    size_t copy_table_sz = (table_size > sizeof(s_table_buf)) ? sizeof(s_table_buf) : (size_t)table_size;
+    if (krw_copyout((uintptr_t)kaddr_table, s_table_buf, copy_table_sz) != 0) return 0;
+    if (krw_copyout((uintptr_t)nid_strbase, s_nid_buf, sizeof(s_nid_buf)) != 0) return 0;
+
+    for (size_t off_ent = 0; off_ent + 0x18 <= copy_table_sz; off_ent += 0x18) {
+        const uint8_t *entry = s_table_buf + off_ent;
+        uint32_t off = *(const uint32_t *)entry;
+        if (off + 12 > sizeof(s_nid_buf)) continue;
+        const char *nid_read = (const char *)(s_nid_buf + off);
 
         int matched = 1;
         for (int i = 0; i <= 10; i++) {
-            if (nid[i] != (char)nid_read[i]) {
+            if (nid[i] != nid_read[i]) {
                 matched = 0;
                 break;
             }
             if (nid[i] == '\0') break;
         }
         if (matched) {
-            uint64_t func_vaddr = *(uint64_t *)(entry + 0x08) + module_base;
+            uint64_t func_offset = *(const uint64_t *)(entry + 0x08);
+            if (func_offset == 0) {
+                continue;
+            }
+            uint64_t func_vaddr = func_offset + module_base;
             klog_write_hex("krw_dynlib_resolve matched NID to: ", func_vaddr);
             return (uintptr_t)func_vaddr;
         }
@@ -1043,6 +1055,106 @@ uintptr_t krw_dynlib_resolve_any(pid_t pid, const char *sname) {
         cur = next;
         count++;
     }
+    return 0;
+}
+
+static void sort_kexport_entries(obs_kexport_entry_t *arr, int low, int high) {
+    if (low < high) {
+        const char *pivot = arr[high].nid;
+        int i = low - 1;
+        for (int j = low; j < high; j++) {
+            if (obs_strcmp(arr[j].nid, pivot) <= 0) {
+                i++;
+                obs_kexport_entry_t tmp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = tmp;
+            }
+        }
+        obs_kexport_entry_t tmp = arr[i + 1];
+        arr[i + 1] = arr[high];
+        arr[high] = tmp;
+        int pi = i + 1;
+
+        sort_kexport_entries(arr, low, pi - 1);
+        sort_kexport_entries(arr, pi + 1, high);
+    }
+}
+
+int krw_dump_all_exports(pid_t pid, obs_kexport_table_t *table) {
+    if (table == NULL) return -1;
+    table->count = 0;
+    table->capacity = OBS_KEXPORT_MAX;
+
+    uintptr_t kproc = krw_get_proc(pid);
+    if (kproc == 0) return -1;
+
+    uintptr_t kaddr = 0;
+    if (krw_copyout(kproc + 0x3E8, &kaddr, sizeof(kaddr)) != 0 || kaddr == 0)
+        return -1;
+
+    uintptr_t cur = 0;
+    if (krw_copyout(kaddr, &cur, sizeof(cur)) != 0 || cur == 0)
+        return -1;
+
+    static uint8_t s_table_buf[32768];
+    static uint8_t s_nid_buf[32768];
+
+    int mod_count = 0;
+    while (cur != 0 && mod_count < 128) {
+        uint8_t module_record[0x180] = {0};
+        if (krw_copyout(cur, module_record, sizeof(module_record)) != 0) break;
+
+        uint32_t sel = 0;
+        krw_copyout(cur + 0x28, &sel, sizeof(sel));
+        uint64_t module_base = *(uint64_t *)(module_record + 0x30);
+        uintptr_t dispatch_kaddr = *(uintptr_t *)(module_record + 0x148);
+
+        if (dispatch_kaddr != 0 && module_base != 0) {
+            uint8_t dispatch_table[0x120] = {0};
+            if (krw_copyout(dispatch_kaddr, dispatch_table, sizeof(dispatch_table)) == 0) {
+                uint64_t kaddr_table = *(uint64_t *)(dispatch_table + 0x28);
+                uint64_t table_size  = *(uint64_t *)(dispatch_table + 0x30);
+                uint64_t nid_strbase = *(uint64_t *)(dispatch_table + 0x38);
+
+                if (kaddr_table != 0 && table_size != 0 && nid_strbase != 0) {
+                    size_t copy_table_sz = (table_size > sizeof(s_table_buf)) ? sizeof(s_table_buf) : (size_t)table_size;
+                    if (krw_copyout((uintptr_t)kaddr_table, s_table_buf, copy_table_sz) == 0 &&
+                        krw_copyout((uintptr_t)nid_strbase, s_nid_buf, sizeof(s_nid_buf)) == 0) {
+
+                        for (size_t off_ent = 0; off_ent + 0x18 <= copy_table_sz; off_ent += 0x18) {
+                            if (table->count >= table->capacity) break;
+                            const uint8_t *entry = s_table_buf + off_ent;
+                            uint32_t off = *(const uint32_t *)entry;
+                            if (off + 12 > sizeof(s_nid_buf)) continue;
+                            const char *nid_read = (const char *)(s_nid_buf + off);
+                            if (nid_read[0] == '\0') continue;
+
+                            uint64_t func_offset = *(const uint64_t *)(entry + 0x08);
+                            if (func_offset == 0) continue;
+
+                            obs_kexport_entry_t *out = &table->entries[table->count];
+                            memcpy(out->nid, nid_read, 11);
+                            out->nid[11] = '\0';
+                            out->handle = sel;
+                            out->vaddr = module_base + func_offset;
+                            table->count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        uintptr_t next = 0;
+        if (krw_copyout(cur, &next, sizeof(next)) != 0 || next == cur) break;
+        cur = next;
+        mod_count++;
+    }
+
+    if (table->count > 1) {
+        sort_kexport_entries(table->entries, 0, (int)table->count - 1);
+    }
+
+    klog_write_hex("krw_dump_all_exports collected exports: ", (uint64_t)table->count);
     return 0;
 }
 

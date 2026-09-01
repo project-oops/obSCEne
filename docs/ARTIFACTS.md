@@ -21,9 +21,13 @@ one says nothing about the others.
 | `obscene-injector.elf` | plain `ET_DYN` | `0x0003` | `0` | a homebrew ELF loader, injects probe into native foreground process |
 | `obscene-module.elf` | vendor ELF | `0xFE10` | `2` | emulators, through their "not a SELF" path |
 | `obscene-eboot.zip` / `eboot.bin` | fSELF | - | - | **the system loader**, from an app directory |
-| `obscene.pkg` | package | - | - | the installer, then the system loader |
+| `obscene.pkg` | package | - | - | the installer, then the system loader (ps4-format, previous-generation) |
+| `native/<TITLE_ID>/` | title directory | - | - | **the system loader**, from `/user/app/<TITLE_ID>` - a ps5 native title: a gen-5 `eboot.bin` beside `sce_sys/{param.json,icon0.png}` |
 
-The first three are built today. `eboot` and `pkg` are scoped and gated. (D180, D278)
+All of these build today. `eboot`, `pkg` and `native` go through `selfish`. The `eboot` container is
+gen-4 by default and gen-5 with `EBOOT_GEN=5`; the `native` title carries a gen-5 eboot and is
+deployed by `native --deploy` to a scan root an auto-mounter registers into `/user/app`.
+(D180, D278, D287, D289, D291)
 
 Each has a one-import twin for proving the transport before trusting the payload:
 

@@ -143,6 +143,7 @@ static int to_proc_prot(uint32_t p_flags) {
 
 uintptr_t loader_load_into_proc(pid_t pid, const uint8_t *elf_data, size_t elf_size,
                                 uintptr_t target_libkernel_base,
+                                const obs_kexport_table_t *kexport_table,
                                 uintptr_t *out_base_addr, size_t *out_base_size) {
     if (loader_validate_elf(elf_data, elf_size) != 0) {
         return 0;
@@ -263,7 +264,15 @@ uintptr_t loader_load_into_proc(pid_t pid, const uint8_t *elf_data, size_t elf_s
                 } else if (syms != NULL && dynstr != NULL && sym_idx > 0) {
                     const char *sname = dynstr + syms[sym_idx].st_name;
                     uintptr_t sym_val = 0;
-                    if (target_libkernel_base != 0) {
+                    if (kexport_table != NULL) {
+                        char nid[12];
+                        obs_compute_nid(sname, nid);
+                        const void *kaddr = obs_kexport_lookup(kexport_table, nid);
+                        if (kaddr != NULL) {
+                            sym_val = (uintptr_t)kaddr;
+                        }
+                    }
+                    if (sym_val == 0 && target_libkernel_base != 0) {
                         if (obs_strcmp(sname, "getpid") == 0) {
                             sym_val = target_libkernel_base + 0x5b0;
                         } else if (obs_strcmp(sname, "sceKernelOpen") == 0) {

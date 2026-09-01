@@ -7,6 +7,7 @@
 #endif
 
 #include "common/freestd.h"
+#include "common/krw.h"
 #include "obscene/harness.h"
 /* For `sceKernelLoadStartModule` and `sceKernelDlsym`, which `obs_module_open` uses.
  *
@@ -231,45 +232,194 @@ static int obs_module_path(char *dest, unsigned int size, const char *prefix,
     return 1;
 }
 
+typedef struct {
+    const char *name;
+    uint16_t id;
+} obs_sysmodule_id_map;
+
+static const obs_sysmodule_id_map obs_sysmodules[] = {
+    {"libSceNet", 0x0001},
+    {"libSceHttp", 0x0002},
+    {"libSceSsl", 0x0003},
+    {"libSceUserService", 0x0004},
+    {"libSceSaveData", 0x0006},
+    {"libSceAudioOut", 0x000c},
+    {"libSceVoice", 0x000e},
+    {"libSceAppInstUtil", 0x0014},
+    {"libSceIme", 0x0017},
+    {"libSceCamera", 0x001d},
+    {"libScePad", 0x0027},
+    {"libSceVideoOut", 0x0028},
+};
+
 int obs_module_open(const char *library) {
+    if (library == NULL) {
+        return -1;
+    }
+
+#if defined(OBS_UNSAFE_LIBRARIES)
+    const char *at = OBS_UNSAFE_LIBRARIES;
+    while (*at != '\0') {
+        while (*at == ' ') at++;
+        const char *name = library;
+        const char *scan = at;
+        while (*scan != '\0' && *scan != ' ' && *name != '\0' && *scan == *name) {
+            scan++;
+            name++;
+        }
+        if (*name == '\0' && (*scan == '\0' || *scan == ' ')) {
+            return -1;
+        }
+        while (*at != '\0' && *at != ' ') at++;
+    }
+#endif
+
+    /* 1. Check if already loaded in module list */
+    if (obs_address_is_callable((const void *)&sceKernelGetModuleList) &&
+        obs_address_is_callable((const void *)&sceKernelGetModuleInfo)) {
+        int mod_list[128];
+        size_t mod_count = 0;
+        if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 && mod_count > 0) {
+            for (size_t i = 0; i < mod_count && i < 128; i++) {
+                int mod_id = mod_list[i];
+                if (mod_id <= 0) continue;
+                unsigned char info[512];
+                for (size_t k = 0; k < sizeof(info); k++) info[k] = 0;
+                *(size_t *)info = sizeof(info);
+                if (sceKernelGetModuleInfo(mod_id, info) == 0) {
+                    const char *mod_name = (const char *)(info + 8);
+                    if (obs_strcmp(mod_name, library) == 0) {
+                        return mod_id;
+                    }
+                }
+            }
+        }
+    }
+
     if (obs_strcmp(library, "libkernel") == 0) {
         return 0x2001;
     }
-    if (!obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-        return -1;
+    if (obs_strcmp(library, "libSceLibcInternal") == 0 ||
+        obs_strcmp(library, "libc") == 0) {
+        return 1;
     }
-    char path[128];
-    for (unsigned int i = 0; i < OBS_COUNT(obs_module_prefixes); i++) {
-        if (!obs_module_path(path, sizeof path, obs_module_prefixes[i], library)) {
-            continue;
-        }
-        int handle = sceKernelLoadStartModule(path, 0, NULL, 0, NULL, NULL);
-        if (handle >= 0) {
-            return handle;
+
+    /* 2. Try loading via sceKernelLoadStartModule on known path prefixes */
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        char path[128];
+        for (unsigned int i = 0; i < OBS_COUNT(obs_module_prefixes); i++) {
+            if (!obs_module_path(path, sizeof path, obs_module_prefixes[i], library)) {
+                continue;
+            }
+            int handle = sceKernelLoadStartModule(path, 0, NULL, 0, NULL, NULL);
+            if (handle >= 0) {
+                return handle;
+            }
         }
     }
+
+    /* 3. Try loading via sceSysmoduleLoadModule */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        for (unsigned int i = 0; i < OBS_COUNT(obs_sysmodules); i++) {
+            if (obs_strcmp(library, obs_sysmodules[i].name) == 0) {
+                int rc = sceSysmoduleLoadModule(obs_sysmodules[i].id);
+                if (rc == 0 || rc == (int)0x80540001) {
+                    if (obs_address_is_callable((const void *)&sceKernelGetModuleList) &&
+                        obs_address_is_callable((const void *)&sceKernelGetModuleInfo)) {
+                        int mod_list[128];
+                        size_t mod_count = 0;
+                        if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 && mod_count > 0) {
+                            for (size_t k = 0; k < mod_count && k < 128; k++) {
+                                int mod_id = mod_list[k];
+                                if (mod_id <= 0) continue;
+                                unsigned char info[512];
+                                for (size_t z = 0; z < sizeof(info); z++) info[z] = 0;
+                                *(size_t *)info = sizeof(info);
+                                if (sceKernelGetModuleInfo(mod_id, info) == 0) {
+                                    const char *mod_name = (const char *)(info + 8);
+                                    if (obs_strcmp(mod_name, library) == 0) {
+                                        return mod_id;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return 1;
+                }
+            }
+        }
+    }
+
     return -1;
 }
 
 const void *obs_module_symbol(int handle, const char *name) {
-    if (handle < 0 || !obs_address_is_callable((const void *)&sceKernelDlsym) || name == NULL) {
+    if (name == NULL) {
+        return NULL;
+    }
+    char nid[12];
+    obs_compute_nid(name, nid);
+
+    /* 0. Try kernel-extracted export table first if available (bypasses retail game DRM block) */
+    const payload_args_t *pargs = obs_get_payload_args();
+    if (pargs != NULL && pargs->kexport_table != NULL) {
+        const void *kaddr = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+        if (kaddr != NULL && obs_address_is_callable(kaddr)) {
+            return kaddr;
+        }
+    }
+
+    if (!obs_address_is_callable((const void *)&sceKernelDlsym)) {
         return NULL;
     }
     void *address = NULL;
     /* 1. Try NID encoding (Sony SPRX export tables store 11-char NIDs) */
-    char nid[12];
-    obs_compute_nid(name, nid);
-    if (sceKernelDlsym(handle, nid, &address) == 0 && obs_address_is_callable(address)) {
+    if (handle >= 0 && sceKernelDlsym(handle, nid, &address) == 0 && obs_address_is_callable(address)) {
         return address;
     }
     /* 2. Fallback: try plain ASCII name */
-    if (sceKernelDlsym(handle, name, &address) == 0 && obs_address_is_callable(address)) {
+    if (handle >= 0 && sceKernelDlsym(handle, name, &address) == 0 && obs_address_is_callable(address)) {
         return address;
+    }
+    /* 3. Global search handle 1 fallback */
+    if (sceKernelDlsym(1, nid, &address) == 0 && obs_address_is_callable(address)) {
+        return address;
+    }
+    if (sceKernelDlsym(1, name, &address) == 0 && obs_address_is_callable(address)) {
+        return address;
+    }
+    /* 4. Global search handle 2 fallback */
+    if (sceKernelDlsym(2, nid, &address) == 0 && obs_address_is_callable(address)) {
+        return address;
+    }
+    if (sceKernelDlsym(2, name, &address) == 0 && obs_address_is_callable(address)) {
+        return address;
+    }
+    /* 5. Iterate all loaded module IDs */
+    if (obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
+        int mod_list[128];
+        size_t mod_count = 0;
+        if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 && mod_count > 0) {
+            for (size_t i = 0; i < mod_count && i < 128; i++) {
+                int mod_id = mod_list[i];
+                if (mod_id <= 0) continue;
+                if (sceKernelDlsym(mod_id, nid, &address) == 0 && obs_address_is_callable(address)) {
+                    return address;
+                }
+                if (sceKernelDlsym(mod_id, name, &address) == 0 && obs_address_is_callable(address)) {
+                    return address;
+                }
+            }
+        }
     }
     return NULL;
 }
 
 int obs_module_resolution_works(void) {
+    const payload_args_t *pargs = obs_get_payload_args();
+    if (pargs != NULL && pargs->kexport_table != NULL) {
+        return 1;
+    }
     /* Three states, because "not asked yet" and "asked, and no" are different and zero can
      * only mean one of them. */
     static int decided = 0;

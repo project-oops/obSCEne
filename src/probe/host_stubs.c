@@ -1171,23 +1171,54 @@ int scePadClose(int handle) {
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 
+int sceKernelGetModuleList(int *out_handles, size_t max, size_t *out_count) {
+    (void)out_handles;
+    (void)max;
+    (void)out_count;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelGetModuleInfo(int handle, void *info) {
+    (void)handle;
+    (void)info;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
 /* Static dummy classification and case tables for host build validation */
 const void *_Getpctype(void);
 const void *_Getptolower(void);
 const void *_Getptoupper(void);
+const void *_Getwctype(void);
+const void *_Getwctolower(void);
+const void *_Getwctoupper(void);
 
-static const unsigned short s_host_ctype_tab[384] = {0};
-static const short s_host_tolower_tab[384] = {0};
-static const short s_host_toupper_tab[384] = {0};
+static const unsigned short s_host_ctype_tab[512] = {0};
+static const short s_host_tolower_tab[512] = {0};
+static const short s_host_toupper_tab[512] = {0};
+static const unsigned short s_host_wctype_tab[512] = {0};
+static const short s_host_wtolower_tab[512] = {0};
+static const short s_host_wtoupper_tab[512] = {0};
 
 const void *_Getpctype(void) {
-    return (const void *)&s_host_ctype_tab[1];
+    return (const void *)&s_host_ctype_tab[16];
 }
 
 const void *_Getptolower(void) {
-    return (const void *)&s_host_tolower_tab[1];
+    return (const void *)&s_host_tolower_tab[16];
 }
 
 const void *_Getptoupper(void) {
-    return (const void *)&s_host_toupper_tab[1];
+    return (const void *)&s_host_toupper_tab[16];
+}
+
+const void *_Getwctype(void) {
+    return (const void *)&s_host_wctype_tab[16];
+}
+
+const void *_Getwctolower(void) {
+    return (const void *)&s_host_wtolower_tab[16];
+}
+
+const void *_Getwctoupper(void) {
+    return (const void *)&s_host_wtoupper_tab[16];
 }

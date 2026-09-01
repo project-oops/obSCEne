@@ -519,6 +519,10 @@ OBS_WEAK int sceKernelDlsym(int handle, const char *symbol, void **address_out);
 OBS_WEAK int sceKernelGetModuleList(int *out_handles, size_t max, size_t *out_count);
 OBS_WEAK int sceKernelGetModuleInfo(int handle, void *info);
 
+/* ---- libSceSysmodule: system module control ------------------------------- */
+OBS_WEAK int sceSysmoduleLoadModule(uint16_t id);
+OBS_WEAK int sceSysmoduleIsLoaded(uint16_t id);
+
 /* ---- libSceLibcInternal: the C runtime -------------------------------------
  *
  * The largest omission in the first pass of this program, and the easiest to get
@@ -961,6 +965,8 @@ OBS_WEAK int sceKeyboardReadState(int handle, void *data);
 
 /* An invalid handle for the subsystem APIs, used the same way. */
 #define OBS_HANDLE_INVALID (-1)
+/* A handle representing the running process itself. */
+#define OBS_HANDLE_SELF 0
 
 /* ---- networking (libSceNet) ---------------------------------------------------------
  *

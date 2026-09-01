@@ -10,13 +10,13 @@
 
 #include "common/freestd.h"
 #include "obscene/runtime.h"
+#include "obscene/harness.h"
 #include "obscene/sink.h"
 
 #if defined(OBSCENE_HOST_BUILD)
 #include <unistd.h>
 #include "obscene/platform.h"
 #else
-#include "obscene/harness.h"
 #include "obscene/platform.h"
 
 /* Declared here rather than in `platform.h`, which is where it belongs.
@@ -584,8 +584,9 @@ unsigned int obs_linkmap_walk(int (*cb)(const char *name, unsigned long base, vo
         }
     }
 
-    /* Fallback: if DT_DEBUG was not present or yielded no nodes, query platform module list */
-    if (count == 0) {
+    /* Query platform system module list if available */
+    if (obs_address_is_callable((const void *)&sceKernelGetModuleList) &&
+        obs_address_is_callable((const void *)&sceKernelGetModuleInfo)) {
         int handles[64];
         size_t written = 0;
         int rc = sceKernelGetModuleList(handles, 64, &written);
@@ -618,23 +619,19 @@ static size_t obs_ctx_append(char *dst, size_t pos, size_t cap, const char *src)
         return pos;
     }
     while (*src != '\0' && pos + 1 < cap) {
-        dst[pos] = *src;
-        pos++;
-        src++;
+        dst[pos++] = *src++;
     }
-    if (cap > 0) {
-        dst[pos] = '\0';
-    }
+    dst[pos] = '\0';
     return pos;
 }
 
-/* Does hay contain needle? */
+/* Freestanding substring search for the context classifier. */
 static int obs_ctx_contains(const char *hay, const char *needle) {
     if (hay == NULL || needle == NULL) {
         return 0;
     }
-    for (unsigned int i = 0; hay[i] != '\0'; i++) {
-        unsigned int j = 0;
+    for (size_t i = 0; hay[i] != '\0'; i++) {
+        size_t j = 0;
         while (needle[j] != '\0' && hay[i + j] == needle[j]) {
             j++;
         }
@@ -655,10 +652,10 @@ static int obs_ctx_gpu_cb(const char *name, unsigned long base, void *user) {
     struct obs_ctx_gpu *g = (struct obs_ctx_gpu *)user;
     (void)base;
     g->walked++;
-    if (obs_ctx_contains(name, "libSceAgc")) {
+    if (obs_ctx_contains(name, "libSceAgc") || obs_ctx_contains(name, "AgcDriver") || obs_ctx_contains(name, "libSceAgcDriver")) {
         g->agc = 1;
     }
-    if (obs_ctx_contains(name, "libSceGnm")) {
+    if (obs_ctx_contains(name, "libSceGnm") || obs_ctx_contains(name, "GnmDriver") || obs_ctx_contains(name, "libSceGnmDriver")) {
         g->gnm = 1;
     }
     return 0;
@@ -752,43 +749,7 @@ void obs_bind_dynamic_symbols(void) {
     }
 }
 
-int sceKernelDlsym(int handle, const char *symbol, void **address_out) {
-    long ret = obs_invoke_syscall(591, (long)handle, (long)symbol, (long)address_out, 0, 0, 0);
-    return (int)ret;
-}
 
-int sceKernelGetModuleList(int *handles, size_t max, size_t *written) {
-    size_t count = 0;
-    long ret = obs_invoke_syscall(599, (long)handles, (long)max, (long)&count, 0, 0, 0);
-    if (ret >= 0) {
-        if (written != NULL) {
-            *written = (count > 0) ? count : (size_t)ret;
-        }
-        return 0;
-    }
-    return (int)ret;
-}
-
-int sceKernelGetModuleInfo(int handle, void *info) {
-    if (info != NULL) {
-        size_t *sz = (size_t *)info;
-        if (*sz == 0) {
-            *sz = 0x160;
-        }
-    }
-    long ret = obs_invoke_syscall(593, (long)handle, (long)info, 0, 0, 0, 0);
-    return (int)ret;
-}
-
-int sceKernelLoadStartModule(const char *name, size_t argc, const void *argv, unsigned int flags, void *p5, int *p6) {
-    (void)argc; (void)argv; (void)p5; (void)p6;
-    int handle = -1;
-    long ret = obs_invoke_syscall(594, (long)name, (long)flags, (long)&handle, 0, 0, 0);
-    if (ret == 0 && handle >= 0) {
-        return handle;
-    }
-    return (int)ret;
-}
 
 int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end, size_t length, size_t alignment, int memory_type, sce_off_t *physical_address) {
     long ret = obs_invoke_syscall(572, (long)search_start, (long)search_end, (long)length, (long)alignment, (long)memory_type, (long)physical_address);

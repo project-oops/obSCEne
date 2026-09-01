@@ -306,6 +306,12 @@ principles six weeks later.
 | 🟢 | D285 | [the measured value is reported on every row, not only on a difference](decisions/D285-the-measured-value-is-reported-on-every.md) | measured | ~>2026-09-01 |
 | 🟢 | D286 | [container-structure: a raw measured dump of a real gen-5 container](decisions/D286-container-structure-a-raw-measured.md) | measured | ~>2026-09-01 |
 | 🟡 | D287 | [the native title carries its eboot and is a ./bin/obscene verb](decisions/D287-the-native-title-carries-its-eboot-and.md) | assumed | 2026-09-01 |
+| 🟢 | D288 | [the title identity has one home: data/identity.toml](decisions/D288-the-title-identity-has-one-home.md) | decided | 2026-09-01 |
+| 🟢 | D289 | [the eboot container generation follows EBOOT_GEN](decisions/D289-the-eboot-container-generation-follows.md) | decided | 2026-09-02 |
+| 🟢 | D290 | [the ctype table accessors get a library assignment](decisions/D290-the-ctype-table-accessors-get-a-library.md) | decided | 2026-09-02 |
+| 🟢 | D291 | [native deploy uploads the title dir via prosperous](decisions/D291-native-deploy-uploads-the-title-dir.md) | decided | 2026-09-02 |
+| 🟢 | D292 | [the native title gets its own id, distinct from the package](decisions/D292-the-native-title-gets-its-own-id.md) | decided | 2026-09-02 |
+| 🟢 | D293 | [a real ps5 native title uses the 4F 15 3D 1D eboot, so native defaults to it](decisions/D293-ps5-native-titles-use-the-4f153d1d-eboot.md) | measured | 2026-09-02 |
 
 | | meaning |
 |---|---|

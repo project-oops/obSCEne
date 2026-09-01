@@ -1,18 +1,23 @@
 # obSCEne's title identity - the single source of truth for both builds.
 #
-# `content_id` is the one fact. The title id (OBSC00001) is its middle field, and build-pkg.sh and
-# build-native.sh each derive the title id from it, so the two builds cannot disagree about which
-# app this is. Before this file the id was copied into each script; two homes for one fact is the
-# same failure the format tables were moved to selfish to avoid (D200).
+# **Two ids, because the two artifacts can be installed side by side.** The ps4 package
+# (build-pkg.sh) and the ps5 native title (build-native.sh) each register under their title id, and
+# one shared id would make the second install collide with the first. So the package reads
+# `content_id` and the native title reads `content_id_native`; each build derives its title id from
+# its own content id (the middle field - OBSC00001 for the package, OBSC00002 for the native title),
+# so the two are distinct and neither is written twice. (D292, the deliberate split of the single
+# identity D287 first chose.)
 #
-# Inert data, not shell: it is read with `sed` and the values are passed to selfish as
-# `--content-id` / `--title-id` arguments. selfish does not read this file - it is a generic tool
-# shared across the OOPS projects, and the identity is obSCEne's, not a property of the format.
-# `param.json` is not the home either: selfish generates it *from* this id, so it is the output.
+# Inert data, not shell: read with `sed`, the values passed to selfish as `--content-id` /
+# `--title-id` arguments. **selfish does not read this file and must not vary an id it is handed** -
+# it is a generic tool shared across the OOPS projects, the identity is obSCEne's, and a tool that
+# silently changed an id would be inventing identity (the one thing provenance forbids). `param.json`
+# is not the home either: selfish generates it *from* the id, so it is the output.
 #
-# Override at build time with CONTENT_ID=... for the one case it is needed: a crashed title the
-# console will not reap holds its id, and every install/launch under it is refused until a reboot;
-# building under a fresh id sidesteps that (build-pkg.sh, D223).
+# Override a build with CONTENT_ID=... for the one case it is needed: a crashed title the console
+# will not reap holds its id, and every install/launch under it is refused until a reboot; building
+# under a fresh id sidesteps that (build-pkg.sh, D223).
 
 content_id = "IV0002-OBSC00001_00-STOREUPD00000000"
+content_id_native = "IV0002-OBSC00002_00-STOREUPD00000000"
 title = "obSCEne"

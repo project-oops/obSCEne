@@ -27,14 +27,27 @@
 # The eboot itself is built by `make eboot` (this script is invoked by `make native`, which
 # depends on it) and its bytes come from selfish - this script only orchestrates.
 set -e
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
 BUILD="${1:?usage: build-native.sh <BUILD>}"
 SELFISH="${SELFISH:-../selfish}"
-# A PS5-shaped title id, so the entry reads as current-generation and an auto-mounter accepts it.
-# Overridable - and worth overriding to something that does not collide with an installed title.
-TITLE_ID="${TITLE_ID:-PPSA00001}"
-TITLE="${TITLE:-obSCEne}"
-CONTENT_ID="${CONTENT_ID:-UP0000-${TITLE_ID}_00-OBSCENE000000000}"
+# obSCEne's own identity, read from the one place it lives (data/identity.toml). The native title has
+# its OWN id (content_id_native), distinct from the package's, so the two can be installed side by
+# side without colliding (D292). The current-generation status comes from the native registration
+# path (AppInstallTitleDir) plus param.json, not from the id's prefix or the eboot's container magic.
+#
+# The content id is the single fact; the title id is derived from it exactly as build-pkg.sh does,
+# so the two builds cannot disagree. Override CONTENT_ID for the stuck-title case (identity.toml, D223).
+identity="$(dirname "$0")/../data/identity.toml"
+toml_str() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\"[[:space:]]*\$/\1/p" "$identity"; }
+# The native title has its own id (content_id_native), distinct from the package's, so the two can
+# be installed side by side without colliding. build-pkg.sh reads content_id; this reads its own.
+CONTENT_ID="${CONTENT_ID:-$(toml_str content_id_native)}"
+TITLE="${TITLE:-$(toml_str title)}"
+if [ -z "${TITLE_ID:-}" ]; then
+    t="${CONTENT_ID#*-}"
+    TITLE_ID="${t%%_*}"
+fi
 DEEPLINK="${DEEPLINK:-http://127.0.0.1:8080/}"
 
 out="$BUILD/native"

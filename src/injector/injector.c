@@ -195,6 +195,11 @@ int injector_start(payload_args_t *args) {
         klog_write("ucred synchronized with target process");
     }
 
+    /* Pre-dump kernel export table BEFORE stopping target with ptrace */
+    static obs_kexport_table_t s_kexport_table;
+    klog_write("pre-dumping kernel export tables...");
+    krw_dump_all_exports(target_pid, &s_kexport_table);
+
     /* 5. Determine payload data source */
     const uint8_t *payload_data = NULL;
     size_t payload_size = 0;
@@ -253,12 +258,14 @@ int injector_start(payload_args_t *args) {
     uintptr_t target_libkernel_base = krw_find_target_libkernel_base(target_kproc, (uintptr_t)bak_reg.r_rip);
     klog_write_hex("target libkernel_base=", target_libkernel_base);
     procctl_find_syscall_gadget(target_pid, target_libkernel_base);
+
     /* 8. Load ELF into target process address space */
     klog_write("mapping ELF segments into target process...");
     uintptr_t target_base = 0;
     size_t target_size = 0;
     uintptr_t entry_addr = loader_load_into_proc(target_pid, payload_data, payload_size,
                                                  target_libkernel_base,
+                                                 &s_kexport_table,
                                                  &target_base, &target_size);
     if (entry_addr == 0) {
         klog_write("ERROR: loader_load_into_proc failed");
@@ -269,12 +276,10 @@ int injector_start(payload_args_t *args) {
     klog_write_hex("payload mapped, base=", target_base);
     klog_write_hex("payload mapped, entry=", entry_addr);
 
-
-
-    /* 9. Setup dedicated stack + payload_args in target process memory */
+    /* 9. Setup dedicated stack + payload_args + kexport table in target process memory */
     uintptr_t alloc_remote = procctl_remote_mmap(
-        target_pid, 0, 0x40000,
-        PROC_PROT_READ | PROC_PROT_WRITE | PROC_PROT_EXEC,
+        target_pid, 0, 0x100000,
+        PROC_PROT_READ | PROC_PROT_WRITE,
         PROC_MAP_ANONYMOUS | PROC_MAP_PRIVATE,
         -1, 0
     );
@@ -286,6 +291,11 @@ int injector_start(payload_args_t *args) {
         injector_exit(-8);
     }
 
+    uintptr_t kexport_remote = alloc_remote + 0x1000;
+    size_t kexport_size = sizeof(uint32_t) * 2 + sizeof(obs_kexport_entry_t) * s_kexport_table.count;
+    procctl_copyin(target_pid, &s_kexport_table, kexport_remote, kexport_size);
+    klog_write_hex("kexport table staged at remote ", kexport_remote);
+
     uintptr_t args_remote = alloc_remote;
     payload_args_t target_args;
     memset(&target_args, 0, sizeof(target_args));
@@ -294,13 +304,15 @@ int injector_start(payload_args_t *args) {
     }
     target_args.kpipe_addr = args->kpipe_addr;
     target_args.kdata_base_addr = args->kdata_base_addr;
+    target_args.kexport_table = (void *)kexport_remote;
     procctl_copyin(target_pid, &target_args, args_remote, sizeof(target_args));
     klog_write_hex("payload_args staged at remote ", args_remote);
     klog_write_hex("staged getpid at ", (uintptr_t)target_args.sys_dynlib_dlsym);
 
-    /* Dedicated stack top (16-byte aligned) */
-    uintptr_t stack_top = (alloc_remote + 0x40000 - 0x200) & ~0xFULL;
-    uintptr_t tramp_remote = stack_top + 0x80;
+    /* Dedicated stack top (16-byte aligned) in upper half of 1MB region */
+    uintptr_t stack_top = (alloc_remote + 0x100000 - 0x200) & ~0xFULL;
+    /* Stage trampoline in target_base + 0x300 (inside RX text segment) */
+    uintptr_t tramp_remote = target_base + 0x300;
 
     /* Build and stage the register-restoration trampoline */
     uint8_t tramp_code[256];

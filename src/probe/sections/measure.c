@@ -309,6 +309,96 @@ static obs_result check_sleep_fidelity(void) {
     return obs_pass();
 }
 
+static inline void obs_cpuid_leaf(uint32_t leaf, uint32_t subleaf, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
+    __asm__ __volatile__("cpuid"
+                         : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx)
+                         : "a"(leaf), "c"(subleaf));
+}
+
+static obs_result check_cpuid_topology(void) {
+    uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
+
+    /* Leaf 0: Vendor String */
+    obs_cpuid_leaf(0, 0, &eax, &ebx, &ecx, &edx);
+    uint32_t vendor[4] = {ebx, edx, ecx, 0};
+    obs_report_measure("120-measure/cpuid", "cpuid", "max_basic_leaf", (uint64_t)eax, "leaf");
+    obs_report_bytes("120-measure/cpuid", "cpuid", "vendor_string", 0, (const unsigned char *)vendor, 12);
+
+    /* Leaf 1: Family, Model, Stepping, Features */
+    obs_cpuid_leaf(1, 0, &eax, &ebx, &ecx, &edx);
+    obs_report_measure("120-measure/cpuid", "cpuid", "signature_eax", (uint64_t)eax, "raw");
+    obs_report_measure("120-measure/cpuid", "cpuid", "feature_ecx", (uint64_t)ecx, "flags");
+    obs_report_measure("120-measure/cpuid", "cpuid", "feature_edx", (uint64_t)edx, "flags");
+    obs_report_measure("120-measure/cpuid", "cpuid", "stepping", (uint64_t)(eax & 0xFu), "val");
+    obs_report_measure("120-measure/cpuid", "cpuid", "model", (uint64_t)((eax >> 4) & 0xFu), "val");
+    obs_report_measure("120-measure/cpuid", "cpuid", "family", (uint64_t)((eax >> 8) & 0xFu), "val");
+
+    /* Leaf 0x80000001: Extended AMD Features */
+    obs_cpuid_leaf(0x80000001u, 0, &eax, &ebx, &ecx, &edx);
+    obs_report_measure("120-measure/cpuid", "cpuid_ext", "feature_ecx", (uint64_t)ecx, "flags");
+    obs_report_measure("120-measure/cpuid", "cpuid_ext", "feature_edx", (uint64_t)edx, "flags");
+
+    /* Leaf 0x8000001D: AMD Zen 2 Cache Topology */
+    for (uint32_t subleaf = 0; subleaf < 4; subleaf++) {
+        obs_cpuid_leaf(0x8000001Du, subleaf, &eax, &ebx, &ecx, &edx);
+        uint32_t cache_type = eax & 0x1Fu;
+        if (cache_type == 0) break;
+        uint32_t cache_level = (eax >> 5) & 0x7u;
+        uint32_t line_size = (ebx & 0xFFFu) + 1u;
+        uint32_t ways = ((ebx >> 22) & 0x3FFu) + 1u;
+        uint32_t num_sets = ecx + 1u;
+        uint64_t total_size = (uint64_t)line_size * ways * num_sets;
+
+        obs_report_measure("120-measure/cache-topology", "cache", "subleaf", (uint64_t)subleaf, "idx");
+        obs_report_measure("120-measure/cache-topology", "cache", "level", (uint64_t)cache_level, "level");
+        obs_report_measure("120-measure/cache-topology", "cache", "type", (uint64_t)cache_type, "type");
+        obs_report_measure("120-measure/cache-topology", "cache", "line_size_bytes", (uint64_t)line_size, "bytes");
+        obs_report_measure("120-measure/cache-topology", "cache", "associativity_ways", (uint64_t)ways, "ways");
+        obs_report_measure("120-measure/cache-topology", "cache", "total_bytes", total_size, "bytes");
+    }
+
+    /* RDTSCP IA32_TSC_AUX register */
+    uint32_t aux = 0;
+    uint32_t tsc_lo = 0, tsc_hi = 0;
+    __asm__ __volatile__("rdtscp" : "=a"(tsc_lo), "=d"(tsc_hi), "=c"(aux));
+    obs_report_measure("120-measure/cpuid", "rdtscp", "tsc_aux_raw", (uint64_t)aux, "raw");
+    obs_report_measure("120-measure/cpuid", "rdtscp", "core_id", (uint64_t)(aux & 0xFFFu), "id");
+    obs_report_measure("120-measure/cpuid", "rdtscp", "numa_node_id", (uint64_t)((aux >> 12) & 0xFFu), "id");
+
+    return obs_pass_value((uint64_t)aux);
+}
+
+static obs_result check_timer_ratio(void) {
+    if (!clock_present(&clocks[0]) || !clock_present(&clocks[1]) || !clock_present(&clocks[2])) {
+        return obs_skip("required clock sources unavailable");
+    }
+
+    uint64_t tsc_0 = sceKernelReadTsc();
+    uint64_t proc_0 = sceKernelGetProcessTime();
+    uint64_t count_0 = sceKernelGetProcessTimeCounter();
+
+    (void)sceKernelUsleep(10000); /* 10 ms */
+
+    uint64_t tsc_1 = sceKernelReadTsc();
+    uint64_t proc_1 = sceKernelGetProcessTime();
+    uint64_t count_1 = sceKernelGetProcessTimeCounter();
+
+    uint64_t dtsc = tsc_1 - tsc_0;
+    uint64_t dproc = proc_1 - proc_0;
+    uint64_t dcount = count_1 - count_0;
+
+    obs_report_measure("120-measure/timer-ratio", "tsc_delta", "ticks", dtsc, "ticks");
+    obs_report_measure("120-measure/timer-ratio", "process_time_delta", "us", dproc, "us");
+    obs_report_measure("120-measure/timer-ratio", "counter_delta", "ticks", dcount, "ticks");
+
+    if (dproc > 0) {
+        uint64_t hz_estimate = (dtsc * 1000000u) / dproc;
+        obs_report_measure("120-measure/timer-ratio", "tsc_hz_calibrated", "hz", hz_estimate, "hz");
+    }
+
+    return obs_pass_value(dtsc);
+}
+
 static const obs_check measure_checks[] = {
     {"120-measure/frequencies", "libkernel", "sceKernelGetTscFrequency", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelGetTscFrequency, check_frequencies,
@@ -321,6 +411,12 @@ static const obs_check measure_checks[] = {
      OBS_FROM_ASSUMED},
     {"120-measure/sleep-fidelity", "libkernel", "sceKernelUsleep", OBS_CAP_TIME,
      OBS_CAP_NONE, (const void *)&sceKernelUsleep, check_sleep_fidelity,
+     OBS_FROM_ASSUMED},
+    {"120-measure/cpuid-topology", "libkernel", "cpuid", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_cpuid_topology, check_cpuid_topology,
+     OBS_FROM_ASSUMED},
+    {"120-measure/timer-ratio", "libkernel", "sceKernelReadTsc", OBS_CAP_TIME,
+     OBS_CAP_NONE, (const void *)check_timer_ratio, check_timer_ratio,
      OBS_FROM_ASSUMED},
 };
 

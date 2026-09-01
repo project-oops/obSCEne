@@ -119,8 +119,8 @@ if [ -n "$title" ]; then
     echo "=== launching title $title_upper on console ==="
     if [ -x "$REPO/../prosperous/target/release/pros.exe" ]; then
         "$REPO/../prosperous/target/release/pros.exe" launch "$title_upper" "${name_arg[@]}" || true
+    elif command -v pros >/dev/null 2>&1; then
         pros launch "$title_upper" "${name_arg[@]}" || true
-    else
     fi
     echo "waiting 2s for title to initialize..."
     sleep 2
@@ -180,11 +180,16 @@ echo
 # only covers a missing file. (Both traps are in oops-hwsweep.sh - this reproduced them.)
 ns=$(grep -acE '^OBS\|' "$into" 2>/dev/null || true); ns=${ns:-0}
 nk=$(grep -acE '^OBS\|' "$klog" 2>/dev/null || true); nk=${nk:-0}
+obs_file="${into%.*}.obs.log"
 if [ "$ns" -gt 0 ]; then
     echo "payload ran: $ns OBS record(s), on the socket -> $into"
+    grep -aE '^OBS\|' "$into" | uniq > "$obs_file" || true
+    echo "OBS records extracted -> $obs_file ($(grep -acE '^OBS\|' "$obs_file" 2>/dev/null || true) records)"
     grep -aE '^OBS\|(meta|build|tally|end|sink|display)\|' "$into" | head
 elif [ "$nk" -gt 0 ]; then
     echo "payload ran: $nk OBS record(s), on the system log -> $klog (the net sink did not connect back; D233)"
+    grep -aE '^OBS\|' "$klog" | uniq > "$obs_file" || true
+    echo "OBS records extracted -> $obs_file ($(grep -acE '^OBS\|' "$obs_file" 2>/dev/null || true) records)"
     grep -aE '^OBS\|(meta|build|tally|end|sink|display)\|' "$klog" | head
 elif grep -qaE 'fatal signal|signo:' "$klog" 2>/dev/null; then
     echo "no records - the payload took a fatal signal before it could report ($klog):"

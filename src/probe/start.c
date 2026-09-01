@@ -149,8 +149,6 @@ void obscene_start(void) {
         && (obs_pargs_at_entry & 0x7UL) == 0) {
         obs_bootstrap_payload_output(((unsigned long *)obs_pargs_at_entry)[0]);
     }
-    /* Dynamically bind weak import symbols across loaded modules in the process */
-    obs_bind_dynamic_symbols();
     /* The first thing, before any platform call that could fault: proof the container
      * mounted, the loader transferred control, and the crt reached here. On a foreground-app
      * launch this is the difference between "the package is wrong" and "a check took the
@@ -227,11 +225,8 @@ void obscene_start(void) {
     /* Non-zero on any failure, matching the host build, so this is usable as a gate.
      * Partial results do not fail the run: amber means "worth looking at", and a
      * build that went red on it would train everyone to ignore it. */
-    obs_boot_note("obscene: reached exit path\n");
-    if (obs_address_is_callable((const void *)&exit)) {
-        obs_boot_note("obscene: calling exit\n");
-        exit(obscene_last_tally.fail > 0 ? 1 : 0);
-    }
+    /* When running as a payload / injected thread, return cleanly to the trampoline
+     * so the host process thread resumes seamlessly without terminating the game. */
     obs_boot_note("obscene: returning to host thread\n");
     return;
 }
