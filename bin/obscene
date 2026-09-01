@@ -18,6 +18,8 @@
 # are not run directly:
 #
 #   ./bin/obscene deploy    build the package, install, launch, capture the report - the round-trip
+#   ./bin/obscene payload-build   build the plain-ELF payload and stop, no console
+#   ./bin/obscene injector-build  build the injector and stop, no console
 #   ./bin/obscene payload   build the plain-ELF payload, run it via elfldr, capture the system log
 #   ./bin/obscene report    capture obscene's records from the console system log to a file
 #   ./bin/obscene recover   read-only: what the console recorded, after a crash
@@ -81,6 +83,13 @@ case "${1:-help}" in
     # elfldr, and capture the system log across the run. All out-connections, so no Windows half -
     # it stays in WSL. A crashing payload writes no records but a `signo:` line, and the verb says
     # which. Flags: --seconds, --into, --build-only, --name, and `-- GEN=5 CORPUS=0` to make.
+    # Build a shape and stop. `payload` and `injector` below are the hardware round-trip:
+    # they build *and send to a console*, and re-enter WSL to do it, so on a Linux runner
+    # they call wsl.exe and exit 127 before compiling anything. These are what CI and
+    # anyone who only wants the artifact ask for. The `*)` fallthrough reaches make for any
+    # other target name, but these two names are already taken.
+    payload-build)  shift; make payload "$@" ;;
+    injector-build) shift; make injector "$@" ;;
     payload)  shift; bash scripts/payload-run.sh "$@" ;;
     # `inject` runs the native process injector: builds both obscene-payload.elf and
     # obscene-injector.elf, sends the injector through elfldr, which hijacks the foreground title

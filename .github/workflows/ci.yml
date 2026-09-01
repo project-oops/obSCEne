@@ -105,20 +105,20 @@ jobs:
         # A guard is not finished until somebody has made it fail, so this job makes it
         # fail on purpose and reports an error if the build *succeeds*.
         run: |
-          if make module HARDWARE=1 BULK=1 >/dev/null 2>&1; then
+          if ./bin/obscene module HARDWARE=1 BULK=1 >/dev/null 2>&1; then
             echo "::error::HARDWARE=1 BULK=1 built - the guard is not working"; exit 1
           fi
           echo "guard refused HARDWARE=1 BULK=1, as it must"
         working-directory: OOPS/obscene
-      # `make`, not `./bin/obscene payload`. That verb dispatches to `scripts/payload-run.sh`,
-      # which builds *and then deploys to a registered console* - and before either, re-enters
-      # WSL when `/proc/version` does not say microsoft. On a Linux runner that means calling
-      # `wsl.exe`, which is not there: exit 127, no build output, and this shape has therefore
-      # never been produced by CI. `make payload` is what the verb runs once it is inside WSL.
+      # `payload-build`, not `payload`. The `payload` verb dispatches to scripts/payload-run.sh,
+      # which builds *and deploys to a registered console* - and before either, re-enters WSL
+      # when /proc/version does not say microsoft. On a Linux runner that is a call to wsl.exe,
+      # which is not there: exit 127, no build output, and this shape had therefore never been
+      # produced by CI. `payload-build` is the same compile without the console half.
       - name: Build
         run: |
-          make payload     HARDWARE=1 BUILD_ID=${{ github.sha }}
-          make payload-min HARDWARE=1 BUILD_ID=${{ github.sha }}
+          ./bin/obscene payload-build  HARDWARE=1 BUILD_ID=${{ github.sha }}
+          ./bin/obscene payload-min    HARDWARE=1 BUILD_ID=${{ github.sha }}
         working-directory: OOPS/obscene
       - name: Stage
         run: |
@@ -157,9 +157,9 @@ jobs:
           OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: Build
-        # `make`, for the same reason as the payload shape above: the `injector` verb deploys to
-        # a console through payload-run.sh and re-enters WSL to do it.
-        run: make injector HARDWARE=1 BUILD_ID=${{ github.sha }}
+        # `injector-build`, for the same reason as the payload shape above: the `injector` verb
+        # deploys to a console through payload-run.sh and re-enters WSL to do it.
+        run: ./bin/obscene injector-build HARDWARE=1 BUILD_ID=${{ github.sha }}
         working-directory: OOPS/obscene
       - name: Stage
         run: |
@@ -196,8 +196,8 @@ jobs:
         working-directory: OOPS/obscene
       - name: Build
         run: |
-          make module     BUILD_ID=${{ github.sha }}
-          make module-min BUILD_ID=${{ github.sha }}
+          ./bin/obscene module     BUILD_ID=${{ github.sha }}
+          ./bin/obscene module-min BUILD_ID=${{ github.sha }}
         working-directory: OOPS/obscene
       - name: Stage
         run: |
@@ -288,8 +288,17 @@ jobs:
       - name: Build the tooling
         run: ./bin/obscene tool-build
         working-directory: OOPS/obscene
+      # `BUILD` absolute, and that is not a style preference.
+      #
+      # build-pkg.sh invokes selfish as `( cd "$SELFISH" && cargo run ... )`, so every path it
+      # hands over is resolved from *selfish's* directory. With the Makefile default
+      # `BUILD ?= build` that makes `--root build/pkg-root` mean `selfish/build/pkg-root`, and
+      # the run dies on `Error: Os { code: 2, kind: NotFound }` after the eboot and both
+      # sce_module stubs have already been built - which reads like a packaging fault rather
+      # than a path one. It never showed by hand because the only caller that builds packages,
+      # scripts/oops-rebuild-pkg.sh, sets BUILD to $HOME/obs-pkg, which is absolute.
       - name: Build
-        run: ./bin/obscene pkg HARDWARE=1 BUILD_ID=${{ github.sha }}
+        run: ./bin/obscene pkg HARDWARE=1 BUILD_ID=${{ github.sha }} BUILD="$PWD/build"
         working-directory: OOPS/obscene
       - name: Stage
         run: |
