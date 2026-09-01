@@ -1170,3 +1170,24 @@ int scePadClose(int handle) {
     (void)handle;
     return OBS_HOST_NOT_IMPLEMENTED;
 }
+
+/* Static dummy classification and case tables for host build validation */
+const void *_Getpctype(void);
+const void *_Getptolower(void);
+const void *_Getptoupper(void);
+
+static const unsigned short s_host_ctype_tab[384] = {0};
+static const short s_host_tolower_tab[384] = {0};
+static const short s_host_toupper_tab[384] = {0};
+
+const void *_Getpctype(void) {
+    return (const void *)&s_host_ctype_tab[1];
+}
+
+const void *_Getptolower(void) {
+    return (const void *)&s_host_tolower_tab[1];
+}
+
+const void *_Getptoupper(void) {
+    return (const void *)&s_host_toupper_tab[1];
+}

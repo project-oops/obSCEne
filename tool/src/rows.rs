@@ -61,7 +61,7 @@ pub fn run(root: &Path, report_path: &Path) -> std::io::Result<bool> {
         return Ok(false);
     }
 
-    let parsed: BTreeSet<String> = sections::rows(&root.join("src").join("sections"))?
+    let parsed: BTreeSet<String> = sections::rows(&sections::find_dir(root, "sections"))?
         .into_iter()
         .map(|row| row.id)
         .collect();
@@ -81,7 +81,7 @@ pub fn run(root: &Path, report_path: &Path) -> std::io::Result<bool> {
     // exactly the case in hand: `900-surface` has both kinds, so every generated row was
     // reported as missed. The discrimination has to be per-file, not per-row.
     let mut generated_sections: BTreeSet<String> = BTreeSet::new();
-    let dir = root.join("src").join("sections");
+    let dir = sections::find_dir(root, "sections");
     for entry in std::fs::read_dir(&dir)?.filter_map(Result::ok) {
         let path = entry.path();
         if path.extension().is_none_or(|e| e != "c") {

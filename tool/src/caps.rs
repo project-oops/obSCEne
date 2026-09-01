@@ -57,7 +57,7 @@ fn tokens(field: &str) -> Vec<String> {
 /// first time someone reorders the list without renumbering - silently, and in the direction
 /// of passing.
 pub fn section_order(root: &Path) -> std::io::Result<Vec<String>> {
-    let registry = std::fs::read_to_string(root.join("src").join("registry.c"))?;
+    let registry = std::fs::read_to_string(sections::find_file(root, "registry.c"))?;
     let mut variables = Vec::new();
     for line in registry.lines() {
         let trimmed = line.trim();
@@ -74,7 +74,7 @@ pub fn section_order(root: &Path) -> std::io::Result<Vec<String>> {
     // identifier string on the next line. Mapping through the variable rather than guessing
     // the identifier from the file name: `os.c` alone defines five sections.
     let mut names = std::collections::BTreeMap::new();
-    let dir = root.join("src").join("sections");
+    let dir = sections::find_dir(root, "sections");
     let mut paths: Vec<_> = std::fs::read_dir(&dir)?
         .filter_map(Result::ok)
         .map(|e| e.path())
@@ -107,7 +107,7 @@ pub fn section_order(root: &Path) -> std::io::Result<Vec<String>> {
 /// harness walks it - so the rows must not be sorted here. `sections::rows` sorts, which is
 /// right for counting and wrong for this.
 fn running_order(root: &Path) -> std::io::Result<Vec<sections::Row>> {
-    let dir = root.join("src").join("sections");
+    let dir = sections::find_dir(root, "sections");
     let mut paths: Vec<_> = std::fs::read_dir(&dir)?
         .filter_map(Result::ok)
         .map(|e| e.path())

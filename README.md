@@ -26,9 +26,9 @@ suspect, red if it failed, grey if a prerequisite meant it was never attempted.
 > title is realistic.
 
 <!-- obscene:counts -->
-**175 checks across 38 sections**, 39538 censused symbols across 372 libraries.
+**189 checks across 40 sections**, 39535 censused symbols across 372 libraries.
 
-Of those checks, 78 rest on a public specification, 26 on the specification of the system this kernel derives from, 2 on independent implementations that agree, and 68 on this project's own reasoning. **1 have been confirmed on real hardware**, which is the number that limits what any of this can claim.
+Of those checks, 79 rest on a public specification, 27 on the specification of the system this kernel derives from, 2 on independent implementations that agree, and 79 on this project's own reasoning. **2 have been confirmed on real hardware**, which is the number that limits what any of this can claim.
 <!-- /obscene:counts -->
 
 ## Why this exists

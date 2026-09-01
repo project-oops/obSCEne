@@ -42,6 +42,9 @@ jobs:
           sudo apt-get install -y -qq clang lld
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: Build the tooling
         run: ./bin/obscene tool-build
@@ -94,6 +97,9 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: The hardware guard refuses the blind prober
         # A guard is not finished until somebody has made it fail, so this job makes it
@@ -141,6 +147,9 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: Build
         run: ./bin/obscene injector HARDWARE=1 BUILD_ID=${{ github.sha }}
@@ -171,6 +180,9 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: Build the tooling
         run: ./bin/obscene tool-build
@@ -215,6 +227,9 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld zip
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: Build the tooling
         run: ./bin/obscene tool-build
@@ -253,6 +268,9 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq clang lld
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
 
       - name: Build the tooling
         run: ./bin/obscene tool-build
@@ -288,6 +306,9 @@ jobs:
           path: OOPS/obscene
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
       - name: Refuse vendor material
         run: |
           set -e
@@ -340,6 +361,9 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
+        env:
+          # Empty unless the org secret exists, and empty is the old behaviour.
+          OOPS_CI_TOKEN: ${{ secrets.OOPS_CI_TOKEN }}
       - name: Check formatting
         run: |
           find src include -name '*.c' -o -name '*.h' \

@@ -128,7 +128,7 @@ fn library_names(text: &str, out: &mut std::collections::BTreeSet<String>) {
 
 /// Read the tree and count what moves.
 pub fn gather(root: &Path) -> std::io::Result<Counts> {
-    let rows = sections::rows(&root.join("src").join("sections"))?;
+    let rows = sections::rows(&sections::find_dir(root, "sections"))?;
     let mut provenance: BTreeMap<String, usize> = BTreeMap::new();
     for row in &rows {
         let tally = provenance.entry(row.provenance.clone()).or_insert(0usize);
@@ -146,10 +146,10 @@ pub fn gather(root: &Path) -> std::io::Result<Counts> {
         library_names(&text, &mut libraries);
     }
 
-    let registry = std::fs::read_to_string(root.join("src").join("registry.c"))?;
+    let registry = std::fs::read_to_string(sections::find_file(root, "registry.c"))?;
     let sections_count = registry.matches("&obs_section_").count();
 
-    let imports = std::fs::read_to_string(root.join("src").join("imports.c"))?;
+    let imports = std::fs::read_to_string(sections::find_file(root, "imports.c"))?;
     let manifest = crate::guards::platform_symbols(&imports).len();
 
     Ok(Counts {
@@ -185,7 +185,7 @@ fn render(name: &str, c: &Counts) -> Option<String> {
             // "**1 have been confirmed on real hardware**" for as long as it sat at one.
             if c.of("hardware") == 1 { "has" } else { "have" },
         )),
-        "BACKLOG.md" => Some(format!(
+        "BACKLOG.md" | "001-where-it-stands.md" => Some(format!(
             "| | |\n\
              |---|---|\n\
              | Behavioural checks | **{}** - {} `spec`, {} `derived`, {} `implementations`, \
@@ -246,7 +246,12 @@ fn apply(path: &Path, c: &Counts, write: bool) -> std::io::Result<Outcome> {
 /// Update or check the marked regions. Returns true when everything is current.
 pub fn run(root: &Path, write: bool, check: bool) -> std::io::Result<bool> {
     let c = gather(root)?;
-    let targets = [root.join("README.md"), root.join("docs").join("BACKLOG.md")];
+    let backlog_doc = if root.join("docs").join("backlog").join("001-where-it-stands.md").exists() {
+        root.join("docs").join("backlog").join("001-where-it-stands.md")
+    } else {
+        root.join("docs").join("BACKLOG.md")
+    };
+    let targets = [root.join("README.md"), backlog_doc];
 
     let mut stale = Vec::new();
     for path in &targets {

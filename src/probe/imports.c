@@ -155,6 +155,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceLibcInternal", "strncasecmp"},
     {"libSceLibcInternal", "strdup"},
     {"libSceLibcInternal", "sprintf"},
+    {"libSceLibcInternal", "_Getpctype"},
+    {"libSceLibcInternal", "_Getptolower"},
+    {"libSceLibcInternal", "_Getptoupper"},
 
     /* The rest of the maths library. See src/sections/math.c. */
     {"libSceLibcInternal", "round"},

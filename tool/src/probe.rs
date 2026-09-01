@@ -8,8 +8,8 @@
 //! # One tag per probe
 //!
 //! The first attempt put every candidate in one table. A recognised tag makes the loader
-//! act on its value, the third one it acted on faulted, and every later verdict was lost
-//! - leaving a result that looked like fifty-seven recognised tags and was actually a
+//! act on its value, the third one it acted on faulted, and every later verdict was lost -
+//! leaving a result that looked like fifty-seven recognised tags and was actually a
 //! crash. A probe that stops early and a probe that finds nothing produce identical
 //! silence.
 //!

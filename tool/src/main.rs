@@ -1112,8 +1112,8 @@ fn run_counts(
 /// The cross-symbol guard gate. Exits non-zero when any check calls an unguarded symbol.
 fn run_guards(root: Option<&std::path::Path>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let root = root.unwrap_or_else(|| std::path::Path::new("."));
-    let imports = std::fs::read_to_string(root.join("src").join("imports.c"))?;
-    let (problems, total) = guards::scan(&root.join("src").join("sections"), &imports)?;
+    let imports = std::fs::read_to_string(sections::find_file(root, "imports.c"))?;
+    let (problems, total) = guards::scan(&sections::find_dir(root, "sections"), &imports)?;
     if problems.is_empty() {
         println!("all {total} checks guard every platform symbol they call");
         return Ok(ExitCode::SUCCESS);

@@ -65,7 +65,7 @@ pub fn our_names(root: &Path) -> std::io::Result<BTreeSet<String>> {
         }
     }
 
-    let imports = std::fs::read_to_string(root.join("src").join("imports.c"))?;
+    let imports = std::fs::read_to_string(crate::sections::find_file(root, "imports.c"))?;
     names.extend(crate::guards::platform_symbols(&imports));
 
     names.remove("name");

@@ -14,6 +14,7 @@
 
 #if defined(OBSCENE_HOST_BUILD)
 #include <unistd.h>
+#include "obscene/platform.h"
 #else
 #include "obscene/harness.h"
 #include "obscene/platform.h"

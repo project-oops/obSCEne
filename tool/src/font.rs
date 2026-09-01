@@ -167,7 +167,7 @@ pub fn run(root: &Path, check: bool) -> std::io::Result<bool> {
     }
     text.push_str("};\n");
 
-    let path = root.join("src").join("font.c");
+    let path = crate::sections::find_file(root, "font.c");
     let slots = usize::from(LAST.saturating_sub(FIRST)).saturating_add(1);
     if check {
         let current = std::fs::read_to_string(&path).unwrap_or_default();

@@ -127,9 +127,38 @@ pub fn rows_in(text: &str) -> Vec<Row> {
     out
 }
 
+/// Resolve a source sub-directory (supporting both src/probe/ and src/).
+#[must_use]
+pub fn find_dir(root: &Path, rel: &str) -> std::path::PathBuf {
+    let probe_dir = root.join("src").join("probe").join(rel);
+    if probe_dir.exists() {
+        probe_dir
+    } else {
+        root.join("src").join(rel)
+    }
+}
+
+/// Resolve a source file (supporting both src/probe/ and src/).
+#[must_use]
+pub fn find_file(root: &Path, filename: &str) -> std::path::PathBuf {
+    let probe_file = root.join("src").join("probe").join(filename);
+    if probe_file.exists() {
+        probe_file
+    } else {
+        root.join("src").join(filename)
+    }
+}
+
 /// Every row across every section file, sorted.
 pub fn rows(sections_dir: &Path) -> std::io::Result<Vec<Row>> {
-    let mut paths: Vec<_> = std::fs::read_dir(sections_dir)?
+    let dir = if sections_dir.exists() {
+        sections_dir.to_path_buf()
+    } else if let Some(parent) = sections_dir.parent().and_then(|p| p.parent()) {
+        find_dir(parent, "sections")
+    } else {
+        sections_dir.to_path_buf()
+    };
+    let mut paths: Vec<_> = std::fs::read_dir(&dir)?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|p| p.extension().is_some_and(|e| e == "c"))
