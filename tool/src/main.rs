@@ -2354,6 +2354,8 @@ fn run_hw_install_native(
     let remote = format!("{base}/{appid}");
     let console = hardware::resolve(hardware::load()?, name)?;
     let mut session = pros_link::files::Session::open(&pros_link::Link::to(&console.address))?;
+    let _ = session.make_directory(base);
+    let _ = session.make_directory(&remote);
     let summary = pros_core::transfer::upload(
         &mut session,
         dir,
@@ -2362,8 +2364,14 @@ fn run_hw_install_native(
         &|| false,
     );
     session.close();
-    summary?;
-    println!("installed {appid} -> {remote}");
+    let sum = summary?;
+    for skipped in &sum.skipped {
+        eprintln!("  skipped {}: {}", skipped.path, skipped.why);
+    }
+    if !sum.skipped.is_empty() {
+        return Err(format!("upload completed with {} skipped entries", sum.skipped.len()).into());
+    }
+    println!("installed {appid} -> {remote} ({} files, {} bytes)", sum.files, sum.bytes);
     Ok(ExitCode::SUCCESS)
 }
 

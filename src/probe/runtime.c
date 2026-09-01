@@ -93,43 +93,24 @@ extern const obs_elf64_dyn _DYNAMIC[];
  * record still parses, which is worse than none. (D233) */
 long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
                         long a6) {
-    unsigned long base = obs_libkernel_base();
-    uintptr_t gadget = (base != 0) ? (base + 0x6aaUL) : 0;
-
     long ret;
     register long r10_arg __asm__("r10") = a4;
     register long r8_arg __asm__("r8") = a5;
     register long r9_arg __asm__("r9") = a6;
 
-    if (gadget != 0) {
-        __asm__ volatile("movq %5, %%rax\n"
-                         "movq %6, %%r10\n"
-                         "callq *%7\n"
-                         "jnc 1f\n"
-                         "movq $-1, %0\n"
-                         "jmp 2f\n"
-                         "1:\n"
-                         "movq %%rax, %0\n"
-                         "2:\n"
-                         : "=r"(ret)
-                         : "D"(a1), "S"(a2), "d"(a3), "r"(r8_arg), "r"(num),
-                           "r"(r10_arg), "r"(gadget), "r"(r9_arg)
-                         : "rax", "rcx", "r11", "memory");
-    } else {
-        __asm__ volatile("movq %5, %%rax\n"
-                         "movq %6, %%r10\n"
-                         "syscall\n"
-                         "jnc 1f\n"
-                         "movq $-1, %0\n"
-                         "jmp 2f\n"
-                         "1:\n"
-                         "movq %%rax, %0\n"
-                         "2:\n"
-                         : "=r"(ret)
-                         : "D"(a1), "S"(a2), "d"(a3), "r"(r8_arg), "r"(num),
-                           "r"(r10_arg), "r"(r9_arg)
-                         : "rax", "rcx", "r11", "memory");
-    }
+    __asm__ volatile("movq %5, %%rax\n"
+                     "movq %6, %%r10\n"
+                     "syscall\n"
+                     "jnc 1f\n"
+                     "movq $-1, %0\n"
+                     "jmp 2f\n"
+                     "1:\n"
+                     "movq %%rax, %0\n"
+                     "2:\n"
+                     : "=r"(ret)
+                     : "D"(a1), "S"(a2), "d"(a3), "r"(r8_arg), "r"(num),
+                       "r"(r10_arg), "r"(r9_arg)
+                     : "rax", "rcx", "r11", "memory");
     return ret;
 }
 
@@ -145,7 +126,9 @@ static void obs_debug_out_write(const char *bytes, size_t len) {
 
     unsigned long base = obs_libkernel_base();
     if (base != 0) {
-        (void)obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
+        typedef void (*fn_debug_t)(int, const char *);
+        fn_debug_t kdebug = (fn_debug_t)(base + 0x2b020UL);
+        kdebug(0, scratch);
     } else if (obs_address_is_callable((const void *)&sceKernelDebugOutText)) {
         (void)sceKernelDebugOutText(0, scratch);
     }
@@ -201,14 +184,14 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
          * weak symbol is null and this is the only working write there is (see
          * obs_bootstrap_payload_output). */
         if (obs_payload_output_bootstrapped) {
-            if (len >= sizeof(scratch))
-                len = sizeof(scratch) - 1;
-            for (size_t i = 0; i < len; i++) {
-                scratch[i] = bytes[i];
+            unsigned long base = obs_libkernel_base();
+            if (base != 0) {
+                typedef long (*fn_write_t)(int, const void *, size_t);
+                fn_write_t kwrite = (fn_write_t)(base + 0x16e00UL);
+                long n = kwrite(OBS_FD_STDOUT, bytes, len);
+                return n > 0 ? (size_t)n : 0;
             }
-            scratch[len] = '\0';
-            long n = obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
-            return n >= 0 ? len : 0;
+            return 0;
         }
         if (&sceKernelWrite == 0) {
             return 0;
@@ -819,26 +802,51 @@ int sceKernelVirtualQuery(const void *address, int flags, void *info,
 }
 
 int sceKernelUsleep(unsigned int microseconds) {
+    unsigned long base = obs_libkernel_base();
+    if (base != 0) {
+        typedef int (*fn_t)(unsigned int);
+        return ((fn_t)(base + 0x16f00UL))(microseconds);
+    }
     long ret = obs_invoke_syscall(240, (long)microseconds, 0, 0, 0, 0, 0);
     return (int)ret;
 }
 
 int sceKernelOpen(const char *path, int flags, uint16_t mode) {
+    unsigned long base = obs_libkernel_base();
+    if (base != 0) {
+        typedef int (*fn_t)(const char *, int, uint16_t);
+        return ((fn_t)(base + 0x16d60UL))(path, flags, mode);
+    }
     long ret = obs_invoke_syscall(5, (long)path, (long)flags, (long)mode, 0, 0, 0);
     return (int)ret;
 }
 
 int sceKernelClose(int fd) {
+    unsigned long base = obs_libkernel_base();
+    if (base != 0) {
+        typedef int (*fn_t)(int);
+        return ((fn_t)(base + 0x16dc0UL))(fd);
+    }
     long ret = obs_invoke_syscall(6, (long)fd, 0, 0, 0, 0, 0);
     return (int)ret;
 }
 
 sce_ssize_t sceKernelRead(int fd, void *buf, size_t count) {
+    unsigned long base = obs_libkernel_base();
+    if (base != 0) {
+        typedef sce_ssize_t (*fn_t)(int, void *, size_t);
+        return ((fn_t)(base + 0x16da0UL))(fd, buf, count);
+    }
     long ret = obs_invoke_syscall(3, (long)fd, (long)buf, (long)count, 0, 0, 0);
     return (sce_ssize_t)ret;
 }
 
 sce_ssize_t sceKernelWrite(int fd, const void *buf, size_t count) {
+    unsigned long base = obs_libkernel_base();
+    if (base != 0) {
+        typedef sce_ssize_t (*fn_t)(int, const void *, size_t);
+        return ((fn_t)(base + 0x16e00UL))(fd, buf, count);
+    }
     long ret = obs_invoke_syscall(4, (long)fd, (long)buf, (long)count, 0, 0, 0);
     return (sce_ssize_t)ret;
 }

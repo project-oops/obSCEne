@@ -570,6 +570,13 @@ static obs_result check_query_short_buffer_overrun(void) {
     return obs_pass_value((uint64_t)bounded);
 }
 
+/* clang-format off - function-pointer casts.
+ *
+ * `int32_t (*)(int32_t *)` is spelled with a space by clang-format 22 and without one by 18,
+ * and CI installs 18 while a developer here has 22. Whichever way the file is written, the
+ * other version rewrites it and the gate fails - so the three functions that cast module
+ * symbols are fenced instead, the way the census lists are (D016). Neither spelling is worth
+ * pinning a toolchain over. */
 static obs_result check_user_service_layout(void) {
     int32_t (*fn_get_user_list)(int32_t *userIdList) =
         (int32_t (*)(int32_t *))obs_module_symbol(OBS_HANDLE_SELF,
@@ -621,7 +628,9 @@ static obs_result check_user_service_layout(void) {
 
     return obs_pass_value((uint64_t)(uint32_t)initial_user_id);
 }
+/* clang-format on */
 
+/* clang-format off - function-pointer casts, as above. */
 static obs_result check_pad_controller_layout(void) {
     int32_t (*fn_pad_init)(void) =
         (int32_t (*)(void))obs_module_symbol(OBS_HANDLE_SELF, "scePadInit");
@@ -662,6 +671,7 @@ static obs_result check_pad_controller_layout(void) {
 
     return obs_pass_value((uint64_t)(uint32_t)handle);
 }
+/* clang-format on */
 
 struct obs_ifaddrs_entry {
     struct obs_ifaddrs_entry *ifa_next;
@@ -673,6 +683,7 @@ struct obs_ifaddrs_entry {
     void *ifa_data;
 };
 
+/* clang-format off - function-pointer casts, as above. */
 static obs_result check_network_interface_layout(void) {
     int32_t (*fn_getifaddrs)(struct obs_ifaddrs_entry **ifap) =
         (int32_t (*)(struct obs_ifaddrs_entry **))obs_module_symbol(OBS_HANDLE_SELF,
@@ -722,6 +733,7 @@ static obs_result check_network_interface_layout(void) {
 
     return obs_pass_value((uint64_t)count);
 }
+/* clang-format on */
 
 static const obs_check layout_checks[] = {
     /* Assumed, uniformly, and the field is being used honestly: nothing here has an

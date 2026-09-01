@@ -76,17 +76,7 @@ OBS_WEAK int sceKernelDebugOutText(int channel, const char *text);
  * A **separate file from the report**, deliberately. `obs_sink_open` opens `O_TRUNC`,
  * so a driver later asking for a full run would wipe exactly the record of the boot
  * that preceded it. */
-static const char *const obs_boot_paths[] = {
-    "/mnt/usb0/obscene/boot.txt",  "/mnt/usb0/obscene-boot.txt",
-    "/mnt/usb1/obscene/boot.txt",  "/mnt/usb1/obscene-boot.txt",
-    "/data/obscene/boot.txt",      "/data/obscene-boot.txt",
-    "/download0/obscene-boot.txt", "obscene-boot.txt",
-};
 
-/* The open boot log, or negative. `obs_boot_tried` stops a platform that cannot open
- * any of them from attempting the whole list again on every note. */
-static int obs_boot_fd = -1;
-static int obs_boot_tried;
 
 /* A boot breadcrumb, to the kernel log **and** to disk.
  *
@@ -114,24 +104,11 @@ static void obs_boot_note(const char *text) {
 
     unsigned long base = obs_libkernel_base();
     if (base != 0) {
-        (void)obs_invoke_syscall(601, 7, (long)text, 0, 0, 0, 0);
-    }
-
-    if (obs_boot_fd < 0 && !obs_boot_tried) {
-        obs_boot_tried = 1;
-        (void)obs_sink_backend_mkdir("/mnt/usb0/obscene");
-        (void)obs_sink_backend_mkdir("/mnt/usb1/obscene");
-        (void)obs_sink_backend_mkdir("/data/obscene");
-        for (unsigned int i = 0; i < OBS_COUNT(obs_boot_paths); i++) {
-            int fd = obs_sink_backend_open(obs_boot_paths[i]);
-            if (fd >= 0) {
-                obs_boot_fd = fd;
-                break;
-            }
-        }
-    }
-    if (obs_boot_fd >= 0) {
-        (void)obs_sink_backend_write(obs_boot_fd, text, len);
+        typedef void (*fn_debug_t)(int, const char *);
+        fn_debug_t kdebug = (fn_debug_t)(base + 0x2b020UL);
+        kdebug(0, text);
+    } else if (obs_address_is_callable((const void *)&sceKernelDebugOutText)) {
+        (void)sceKernelDebugOutText(0, text);
     }
 }
 
