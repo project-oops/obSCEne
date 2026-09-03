@@ -3,6 +3,14 @@
 Every file here is listed, and `obscene-tool doccheck` fails if one is not - an index that
 silently stops covering the directory is worse than no index, because it reads as complete.
 
+
+## The words
+
+- [GLOSSARY.md](GLOSSARY.md) - what a check is, what a section is, the census, the sinks, and
+  which execution context a result came from. Start here if `DT_INIT_ARRAY`, `ps4_mode` or
+  "the census" are not words you already have. The collection's glossary covers standard ELF
+  and the words that mean something else in the sibling repositories.
+
 ## What obSCEne is
 
 - [DESIGN.md](DESIGN.md) - why it is shaped the way it is: what it announces before it acts,
@@ -50,6 +58,9 @@ silently stops covering the directory is worse than no index, because it reads a
 - [HARDWARE.md](HARDWARE.md) - **what a real console answered.** The findings, each citing a
   record in `data/hardware/`: which libraries a title is actually given, what the census
   reached, and which ones end the process when loaded.
+- [PLATFORM_LIBRARIES.md](PLATFORM_LIBRARIES.md) - **the retail SPRX filesystem and privilege model.**
+  Partition layout (`/system/common/lib`, `/system_ex/common_ex/lib`, `/system/priv/lib`),
+  the four privilege tiers (`app`, `sysmodule`, `system`, `root`), and differences from PS4.
 - [HARDWARE-PROBE.md](HARDWARE-PROBE.md) - what changes when the target is real hardware
   rather than something standing in for one. Written before any of it ran, so it is the
   request where `HARDWARE.md` is the answer.
