@@ -60,7 +60,7 @@ out="$BUILD/native"
 rm -rf "$out"
 mkdir -p "$out"
 
-# Stage what `selfish native --root` copies verbatim into the title directory: the eboot, unless
+# Stage what `selfish build title --root` copies verbatim into the title directory: the eboot, unless
 # a deeplink-only layout was asked for.
 root_arg=()
 if [ "${NO_EBOOT:-0}" != "1" ]; then
@@ -74,23 +74,24 @@ if [ "${NO_EBOOT:-0}" != "1" ]; then
     mkdir -p "$ebootroot"
     cp "$BUILD/eboot.bin" "$ebootroot/eboot.bin"
     if [ -d "$BUILD/sce_module" ]; then
+        mkdir -p "$ebootroot"
         cp -r "$BUILD/sce_module" "$ebootroot/sce_module"
     fi
     root_arg=(--root "$(cd "$ebootroot" && pwd)")
 fi
 
-selfish() { ( cd "$SELFISH" && cargo run -q -p selfish-cli -- "$@" ); }
-
+selfish() { ( cd "$SELFISH" && PATH="$HOME/.cargo/bin:$PATH" cargo run -q -p selfish-cli -- "$@" ); }
 icon_arg=()
 if [ -f assets/logo.png ]; then
     icon_arg=(--icon "$(pwd)/assets/logo.png")
 fi
 
-selfish native \
+selfish build title \
     --out "$(cd "$out" && pwd)" \
     --title-id "$TITLE_ID" \
     --title "$TITLE" \
     --content-id "$CONTENT_ID" \
+    --privilege "${PRIVILEGE:-app}" \
     "${category_arg[@]}" \
     "${deeplink_arg[@]}" \
     "${root_arg[@]}" \

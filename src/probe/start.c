@@ -45,6 +45,8 @@
 #include "obscene/sink.h"
 #include "obscene/sysinfo.h"
 #include "obscene/platform.h"
+#include "oops/krw.h"
+#include "oops/syscall.h"
 
 /* Kept in a global so a debugger, or a loader inspecting the image after the run, can
  * read the outcome without parsing the report stream. Written before the process ends,
@@ -114,13 +116,28 @@ void obscene_start(void) {
     __asm__ volatile("mov %%rdi, %0" : "=r"(obs_pargs_at_entry));
     obs_capture_payload_args(obs_pargs_at_entry);
     /* Bootstrap the output channel from getpid before anything tries to write. Guarded:
-     * read word 0 only when payload_args is a plausible, aligned pointer, so a
-     * non-payload entry - a title launched by the shell, say - never dereferences a
-     * value that is not a struct pointer. The bootstrap itself refuses anything not
-     * shaped like a libkernel export (D209). */
+     * only attempt when libkernel is not dynamically linked and payload_args is a plausible, aligned pointer. */
     if (obs_pargs_at_entry >= 0x10000UL && obs_pargs_at_entry < 0x0000800000000000UL &&
         (obs_pargs_at_entry & 0x7UL) == 0) {
         obs_bootstrap_payload_output(((unsigned long *)obs_pargs_at_entry)[0]);
+    }
+
+    /* If payload arguments provide kernel R/W but no staged kexport table,
+     * initialize KRW and dump exports so payload symbol resolution succeeds. */
+    static obs_kexport_table_t s_payload_kexport_table;
+    const payload_args_t *pargs_init = obs_get_payload_args();
+    if (pargs_init != NULL) {
+        sys_call_init(pargs_init);
+    }
+    if (pargs_init != NULL && pargs_init->kexport_table == NULL &&
+        (pargs_init->rwpipe != NULL || pargs_init->rwpair != NULL)) {
+        if (krw_init(pargs_init) == 0) {
+            pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+            if (krw_dump_all_exports(pid, &s_payload_kexport_table) == 0 &&
+                s_payload_kexport_table.count > 0) {
+                obs_set_payload_kexport_table(&s_payload_kexport_table);
+            }
+        }
     }
     /* The first thing, before any platform call that could fault: proof the container
      * mounted, the loader transferred control, and the crt reached here. On a
@@ -201,11 +218,23 @@ void obscene_start(void) {
     obs_screen_present();
 #endif
 
-    /* Non-zero on any failure, matching the host build, so this is usable as a gate.
-     * Partial results do not fail the run: amber means "worth looking at", and a
-     * build that went red on it would train everyone to ignore it. */
-    /* When running as a payload / injected thread, return cleanly to the trampoline
-     * so the host process thread resumes seamlessly without terminating the game. */
-    obs_boot_note("obscene: returning to host thread\n");
-    return;
+    /* If launched as an injected thread with a trampoline (kexport_table staged),
+     * return to the caller trampoline to resume the host game.
+     * Standalone payloads have no trampoline; cleanly exit process via syscall. */
+    const payload_args_t *pargs = (const payload_args_t *)obs_get_payload_args();
+    if (pargs != NULL && pargs->kexport_table != NULL) {
+        obs_boot_note("obscene: returning to host thread\n");
+        return;
+    }
+
+    obs_boot_note("obscene: execution finished; exiting process\n");
+    obs_invoke_syscall(1, 0, 0, 0, 0, 0, 0);
+    if (obs_address_is_callable((const void *)&exit)) {
+        exit(0);
+    }
+    for (;;) {
+        if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+            sceKernelUsleep(1000000);
+        }
+    }
 }

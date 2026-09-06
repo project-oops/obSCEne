@@ -58,7 +58,8 @@ static const char *const obs_sink_paths[] = {
     "/mnt/usb0/obscene/report.txt",  "/mnt/usb0/obscene-report.txt",
     "/mnt/usb1/obscene/report.txt",  "/mnt/usb1/obscene-report.txt",
     "/data/obscene/report.txt",      "/data/obscene-report.txt",
-    "/download0/obscene-report.txt", "obscene-report.txt",
+    "/download0/obscene-report.txt", "reports/obscene-report.txt",
+    "obscene-report.txt",
 };
 
 /* Sinks: primary snapshot (for resume/tooling) and timestamped archive (for
@@ -95,6 +96,7 @@ const char *obs_sink_open(void) {
     (void)obs_sink_backend_mkdir("/mnt/usb0/obscene");
     (void)obs_sink_backend_mkdir("/mnt/usb1/obscene");
     (void)obs_sink_backend_mkdir("/data/obscene");
+    (void)obs_sink_backend_mkdir("reports");
 
     /* Try to open a timestamped archive sink first so this run never clobbers previous
      * ones */
@@ -104,6 +106,7 @@ const char *obs_sink_open(void) {
             "/mnt/usb0/obscene/report-", "/mnt/usb0/obscene-report-",
             "/mnt/usb1/obscene/report-", "/mnt/usb1/obscene-report-",
             "/data/obscene/report-",     "/data/obscene-report-",
+            "reports/report-",
             "obscene-report-",
         };
         char ts_candidate[128];

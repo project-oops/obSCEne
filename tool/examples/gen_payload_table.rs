@@ -1,5 +1,5 @@
 //! Generate obSCEne's payload resolution table: read the payload's imports, find each in the
-//! target libraries, emit `payload_table.c` for the crt0 (`SELFish/runtime/crt0.c`) to link against.
+//! target libraries, emit `payload_table.c` for the crt0 (`oops-sdk/runtime/crt0.c`) to link against.
 //!
 //!   `gen_payload_table <payload.elf> <libkernel.sprx> [<console_path> <local.sprx>]...`
 //!

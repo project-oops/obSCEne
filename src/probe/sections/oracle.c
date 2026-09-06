@@ -29,8 +29,8 @@
  * same reason: an instrument that cannot be shown to work is not evidence.
  */
 
-#include "common/freestd.h"
-#include "common/krw.h"
+#include "oops/freestd.h"
+#include "oops/krw.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"

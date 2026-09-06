@@ -295,6 +295,10 @@ or not at all. A probe that hangs loses every check behind it, which has happene
   the manifest saying which library resolves which name is still here, and so is the `$` sigil
   marking a symbol whose name *is* the identifier - that is a convention of this project's
   symbol tables, not a fact about the format.
+- `../oops-sdk` - **the freestanding-C SDK, and a build dependency.** obSCEne links its C
+  sources into both the module and the eboot and builds its payloads on the SDK runtime; the
+  `Makefile` resolves it at `../oops-sdk` and includes its `oops-sdk.mk`. A sibling checkout,
+  the same convention as `../selfish`; the repositories are checked out as a set.
 - `data/` - the source of truth for everything generated, and now **only this project's own
   measurements**: `surface.txt` (the curated census), `mined-names.txt` and `unnamed-nids.txt`
   (the mined corpus), `gpu-surface.tsv` (the GPU ISA classification), `font.txt` (glyph art),

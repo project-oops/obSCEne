@@ -7,8 +7,8 @@
 #define OBSCENE_EXCLUDE ""
 #endif
 
-#include "common/freestd.h"
-#include "common/krw.h"
+#include "oops/freestd.h"
+#include "oops/krw.h"
 #include "obscene/harness.h"
 /* For `sceKernelLoadStartModule` and `sceKernelDlsym`, which `obs_module_open` uses.
  *
@@ -49,7 +49,7 @@
  * Deliberately generous rather than clever. The cost of rejecting a real function here
  * is one check reported absent; the cost of accepting a bad one is every check after
  * it. */
-#define OBS_LOWEST_CALLABLE 0x400000UL
+#define OBS_LOWEST_CALLABLE 0x1000UL
 
 /* Checks named at build time as ones that take the process down.
  *
@@ -183,8 +183,41 @@ const char *obs_provenance_name(obs_provenance from) {
     }
 }
 
+static uintptr_t s_plt_start = 0;
+static uintptr_t s_plt_end = 0;
+
+void obs_set_plt_bounds(uintptr_t start, uintptr_t end) {
+    s_plt_start = start;
+    s_plt_end = end;
+}
+
 int obs_address_is_callable(const void *address) {
-    return address != NULL && (uintptr_t)address >= OBS_LOWEST_CALLABLE;
+    if (address == NULL) {
+        return 0;
+    }
+    uintptr_t addr = (uintptr_t)address;
+    if (addr < OBS_LOWEST_CALLABLE) {
+        return 0;
+    }
+    if (s_plt_start != 0 && addr >= s_plt_start && addr < s_plt_end) {
+        if (addr < s_plt_start + 16) {
+            return 0;
+        }
+        const uint8_t *code = (const uint8_t *)address;
+        if (code[0] == 0xff && code[1] == 0x25) {
+            int32_t disp = *(const int32_t *)(const void *)(code + 2);
+            const uint64_t *got_slot =
+                (const uint64_t *)(const void *)(code + 6 + disp);
+            uint64_t target = *got_slot;
+            if (target == 0 || (target >= s_plt_start && target < s_plt_end) ||
+                target < OBS_LOWEST_CALLABLE) {
+                return 0;
+            }
+            return 1;
+        }
+        return 0;
+    }
+    return 1;
 }
 
 /* Where a library might be, tried in order.
@@ -198,12 +231,34 @@ int obs_address_is_callable(const void *address) {
  * Candidates tried in order with the caller reporting the outcome is the same shape
  * `sink.c` uses for its write path and `runtime.c` for its output channel. Guessing one
  * and failing silently is what that shape exists to avoid. */
-static const char *const obs_module_prefixes[] = {
-    "",
-    "/system/common/lib/",
-    "/system_ex/common_ex/lib/",
-    "/app0/sce_module/",
+typedef struct {
+    const char *prefix;
+    obs_module_tier tier;
+} obs_path_prefix;
+
+static const obs_path_prefix obs_module_path_prefixes[] = {
+    {"", OBS_TIER_APP},
+    {"/system/common/lib/", OBS_TIER_APP},
+    {"/app0/sce_module/", OBS_TIER_APP},
+    {"/system_ex/common_ex/lib/", OBS_TIER_SYSTEM},
+    {"/system/priv/lib/", OBS_TIER_ROOT},
 };
+
+const char *obs_module_tier_name(obs_module_tier tier) {
+    switch (tier) {
+    case OBS_TIER_APP:
+        return "app";
+    case OBS_TIER_SYSMODULE:
+        return "sysmodule";
+    case OBS_TIER_SYSTEM:
+        return "system";
+    case OBS_TIER_ROOT:
+        return "root";
+    case OBS_TIER_UNKNOWN:
+    default:
+        return "unknown";
+    }
+}
 
 /* Build `<prefix><library>.sprx` into `dest`, or 0 if it will not fit.
  *
@@ -248,9 +303,14 @@ static const obs_sysmodule_id_map obs_sysmodules[] = {
     {"libSceVoice", 0x000e},    {"libSceAppInstUtil", 0x0014},
     {"libSceIme", 0x0017},      {"libSceCamera", 0x001d},
     {"libScePad", 0x0027},      {"libSceVideoOut", 0x0028},
+    {"libSceVideodec2", 0x008e},{"libSceAudiodec", 0x0088},
+    {"libSceKeyboard", 0x00a8}, {"libSceMouse", 0x00a9},
 };
 
-int obs_module_open(const char *library) {
+int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
+    if (tier_out != NULL) {
+        *tier_out = OBS_TIER_UNKNOWN;
+    }
     if (library == NULL) {
         return -1;
     }
@@ -291,6 +351,9 @@ int obs_module_open(const char *library) {
                 if (sceKernelGetModuleInfo(mod_id, info) == 0) {
                     const char *mod_name = (const char *)(info + 8);
                     if (obs_strcmp(mod_name, library) == 0) {
+                        if (tier_out != NULL) {
+                            *tier_out = OBS_TIER_APP;
+                        }
                         return mod_id;
                     }
                 }
@@ -299,33 +362,61 @@ int obs_module_open(const char *library) {
     }
 
     if (obs_strcmp(library, "libkernel") == 0) {
+        if (tier_out != NULL) {
+            *tier_out = OBS_TIER_APP;
+        }
         return 0x2001;
     }
     if (obs_strcmp(library, "libSceLibcInternal") == 0 ||
         obs_strcmp(library, "libc") == 0) {
+        if (tier_out != NULL) {
+            *tier_out = OBS_TIER_APP;
+        }
         return 1;
     }
 
     /* 2. Try loading via sceKernelLoadStartModule on known path prefixes */
     if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
         char path[128];
-        for (unsigned int i = 0; i < OBS_COUNT(obs_module_prefixes); i++) {
-            if (!obs_module_path(path, sizeof path, obs_module_prefixes[i], library)) {
+        for (unsigned int i = 0; i < OBS_COUNT(obs_module_path_prefixes); i++) {
+            if (!obs_module_path(path, sizeof path, obs_module_path_prefixes[i].prefix,
+                                 library)) {
                 continue;
             }
             int handle = sceKernelLoadStartModule(path, 0, NULL, 0, NULL, NULL);
             if (handle >= 0) {
+                if (tier_out != NULL) {
+                    *tier_out = obs_module_path_prefixes[i].tier;
+                }
                 return handle;
             }
         }
     }
 
-    /* 3. Try loading via sceSysmoduleLoadModule */
+    /* 3. Try loading via sceSysmoduleLoadModule / sceSysmoduleLoadModuleInternal */
+    /* clang-format off */
+    int (*fn_sysmodule_load)(uint16_t) = NULL;
     if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        fn_sysmodule_load = sceSysmoduleLoadModule;
+    } else {
+        const void *internal_sym = obs_module_symbol(1, "sceSysmoduleLoadModuleInternal");
+        if (internal_sym == NULL) {
+            internal_sym = obs_module_symbol(0x2001, "sceSysmoduleLoadModuleInternal");
+        }
+        if (internal_sym != NULL && obs_address_is_callable(internal_sym)) {
+            fn_sysmodule_load = (int (*)(uint16_t))internal_sym;
+        }
+    }
+    /* clang-format on */
+
+    if (fn_sysmodule_load != NULL) {
         for (unsigned int i = 0; i < OBS_COUNT(obs_sysmodules); i++) {
             if (obs_strcmp(library, obs_sysmodules[i].name) == 0) {
-                int rc = sceSysmoduleLoadModule(obs_sysmodules[i].id);
+                int rc = fn_sysmodule_load(obs_sysmodules[i].id);
                 if (rc == 0 || rc == (int)0x80540001) {
+                    if (tier_out != NULL) {
+                        *tier_out = OBS_TIER_SYSMODULE;
+                    }
                     if (obs_address_is_callable(
                             (const void *)&sceKernelGetModuleList) &&
                         obs_address_is_callable(
@@ -357,7 +448,38 @@ int obs_module_open(const char *library) {
         }
     }
 
+    /* 4. Try kernel-extracted export table: verify if any known symbol of this library is present */
+    const payload_args_t *pargs = obs_get_payload_args();
+    if (pargs != NULL && pargs->kexport_table != NULL) {
+        for (unsigned int s = 0; s < obs_section_count; s++) {
+            const obs_section *sec = obs_sections[s];
+            if (sec == NULL)
+                continue;
+            for (unsigned int c = 0; c < sec->check_count; c++) {
+                const obs_check *chk = &sec->checks[c];
+                if (chk->library != NULL && obs_strcmp(chk->library, library) == 0 &&
+                    chk->symbol != NULL) {
+                    char nid[12];
+                    obs_compute_nid(chk->symbol, nid);
+                    const void *addr = obs_kexport_lookup(
+                        (const obs_kexport_table_t *)pargs->kexport_table, nid);
+                    if (addr != NULL && obs_address_is_callable(addr)) {
+                        if (tier_out != NULL) {
+                            *tier_out = OBS_TIER_APP;
+                        }
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
+
     return -1;
+}
+
+int obs_module_open(const char *library) {
+    obs_module_tier tier;
+    return obs_module_open_tier(library, &tier);
 }
 
 const void *obs_module_symbol(int handle, const char *name) {
@@ -365,7 +487,16 @@ const void *obs_module_symbol(int handle, const char *name) {
         return NULL;
     }
     char nid[12];
-    obs_compute_nid(name, nid);
+    if (name[0] == '$') {
+        size_t j = 0;
+        while (j < 11 && name[1 + j] != '\0') {
+            nid[j] = name[1 + j];
+            j++;
+        }
+        nid[j] = '\0';
+    } else {
+        obs_compute_nid(name, nid);
+    }
 
     /* 0. Try kernel-extracted export table first if available (bypasses retail game DRM
      * block) */
@@ -399,7 +530,8 @@ const void *obs_module_symbol(int handle, const char *name) {
         return address;
     }
     /* 2. Fallback: try plain ASCII name */
-    if (handle >= 0 && fn_dlsym(handle, name, &address) == 0 &&
+    const char *ascii_name = (name[0] == '$') ? (name + 1) : name;
+    if (handle >= 0 && fn_dlsym(handle, ascii_name, &address) == 0 &&
         obs_address_is_callable(address)) {
         return address;
     }

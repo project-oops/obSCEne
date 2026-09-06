@@ -1,7 +1,7 @@
 /build/
-# ...and any nested one. The rule above is anchored to the root, so `src/porthole/build/`
-# was not covered and a 16 KB x86-64 ELF was staged from it. The subtree builds itself with
-# its own Makefile, which is the whole point of it - so it makes its own build directory.
+# ...and any nested one. The rule above is anchored to the root, so a `build/` inside a
+# subtree that builds itself - its own Makefile, its own build directory - was not covered,
+# and a 16 KB x86-64 ELF was staged from one before this line existed.
 build/
 *.o
 *.elf

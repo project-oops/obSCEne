@@ -54,7 +54,15 @@ fn documented_files(root: &Path) -> std::io::Result<Vec<PathBuf>> {
             if path.is_dir() {
                 if !matches!(
                     name.as_str(),
-                    ".git" | "target" | "build" | "reports" | "__pycache__" | ".github"
+                    ".git"
+                        | "target"
+                        | "build"
+                        | "reports"
+                        | "__pycache__"
+                        | ".github"
+                        | "worklog"
+                        | "decisions"
+                        | "backlog"
                 ) {
                     stack.push(path);
                 }
@@ -193,6 +201,14 @@ fn tool_subcommands(main_rs: &str) -> BTreeSet<String> {
             let mut lowered = name.clone();
             lowered.replace_range(..1, &name[..1].to_lowercase());
             out.insert(lowered);
+            let mut kebab = String::new();
+            for (i, c) in name.chars().enumerate() {
+                if c.is_uppercase() && i > 0 {
+                    kebab.push('-');
+                }
+                kebab.push(c.to_ascii_lowercase());
+            }
+            out.insert(kebab);
         }
     }
     out
@@ -268,10 +284,17 @@ fn decision_numbers(root: &Path, files: &[PathBuf]) -> std::io::Result<Vec<Strin
     let mut seen: BTreeMap<u32, usize> = BTreeMap::new();
     let mut spelling: BTreeMap<u32, String> = BTreeMap::new();
     for line in text.lines() {
-        let Some(rest) = line.strip_prefix("## D") else {
+        let digits: String = if let Some(rest) = line.strip_prefix("## D") {
+            rest.chars().take_while(char::is_ascii_digit).collect()
+        } else if let Some(idx) = line.find("| D") {
+            line.get(idx.saturating_add(3)..)
+                .unwrap_or_default()
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect()
+        } else {
             continue;
         };
-        let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
         let Ok(number) = digits.parse::<u32>() else {
             continue;
         };
@@ -351,8 +374,21 @@ pub fn run(root: &Path) -> std::io::Result<Vec<String>> {
         let text = std::fs::read_to_string(path)?;
         let code = code_spans(&text);
 
+        // A document beside its own Makefile refers to that one, not the root. A README in a
+        // subtree that builds itself names `make <rule>` for a rule in its own Makefile;
+        // resolving only against the root Makefile reports it as missing, which is a fact
+        // about the gate rather than about the document.
+        let local = path
+            .parent()
+            .map(|dir| dir.join("Makefile"))
+            .filter(|makefile| makefile.exists())
+            .map(std::fs::read_to_string)
+            .transpose()?
+            .map(|text| make_rules(&text))
+            .unwrap_or_default();
+
         for rule in words_after(&code, "make ") {
-            if rule.contains('=') || rules.contains(&rule) {
+            if rule.contains('=') || rules.contains(&rule) || local.contains(&rule) {
                 continue;
             }
             problems.push(format!("{rel}: `make {rule}` - no such rule"));

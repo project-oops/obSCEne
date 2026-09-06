@@ -17,7 +17,7 @@
 //! The names are LLVM's, from the open-source `IntrinsicsAMDGPU.td`. When that file is
 //! installed the census is cross-checked against it - every classified name must still exist,
 //! and every scalar-math intrinsic must be classified - but generation stands without it. The
-//! coverage claims are checked against `src/shaders/*.comp` unconditionally, because a
+//! coverage claims are checked against `src/probe/shaders/*.comp` unconditionally, because a
 //! `covered:` claim naming a kernel that does not exist is a lie the document can tell on any
 //! machine.
 //!
@@ -77,7 +77,7 @@ pub fn table(root: &Path) -> std::io::Result<Vec<Row>> {
 /// The kernel names obSCEne actually has, so a `covered:` claim is checked against reality
 /// rather than asserted.
 fn kernels(root: &Path) -> BTreeSet<String> {
-    let dir = root.join("src").join("shaders");
+    let dir = root.join("src").join("probe").join("shaders");
     std::fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -145,7 +145,7 @@ pub fn validate(
         };
         if !have.contains(kernel) {
             problems.push(format!(
-                "{} claims covered:{kernel}, but src/shaders/{kernel}.comp does not exist",
+                "{} claims covered:{kernel}, but src/probe/shaders/{kernel}.comp does not exist",
                 row.name
             ));
         }

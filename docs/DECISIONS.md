@@ -300,18 +300,33 @@ principles six weeks later.
 | 🟢 | D279 | [canonical release artifact naming scheme across CI workflows and frontend](decisions/D279-canonical-release-artifact-naming.md) | decided | ~2026-08-31..09-01 |
 | 🟡 | D280 | [Porthole scaffolded, and the encoder reachability made a section (106-encoder)](decisions/D280-porthole-scaffolded-and-the-encoder.md) | assumed | 2026-09-01 |
 | 🟢 | D281 | [Projects live under src/, and the encoder section finished its wiring](decisions/D281-projects-live-under-src-and-the-encoder.md) | decided | 2026-09-01 |
-| ⚪ | D282 | [dlsym gets its positive: a known symbol through a valid handle](decisions/D282-dlsym-gets-its-positive-a-known-symbol.md) | unrecorded | ~>2026-09-01 |
-| 🔴 | D283 | [flexible-configured: the probe orbistoun's allocator work was blocked on](decisions/D283-flexible-configured-the-probe-orbistoun.md) | blocked | ~>2026-09-01 |
-| ⚪ | D284 | [obs_read_header is bounded by the caller's buffer, not by a constant](decisions/D284-obs-read-header-is-bounded-by-the.md) | unrecorded | ~>2026-09-01 |
-| 🟢 | D285 | [the measured value is reported on every row, not only on a difference](decisions/D285-the-measured-value-is-reported-on-every.md) | measured | ~>2026-09-01 |
-| 🟢 | D286 | [container-structure: a raw measured dump of a real gen-5 container](decisions/D286-container-structure-a-raw-measured.md) | measured | ~>2026-09-01 |
-| 🟡 | D287 | [the native title carries its eboot and is a ./bin/obscene verb](decisions/D287-the-native-title-carries-its-eboot-and.md) | assumed | 2026-09-01 |
-| 🟢 | D288 | [the title identity has one home: data/identity.toml](decisions/D288-the-title-identity-has-one-home.md) | decided | 2026-09-01 |
-| 🟢 | D289 | [the eboot container generation follows EBOOT_GEN](decisions/D289-the-eboot-container-generation-follows.md) | decided | 2026-09-02 |
-| 🟢 | D290 | [the ctype table accessors get a library assignment](decisions/D290-the-ctype-table-accessors-get-a-library.md) | decided | 2026-09-02 |
-| 🟢 | D291 | [native deploy uploads the title dir via prosperous](decisions/D291-native-deploy-uploads-the-title-dir.md) | decided | 2026-09-02 |
-| 🟢 | D292 | [the native title gets its own id, distinct from the package](decisions/D292-the-native-title-gets-its-own-id.md) | decided | 2026-09-02 |
-| 🟢 | D293 | [a real ps5 native title uses the 4F 15 3D 1D eboot, so native defaults to it](decisions/D293-ps5-native-titles-use-the-4f153d1d-eboot.md) | measured | 2026-09-02 |
+| ⚪ | D282 | [dlsym gets its positive: a known symbol through a valid handle](decisions/D282-dlsym-gets-its-positive-a-known-symbol.md) | unrecorded | ~2026-09-01..09-02 |
+| 🔴 | D283 | [flexible-configured: the probe orbistoun's allocator work was blocked on](decisions/D283-flexible-configured-the-probe-orbistoun.md) | blocked | ~2026-09-01..09-02 |
+| ⚪ | D284 | [obs_read_header is bounded by the caller's buffer, not by a constant](decisions/D284-obs-read-header-is-bounded-by-the.md) | unrecorded | ~2026-09-01..09-02 |
+| 🟢 | D285 | [the measured value is reported on every row, not only on a difference](decisions/D285-the-measured-value-is-reported-on-every.md) | measured | ~2026-09-01..09-02 |
+| 🟢 | D286 | [container-structure: a raw measured dump of a real gen-5 container](decisions/D286-container-structure-a-raw-measured.md) | measured | ~2026-09-01..09-02 |
+| ⚪ | D287 | [the native title carries its eboot and is a `./bin/obscene` verb](decisions/D287-the-native-title-carries-its-eboot-and.md) | unrecorded | ~2026-09-01..09-02 |
+| ⚪ | D288 | [the title identity has one home: data/identity.toml](decisions/D288-the-title-identity-has-one-home.md) | unrecorded | ~2026-09-01..09-02 |
+| ⚪ | D289 | [the eboot container generation follows EBOOT_GEN](decisions/D289-the-eboot-container-generation-follows.md) | unrecorded | ~2026-09-01..09-02 |
+| ⚪ | D290 | [the ctype table accessors get a library assignment](decisions/D290-the-ctype-table-accessors-get-a-library.md) | unrecorded | ~2026-09-01..09-02 |
+| ⚪ | D291 | [native deploy uploads the title dir to a scan root via prosperous](decisions/D291-native-deploy-uploads-the-title-dir.md) | unrecorded | ~2026-09-01..09-02 |
+| ⚪ | D292 | [the native title gets its own id, distinct from the package](decisions/D292-the-native-title-gets-its-own-id.md) | unrecorded | ~2026-09-01..09-02 |
+| 🟢 | D293 | [a real ps5 native title uses the 4F 15 3D 1D eboot, so `native` defaults to it](decisions/D293-ps5-native-titles-use-the-4f153d1d-eboot.md) | hardware | ~2026-09-01..09-02 |
+| 🟢 | D294 | [SceShellUI restart recovers from VSH UI softlocks](decisions/D294-sceshellui-restart-recovers-from-vsh-ui-softlocks.md) | decided | 2026-09-02 |
+| 🟢 | D295 | [Dynamic module resolution for non-essential libraries](decisions/D295-dynamic-module-resolution-for-non-essential-libraries.md) | decided | 2026-09-02 |
+| 🟢 | D296 | [Four-tier privilege model and module categorization](decisions/D296-four-tier-privilege-model-and-module-categorization.md) | decided | 2026-09-02 |
+| 🟢 | D297 | [External SDK Version Dictionary and Targeted SDK Builds in SELFish and obSCEne](decisions/D297-external-sdk-dictionary-and-targeted-sdk-builds.md) | decided | 2026-09-02 |
+| 🟢 | D298 | [PT_SCE_PROCPARAM and PT_SCE_MODULE_PARAM Contracts on PS5 Native](decisions/D298-pt-sce-procparam-and-module-param-contracts.md) | decided | 2026-09-02 |
+| 🟢 | D299 | [Reproducible Process Parameter Audit in 048-selfaudit](decisions/D299-reproducible-procparam-audit-in-048-selfaudit.md) | decided | 2026-09-02 |
+| 🟢 | D300 | [Porthole encoder self-resolution: loading VENC sysmodule and export table traversal](decisions/D300-porthole-encoder-self-resolution.md) | decided | 2026-09-03 |
+| 🟢 | D301 | [Application Category, Privilege Tiers, and Display Arbitration on PS5 Native](decisions/D301-application-category-privilege-tiers-and-display-arbitration.md) | measured | 2026-09-03 |
+| 🟢 | D302 | [The conformance matrix - one capture per launch shape, named for the shape](decisions/D302-the-conformance-matrix-and-its-naming.md) | decided | 2026-09-03 |
+| 🟡 | D303 | [a scalar out-parameter is poisoned, not zeroed](decisions/D303-a-scalar-out-parameter-is-poisoned-not-zeroed.md) | assumed | 2026-09-03 |
+| 🟢 | D314 | [the decision gate checks the log this repository actually has](decisions/D314-the-decision-gate-checks-the-log-it-has.md) | decided | 2026-09-03 |
+| 🟢 | D315 | [a document beside a Makefile means that Makefile](decisions/D315-a-document-beside-a-makefile-means-that-makefile.md) | decided | 2026-09-03 |
+| 🟢 | D316 | [Porthole input injection via Ghostpad Virtual Device Interface (VDI)](decisions/D316-porthole-input-injection-and-ghostpad-vdi.md) | decided | 2026-09-03 |
+| 🟢 | D317 | [Porthole video pipeline reusing oops-sdk display and direct memory](decisions/D317-porthole-video-pipeline-reusing-oops-sdk.md) | decided | 2026-09-03 |
+| 🟢 | D320 | [the orbistoun backlog is generated and tiered by what blocks it](decisions/D320-the-orbistoun-backlog-is-generated-and-tiered.md) | decided | 2026-09-03 |
 
 | | meaning |
 |---|---|

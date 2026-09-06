@@ -7,7 +7,7 @@
  *
  * Declared exactly as surface.h declares its own: `const char`, so only the
  * address can ever be read. The type system forbidding the call is what makes a
- * census of 34,949 symbols safe to hold at all.
+ * census of 34,931 symbols safe to hold at all.
  */
 
 #ifndef OBSCENE_CORPUS_H
@@ -12738,9 +12738,8 @@
     X(sceKeyboardPadEmulateClose) \
     X(sceKeyboardPadEmulateOpen)
 
-/* libSceKeyboard: 13 symbols, 13 callable. */
+/* libSceKeyboard: 12 symbols, 12 callable. */
 #define OBS_CORPUS_0137_LIBSCEKEYBOARD(X) \
-    X(sceKeyboardClose) \
     X(sceKeyboardConnectPort) \
     X(sceKeyboardDebugGetDeviceId) \
     X(sceKeyboardDeviceOpen) \
@@ -12754,7 +12753,6 @@
     X(sceKeyboardSetProcessFocus) \
     X(sceKeyboardSetProcessPrivilege)
 #define OBS_CORPUS_CALLABLE_0137_LIBSCEKEYBOARD(X) \
-    X(sceKeyboardClose) \
     X(sceKeyboardConnectPort) \
     X(sceKeyboardDebugGetDeviceId) \
     X(sceKeyboardDeviceOpen) \
@@ -19866,35 +19864,27 @@
     X(_ZNK23sceMetadataReaderWriter8Metadata8getValueERKSsRNS_5ValueE) \
     X(_ZNK23sceMetadataReaderWriter8Metadata9dumpValueEv)
 
-/* libSceMouse: 15 symbols, 15 callable. */
+/* libSceMouse: 11 symbols, 11 callable. */
 #define OBS_CORPUS_0152_LIBSCEMOUSE(X) \
-    X(sceMouseClose) \
     X(sceMouseConnectPort) \
     X(sceMouseDebugGetDeviceId) \
     X(sceMouseDeviceOpen) \
     X(sceMouseDisconnectDevice) \
     X(sceMouseDisconnectPort) \
     X(sceMouseGetDeviceInfo) \
-    X(sceMouseInit) \
     X(sceMouseMbusInit) \
-    X(sceMouseOpen) \
-    X(sceMouseRead) \
     X(sceMouseSetHandType) \
     X(sceMouseSetPointerSpeed) \
     X(sceMouseSetProcessFocus) \
     X(sceMouseSetProcessPrivilege)
 #define OBS_CORPUS_CALLABLE_0152_LIBSCEMOUSE(X) \
-    X(sceMouseClose) \
     X(sceMouseConnectPort) \
     X(sceMouseDebugGetDeviceId) \
     X(sceMouseDeviceOpen) \
     X(sceMouseDisconnectDevice) \
     X(sceMouseDisconnectPort) \
     X(sceMouseGetDeviceInfo) \
-    X(sceMouseInit) \
     X(sceMouseMbusInit) \
-    X(sceMouseOpen) \
-    X(sceMouseRead) \
     X(sceMouseSetHandType) \
     X(sceMouseSetPointerSpeed) \
     X(sceMouseSetProcessFocus) \
@@ -58124,22 +58114,18 @@
 #define OBS_CORPUS_CALLABLE_0212_LIBSCEORBISCOMPATFORVIDEOSERVICE(X) \
     X(_ZN4Manx7RunLoop8finalizeEv)
 
-/* libScePad: 80 symbols, 80 callable. */
+/* libScePad: 72 symbols, 72 callable. */
 #define OBS_CORPUS_0213_LIBSCEPAD(X) \
     X(Func_298D21481F94C9FA) \
     X(Func_51E514BCD3A05CA5) \
     X(Func_89C9237E393DA243) \
     X(Func_EF103E845B6F0420) \
     X(scePadConnectPort) \
-    X(scePadDeviceClassGetExtendedInformation) \
-    X(scePadDeviceClassParseData) \
     X(scePadDeviceOpen) \
-    X(scePadDisableVibration) \
     X(scePadDisconnectDevice) \
     X(scePadDisconnectPort) \
     X(scePadEnableAutoDetect) \
     X(scePadEnableExtensionPort) \
-    X(scePadEnableSpecificDeviceClass) \
     X(scePadEnableUsbConnection) \
     X(scePadGetBluetoothAddress) \
     X(scePadGetCapability) \
@@ -58155,7 +58141,6 @@
     X(scePadGetMotionSensorPosition) \
     X(scePadGetMotionTimerUnit) \
     X(scePadGetSphereRadius) \
-    X(scePadGetTriggerEffectState) \
     X(scePadGetVersionInfo) \
     X(scePadIsBlasterConnected) \
     X(scePadIsDS4Connected) \
@@ -58191,10 +58176,7 @@
     X(scePadSetProcessPrivilege) \
     X(scePadSetProcessPrivilegeOfButtonRemapping) \
     X(scePadSetShareButtonMaskForRemotePlay) \
-    X(scePadSetTriggerEffect) \
     X(scePadSetUserColor) \
-    X(scePadSetVibrationForce) \
-    X(scePadSetVibrationMode) \
     X(scePadSetVrTrackingMode) \
     X(scePadShareOutputData) \
     X(scePadStartRecording) \
@@ -58212,15 +58194,11 @@
     X(Func_89C9237E393DA243) \
     X(Func_EF103E845B6F0420) \
     X(scePadConnectPort) \
-    X(scePadDeviceClassGetExtendedInformation) \
-    X(scePadDeviceClassParseData) \
     X(scePadDeviceOpen) \
-    X(scePadDisableVibration) \
     X(scePadDisconnectDevice) \
     X(scePadDisconnectPort) \
     X(scePadEnableAutoDetect) \
     X(scePadEnableExtensionPort) \
-    X(scePadEnableSpecificDeviceClass) \
     X(scePadEnableUsbConnection) \
     X(scePadGetBluetoothAddress) \
     X(scePadGetCapability) \
@@ -58236,7 +58214,6 @@
     X(scePadGetMotionSensorPosition) \
     X(scePadGetMotionTimerUnit) \
     X(scePadGetSphereRadius) \
-    X(scePadGetTriggerEffectState) \
     X(scePadGetVersionInfo) \
     X(scePadIsBlasterConnected) \
     X(scePadIsDS4Connected) \
@@ -58272,10 +58249,7 @@
     X(scePadSetProcessPrivilege) \
     X(scePadSetProcessPrivilegeOfButtonRemapping) \
     X(scePadSetShareButtonMaskForRemotePlay) \
-    X(scePadSetTriggerEffect) \
     X(scePadSetUserColor) \
-    X(scePadSetVibrationForce) \
-    X(scePadSetVibrationMode) \
     X(scePadSetVrTrackingMode) \
     X(scePadShareOutputData) \
     X(scePadStartRecording) \
@@ -66870,7 +66844,7 @@
     X(curl_url_set) \
     X(curl_version)
 
-/* libkernel: 785 symbols, 782 callable. */
+/* libkernel: 781 symbols, 778 callable. */
 #define OBS_CORPUS_0346_LIBKERNEL(X) \
     X(__Error) \
     X(__Ux86_64_setcontext) \
@@ -67396,10 +67370,7 @@
     X(sceKernelIsMainOnStanbyMode) \
     X(sceKernelIsMainOnStandbyMode) \
     X(sceKernelIsTestKit) \
-    X(sceKernelJitCreateAliasOfSharedMemory) \
-    X(sceKernelJitCreateSharedMemory) \
     X(sceKernelJitGetSharedMemoryInfo) \
-    X(sceKernelJitMapSharedMemory) \
     X(sceKernelKernelHeapUsage) \
     X(sceKernelLoadStartModuleForSysmodule) \
     X(sceKernelLoadStartModuleInternalForMono) \
@@ -67433,8 +67404,6 @@
     X(sceKernelPrepareToResumeProcess) \
     X(sceKernelPrepareToSuspendProcess) \
     X(sceKernelPrintBacktraceWithModuleInfo) \
-    X(sceKernelProtectDirectMemory) \
-    X(sceKernelProtectDirectMemoryForPID) \
     X(sceKernelPwritev) \
     X(sceKernelQueryTraceMemory) \
     X(sceKernelRaiseException) \
@@ -68180,10 +68149,7 @@
     X(sceKernelIsMainOnStanbyMode) \
     X(sceKernelIsMainOnStandbyMode) \
     X(sceKernelIsTestKit) \
-    X(sceKernelJitCreateAliasOfSharedMemory) \
-    X(sceKernelJitCreateSharedMemory) \
     X(sceKernelJitGetSharedMemoryInfo) \
-    X(sceKernelJitMapSharedMemory) \
     X(sceKernelKernelHeapUsage) \
     X(sceKernelLoadStartModuleForSysmodule) \
     X(sceKernelLoadStartModuleInternalForMono) \
@@ -68217,8 +68183,6 @@
     X(sceKernelPrepareToResumeProcess) \
     X(sceKernelPrepareToSuspendProcess) \
     X(sceKernelPrintBacktraceWithModuleInfo) \
-    X(sceKernelProtectDirectMemory) \
-    X(sceKernelProtectDirectMemoryForPID) \
     X(sceKernelPwritev) \
     X(sceKernelQueryTraceMemory) \
     X(sceKernelRaiseException) \

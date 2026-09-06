@@ -297,6 +297,10 @@ void obs_report_call(const char *library, const char *symbol, uint64_t index,
 void obs_report_resolve(const char *library, const char *symbol, int present,
                         uint64_t address);
 
+/* Module privilege tier reporting: OBS|modtier|<library>|<status>|<tier>|<detail> */
+void obs_report_module_tier(const char *library, const char *status,
+                            obs_module_tier tier, const char *detail);
+
 /* A call's actual return for a deliberately wrong argument.
  *
  * Every negative check in this suite asserts that a bad argument is *refused* and

@@ -18,5 +18,6 @@
 # will not reap holds its id, and every install/launch under it is refused until a reboot; building
 # under a fresh id sidesteps that (build-pkg.sh, D223).
 
+title = "obSCEne"
 content_id = "IV0002-OBSC00001_00-STOREUPD00000000"
-content_id_native = "UP0000-PPSA99998_00-OBSCENE000000000"
+content_id_native = "UP0000-PPSA99980_00-OBSCENE000000000"

@@ -1,5 +1,5 @@
-#include "common/freestd.h"
-#include "common/krw.h"
+#include "oops/freestd.h"
+#include "oops/krw.h"
 #include "obscene/display.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
@@ -125,7 +125,17 @@ static obs_result check_encoder_module_load(void) {
     int loaded_handle = -1;
     for (size_t i = 0; i < OBS_COUNT(search_paths); i++) {
         if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-            int res = 0;
+            /* **Poisoned, not zeroed.** A zero here cannot be told apart from a platform
+             * that never writes the out-parameter at all - both report 0, so the measurement
+             * separates nothing, and orbistoun had to mark all twenty-four of them opaque
+             * (orbistoun D497). Poisoning makes "untouched" a visible answer, which is the
+             * same argument `obs_report_written` already makes for buffers.
+             *
+             * `0xC7` is this project's own pattern byte, from `obs_layout_patterns`; a word
+             * of it is a value no error code or handle would be. A platform that happened to
+             * write exactly this reads as untouched, which is the residual that decision
+             * names and no single pattern avoids. */
+            int res = (int)0xC7C7C7C7u;
             int h = sceKernelLoadStartModule(search_paths[i], 0, (void *)0, 0,
                                              (void *)0, &res);
             obs_report_measure("106-encoder/path-probe", search_paths[i], "handle",
@@ -216,10 +226,6 @@ static obs_result check_encoder_symbol_census(void) {
                                (uint64_t)(uintptr_t)addr, "offset");
             obs_report_measure("106-encoder/symbols", name, "handle",
                                (uint64_t)(uint32_t)found_handle, "handle");
-            if (obs_address_is_callable(addr)) {
-                obs_report_buffer("106-encoder/prologue", name, "code",
-                                  (const unsigned char *)addr, 16);
-            }
         } else {
             obs_report_measure("106-encoder/symbols", name, "unresolved", 0, "status");
         }
@@ -253,10 +259,6 @@ static obs_result check_encoder_symbol_census(void) {
                                (uint64_t)(uintptr_t)addr, "offset");
             obs_report_measure("106-encoder/rec-symbols", name, "handle",
                                (uint64_t)(uint32_t)found_handle, "handle");
-            if (obs_address_is_callable(addr)) {
-                obs_report_buffer("106-encoder/rec-prologue", name, "code",
-                                  (const unsigned char *)addr, 16);
-            }
         } else {
             obs_report_measure("106-encoder/rec-symbols", name, "unresolved", 0,
                                "status");

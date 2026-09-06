@@ -41,8 +41,8 @@
  * runs on other people's consoles.
  */
 
-#include "common/freestd.h"
-#include "common/krw.h"
+#include "oops/freestd.h"
+#include "oops/krw.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -56,6 +56,8 @@
  * which is any build not loaded as an elfldr payload. That is a clean skip, not a
  * fault. */
 static unsigned long obs_payload_args = 0;
+static payload_args_t s_local_payload_args;
+static int s_have_payload_args = 0;
 
 /* Called once, from the entry, with `payload_args` while `rdi` is still live. Kept
  * trivial: the entry is the only place the value is available, and the only thing it
@@ -63,10 +65,28 @@ static unsigned long obs_payload_args = 0;
 void obs_capture_payload_args(unsigned long args);
 void obs_capture_payload_args(unsigned long args) {
     obs_payload_args = args;
+    if (args >= 0x10000UL && args < 0x0000800000000000UL && (args & 0x7UL) == 0) {
+        const payload_args_t *src = (const payload_args_t *)args;
+        s_local_payload_args.sys_dynlib_dlsym = src->sys_dynlib_dlsym;
+        s_local_payload_args.rwpipe = src->rwpipe;
+        s_local_payload_args.rwpair = src->rwpair;
+        s_local_payload_args.kpipe_addr = src->kpipe_addr;
+        s_local_payload_args.kdata_base_addr = src->kdata_base_addr;
+        s_local_payload_args.payloadout = src->payloadout;
+        s_local_payload_args.kexport_table = src->kexport_table;
+        s_have_payload_args = 1;
+    }
+}
+
+void obs_set_payload_kexport_table(void *table) {
+    s_local_payload_args.kexport_table = table;
 }
 
 const payload_args_t *obs_get_payload_args(void);
 const payload_args_t *obs_get_payload_args(void) {
+    if (s_have_payload_args) {
+        return &s_local_payload_args;
+    }
     if (obs_payload_args >= 0x10000UL && obs_payload_args < 0x0000800000000000UL &&
         (obs_payload_args & 0x7UL) == 0) {
         return (const payload_args_t *)obs_payload_args;
@@ -150,6 +170,37 @@ static obs_result check_handoff_words(void) {
                 first_kernel = word;
             }
         }
+    }
+
+    const payload_args_t *pargs = obs_get_payload_args();
+    if (pargs != NULL) {
+        if (pargs->rwpipe != NULL) {
+            obs_report_measure("136-kernel/handoff", "rwpipe_0", "val", (uint64_t)(int64_t)pargs->rwpipe[0], "fd");
+            obs_report_measure("136-kernel/handoff", "rwpipe_1", "val", (uint64_t)(int64_t)pargs->rwpipe[1], "fd");
+        }
+        if (pargs->rwpair != NULL) {
+            obs_report_measure("136-kernel/handoff", "rwpair_0", "val", (uint64_t)(int64_t)pargs->rwpair[0], "fd");
+            obs_report_measure("136-kernel/handoff", "rwpair_1", "val", (uint64_t)(int64_t)pargs->rwpair[1], "fd");
+        }
+        obs_report_measure("136-kernel/handoff", "kexport_table", pargs->kexport_table != NULL ? "present" : "null",
+                           (uint64_t)(uintptr_t)pargs->kexport_table, "addr");
+#if !defined(OBSCENE_HOST_BUILD)
+        pid_t my_pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+        uintptr_t my_kproc = krw_get_proc(my_pid);
+        obs_report_measure("136-kernel/handoff", "my_pid", "val", (uint64_t)my_pid, "pid");
+        obs_report_measure("136-kernel/handoff", "allproc_addr", "val", (uint64_t)krw_allproc_addr(), "addr");
+        obs_report_measure("136-kernel/handoff", "my_kproc", my_kproc != 0 ? "found" : "zero", (uint64_t)my_kproc, "addr");
+        if (my_kproc != 0) {
+            uintptr_t kaddr = 0;
+            krw_copyout(my_kproc + 0x3E8, &kaddr, sizeof(kaddr));
+            obs_report_measure("136-kernel/handoff", "kproc_3e8", "val", (uint64_t)kaddr, "addr");
+            if (kaddr != 0) {
+                uintptr_t cur = 0;
+                krw_copyout(kaddr, &cur, sizeof(cur));
+                obs_report_measure("136-kernel/handoff", "kproc_cur", "val", (uint64_t)cur, "addr");
+            }
+        }
+#endif
     }
 
     if (kernel_words == 0) {

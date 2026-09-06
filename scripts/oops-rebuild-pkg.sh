@@ -135,8 +135,9 @@ BUILD="${BUILD:-$HOME/obs-pkg}"
 
 # Where the Windows half reads from. The package is built Linux-local (see above) and a Windows
 # process cannot open `$HOME` inside the distro without going through `\wsl$`, so it is copied
-# into the repository - `*.pkg` is gitignored, so this is a working file, not a commit.
-staged="$OBSCENE/obscene.pkg"
+# into the build directory - `build/` is gitignored and keeps the root clean.
+mkdir -p "$OBSCENE/build"
+staged="$OBSCENE/build/obscene.pkg"
 
 if [ "$build" = 1 ]; then
     # Nothing from a previous run survives into this one.
@@ -201,10 +202,10 @@ echo "=== 3/3  install (Windows, so the console can reach us) ==="
 # without it a Windows process started from WSL sees none of this shell's environment.
 tool="$OBSCENE/tool"
 target="$tool/target-win"
-exe="$target/debug/obscene-tool.exe"
+exe="$target/release/obscene-tool.exe"
 
 ( cd "$tool" && CARGO_TARGET_DIR="$target" WSLENV=CARGO_TARGET_DIR/p \
-    cargo.exe build --bin obscene-tool 2>&1 | tr -d '\r' | grep -E "^error|Finished" ) || true
+    cargo.exe build --release --bin obscene-tool 2>&1 | tr -d '\r' | grep -E "^error|Finished" ) || true
 [ -f "$exe" ] || { echo "oops-rebuild-pkg.sh: no $exe - the Windows build did not produce one" >&2; exit 1; }
 
 # The binary is executed by its *Linux* path - WSL interop runs a `.exe` from `/mnt/...`, but

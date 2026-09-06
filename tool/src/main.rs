@@ -24,6 +24,7 @@ mod corpus;
 mod counts;
 mod crack;
 mod decisions;
+mod decode_layout;
 mod derive;
 mod diff;
 mod doccheck;
@@ -38,6 +39,7 @@ mod gpusurface;
 mod guards;
 mod hardware;
 mod imports;
+mod matrix;
 mod mining;
 mod pretty;
 mod probe;
@@ -220,6 +222,15 @@ enum Command {
         /// The eleven-character encoded form, with or without the `#lib#mod` suffix.
         encoded: String,
     },
+    /// Extract ABI structure layouts from hardware prologue dumps and out-param buffers.
+    #[command(name = "decode-layout")]
+    DecodeLayout {
+        /// Report file containing probe output.
+        report: PathBuf,
+        /// Path to write the layout TSV to. Defaults to stdout.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Turn a linked ELF into a module a console loader will run.
     ///
     /// Fixes the header and builds the vendor dynamic segment. Both, always: a loader
@@ -248,6 +259,12 @@ enum Command {
         /// Where to write the container. Defaults to `eboot.bin` beside the input.
         #[arg(long)]
         out: Option<PathBuf>,
+        /// Privilege tier: app, sysmodule, system, or root.
+        #[arg(long, default_value = "app")]
+        privilege: String,
+        /// Target SDK version or alias (e.g. "2.000.009", "ps5-native", "ps4-compat").
+        #[arg(long)]
+        sdk: Option<String>,
     },
     /// List what a module imports.
     ///
@@ -320,6 +337,26 @@ enum Command {
         /// The name appears verbatim in the output. `shadps4=reports/shadps4.txt`.
         #[arg(required = true)]
         reports: Vec<String>,
+    },
+    /// Compare every committed capture in the conformance matrix, and say what differs.
+    ///
+    /// One capture per launch shape, named
+    /// `obscene-probe-<target>-<mode>-<privilege>-<category>.log`, holding the **latest** run
+    /// of that shape. Where a `hardware` capture is present it is the authority and the others
+    /// are measured against it; where none is, disagreement is reported as unsettled rather
+    /// than blamed on anybody.
+    ///
+    /// A file that is not named as a capture is **listed**, never skipped quietly - a matrix
+    /// that omitted one would report agreement it had not checked.
+    ///
+    /// Exits 1 when anything diverges from hardware, so it works as a gate.
+    Matrix {
+        /// Directory of captures.
+        #[arg(default_value = "data/hardware")]
+        dir: PathBuf,
+        /// Print every check, not only the ones that differ.
+        #[arg(long)]
+        full: bool,
     },
     /// Check a report against the format contract.
     ///
@@ -471,7 +508,7 @@ enum Command {
     },
     /// Register a console and ask what it can currently answer
     Hw {
-        /// register | list | check | logs | send | sh | ls | pull | push | install | launch
+        /// register | list | check | logs | send | sh | ls | pull | push | install | launch | restart-ui
         action: String,
         /// Address for `register`; an ELF for `send`; a command for `sh`; a console path for
         /// `ls`/`pull`; a local file for `push` (`--into` is the remote path); a `.pkg` for
@@ -640,14 +677,11 @@ enum Command {
         #[arg(long)]
         report: PathBuf,
     },
-    /// Regenerate or check the index at the top of the decision log
+    /// Check the decision log against the index generated from it
     Decisions {
         /// Repository root. Defaults to the current directory.
         #[arg(long)]
         root: Option<PathBuf>,
-        /// Exit non-zero if the index has drifted instead of rewriting it
-        #[arg(long)]
-        check: bool,
     },
     /// Check the captured protocol transcripts against the specification
     Protocol {
@@ -842,12 +876,14 @@ fn run_hw(
         // URL when it mounts `/app0`. `handover` stops serving the instant the install has taken
         // the file (its `Drop`), so `install` then a separate `launch` finds a dead URL and the
         // mount fails - `mountApp0Dir 0x80020002`, `launchApp 0x80020002`, observed on hardware.
-        // One `Handover`, alive across the install, the launch, and a settle window after it,
-        // lets the mount's range fetches land on a server that is still there.
+        // Safely restart SceShellUI to recover from on-screen modal softlocks without rebooting.
+        "restart-ui" | "reset-ui" => run_hw_restart_ui(name),
+        // Cleanly terminate an application (unfreezing if in STOP state) to release vnode locks.
+        "close-app" | "kill-app" => run_hw_close_app(name, address),
         "deploy" => run_hw_deploy(name, address, into, seconds),
         other => Err(format!(
             "unknown action `{other}`: try register, list, check, logs, send, sh, ls, pull, \
-             push, install, install-native, launch or deploy"
+             push, install, install-native, launch, restart-ui, close-app or deploy"
         )
         .into()),
     }
@@ -1038,14 +1074,13 @@ fn run_caps(root: Option<&std::path::Path>) -> Result<ExitCode, Box<dyn std::err
     }
 }
 
-/// The decision-log index: generated from the entries, gated against drift.
-fn run_decisions(
-    root: Option<&std::path::Path>,
-    check: bool,
-) -> Result<ExitCode, Box<dyn std::error::Error>> {
+/// The decision log against its index: every entry listed once, every row a real file.
+///
+/// The index itself is generated by `tools/split-decisions.sh`, shared with the sibling
+/// repositories. This checks the two still describe the same set; it does not write.
+fn run_decisions(root: Option<&std::path::Path>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let root = root.unwrap_or_else(|| std::path::Path::new("."));
-    let path = root.join("docs").join("DECISIONS.md");
-    if decisions::run(&path, check)? {
+    if decisions::run(root)? {
         Ok(ExitCode::SUCCESS)
     } else {
         Ok(ExitCode::FAILURE)
@@ -1294,7 +1329,7 @@ fn run_gate(command: Command) -> Result<ExitCode, Box<dyn std::error::Error>> {
         Command::Caps { root } => run_caps(root.as_deref()),
         Command::Claims { root } => run_claims(root.as_deref()),
         Command::Rows { root, report } => run_rows(root.as_deref(), &report),
-        Command::Decisions { root, check } => run_decisions(root.as_deref(), check),
+        Command::Decisions { root } => run_decisions(root.as_deref()),
         Command::Protocol {
             root,
             examples,
@@ -1314,6 +1349,40 @@ fn run_gate(command: Command) -> Result<ExitCode, Box<dyn std::error::Error>> {
     }
 }
 
+fn run_nid(
+    name: &str,
+    suffix_file: Option<&std::path::Path>,
+    library: u16,
+    module: u16,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let bytes = suffix::read(suffix_file)?;
+    let value = selfish_nid::Nid::with_suffix(name, &bytes);
+    println!("{name}");
+    println!("  nid     {:#018x}", value.value());
+    println!("  encoded {}", value.encode());
+    println!(
+        "  symbol  {}",
+        selfish_nid::symbol_name(value, library, module)
+    );
+    Ok(ExitCode::SUCCESS)
+}
+
+fn run_decode(encoded: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let head = encoded.split('#').next().unwrap_or(encoded);
+    let value = selfish_nid::Nid::decode(head)?;
+    println!("{head}");
+    println!("  nid  {:#018x}", value.value());
+    Ok(ExitCode::SUCCESS)
+}
+
+fn run_decode_layout(
+    report: &std::path::Path,
+    out: Option<&std::path::Path>,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    decode_layout::run(report, out).map_err(Box::<dyn std::error::Error>::from)?;
+    Ok(ExitCode::SUCCESS)
+}
+
 fn run(cli: Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
     match cli.command {
         Command::Nid {
@@ -1321,27 +1390,9 @@ fn run(cli: Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
             suffix_file,
             library,
             module,
-        } => {
-            let bytes = suffix::read(suffix_file.as_deref())?;
-            let value = selfish_nid::Nid::with_suffix(&name, &bytes);
-            println!("{name}");
-            println!("  nid     {:#018x}", value.value());
-            println!("  encoded {}", value.encode());
-            println!(
-                "  symbol  {}",
-                selfish_nid::symbol_name(value, library, module)
-            );
-            Ok(ExitCode::SUCCESS)
-        }
-        Command::Decode { encoded } => {
-            // A real symbol name carries the library and module after the NID; accept
-            // either form so this works on text copied straight out of a module.
-            let head = encoded.split('#').next().unwrap_or(&encoded);
-            let value = selfish_nid::Nid::decode(head)?;
-            println!("{head}");
-            println!("  nid  {:#018x}", value.value());
-            Ok(ExitCode::SUCCESS)
-        }
+        } => run_nid(&name, suffix_file.as_deref(), library, module),
+        Command::Decode { encoded } => run_decode(&encoded),
+        Command::DecodeLayout { report, out } => run_decode_layout(&report, out.as_deref()),
         Command::Vaddrs {
             module,
             corpus,
@@ -1356,7 +1407,15 @@ fn run(cli: Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
             file,
             out,
             generation,
-        } => run_mkself(&file, out.as_deref(), generation),
+            privilege,
+            sdk,
+        } => run_mkself(
+            &file,
+            out.as_deref(),
+            generation,
+            &privilege,
+            sdk.as_deref(),
+        ),
         Command::Imports { file } => run_imports(&file),
         Command::Crack(args) => run_crack(&args),
         Command::Consensus { reports } => run_consensus(&reports),
@@ -1383,6 +1442,7 @@ fn run(cli: Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
             spin,
             proc_param,
         } => run_minimal(&out, spin, proc_param),
+        Command::Matrix { dir, full } => run_matrix(&dir, full),
         Command::Verify { file } => run_verify(&file),
         Command::Diff { before, after } => {
             let old = report::Report::parse(&std::fs::read_to_string(&before)?);
@@ -1842,6 +1902,119 @@ fn print_diff(comparison: &diff::Comparison) {
 }
 
 /// Checks a report against the format contract.
+/// `matrix` - read every capture in a directory and report the spread.
+///
+/// **Reads the names rather than being told them.** `consensus` takes `name=path` pairs from
+/// the caller, which is right for an ad-hoc comparison and wrong here: the point of the naming
+/// convention is that the directory *is* the matrix, so a cell nobody added is a cell nobody
+/// can forget to pass on the command line.
+fn run_matrix(dir: &std::path::Path, full: bool) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let mut captures = Vec::new();
+    let mut unnamed = Vec::new();
+    let mut entries: Vec<_> = std::fs::read_dir(dir)?
+        .flatten()
+        .map(|e| e.path())
+        .collect();
+    entries.sort();
+    for path in entries {
+        if path.is_dir() {
+            continue;
+        }
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default();
+        match matrix::parse_name(name) {
+            Ok(cell) => {
+                let text = std::fs::read_to_string(&path)?;
+                captures.push((cell, report::Report::parse(&text)));
+            }
+            Err(why) => unnamed.push(why),
+        }
+    }
+    let mut built = matrix::compare(&captures);
+    built.unnamed = unnamed;
+    Ok(print_matrix(&built, full))
+}
+
+/// Renders the matrix, and decides the exit code.
+fn print_matrix(built: &matrix::Matrix, full: bool) -> ExitCode {
+    println!("cells ({})", built.cells.len());
+    for cell in &built.cells {
+        let mark = if cell.is_authority() {
+            " <- authority"
+        } else {
+            ""
+        };
+        println!("  {}{mark}", cell.label());
+    }
+    if !built.unnamed.is_empty() {
+        // Named, not counted: a file nobody is comparing is the one worth looking at.
+        println!("\nnot named as captures ({})", built.unnamed.len());
+        for why in &built.unnamed {
+            println!("  {why}");
+        }
+    }
+    if built.cells.is_empty() {
+        println!("\nno captures - nothing was compared");
+        return ExitCode::SUCCESS;
+    }
+    let gaps = built.missing();
+    if !gaps.is_empty() {
+        println!(
+            "\nshapes some target has and another lacks ({})",
+            gaps.len()
+        );
+        for cell in &gaps {
+            println!("  {}", cell.file_name());
+        }
+    }
+
+    let divergences = built.divergences();
+    let unsettled = built.unsettled();
+    if !built.has_authority() {
+        println!(
+            "\n**no hardware capture, so nothing here is settled.** {} check(s) disagree across cells:",
+            unsettled.len()
+        );
+        for row in &unsettled {
+            println!("  {}", row.check);
+            for (label, (status, value)) in &row.answers {
+                println!("    {label:<34} {status:?} {value}");
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+
+    println!("\ndiverging from hardware ({})", divergences.len());
+    for row in &divergences {
+        let (expected, value) = row
+            .authority
+            .as_ref()
+            .expect("a divergence has an authority");
+        println!("  {}  hardware: {expected:?} {value}", row.check);
+        for label in row.diverging() {
+            if let Some((status, seen)) = row.answers.get(label) {
+                println!("    {label:<34} {status:?} {seen}");
+            }
+        }
+    }
+    if full {
+        println!("\nevery check ({})", built.rows.len());
+        for row in &built.rows {
+            println!("  {}", row.check);
+            for (label, (status, value)) in &row.answers {
+                println!("    {label:<34} {status:?} {value}");
+            }
+        }
+    }
+    if divergences.is_empty() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
+}
+
 fn run_verify(file: &std::path::Path) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let text = std::fs::read_to_string(file)?;
     let problems = verify::check(&report::Report::parse(&text));
@@ -1924,6 +2097,8 @@ fn run_mkself(
     file: &std::path::Path,
     out: Option<&std::path::Path>,
     generation: u8,
+    privilege: &str,
+    sdk_str: Option<&str>,
 ) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let payload = std::fs::read(file)?;
     let generation = if generation == 5 {
@@ -1931,21 +2106,32 @@ fn run_mkself(
     } else {
         selfish_abi::Generation::Previous
     };
-    let container = selfish_container::build(&payload, generation)?;
+    let priv_tier: selfish_container::Privilege =
+        privilege.parse().map_err(|e: &str| e.to_owned())?;
+    let dict = selfish_container::SdkDictionary::embedded();
+    let target_sdk = match sdk_str {
+        Some(s) => dict
+            .resolve(s, generation)
+            .map_err(Box::<dyn std::error::Error>::from)?,
+        None => selfish_container::TargetSdk::default_for(generation),
+    };
+    let container =
+        selfish_container::build_with_options(&payload, generation, priv_tier, Some(target_sdk))?;
     let target = match out {
         Some(p) => p.to_path_buf(),
         None => file.with_file_name("eboot.bin"),
     };
     std::fs::write(&target, &container)?;
     println!(
-        "{}: {} bytes from a {} byte payload, {generation}",
+        "{}: {} bytes from a {} byte payload, {generation} (privilege: {priv_tier:?}, sdk: 0x{:08x}/0x{:08x})",
         target.display(),
         container.len(),
-        payload.len()
+        payload.len(),
+        target_sdk.ps4_sdk,
+        target_sdk.ppr_sdk,
     );
     Ok(ExitCode::SUCCESS)
 }
-
 /// The encoded import names a finished module carries, or `None` if it carries no vendor
 /// tables at all.
 ///
@@ -2500,5 +2686,86 @@ fn run_hw_deploy(
         }
     }
     println!("fetched {} time(s) in total", offered.taken());
+    Ok(ExitCode::SUCCESS)
+}
+
+/// `hw restart-ui` - restart `SceShellUI` to recover from UI softlocks without rebooting.
+///
+/// Finding the process and signalling it are prosperous's job now, not a recipe kept here:
+/// `pros_core::system::shell_ui` picks it out by name (so no other process, `SceShellCore`
+/// included, can be hit) and `kill` builds the signal. `SceSysCore` respawns it. This is the
+/// same path `pros restart-ui` takes; the shared home is prosperous D027.
+fn run_hw_restart_ui(name: Option<&str>) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let console = hardware::resolve(hardware::load()?, name)?;
+    let link = pros_link::Link::to(&console.address);
+    let listing = pros_link::shell::run(&link, "ps", Duration::from_secs(10))?;
+    let processes = pros_core::system::processes(&listing);
+    let Some(ui) = pros_core::system::shell_ui(&processes) else {
+        println!("SceShellUI process not found");
+        return Ok(ExitCode::FAILURE);
+    };
+    println!(
+        "restarting SceShellUI (PID {}) to clear UI softlock...",
+        ui.pid
+    );
+    let out = pros_link::shell::run(
+        &link,
+        &pros_core::system::kill(&ui.pid, pros_core::system::Signal::Terminate),
+        Duration::from_secs(10),
+    )?;
+    if !out.trim().is_empty() {
+        print!("{out}");
+    }
+    println!("SceShellUI killed; SceSysCore will respawn it cleanly.");
+    Ok(ExitCode::SUCCESS)
+}
+
+/// `hw close-app` - cleanly terminate an app (default PPSA99980) to free locked vnodes.
+///
+/// Selecting the processes and the wake-then-kill order are prosperous's now
+/// (`pros_core::system::{of_title, end}`) - `end` is what knows a stopped process must be
+/// sent SIGCONT before SIGKILL, or it leaves locked vnodes behind. The only thing kept here
+/// is obSCEne's own quirk: its probe runs as a bare payload with no title id, so when the
+/// default id matches nothing it is found by its eboot instead. Shared home: prosperous D027.
+fn run_hw_close_app(
+    name: Option<&str>,
+    target_title: Option<&str>,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let title_id = target_title.unwrap_or("PPSA99980");
+    let console = hardware::resolve(hardware::load()?, name)?;
+    let link = pros_link::Link::to(&console.address);
+    let listing = pros_link::shell::run(&link, "ps", Duration::from_secs(10))?;
+    let processes = pros_core::system::processes(&listing);
+    let mut mine = pros_core::system::of_title(&processes, title_id);
+    if mine.is_empty() && title_id == "PPSA99980" {
+        mine = processes
+            .iter()
+            .filter(|process| process.command.contains("eboot.bin"))
+            .collect();
+    }
+    if mine.is_empty() {
+        println!("no active process found for {title_id}");
+        return Ok(ExitCode::SUCCESS);
+    }
+    for process in &mine {
+        println!(
+            "closing {title_id} (PID {}, state {})...",
+            process.pid, process.state
+        );
+        for command in pros_core::system::end(process) {
+            let _ = pros_link::shell::run(&link, &command, Duration::from_secs(5));
+        }
+    }
+    // Give the kills a moment to land before asking again, then let prosperous say whether the
+    // title is still there rather than a substring match that a different process could trip.
+    std::thread::sleep(Duration::from_millis(500));
+    let after = pros_link::shell::run(&link, "ps", Duration::from_secs(5))?;
+    let remaining = pros_core::system::processes(&after);
+    let still = pros_core::system::of_title(&remaining, title_id);
+    if still.is_empty() {
+        println!("closed {title_id} successfully.");
+    } else {
+        println!("warning: process still appears in ps for {title_id}");
+    }
     Ok(ExitCode::SUCCESS)
 }

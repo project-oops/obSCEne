@@ -23,13 +23,15 @@ anyone else can reproduce a report.
 
 ### Siblings
 
-**obSCEne does not build from a clone of only this repository.** It resolves two of them by
+**obSCEne does not build from a clone of only this repository.** It resolves three of them by
 relative path, as siblings, so the directory layout is a build requirement rather than a
 convenience:
 
 ```
 selfish      every platform file format - the module, the eboot, the package
 prosperous   (and oops-libs, through it)
+oops-sdk     the freestanding-C SDK: its sources link into the module and eboot, and
+             payloads build on its runtime (Makefile includes its oops-sdk.mk)
 ```
 
 ```bash
@@ -40,8 +42,8 @@ Without SELFish beside it, `host` builds and nothing that a loader or an emulato
 does. That is not an accident of layout: producing a *format* goes through SELFish precisely
 so that a wrong magic or a stale tag cannot be introduced here in isolation.
 
-`SELFISH ?= ../selfish` in the `Makefile` is the only knob, if your checkout is arranged
-differently.
+`SELFISH ?= ../selfish` and `OOPS_SDK ?= ../oops-sdk` in the `Makefile` are the two knobs, if
+your checkout is arranged differently.
 
 ### Windows
 

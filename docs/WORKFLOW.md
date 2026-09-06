@@ -175,7 +175,7 @@ claiming only that a symbol exists, and nothing about what it does.
 Everything is `sh`, and the emulators are driven from it exactly as the builds are.
 
 ```bash
-# One run: build (in the VM), fetch, run, extract the report.
+# One run: build (in WSL), fetch, run, extract the report.
 sh scripts/run-emulator.sh --emulator C:\emu\shadPS4.exe
 
 # A complete sweep: rounds until nothing kills the process.
@@ -186,7 +186,7 @@ sh scripts/harvest-nids.sh reports/*.log
 ```
 
 ```bash
-# Everything that must pass before a change is done. Run this in the VM.
+# Everything that must pass before a change is done. Run this in WSL.
 sh scripts/verify.sh
 ```
 
@@ -230,25 +230,22 @@ hides a check that no longer crashes.
 
 ### The one environment hazard worth knowing
 
-Git Bash rewrites anything that looks like a Unix path before a Windows program sees it,
-so `--working-directory /home/ubuntu/obscene` reaches multipass as
-`C:/Program Files/Git/home/ubuntu/obscene` and the command fails on a directory that does
-not exist. Paths inside the VM must survive untouched, so every multipass call goes
-through a one-line wrapper that sets `MSYS_NO_PATHCONV=1`.
+Git Bash rewrites anything that looks like a Unix path before a Windows program sees it, and
+`wsl.exe` is as Windows a program as any, however Linux the command it carries. So
+`wsl.exe -d Ubuntu -- bash -lc '... /home/ubuntu/obscene ...'` reaches the distro with its
+`/...` arguments rewritten to `C:/Program Files/Git/...`, and the command fails on a directory
+that does not exist. Paths meant for inside WSL must survive untouched, so every `wsl.exe` call
+goes through a one-line wrapper that sets `MSYS_NO_PATHCONV=1`.
 
-**This is why these scripts used to be PowerShell.** CLAUDE.md said to use it for
-multipass invocations for exactly this reason - and the reason was one environment
+**This is why these scripts used to be PowerShell.** CLAUDE.md said to use it for the
+cross-boundary invocations for exactly this reason - and the reason was one environment
 variable, not a language. Writing them in sh also deleted the hazard PowerShell brought
-with it: it turns a native command's stderr into a terminating error, so multipass warning
-about a file it had just copied correctly would kill a script, intermittently.
+with it: it turns a native command's stderr into a terminating error, so a warning printed on
+a step that had actually succeeded would kill a script, intermittently.
 
-One thing left over: multipass copies a file to an NTFS target correctly and then exits
-non-zero trying to set POSIX permissions on it. The scripts tolerate that and assert the
-file exists instead, which is what they actually want to know.
-
-`build/` is a second one, and unrelated: the VM mounts this repository and can create that
-directory as root, after which the host cannot write into its own build directory. Reports
-go to `reports/`.
+`build/` is a related trap: the build must land on a Linux-local `BUILD` path, never the
+mounted `/mnt/c/...` tree, because a Windows mount cannot carry the execute bit and the host
+binary that generates `symbols.txt` will not run from it. Reports go to `reports/`.
 
 ## What obSCEne gives the emulator, concretely
 

@@ -40,6 +40,7 @@
 
 #include "obscene/harness.h"
 #include "obscene/platform.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 /* Large enough for any `sigset_t` this could meet - 16 bytes on the BSD the target
@@ -61,63 +62,129 @@ typedef union {
 #define OBS_SIGNAL_A 1
 #define OBS_SIGNAL_B 2
 
+#if !defined(OBSCENE_HOST_BUILD)
+typedef void *ObsPosixRwlock;
+#endif
+
+typedef int (*fn_posix_getpagesize_t)(void);
+typedef int (*fn_posix_sigemptyset_t)(void *);
+typedef int (*fn_posix_sigfillset_t)(void *);
+typedef int (*fn_posix_sigaddset_t)(void *, int);
+typedef int (*fn_posix_sigdelset_t)(void *, int);
+typedef int (*fn_posix_sigismember_t)(const void *, int);
+typedef int (*fn_posix_usleep_t)(unsigned int);
+typedef int (*fn_posix_rwlock_init_t)(ObsPosixRwlock *, const void *);
+typedef int (*fn_posix_rwlock_destroy_t)(ObsPosixRwlock *);
+typedef int (*fn_posix_rwlock_tryrdlock_t)(ObsPosixRwlock *);
+typedef int (*fn_posix_rwlock_trywrlock_t)(ObsPosixRwlock *);
+typedef int (*fn_posix_rwlock_unlock_t)(ObsPosixRwlock *);
+
+#if !defined(OBSCENE_HOST_BUILD)
+static int s_posix_handle = -2;
+
+static int obs_posix_handle(void) {
+    if (s_posix_handle != -2) {
+        return s_posix_handle;
+    }
+    s_posix_handle = obs_module_open("libScePosix");
+    if (s_posix_handle < 0) {
+        s_posix_handle = obs_module_open("libScePosixForWebKit");
+    }
+    return s_posix_handle;
+}
+#endif
+
+static void *obs_posix_symbol(const char *name) {
+#if defined(OBSCENE_HOST_BUILD)
+    if (obs_strcmp(name, "posix_getpagesize") == 0) return (void *)&posix_getpagesize;
+    if (obs_strcmp(name, "posix_sigemptyset") == 0) return (void *)&posix_sigemptyset;
+    if (obs_strcmp(name, "posix_sigfillset") == 0) return (void *)&posix_sigfillset;
+    if (obs_strcmp(name, "posix_sigaddset") == 0) return (void *)&posix_sigaddset;
+    if (obs_strcmp(name, "posix_sigdelset") == 0) return (void *)&posix_sigdelset;
+    if (obs_strcmp(name, "posix_sigismember") == 0) return (void *)&posix_sigismember;
+    if (obs_strcmp(name, "posix_usleep") == 0) return (void *)&posix_usleep;
+    if (obs_strcmp(name, "posix_pthread_rwlock_init") == 0) return (void *)&posix_pthread_rwlock_init;
+    if (obs_strcmp(name, "posix_pthread_rwlock_destroy") == 0) return (void *)&posix_pthread_rwlock_destroy;
+    if (obs_strcmp(name, "posix_pthread_rwlock_tryrdlock") == 0) return (void *)&posix_pthread_rwlock_tryrdlock;
+    if (obs_strcmp(name, "posix_pthread_rwlock_trywrlock") == 0) return (void *)&posix_pthread_rwlock_trywrlock;
+    if (obs_strcmp(name, "posix_pthread_rwlock_unlock") == 0) return (void *)&posix_pthread_rwlock_unlock;
+    return NULL;
+#else
+    int h = obs_posix_handle();
+    if (h < 0) {
+        return NULL;
+    }
+    return (void *)obs_module_symbol(h, name);
+#endif
+}
+
 static obs_result check_signal_sets(void) {
-    OBS_REQUIRE(&posix_sigaddset, &posix_sigdelset, &posix_sigfillset,
-                &posix_sigismember);
+    fn_posix_sigemptyset_t fn_empty = (fn_posix_sigemptyset_t)obs_posix_symbol("posix_sigemptyset");
+    fn_posix_sigfillset_t fn_fill = (fn_posix_sigfillset_t)obs_posix_symbol("posix_sigfillset");
+    fn_posix_sigaddset_t fn_add = (fn_posix_sigaddset_t)obs_posix_symbol("posix_sigaddset");
+    fn_posix_sigdelset_t fn_del = (fn_posix_sigdelset_t)obs_posix_symbol("posix_sigdelset");
+    fn_posix_sigismember_t fn_member = (fn_posix_sigismember_t)obs_posix_symbol("posix_sigismember");
+    if (fn_empty == NULL || fn_fill == NULL || fn_add == NULL || fn_del == NULL || fn_member == NULL) {
+        return obs_skip("libScePosix is not available in this sandbox");
+    }
     obs_sigset set;
     for (size_t i = 0; i < sizeof(set.bytes); i++) {
         set.bytes[i] = 0xA5;
     }
 
-    if (posix_sigemptyset(&set) != 0) {
+    if (fn_empty(&set) != 0) {
         return obs_fail("an empty signal set could not be made");
     }
     /* The buffer was filled with a pattern first, so this also catches an
      * implementation that reports success and writes nothing: the stale bytes would
      * still read as members. */
-    if (posix_sigismember(&set, OBS_SIGNAL_A) != 0) {
+    if (fn_member(&set, OBS_SIGNAL_A) != 0) {
         return obs_fail("a signal was already in a set said to be empty");
     }
 
-    if (posix_sigaddset(&set, OBS_SIGNAL_A) != 0) {
+    if (fn_add(&set, OBS_SIGNAL_A) != 0) {
         return obs_fail("a signal could not be added to a set");
     }
-    if (posix_sigismember(&set, OBS_SIGNAL_A) != 1) {
+    if (fn_member(&set, OBS_SIGNAL_A) != 1) {
         return obs_fail("a signal that was added is not in the set");
     }
     /* Adding one must not add the others. An implementation that fills the set on any
      * add passes every check above. */
-    if (posix_sigismember(&set, OBS_SIGNAL_B) != 0) {
+    if (fn_member(&set, OBS_SIGNAL_B) != 0) {
         return obs_fail("adding one signal added another");
     }
 
-    if (posix_sigdelset(&set, OBS_SIGNAL_A) != 0) {
+    if (fn_del(&set, OBS_SIGNAL_A) != 0) {
         return obs_fail("a signal could not be removed from a set");
     }
-    if (posix_sigismember(&set, OBS_SIGNAL_A) != 0) {
+    if (fn_member(&set, OBS_SIGNAL_A) != 0) {
         return obs_fail("a signal that was removed is still in the set");
     }
 
-    if (posix_sigfillset(&set) != 0) {
+    if (fn_fill(&set) != 0) {
         return obs_fail("a full signal set could not be made");
     }
-    if (posix_sigismember(&set, OBS_SIGNAL_A) != 1 ||
-        posix_sigismember(&set, OBS_SIGNAL_B) != 1) {
+    if (fn_member(&set, OBS_SIGNAL_A) != 1 ||
+        fn_member(&set, OBS_SIGNAL_B) != 1) {
         return obs_fail("a set said to be full is missing a signal");
     }
     /* Empty after full, so the last call cannot be the one that happens to work on a
      * freshly zeroed buffer. */
-    if (posix_sigemptyset(&set) != 0) {
+    if (fn_empty(&set) != 0) {
         return obs_fail("a full set could not be emptied");
     }
-    if (posix_sigismember(&set, OBS_SIGNAL_B) != 0) {
+    if (fn_member(&set, OBS_SIGNAL_B) != 0) {
         return obs_fail("emptying a full set left a signal in it");
     }
     return obs_pass();
 }
 
 static obs_result check_page_size(void) {
-    int size = posix_getpagesize();
+    fn_posix_getpagesize_t fn = (fn_posix_getpagesize_t)obs_posix_symbol("posix_getpagesize");
+    if (fn == NULL) {
+        return obs_skip("libScePosix is not available in this sandbox");
+    }
+    int size = fn();
     if (size <= 0) {
         return obs_fail_code("the page size is not positive", (uint64_t)(uint32_t)size);
     }
@@ -133,107 +200,65 @@ static obs_result check_page_size(void) {
 }
 
 static obs_result check_short_sleep(void) {
+    fn_posix_usleep_t fn = (fn_posix_usleep_t)obs_posix_symbol("posix_usleep");
+    if (fn == NULL) {
+        return obs_skip("libScePosix is not available in this sandbox");
+    }
     /* A millisecond. Short enough that a suite of several hundred checks does not
-     * notice it, long enough to be a real request rather than a rounding error.
-     *
-     * Blocking on purpose is allowed here, as it is in 050-time/usleep, because the
-     * duration is ours rather than the platform's: nothing it waits for can fail to
-     * arrive. A lock or a read has no such bound, which is why those are written as the
-     * try form or not at all.
-     *
-     * `sceKernelUsleep` is the vendor spelling of this same call, so the two are
-     * another candidate for the comparison in `spellings-agree`. Not done here: that
-     * check compares outcomes, and two sleeps both returning zero would agree without
-     * either having slept. */
-    if (posix_usleep(1000u) != 0) {
+     * notice it, long enough to be a real request rather than a rounding error. */
+    if (fn(1000u) != 0) {
         return obs_fail("a one-millisecond sleep reported failure");
     }
-    /* # What a pass here does not establish
-     *
-     * That the sleep happened. `usleep` returns zero for any valid request, so a stub
-     * returning zero to everything passes this, and the check cannot tell them apart.
-     * That is the same defect D056 found in the inverse-trigonometry check, and it is
-     * stated rather than fixed because the two available fixes are both worse.
-     *
-     * A responsiveness probe would compare the return values of two sleeps - which are
-     * both zero when the function is *correct*, so it would report a working
-     * implementation as silent. That is the `fmod(7, 4)` mistake with the inputs chosen
-     * deliberately instead of by accident.
-     *
-     * A clock comparison would need a time source this check has not established. The
-     * one the vendor section uses counts process time, which a sleeping thread may
-     * legitimately not accrue - see 050-time/usleep, which for that reason only checks
-     * that the clock did not go backwards.
-     *
-     * So a pass here means "the call accepted a valid request and reported success",
-     * which is weaker than a pass elsewhere in this section and is worth knowing when
-     * reading the sheet. The value is the fail: an implementation that refuses a
-     * one-millisecond sleep is broken in a way worth seeing. */
     return obs_pass();
 }
 
 static obs_result check_rwlock(void) {
-    OBS_REQUIRE(&posix_pthread_rwlock_destroy, &posix_pthread_rwlock_tryrdlock,
-                &posix_pthread_rwlock_trywrlock, &posix_pthread_rwlock_unlock);
+    fn_posix_rwlock_init_t fn_init = (fn_posix_rwlock_init_t)obs_posix_symbol("posix_pthread_rwlock_init");
+    fn_posix_rwlock_destroy_t fn_destroy = (fn_posix_rwlock_destroy_t)obs_posix_symbol("posix_pthread_rwlock_destroy");
+    fn_posix_rwlock_tryrdlock_t fn_tryrd = (fn_posix_rwlock_tryrdlock_t)obs_posix_symbol("posix_pthread_rwlock_tryrdlock");
+    fn_posix_rwlock_trywrlock_t fn_trywr = (fn_posix_rwlock_trywrlock_t)obs_posix_symbol("posix_pthread_rwlock_trywrlock");
+    fn_posix_rwlock_unlock_t fn_unlock = (fn_posix_rwlock_unlock_t)obs_posix_symbol("posix_pthread_rwlock_unlock");
+    if (fn_init == NULL || fn_destroy == NULL || fn_tryrd == NULL || fn_trywr == NULL || fn_unlock == NULL) {
+        return obs_skip("libScePosix is not available in this sandbox");
+    }
     ObsPosixRwlock lock = 0;
-    if (posix_pthread_rwlock_init(&lock, 0) != 0) {
+    if (fn_init(&lock, 0) != 0) {
         return obs_fail("a POSIX read/write lock could not be created");
     }
     /* The same shape as 015-sync's check of the vendor spelling, deliberately: two
      * readers admitted at once, a writer refused while they hold it, and admitted once
      * they are gone. A platform that fails the second reader has built a mutex. */
-    if (posix_pthread_rwlock_tryrdlock(&lock) != 0) {
-        (void)posix_pthread_rwlock_destroy(&lock);
+    if (fn_tryrd(&lock) != 0) {
+        (void)fn_destroy(&lock);
         return obs_fail("a fresh lock could not be taken for reading");
     }
-    if (posix_pthread_rwlock_tryrdlock(&lock) != 0) {
-        (void)posix_pthread_rwlock_unlock(&lock);
-        (void)posix_pthread_rwlock_destroy(&lock);
+    if (fn_tryrd(&lock) != 0) {
+        (void)fn_unlock(&lock);
+        (void)fn_destroy(&lock);
         return obs_fail("a second reader was refused");
     }
-    if (posix_pthread_rwlock_trywrlock(&lock) == 0) {
-        (void)posix_pthread_rwlock_unlock(&lock);
-        (void)posix_pthread_rwlock_unlock(&lock);
-        (void)posix_pthread_rwlock_unlock(&lock);
-        (void)posix_pthread_rwlock_destroy(&lock);
+    if (fn_trywr(&lock) == 0) {
+        (void)fn_unlock(&lock);
+        (void)fn_unlock(&lock);
+        (void)fn_unlock(&lock);
+        (void)fn_destroy(&lock);
         return obs_fail("a writer was let in while readers held the lock");
     }
-    (void)posix_pthread_rwlock_unlock(&lock);
-    (void)posix_pthread_rwlock_unlock(&lock);
+    (void)fn_unlock(&lock);
+    (void)fn_unlock(&lock);
 
-    if (posix_pthread_rwlock_trywrlock(&lock) != 0) {
-        (void)posix_pthread_rwlock_destroy(&lock);
+    if (fn_trywr(&lock) != 0) {
+        (void)fn_destroy(&lock);
         return obs_fail("a writer was refused an unheld lock");
     }
-    (void)posix_pthread_rwlock_unlock(&lock);
-    if (posix_pthread_rwlock_destroy(&lock) != 0) {
+    (void)fn_unlock(&lock);
+    if (fn_destroy(&lock) != 0) {
         return obs_fail("a lock could not be destroyed");
     }
     return obs_pass();
 }
 
 static obs_result check_spellings_agree(void) {
-    OBS_REQUIRE(&posix_pthread_rwlock_destroy, &posix_pthread_rwlock_init,
-                &posix_pthread_rwlock_trywrlock, &posix_pthread_rwlock_unlock);
-    /* The check this whole section exists for.
-     *
-     * These are two names for one thing. Nothing here asks for a particular answer -
-     * it asks the two paths the same question and reports when they differ, which is a
-     * fault whatever the right answer turns out to be.
-     *
-     * It cannot be written the usual way. An expected value would make it a third
-     * opinion; the point is that the platform must agree with itself. */
-    /* Both symbols have to be checked, and only one of them is this check's own.
-     *
-     * The harness skips a check whose declared symbol is null, because jumping to zero
-     * takes the process down and loses everything behind it. A check that calls a
-     * second library gets no such protection - the guard covers the symbol in the
-     * table, not whatever else the body reaches for.
-     *
-     * This is not hypothetical. The first version of this check went straight into a
-     * null `scePthreadRwlockInit` on the host build and took the process with it; the
-     * `try` record with no `res` named it, which is what that invariant is for. Every
-     * platform declaration is weak, so the address is the test. */
     if ((const void *)&scePthreadRwlockInit == 0 ||
         (const void *)&scePthreadRwlockTryrdlock == 0 ||
         (const void *)&scePthreadRwlockTrywrlock == 0 ||
@@ -242,17 +267,25 @@ static obs_result check_spellings_agree(void) {
         return obs_skip(
             "the vendor spelling is absent, so there is nothing to compare");
     }
+    fn_posix_rwlock_init_t fn_posix_init = (fn_posix_rwlock_init_t)obs_posix_symbol("posix_pthread_rwlock_init");
+    fn_posix_rwlock_destroy_t fn_posix_destroy = (fn_posix_rwlock_destroy_t)obs_posix_symbol("posix_pthread_rwlock_destroy");
+    fn_posix_rwlock_tryrdlock_t fn_posix_tryrd = (fn_posix_rwlock_tryrdlock_t)obs_posix_symbol("posix_pthread_rwlock_tryrdlock");
+    fn_posix_rwlock_trywrlock_t fn_posix_trywr = (fn_posix_rwlock_trywrlock_t)obs_posix_symbol("posix_pthread_rwlock_trywrlock");
+    fn_posix_rwlock_unlock_t fn_posix_unlock = (fn_posix_rwlock_unlock_t)obs_posix_symbol("posix_pthread_rwlock_unlock");
+    if (fn_posix_init == NULL || fn_posix_destroy == NULL || fn_posix_tryrd == NULL || fn_posix_trywr == NULL || fn_posix_unlock == NULL) {
+        return obs_skip("libScePosix is not available in this sandbox");
+    }
 
     ScePthreadRwlock vendor = 0;
     ObsPosixRwlock posix = 0;
     int vendor_rc = scePthreadRwlockInit(&vendor, NULL, "obscene-compare");
-    int posix_rc = posix_pthread_rwlock_init(&posix, 0);
+    int posix_rc = fn_posix_init(&posix, 0);
     if ((vendor_rc == 0) != (posix_rc == 0)) {
         if (vendor_rc == 0) {
             (void)scePthreadRwlockDestroy(&vendor);
         }
         if (posix_rc == 0) {
-            (void)posix_pthread_rwlock_destroy(&posix);
+            (void)fn_posix_destroy(&posix);
         }
         return obs_fail("one spelling created a lock and the other refused");
     }
@@ -263,36 +296,33 @@ static obs_result check_spellings_agree(void) {
     /* Second reader on both. Whether it is admitted is the platform's business; that
      * the two answers match is not. */
     (void)scePthreadRwlockTryrdlock(&vendor);
-    (void)posix_pthread_rwlock_tryrdlock(&posix);
+    (void)fn_posix_tryrd(&posix);
     int vendor_second = scePthreadRwlockTryrdlock(&vendor);
-    int posix_second = posix_pthread_rwlock_tryrdlock(&posix);
+    int posix_second = fn_posix_tryrd(&posix);
 
-    /* Compared as outcomes rather than as codes: the two libraries are entitled to
-     * report the same refusal with different numbers, and calling that a disagreement
-     * would be this check inventing a requirement. */
     int disagree_reader = (vendor_second == 0) != (posix_second == 0);
 
     if (vendor_second == 0) {
         (void)scePthreadRwlockUnlock(&vendor);
     }
     if (posix_second == 0) {
-        (void)posix_pthread_rwlock_unlock(&posix);
+        (void)fn_posix_unlock(&posix);
     }
 
     int vendor_writer = scePthreadRwlockTrywrlock(&vendor);
-    int posix_writer = posix_pthread_rwlock_trywrlock(&posix);
+    int posix_writer = fn_posix_trywr(&posix);
     int disagree_writer = (vendor_writer == 0) != (posix_writer == 0);
     if (vendor_writer == 0) {
         (void)scePthreadRwlockUnlock(&vendor);
     }
     if (posix_writer == 0) {
-        (void)posix_pthread_rwlock_unlock(&posix);
+        (void)fn_posix_unlock(&posix);
     }
 
     (void)scePthreadRwlockUnlock(&vendor);
-    (void)posix_pthread_rwlock_unlock(&posix);
+    (void)fn_posix_unlock(&posix);
     (void)scePthreadRwlockDestroy(&vendor);
-    (void)posix_pthread_rwlock_destroy(&posix);
+    (void)fn_posix_destroy(&posix);
 
     if (disagree_reader) {
         return obs_fail("the two spellings disagree about a second reader");
@@ -305,18 +335,18 @@ static obs_result check_spellings_agree(void) {
 
 static const obs_check posix_checks[] = {
     {"017-posix/page-size", "libScePosix", "posix_getpagesize", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&posix_getpagesize, check_page_size, OBS_FROM_SPEC},
+     OBS_CAP_NONE, (const void *)check_page_size, check_page_size, OBS_FROM_SPEC},
     {"017-posix/signal-sets", "libScePosix", "posix_sigemptyset", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&posix_sigemptyset, check_signal_sets, OBS_FROM_SPEC},
+     OBS_CAP_NONE, (const void *)check_signal_sets, check_signal_sets, OBS_FROM_SPEC},
     {"017-posix/short-sleep", "libScePosix", "posix_usleep", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&posix_usleep, check_short_sleep, OBS_FROM_SPEC},
+     (const void *)check_short_sleep, check_short_sleep, OBS_FROM_SPEC},
     {"017-posix/rwlock", "libScePosix", "posix_pthread_rwlock_init", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&posix_pthread_rwlock_init, check_rwlock,
+     OBS_CAP_NONE, (const void *)check_rwlock, check_rwlock,
      OBS_FROM_SPEC},
     /* Assumed, not spec: no document says the two libraries must be one
      * implementation. It is a strong expectation and it is still this project's. */
     {"017-posix/spellings-agree", "libScePosix", "posix_pthread_rwlock_tryrdlock",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&posix_pthread_rwlock_tryrdlock,
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_spellings_agree,
      check_spellings_agree, OBS_FROM_ASSUMED},
 };
 

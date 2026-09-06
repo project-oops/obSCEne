@@ -33,7 +33,10 @@
 # A command-line `make CC=...` still overrides it — which is how a compiler cache is wrapped in:
 # `oops-rebuild-pkg.sh` passes `make CC="sccache clang"`, and a plain `make` stays bare clang.
 CC := clang
+AR ?= ar
 BUILD ?= build
+OOPS_SDK ?= $(abspath ../oops-sdk)
+include $(OOPS_SDK)/oops-sdk.mk
 
 # Which console generation the module declares itself for.
 #
@@ -75,7 +78,7 @@ TABLE ?= $(if $(filter 5,$(GEN)),current,legacy)
 WARNINGS := -Wall -Wextra -Werror -Wshadow -Wconversion -Wsign-conversion \
             -Wstrict-prototypes -Wmissing-prototypes -Wvla
 STD := -std=c11
-INCLUDE := -Iinclude -Isrc
+INCLUDE := -Iinclude -Isrc $(OOPS_SDK_INCLUDE)
 
 # Stamped into every report so a diff can tell "the probe changed" from "the platform
 # changed" — two very different answers to "did that help?".
@@ -314,6 +317,7 @@ endif
 
 # The Rust tooling. Built into a VM-local target directory for the same reason the C
 # build is: cargo writes by rename, and a mounted Windows share refuses it.
+CARGO ?= $(shell if [ -x "$$HOME/.cargo/bin/cargo" ]; then echo "$$HOME/.cargo/bin/cargo"; else which cargo 2>/dev/null; fi)
 TOOL_TARGET ?= /tmp/obscene-tool-target
 TOOL := $(TOOL_TARGET)/release/obscene-tool
 
@@ -323,15 +327,14 @@ TOOL := $(TOOL_TARGET)/release/obscene-tool
 # rather than being buried in `#if` inside otherwise-shared code. A file either builds for
 # a target or it does not, and the list says which - so adding a target means adding a list,
 # not threading another condition through every file it touches.
-COMMON_SRC := src/common/freestd.c src/probe/runtime.c src/probe/status.c src/probe/report.c src/probe/harness.c src/probe/registry.c \
+COMMON_SRC := src/probe/runtime.c src/probe/status.c src/probe/report.c src/probe/harness.c src/probe/registry.c \
               src/probe/imports.c src/probe/display.c src/probe/font.c src/probe/screen.c src/probe/sink.c \
               src/probe/net.c src/probe/sysinfo.c \
               $(wildcard src/probe/sections/*.c)
 TARGET_SRC := $(COMMON_SRC) src/probe/start.c src/probe/crt.c src/probe/sink_target.c src/probe/net_target.c
 HOST_SRC := $(COMMON_SRC) src/probe/host_main.c src/probe/host_stubs.c src/probe/sink_host.c \
             src/probe/net_posix.c
-INJECTOR_SRC := src/injector/injector.c src/injector/loader.c src/injector/procctl.c \
-                src/injector/krw.c src/injector/target.c src/common/freestd.c src/common/syscall.c
+INJECTOR_SRC := src/probe/injector_entry.c
 
 # On this host the maths functions live in libm, not libc, so without it 037-math
 # skips every check with "symbol is not present" - the harness behaving correctly, and
@@ -464,6 +467,8 @@ EBOOT_TABLE ?= $(TABLE)
 #   executable  0xFE10   what native current-generation (PS5) eboots carry and what kstuff expects
 EBOOT_KIND ?= $(if $(filter 5,$(EBOOT_GEN)),executable,fixed)
 
+PRIVILEGE ?= app
+
 TARGET_LD ?= $(SELFISH)/link/module.ld
 
 # Lazily expanded (`=`, not `:=`) so a target-specific `TARGET_LD` is picked up. With `:=` the
@@ -507,22 +512,33 @@ OBJROOT := $(BUILD)/obj
 # Compile flags per target. `-nostdlib` is filtered out of the module/eboot set because it is a
 # link flag; everything else in TARGET_FLAGS is a compile flag.
 HOST_CFLAGS = $(STD) $(STAMP) $(WARNINGS) $(INCLUDE) -DOBSCENE_HOST_BUILD -fno-builtin -O1
-MODULE_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"module"' $(WARNINGS) $(INCLUDE) \
-               $(filter-out -nostdlib,$(TARGET_FLAGS))
-EBOOT_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"module"' -DOBS_CENSUS_LINKED=0 $(WARNINGS) \
-               $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
-INJECTOR_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"injector"' $(WARNINGS) $(INCLUDE) \
-                  $(filter-out -nostdlib,$(TARGET_FLAGS))
-
-# Link flags: the target/link flags only, no `-D`/`-I`/warnings, and unused-argument warnings
+MODULE_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"module"' -DOBSCENE_TARGET_MODULE=1 $(WARNINGS) $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
+EBOOT_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"module"' -DOBSCENE_TARGET_MODULE=1 -DOBS_CENSUS_LINKED=0 $(WARNINGS) $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
+INJECTOR_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"injector"' $(WARNINGS) $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
+INJECT_TARGET ?=
+ifneq ($(INJECT_TARGET),)
+INJECTOR_CFLAGS += -DOBSCENE_INJECT_TARGET='"$(INJECT_TARGET)"'
+endif
 # silenced so a compile flag that clang forwards to the linker does not fail the objects-only
 # link under `-Werror`.
 TARGET_LINK = $(TARGET_FLAGS) $(TARGET_LDFLAGS) -Wno-unused-command-line-argument
-
 HOST_OBJ := $(patsubst src/%.c,$(OBJROOT)/host/%.o,$(HOST_SRC))
+OOPS_SDK_HOST_OBJ := $(OBJROOT)/host/oops-sdk/system/freestd.o
+OOPS_SDK_MODULE_OBJ := $(patsubst $(OOPS_SDK_DIR)/src/%.c,$(OBJROOT)/module/oops-sdk/%.o,$(OOPS_SDK_C_SRCS))
+OOPS_SDK_EBOOT_OBJ := $(patsubst $(OOPS_SDK_DIR)/src/%.c,$(OBJROOT)/eboot/oops-sdk/%.o,$(OOPS_SDK_C_SRCS))
+OOPS_SDK_MODULE_LIB := $(OBJROOT)/module/liboops.a
+OOPS_SDK_EBOOT_LIB := $(OBJROOT)/eboot/liboops.a
 MODULE_OBJ := $(patsubst src/%.c,$(OBJROOT)/module/%.o,$(TARGET_SRC))
 EBOOT_OBJ := $(patsubst src/%.c,$(OBJROOT)/eboot/%.o,$(TARGET_SRC))
 INJECTOR_OBJ := $(patsubst src/%.c,$(OBJROOT)/injector/%.o,$(INJECTOR_SRC))
+INJECTOR_SDK_SRCS := $(OOPS_SDK_DIR)/src/system/freestd.c \
+                     $(OOPS_SDK_DIR)/src/system/syscall.c \
+                     $(OOPS_SDK_DIR)/src/system/krw.c \
+                     $(OOPS_SDK_DIR)/src/system/procctl.c \
+                     $(OOPS_SDK_DIR)/src/system/loader.c \
+                     $(OOPS_SDK_DIR)/src/system/target.c \
+                     $(OOPS_SDK_DIR)/src/system/inject.c
+OOPS_SDK_INJECTOR_OBJ := $(patsubst $(OOPS_SDK_DIR)/src/%.c,$(OBJROOT)/injector/oops-sdk/%.o,$(INJECTOR_SDK_SRCS))
 
 .PHONY: FORCE_FLAGS
 FORCE_FLAGS:
@@ -543,20 +559,41 @@ $(OBJROOT)/eboot/.flags: FORCE_FLAGS | $(OBJROOT)/eboot
 $(OBJROOT)/injector/.flags: FORCE_FLAGS | $(OBJROOT)/injector
 	@$(file >$@.tmp,$(INJECTOR_CFLAGS)) cmp -s $@.tmp $@ 2>/dev/null && rm -f $@.tmp || mv $@.tmp $@
 
+$(OOPS_SDK_MODULE_LIB): $(OOPS_SDK_MODULE_OBJ)
+	@mkdir -p $(@D)
+	$(AR) rcs $@ $^
+
+$(OOPS_SDK_EBOOT_LIB): $(OOPS_SDK_EBOOT_OBJ)
+	@mkdir -p $(@D)
+	$(AR) rcs $@ $^
+
 $(HOST_OBJ): $(OBJROOT)/host/%.o: src/%.c $(OBJROOT)/host/.flags
+	@mkdir -p $(@D)
+	$(CC) $(HOST_CFLAGS) -MMD -MP -c -o $@ $<
+$(OOPS_SDK_HOST_OBJ): $(OBJROOT)/host/oops-sdk/%.o: $(OOPS_SDK_DIR)/src/%.c $(OBJROOT)/host/.flags
 	@mkdir -p $(@D)
 	$(CC) $(HOST_CFLAGS) -MMD -MP -c -o $@ $<
 $(MODULE_OBJ): $(OBJROOT)/module/%.o: src/%.c $(OBJROOT)/module/.flags
 	@mkdir -p $(@D)
 	$(CC) $(MODULE_CFLAGS) -MMD -MP -c -o $@ $<
+$(OOPS_SDK_MODULE_OBJ): $(OBJROOT)/module/oops-sdk/%.o: $(OOPS_SDK_DIR)/src/%.c $(OBJROOT)/module/.flags
+	@mkdir -p $(@D)
+	$(CC) $(MODULE_CFLAGS) -MMD -MP -c -o $@ $<
 $(EBOOT_OBJ): $(OBJROOT)/eboot/%.o: src/%.c $(OBJROOT)/eboot/.flags
+	@mkdir -p $(@D)
+	$(CC) $(EBOOT_CFLAGS) -MMD -MP -c -o $@ $<
+$(OOPS_SDK_EBOOT_OBJ): $(OBJROOT)/eboot/oops-sdk/%.o: $(OOPS_SDK_DIR)/src/%.c $(OBJROOT)/eboot/.flags
 	@mkdir -p $(@D)
 	$(CC) $(EBOOT_CFLAGS) -MMD -MP -c -o $@ $<
 $(INJECTOR_OBJ): $(OBJROOT)/injector/%.o: src/%.c $(OBJROOT)/injector/.flags
 	@mkdir -p $(@D)
 	$(CC) $(INJECTOR_CFLAGS) -MMD -MP -c -o $@ $<
+$(OOPS_SDK_INJECTOR_OBJ): $(OBJROOT)/injector/oops-sdk/%.o: $(OOPS_SDK_DIR)/src/%.c $(OBJROOT)/injector/.flags
+	@mkdir -p $(@D)
+	$(CC) $(INJECTOR_CFLAGS) -MMD -MP -c -o $@ $<
 
-$(OBJROOT)/injector/blob.o: src/injector/blob.S $(BUILD)/obscene-payload.elf $(OBJROOT)/injector/.flags
+
+$(OBJROOT)/injector/blob.o: src/probe/blob.S $(BUILD)/obscene-payload.elf $(OBJROOT)/injector/.flags
 	@mkdir -p $(@D)
 	$(CC) $(INJECTOR_CFLAGS) -DEMBED_PAYLOAD_PATH='"$(BUILD)/obscene-payload.elf"' -c -o $@ $<
 
@@ -584,7 +621,7 @@ $(BUILD):
 # there is nothing to do.
 .PHONY: tool
 tool:
-	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) cargo build --release --quiet
+	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) $(CARGO) build --release --quiet
 
 # Which library each import comes from.
 #
@@ -607,10 +644,8 @@ $(BUILD)/symbols.txt: host | $(BUILD)
 $(BUILD)/symbols-no-census.txt: host | $(BUILD)
 	@$(BUILD)/obscene-host --symbols-no-census > $@
 
-# The vendor-format build. Emulators accept only this shape, so it is the only one
-# testable without a console — which is why it comes first.
-module: tool $(BUILD)/symbols.txt $(MODULE_OBJ) | $(BUILD)
-	$(CC) $(TARGET_LINK) -o $(BUILD)/obscene.module.elf $(MODULE_OBJ)
+module: tool $(BUILD)/symbols.txt $(MODULE_OBJ) $(OOPS_SDK_MODULE_LIB) | $(BUILD)
+	$(CC) $(TARGET_LINK) -o $(BUILD)/obscene.module.elf $(MODULE_OBJ) $(OOPS_SDK_MODULE_LIB)
 	@$(TOOL) mkmodule $(BUILD)/obscene.module.elf --symbols $(BUILD)/symbols.txt --generation $(GEN) --table $(TABLE)
 
 # The one-import control.
@@ -665,22 +700,26 @@ payload: $(BUILD)
 	    $(TARGET_FLAGS) -fuse-ld=lld -shared -Wl,-e,obscene_start \
 	    -Wl,--unresolved-symbols=ignore-all -Wl,-z,noexecstack \
 	    -Wl,-z,max-page-size=0x4000 -Wl,-z,common-page-size=0x4000 \
-	    -o $(BUILD)/obscene-payload.elf $(TARGET_SRC)
+	    -o $(BUILD)/obscene-payload.elf $(TARGET_SRC) $(OOPS_SDK_C_SRCS)
 	@cp -f $(BUILD)/obscene-payload.elf $(BUILD)/obscene.elf 2>/dev/null || true
 
 # The standalone injector payload.
 #
 # Consumes session kernel R/W to hijack a target native process, map obscene.elf
 # segments, and execute the probe natively.
-injector: $(BUILD) payload $(INJECTOR_OBJ) $(OBJROOT)/injector/blob.o
+injector: $(BUILD) payload $(INJECTOR_OBJ) $(OOPS_SDK_INJECTOR_OBJ) $(OBJROOT)/injector/blob.o
 	$(CC) $(STD) $(STAMP) -DOBSCENE_TARGET='"injector"' $(WARNINGS) $(INCLUDE) \
 	    $(TARGET_FLAGS) -fuse-ld=lld -shared -Wl,-e,injector_start \
+	    -Wl,-Bsymbolic \
 	    -Wl,-T,link/injector.ld \
 	    -Wl,--unresolved-symbols=ignore-all -Wl,-z,noexecstack \
 	    -Wl,-z,max-page-size=0x4000 -Wl,-z,common-page-size=0x4000 \
-	    -o $(BUILD)/obscene-injector.elf $(INJECTOR_OBJ) $(OBJROOT)/injector/blob.o
+	    -o $(BUILD)/obscene-injector.elf $(INJECTOR_OBJ) $(OOPS_SDK_INJECTOR_OBJ) $(OBJROOT)/injector/blob.o
 
 inject: injector
+
+# Porthole moved to the oops-apps repository (its own app there, built on oops-sdk). obSCEne
+# is a probe, not a home for apps - see oops-apps D001. The host half stays in Prosperous.
 
 # The one-import control, in the shape a console takes.
 #
@@ -789,6 +828,8 @@ payload-min: | $(BUILD)
 # privileges and under emulators that stub everything, where requiring the whole census is
 # exactly what is wanted.
 EBOOT_LIBS ?= 16
+PRIVILEGE ?= 0
+SDK ?= 0
 
 eboot-libs-guard: $(BUILD)/symbols-no-census.txt
 	@if [ "$(EBOOT_LIBS)" != "any" ]; then \
@@ -803,9 +844,9 @@ eboot-libs-guard: $(BUILD)/symbols-no-census.txt
 	    fi; \
 	fi
 
-eboot: TARGET_LD := $(SELFISH)/link/eboot.ld
-eboot: tool eboot-libs-guard $(BUILD)/symbols-no-census.txt $(EBOOT_OBJ) | $(BUILD)
-	$(CC) $(TARGET_LINK) -o $(BUILD)/obscene.eboot.elf $(EBOOT_OBJ)
+eboot: TARGET_LD = $(if $(filter 5,$(EBOOT_GEN)),$(SELFISH)/link/native_eboot.ld,$(SELFISH)/link/eboot.ld)
+eboot: tool eboot-libs-guard $(BUILD)/symbols-no-census.txt $(EBOOT_OBJ) $(OOPS_SDK_EBOOT_LIB) | $(BUILD)
+	$(CC) $(TARGET_LINK) -o $(BUILD)/obscene.eboot.elf $(EBOOT_OBJ) $(OOPS_SDK_EBOOT_LIB)
 	@$(TOOL) mkmodule $(BUILD)/obscene.eboot.elf --symbols $(BUILD)/symbols-no-census.txt \
 	    --generation $(EBOOT_GEN) --table $(EBOOT_TABLE) --kind $(EBOOT_KIND)
 	@# The container generation follows EBOOT_GEN, the same knob the module above uses and the one
@@ -813,8 +854,7 @@ eboot: tool eboot-libs-guard $(BUILD)/symbols-no-census.txt $(EBOOT_OBJ) | $(BUI
 	@# mkmodule took the variable, so EBOOT_GEN=5 stamped a gen-5 module inside a gen-4 container.
 	@# Default stays 4 (the proven fake-signed container); EBOOT_GEN=5 builds the current-generation
 	@# container, whose structure selfish still calls a hypothesis until hardware accepts one. (D289)
-	@$(TOOL) mkself $(BUILD)/obscene.eboot.elf --out $(BUILD)/eboot.bin --generation $(EBOOT_GEN)
-
+	@$(TOOL) mkself $(BUILD)/obscene.eboot.elf --out $(BUILD)/eboot.bin --generation $(EBOOT_GEN) --privilege $(PRIVILEGE) --sdk $(SDK)
 # The installable package.
 #
 # Exercises a loader the others do not: the installer. A title arriving through it is
@@ -828,6 +868,7 @@ eboot: tool eboot-libs-guard $(BUILD)/symbols-no-census.txt $(EBOOT_OBJ) | $(BUI
 #
 #     app0/eboot.bin
 #     app0/sce_sys/param.json     <- param.json. Not param.sfo, which is the previous console
+#     app0/sce_sys/icon0.png
 #
 # and param.json is four fields: applicationCategoryType, titleId, and a localizedParameters
 # block carrying defaultLanguage and a titleName. (D180)
@@ -860,11 +901,14 @@ pkg: eboot sce-module | $(BUILD)
 .PHONY: native
 native: EBOOT_GEN = 5
 native: EBOOT_TABLE = legacy
-native: EBOOT_KIND = fixed
+native: EBOOT_KIND = executable
+native: TARGET_LD = $(SELFISH)/link/native_eboot.ld
+native: PRIVILEGE = root
+native: SDK = ps5-native
+native: MODULE_GEN = 5
 native: eboot sce-module | $(BUILD)
-	@SELFISH=$(SELFISH) bash scripts/build-native.sh $(BUILD)
+	@SELFISH=$(SELFISH) PRIVILEGE=$(PRIVILEGE) SDK=$(SDK) bash scripts/build-native.sh $(BUILD)
 # The same package around the *minimal* module, which is what to send at a console first.
-#
 # `module-min` is one import and one library, built by the same linker script through the same
 # `mkmodule` with the same tags, so everything structural is present and everything about scale
 # is gone. Wrapping it changes what a failed launch means: the full package carries an eleven
@@ -923,7 +967,7 @@ MIN_DEFINES ?=
 # The eboot no longer does (D228). It links twelve libraries and neither is among them, so the
 # collision is gone - and `sce-module-guard` checks that against the eboot's own manifest rather
 # than against a list the eboot does not use.
-SCE_MODULES ?= libc libSceFios2
+SCE_MODULES ?= libc $(if $(filter 5,$(EBOOT_GEN)),,libSceFios2)
 
 # A stub must never share a name with a library the probe imports from.
 #
@@ -957,7 +1001,7 @@ sce-module-guard:
 # A bundled library is the third layout, and neither of the other scripts produces it: the
 # headers must sit outside the first segment (which `module.ld` does not do) and the image must
 # be based at zero (which `eboot.ld` does not do). See `link/library.ld`. (D222)
-sce-module: TARGET_LD := $(SELFISH)/link/library.ld
+MODULE_GEN ?= $(EBOOT_GEN)
 # The same generation and table convention as the eboot, because they load together and a
 # loader checks. It took the defaults and the eboot did not, which the console named exactly:
 #
@@ -965,6 +1009,7 @@ sce-module: TARGET_LD := $(SELFISH)/link/library.ld
 #     [rtld] ERROR self_load_shared_object:2826: B: res 0 (libSceFios2.prx)  val 2
 #
 # `val 2` is `EI_ABIVERSION`, and the eboot's is 0. (D222)
+sce-module: TARGET_LD := $(SELFISH)/link/library.ld
 sce-module: sce-module-guard tool | $(BUILD)
 	@echo "libkernel sceKernelWrite" > $(BUILD)/sce-module-symbols.txt
 	@# Emptied, not just created. `build-pkg.sh` ships whatever is in here, so a module that
@@ -981,7 +1026,7 @@ sce-module: sce-module-guard tool | $(BUILD)
 	        --symbols $(BUILD)/sce-module-symbols.txt --module-name $$name --kind shared \
 	        --generation $(EBOOT_GEN) --table $(EBOOT_TABLE) || exit 1; \
 	    $(TOOL) mkself $(BUILD)/$$name.module.elf \
-	        --out $(BUILD)/sce_module/$$name.prx --generation 4 || exit 1; \
+	        --out $(BUILD)/sce_module/$$name.prx --generation $(MODULE_GEN) --privilege $(PRIVILEGE) --sdk $(SDK) || exit 1; \
 	done
 
 eboot-min: TARGET_LD := $(SELFISH)/link/eboot.ld
@@ -1000,8 +1045,8 @@ eboot-min: tool | $(BUILD)
 # probed and never called; clang knows those names as builtins and rejects the
 # declaration as "a different kind of symbol". Telling it not to assume it knows them
 # is exactly true - on the guest they are whatever the platform library provides.
-host: $(HOST_OBJ) | $(BUILD)
-	$(CC) -o $(BUILD)/obscene-host $(HOST_OBJ) $(HOST_LIBS)
+host: $(HOST_OBJ) $(OOPS_SDK_HOST_OBJ) | $(BUILD)
+	$(CC) -o $(BUILD)/obscene-host $(HOST_OBJ) $(OOPS_SDK_HOST_OBJ) $(HOST_LIBS)
 
 # The Steam Deck build.
 #
@@ -1048,7 +1093,7 @@ pretty: host tool
 # harness behaves.
 check: module payload host
 	@echo "--- tooling tests ---"
-	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) cargo test --quiet
+	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) $(CARGO) test --quiet
 	@echo "--- host harness ---"
 	-cd $(BUILD) && ./obscene-host > host-report.txt
 	@$(TOOL) verify $(BUILD)/host-report.txt
@@ -1071,6 +1116,6 @@ clean:
 
 # Header dependencies recorded by -MMD, so a header edit rebuilds the objects that use it.
 # Absent on the first build; -include ignores what is not there yet.
--include $(HOST_OBJ:.o=.d) $(MODULE_OBJ:.o=.d) $(EBOOT_OBJ:.o=.d)
+-include $(HOST_OBJ:.o=.d) $(OOPS_SDK_HOST_OBJ:.o=.d) $(MODULE_OBJ:.o=.d) $(EBOOT_OBJ:.o=.d) $(INJECTOR_OBJ:.o=.d) $(OOPS_SDK_INJECTOR_OBJ:.o=.d)
 
 

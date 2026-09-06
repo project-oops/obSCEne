@@ -342,10 +342,10 @@ jobs:
             echo "::error::a path reserved for vendor material is tracked"
             exit 1
           fi
-          # An extension is not enough, and that is not hypothetical: a 16 KB x86-64 ELF was
-          # tracked at src/porthole/build/porthole_selftest and every pattern above passed it,
-          # because the file has no extension at all. The subtree builds itself with its own
-          # Makefile, so it made its own build/ that the root-anchored /build/ rule missed.
+          # An extension is not enough, and that is not hypothetical: a 16 KB x86-64 ELF with
+          # no extension at all was once tracked from a subtree that builds itself, and every
+          # pattern above passed it. The subtree made its own build/ that the root-anchored
+          # /build/ rule missed, so the file was named nothing a pattern here would catch.
           #
           # Content is what a loader reads, so content is what this checks. Images are the
           # only binaries this repository is meant to track.
@@ -477,10 +477,10 @@ jobs:
             The package is built by a job allowed to fail, so it may be absent from a given
             build. That is honest rather than hidden: it is the least settled of the shapes.
 
-            **`obscene-porthole.elf` is not here and is not late.** The Porthole payload is a
-            scaffold: `src/porthole/Makefile` builds a host self-test and compiles the target
-            half to an object, deliberately never linking it, because a real payload needs the
-            CRT and net wiring that the encoder go/no-go gates. There is no ELF to publish yet.
+            **Porthole is no longer here.** It moved to the oops-apps repository, where it is
+            an app built on oops-sdk rather than a payload inside a probe (oops-apps D001). Its
+            host half stays in Prosperous. obSCEne builds and publishes the probe and the
+            injector; the apps built on the platform live next door.
 
             This is ordinary homebrew. It needs no vendor toolchain to build and carries
             nothing from one.

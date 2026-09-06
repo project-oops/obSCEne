@@ -254,6 +254,7 @@ obs_tally obs_run_all(void);
  * Used by the census as well, so a symbol reported present is one that could actually
  * be called. */
 int obs_address_is_callable(const void *address);
+void obs_set_plt_bounds(uintptr_t start, uintptr_t end);
 
 /* Load a library by name and hand back a handle, or a negative value if it will not
  * load.
@@ -274,7 +275,28 @@ int obs_address_is_callable(const void *address);
  * the caller reports the library. See `obs_module_open` in `harness.c` for why no
  * absolute path can be written down.
  */
+/* Four privilege/security tiers for module access on PlayStation:
+ * - OBS_TIER_APP: Standard application sandbox (/system/common/lib/, /app0/sce_module/)
+ * - OBS_TIER_SYSMODULE: Dynamic on-demand sysmodule via sceSysmoduleLoadModule
+ * - OBS_TIER_SYSTEM: Extended system application (/system_ex/common_ex/lib/, auth_id 0x38...01)
+ * - OBS_TIER_ROOT: Kernel / root privileged (/system/priv/lib/, auth_id 0x80...01)
+ */
+typedef enum {
+    OBS_TIER_UNKNOWN = 0,
+    OBS_TIER_APP,
+    OBS_TIER_SYSMODULE,
+    OBS_TIER_SYSTEM,
+    OBS_TIER_ROOT,
+} obs_module_tier;
+
+const char *obs_module_tier_name(obs_module_tier tier);
+
+/* Load a library by name and hand back a handle, or a negative value if it will not
+ * load. */
 int obs_module_open(const char *library);
+
+/* Load a library by name and report which tier provided it. */
+int obs_module_open_tier(const char *library, obs_module_tier *tier_out);
 
 /* Resolve one name through a handle from [`obs_module_open`], or null.
  *

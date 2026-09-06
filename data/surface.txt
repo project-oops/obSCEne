@@ -78,6 +78,13 @@ sceVencCoreCreateEncoder
 sceVencCoreGetAuData
 sceVencCoreQueryMemorySize
 sceKernelGetdents
+sceKernelJitCreateSharedMemory
+sceKernelJitMapSharedMemory
+sceKernelJitCreateAliasOfSharedMemory
+sceAgcDcbResetQueue
+scePadSetTriggerEffect
+sceKeyboardReadState
+sceMouseRead
 scePadReadState
 putchar
 puts
@@ -490,7 +497,6 @@ sceAgcDcbGetLodStatsGetSize
 sceAgcDcbJump
 sceAgcDcbPopMarker
 sceAgcDcbPushMarker
-sceAgcDcbResetQueue
 sceAgcDcbSetBaseIndirectArgs
 sceAgcDcbSetCxRegistersIndirect
 sceAgcDcbSetFlip
@@ -603,6 +609,15 @@ scePadResetOrientation
 scePadOpenExt
 scePadSetTiltCorrectionState
 scePadGetExtControllerInformation
+scePadGetTriggerEffectState
+scePadDisableTriggerEffect
+scePadSetVibrationMode
+scePadSetVibrationForce
+scePadDisableVibration
+scePadDeviceClassGetExtendedInformation
+scePadDeviceClassParseData
+scePadEnableSpecificDeviceClass
+scePadSetVibrationTriggerEffectWeakWhileEmbeddedMicInUse
 @end
 
 @group OBS_SURFACE_SYSMODULE sysmodule libSceSysmodule OBS_SHARED
@@ -730,5 +745,29 @@ sceNetResolverCreate
 sceNetGetsockname
 sceNetHtons
 sceNetInetPton
+@end
+
+@group OBS_SURFACE_SYNC_ON_ADDRESS sync_on_address libkernel_sync_on_address OBS_SHARED
+@note
+/* Synchronization on address: user-space wait and wake operations.
+ * sceKernelSyncOnAddressWait calls FreeBSD _umtx_op with UMTX_OP_WAIT (op 2).
+ * sceKernelSyncOnAddressWake calls FreeBSD _umtx_op with UMTX_OP_WAKE (op 3). */
+@end
+
+@symbols
+sceKernelSyncOnAddressWait
+sceKernelSyncOnAddressWake
+@end
+
+@group OBS_SURFACE_SYNC_ON_ADDRESS2 sync_on_address2 libkernel_sync_on_address2 OBS_SHARED
+@note
+/* Sized variants of wait on address (8-bit, 16-bit, 32-bit, 64-bit). */
+@end
+
+@symbols
+sceKernelSyncOnAddressWait8
+sceKernelSyncOnAddressWait16
+sceKernelSyncOnAddressWait32
+sceKernelSyncOnAddressWait64
 @end
 

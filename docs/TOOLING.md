@@ -152,7 +152,7 @@ and nothing says so.
 | `protocol --root .` | the captured exchanges match `PROTOCOL.md` |
 | `protocol --root . --selftest` | thirteen deliberate corruptions, all of which must be rejected |
 | `corpus --root .` | the mined corpus has been shown the current emulator checkouts |
-| `decisions --root . --check` | the decision log's index matches its entries |
+| `decisions --root .` | every entry under `docs/decisions/` has exactly one row in the index, and every row a real file |
 
 ## The generators
 
@@ -166,8 +166,7 @@ retyping a judgement into another language is how a transcription error gets int
 | `census corpus --platform` | `include/obscene/corpus.h` | `data/mined-names.txt` |
 | `census nids --platform` | `include/obscene/nids.h` | `data/unnamed-nids.txt` |
 | `font` | `src/probe/font.c` | `data/font.txt` - glyph art, so a glyph is corrected in place |
-| `shaders` | `include/obscene/gpu_shaders.gen.h` | `src/shaders/*.comp`, needs `glslangValidator` |
-| `gpusurface --write` | `docs/GPU_SURFACE.md` | `data/gpu-surface.tsv` |
+| `shaders` | `include/obscene/gpu_shaders.gen.h` | `src/probe/shaders/*.comp`, needs `glslangValidator` |
 | `mine` | both corpus files | the emulator checkouts and the firmware trees |
 
 `shaders` and `gpusurface` want the build VM: one needs a shader compiler, and the other
@@ -195,12 +194,12 @@ reason was the same one arrived at from the other direction: **they were the onl
 tree without tests or types, and they were the code deciding whether everything else was
 correct.** Every one of them was found miscounting something.
 
-Everything remaining is `sh`. The module is built inside a multipass VM, because a Windows
+Everything remaining is `sh`. The module is built inside WSL, because a Windows
 mount cannot carry the execute bit and a binary built into the tree refuses to run (D012);
 the emulators are Windows applications. Neither fact says anything about what language should
 drive them, and Git Bash launches a Windows executable perfectly well.
 
-### Building - run these in the VM
+### Building - run these in WSL
 
 | | |
 |---|---|
@@ -219,7 +218,7 @@ handed a later step a module that walked straight into a known crash.
 
 | | |
 |---|---|
-| `run-emulator.sh` | one run: fetch the module from the VM, run it, extract the report. |
+| `run-emulator.sh` | one run: fetch the module from WSL, run it, extract the report. |
 | `sweep.sh` | rounds until nothing kills the process. |
 | `harvest-nids.sh` | grows the NID table from emulator logs. Merges, never replaces. |
 
@@ -249,6 +248,8 @@ not run directly (D269, `scripts/README.md`).
 | verb | what it does |
 |---|---|
 | `./bin/obscene deploy` | build, install, launch, capture the report - the whole package round-trip |
+| `./bin/obscene native-deploy` | build and deploy current-generation native title directory (`/user/data/homebrew/<TITLE_ID>`) |
+| `./bin/obscene restart-ui` | safely restart `SceShellUI` to recover from VSH UI softlocks without rebooting (D294) |
 | `./bin/obscene payload` | build the plain-ELF payload, run it via elfldr, capture the raw system log |
 | `./bin/obscene report` | capture obscene's records off the console system log into a file (`obscene-tool report`) |
 | `./bin/obscene recover` | read-only: boot log, report file, and crash dumps the console kept |
@@ -259,21 +260,18 @@ not run directly (D269, `scripts/README.md`).
 
 ### The one environment hazard worth knowing
 
-Git Bash rewrites anything that looks like a Unix path before a Windows program sees it,
-so `--working-directory /home/ubuntu/obscene` reaches multipass as
-`C:/Program Files/Git/home/ubuntu/obscene` and the command fails on a directory that does
-not exist. Paths inside the VM must survive untouched, so every multipass call goes
-through a one-line wrapper that sets `MSYS_NO_PATHCONV=1`.
+Git Bash rewrites anything that looks like a Unix path before a Windows program sees it, and
+`wsl.exe` is as Windows a program as any, however Linux the command it carries. So
+`wsl.exe -d Ubuntu -- bash -lc '... /home/ubuntu/obscene ...'` reaches the distro with its
+`/...` arguments rewritten to `C:/Program Files/Git/...`, and the command fails on a directory
+that does not exist. Paths meant for inside WSL must survive untouched, so every `wsl.exe` call
+goes through a one-line wrapper that sets `MSYS_NO_PATHCONV=1`.
 
-**This is why these scripts used to be PowerShell.** CLAUDE.md said to use it for
-multipass invocations for exactly this reason - and the reason was one environment
+**This is why these scripts used to be PowerShell.** CLAUDE.md said to use it for the
+cross-boundary invocations for exactly this reason - and the reason was one environment
 variable, not a language. Writing them in sh also deleted the hazard PowerShell brought
-with it: it turns a native command's stderr into a terminating error, so multipass warning
-about a file it had just copied correctly would kill a script, intermittently.
-
-One thing left over: multipass copies a file to an NTFS target correctly and then exits
-non-zero trying to set POSIX permissions on it. The scripts tolerate that and assert the
-file exists instead, which is what they actually want to know.
+with it: it turns a native command's stderr into a terminating error, so a warning printed on
+a step that had actually succeeded would kill a script, intermittently.
 
 ## `consensus`
 

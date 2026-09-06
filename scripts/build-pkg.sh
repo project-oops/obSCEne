@@ -74,8 +74,11 @@ else
 fi
 
 # Where selfish is invoked.
-selfish() { ( cd "$SELFISH" && cargo run -q -p selfish-cli -- "$@" ); }
-
+if [ -x "$SELFISH/target/release/selfish" ]; then
+    selfish() { "$SELFISH/target/release/selfish" "$@"; }
+else
+    selfish() { ( cd "$SELFISH" && PATH="$HOME/.cargo/bin:$PATH" cargo run -q -p selfish-cli -- "$@" ); }
+fi
 image="$BUILD/obscene.pfs.img"
 out="$BUILD/obscene.pkg"
 

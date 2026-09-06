@@ -68,8 +68,7 @@ case "${1:-help}" in
     pkg)   shift; make pkg "$@" ;;
     # `native` lays out obSCEne as a current-generation title directory (param.json + icon +
     # fake-signed eboot) rather than a PS4-badged package: `make native` builds the eboot, then
-    # `selfish native` writes the title dir. Drop the result where an auto-mounter (ShadowMountPlus)
-    # scans, or register it with sceAppInstUtilAppInstallTitleDir from a payload. Overridable via
+    # `selfish build title` writes the title dir. Drop the result where an auto-mounter (ShadowMountPlus)
     # TITLE_ID=/TITLE=/CONTENT_ID=/DEEPLINK=/NO_EBOOT=1.
     native)
         shift
@@ -122,6 +121,7 @@ case "${1:-help}" in
     minbuild) shift; bash scripts/oops-minbuild.sh "$@" ;;
     digcheck) shift; bash scripts/oops-digcheck.sh "$@" ;;
     prep)     shift; bash scripts/oops-prep.sh "$@" ;;
+    restart-ui|reset-ui) shift; _obscene_tool hw restart-ui "$@" ;;
     doc)   shift; ( cd tool && cargo doc --no-deps "$@" ) ;;
     # The Rust tooling: build its binary, run its checks. Named so CI reaches them the same way
     # a person does, rather than reaching past the front door to `cargo` and the raw tool path.
@@ -129,6 +129,7 @@ case "${1:-help}" in
     guards)     shift; ( cd tool && cargo run --quiet -- guards "$@" ) ;;
     imports)    shift; _obscene_tool imports "$@" ;;
     verify)     shift; _obscene_tool verify "$@" ;;
+    matrix)     shift; _obscene_tool matrix "$@" ;;
     selftest)   shift; _obscene_tool selftest "$@" ;;
     # The header comment above IS the usage text. The range ends at the line before `set -euo`,
     # found rather than hardcoded - a hardcoded number silently truncates the help the next time

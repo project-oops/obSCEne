@@ -31,6 +31,7 @@ and it was fine" look identical in a report that simply has no entry.
 | ⚪ | [9. Not under version control](backlog/019-not-under-version-control.md) | no marker |
 | ⚪ | [10. The gap the emulators measured](backlog/020-the-gap-the-emulators-measured.md) | no marker |
 | ⚪ | [13. Getting the report off the machine](backlog/021-getting-the-report-off-the-machine.md) | no marker |
+| 🔴 | [14. Measurements orbistoun is blocked on - the full sweep, 717 questions over 504 functions](backlog/022-measurements-orbistoun-is-blocked-on.md) | open |
 
 | | meaning |
 |---|---|

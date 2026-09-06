@@ -625,21 +625,10 @@ static obs_result check_container_structure(void) {
                            "header did not fit the read window");
     }
 
-    /* The installed sce_sys tree of the same title: the file set a package carries, as
-     * it lands on disk. Names only - the entry inventory a builder reproduces, not any
-     * file's contents. `found` is `<dir>/eboot.bin`; replace the trailing name with
-     * `sce_sys`. */
-    char sysdir[1024];
-    size_t fl = 0;
-    while (found[fl]) {
-        fl++;
-    }
-    while (fl > 0 && found[fl - 1] != '/') {
-        fl--;
-    }
-    size_t s = obs_append_n(sysdir, 0, sizeof sysdir, found, fl);
-    obs_append(sysdir, s, sizeof sysdir, "sce_sys");
-    int sdir = sceKernelOpen(sysdir, OBS_O_RDONLY, 0);
+    /* Opening the /app0/sce_sys directory on PS5 native triggers PFS directory
+     * integrity verification (pltauth -35) from SceShellCore/PFAuthClient. Skip it. */
+    (void)found;
+    int sdir = -1;
     if (sdir >= 0) {
         char dents[4096];
         unsigned int files = 0;

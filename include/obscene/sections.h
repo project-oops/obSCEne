@@ -28,6 +28,7 @@ extern const obs_section obs_section_math;
 
 /* Operating-system services. */
 extern const obs_section obs_section_file;
+extern const obs_section obs_section_disc;
 extern const obs_section obs_section_selfaudit;
 extern const obs_section obs_section_reach;
 extern const obs_section obs_section_time;
@@ -39,6 +40,7 @@ extern const obs_section obs_section_video;
 extern const obs_section obs_section_videobuf;
 extern const obs_section obs_section_audio;
 extern const obs_section obs_section_input;
+extern const obs_section obs_section_input_ext;
 
 /* Not a layer. A census of the whole known surface, placed last because it answers a
  * different question from everything above it and because it is the one section that
@@ -51,6 +53,7 @@ extern const obs_section obs_section_measure;
 extern const obs_section obs_section_layout;
 extern const obs_section obs_section_oracle;
 extern const obs_section obs_section_memmap;
+extern const obs_section obs_section_jit;
 /* How many section rows the screen can hold.
  *
  * **This lives here, beside the sections, because it was in `screen.c` and drifted.**
@@ -78,6 +81,7 @@ extern const obs_section obs_section_kernelprobe;
 /* Stash payload_args at entry, where rdi still holds it, for the kernel-probe section.
  * A no-op's worth of work, but it must run first: see src/sections/kernelprobe.c. */
 void obs_capture_payload_args(unsigned long args);
+void obs_set_payload_kexport_table(void *table);
 extern const obs_section obs_section_imports;
 
 /* The encoder the console drives for its own recordings. Every check is a refusal: the
@@ -85,10 +89,17 @@ extern const obs_section obs_section_imports;
 extern const obs_section obs_section_record;
 extern const obs_section obs_section_encoder;
 
+/* The decode counterparts to the encoder, resolved the same way: whether the media-decode
+ * libraries load and export the entry points a stream client or player needs. Resolution
+ * only - the decode calls' structure layouts are unconfirmed, so none is called. */
+extern const obs_section obs_section_videodec;
+extern const obs_section obs_section_audiodec;
+
 /* GPU compute. Always present - it reports a skip when built without OBS_GPU - so the
  * capability never silently disappears from the report. */
 extern const obs_section obs_section_gpu;
 extern const obs_section obs_section_gnm;
+extern const obs_section obs_section_agc;
 extern const obs_section obs_section_surface;
 
 /* The blind prober. Compiled in only under OBS_BULK - it is the one section expected to

@@ -9,7 +9,7 @@ OUTPUT_ARCH(i386:x86-64)
 ENTRY(injector_start)
 
 PHDRS {
-    text PT_LOAD FLAGS(5);       /* Read + Execute */
+    text PT_LOAD FILEHDR PHDRS FLAGS(5);       /* Read + Execute */
     rodata PT_LOAD FLAGS(4);     /* Read Only */
     data PT_LOAD FLAGS(6);       /* Read + Write */
     dynamic PT_DYNAMIC FLAGS(6); /* Dynamic Table */
@@ -18,7 +18,7 @@ PHDRS {
 SECTIONS {
     . = SIZEOF_HEADERS;
 
-    .text : ALIGN(0x4000) {
+    .text : {
         *(.text .text.*)
     } :text
 
@@ -26,8 +26,15 @@ SECTIONS {
         *(.rodata .rodata.*)
     } :rodata
 
+    .rela.dyn : {
+        __rela_dyn_start = .;
+        *(.rela.dyn)
+        __rela_dyn_end = .;
+    } :rodata
+
     .data : ALIGN(0x4000) {
         *(.data .data.*)
+        *(.data.rel.ro*)
         *(.got)
         *(.got.plt)
     } :data
@@ -48,4 +55,3 @@ SECTIONS {
         *(.eh_frame_hdr)
     }
 }
-

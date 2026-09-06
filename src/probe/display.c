@@ -33,6 +33,7 @@
 
 #include "obscene/platform.h"
 #include "obscene/runtime.h"
+#include "oops/display.h"
 
 #if defined(OBSCENE_HOST_BUILD)
 #include <stdio.h>
@@ -129,6 +130,7 @@ static const char *obs_state_text = "not attempted";
 static uint32_t *obs_fb = 0;
 
 #if !defined(OBSCENE_HOST_BUILD)
+static oops_display_t *s_oops_disp = 0;
 static int obs_video_handle = -1;
 
 /* How many framebuffers are registered.
@@ -166,6 +168,9 @@ int obs_display_holds_output(void) {
 #if defined(OBSCENE_HOST_BUILD)
     return obs_state == OBS_DISPLAY_READY;
 #else
+    if (s_oops_disp) {
+        return oops_display_is_ready(s_oops_disp);
+    }
     /* Whether the output handle is open, not whether the display came up.
      *
      * These are different, and reading the second for the first produced a finding this
@@ -221,6 +226,10 @@ static uint64_t obs_state_code;
  * buffers were refused. */
 static void obs_release_output(void) {
 #if !defined(OBSCENE_HOST_BUILD)
+    if (s_oops_disp) {
+        oops_display_close(s_oops_disp);
+        s_oops_disp = 0;
+    }
     if (obs_video_handle > 0 &&
         obs_address_is_callable((const void *)&sceVideoOutClose)) {
         (void)sceVideoOutClose(obs_video_handle);
@@ -418,6 +427,24 @@ obs_display_state obs_display_open(void) {
     if (obs_state != OBS_DISPLAY_UNTRIED) {
         return obs_state;
     }
+
+#if defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5)
+    /* Prospero native title: use AGC backend via oops-sdk */
+    s_oops_disp = oops_display_open(OOPS_DISPLAY_BACKEND_AGC, OBS_FB_WIDTH, OBS_FB_HEIGHT);
+    if (s_oops_disp && oops_display_is_ready(s_oops_disp)) {
+        obs_fb = oops_display_get_framebuffer(s_oops_disp);
+        obs_state = OBS_DISPLAY_READY;
+        obs_state_text = oops_display_get_backend_name(s_oops_disp);
+        obs_state_code = 0;
+        obs_report_display("vo-accepted", obs_state_text, 0);
+        obs_display_clear(OBS_COLOUR_GROUND);
+        return obs_state;
+    }
+    if (s_oops_disp) {
+        oops_display_close(s_oops_disp);
+        s_oops_disp = 0;
+    }
+#endif
 
     /* Every symbol first. An absent display is not a failure - it is a platform
      * without one - and saying so costs nothing. */
@@ -731,6 +758,22 @@ void obs_display_flip(void) {
     if (obs_state != OBS_DISPLAY_READY) {
         return;
     }
+
+    if (s_oops_disp) {
+        int rc = oops_display_flip(s_oops_disp);
+        if (rc != 0) {
+            (void)obs_give_up(OBS_DISPLAY_FAILED,
+                              "a flip was refused; the screen is frozen");
+            return;
+        }
+        obs_fb = oops_display_get_framebuffer(s_oops_disp);
+        if (!obs_present_tested) {
+            obs_present_tested = 1;
+            obs_presented = 1;
+        }
+        return;
+    }
+
     /* Flip mode 1 is the one that does not wait for a vertical blank. A probe that
      * blocked here on a platform whose vblank never arrives would hang holding a
      * complete report, which is the worst outcome available. */

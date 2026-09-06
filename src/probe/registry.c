@@ -44,6 +44,7 @@ const obs_section *const obs_sections[] = {
     &obs_section_math,
     /* Operating-system services. */
     &obs_section_file,
+    &obs_section_disc,
     /* After the file section, whose filesystem capability both need. Reach first: it
      * reports a plain jailed/escaped verdict, so the SELF audit's skip-or-confirm below
      * reads against a known filesystem context. Behaviour only, both of them. */
@@ -61,6 +62,7 @@ const obs_section *const obs_sections[] = {
     &obs_section_videobuf,
     &obs_section_audio,
     &obs_section_input,
+    &obs_section_input_ext,
     /* Recording, last of the presentation layer: it drives the encoder behind the same
      * output the video section acquires, so a reader wants to know whether that output
      * works before reading anything about what it encodes.
@@ -70,6 +72,13 @@ const obs_section *const obs_sections[] = {
      * Putting it after the census read fine in the registry and failed the gate. */
     &obs_section_record,
     &obs_section_encoder,
+    /* The decode side of the media stack, right after the encoder census it mirrors: same
+     * resolve-and-record shape, the other direction (turning a stream into frames and PCM
+     * rather than the reverse). These name the libraries an `oops/videodec.h` and
+     * `oops/audiodec.h` would be built on, and a hardware run is what confirms the names.
+     * Neither calls a decoder - the structure layouts are unconfirmed. */
+    &obs_section_videodec,
+    &obs_section_audiodec,
     /* What the platform actually has, before the census that tests a list we wrote.
      * Read in that order deliberately: the inventory says what is there, and the census
      * then says how much of what we know about is among it. */
@@ -112,6 +121,7 @@ const obs_section *const obs_sections[] = {
     /* The map, last: it is the longest-running section and the one whose records a
      * reader is most likely to scroll to the end for. */
     &obs_section_memmap,
+    &obs_section_jit,
     /* GPU compute, before the census: it measures what the device computes, which is a
      * question about the platform, so it belongs with the sections that call things
      * rather than with the census that only counts them. Skips cheaply when built
@@ -121,6 +131,8 @@ const obs_section *const obs_sections[] = {
      * other axis (the sceGnm calls rather than what the device computes). Skips as "not
      * present" on any loader without libSceGnmDriver, the host build included. */
     &obs_section_gnm,
+    /* Current-generation GPU command building and shaders (libSceAgc). */
+    &obs_section_agc,
     &obs_section_surface,
     /* After the census, because it needs nothing the census establishes and because it
      * is the only section that may not return. Anything placed behind it would be lost

@@ -109,6 +109,16 @@ Both emulators printing an entry address and then declining to use it is exactly
 that would look like. Testable by exporting the symbol and watching whether either one
 calls it.
 
+**Weakened by measurement, 2026-09-03.** Orbistoun hashed `module_start`, `module_stop` and
+`module_prolog` and looked for them among the exports of three modules a retail title ships -
+`Il2CppUserAssemblies.prx` (247 symbols), `PS5Util.prx` and `sce_module/libc.prx`. **None
+exports any of the three.** The hasher was checked against `memcpy` on the same files first, so
+the negatives are negatives rather than a spelling mistake (orbistoun's decision 492).
+
+The platform's own loader starts those modules, so exporting `module_start` is not what makes a
+module startable. That does not explain why two emulators decline to execute *this* module, and
+it does remove the reason to believe this particular answer.
+
 Recorded because the alternative was to keep iterating against one emulator and treat
 its behaviour as the specification. A second implementation costs one download and turns
 "this emulator does not like our module" into "our module is wrong".

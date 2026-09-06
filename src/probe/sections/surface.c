@@ -66,17 +66,14 @@ typedef struct obs_symbol {
 #define OBS_CENSUS_LINKED 0
 #endif
 
-/* Declares one censused name as data. See the note above on why not as a function.
- *
- * Kept in both modes. A declaration imports nothing on its own - only taking the
- * address does - so leaving it costs nothing and keeps the two modes one file rather
- * than two. */
-#define OBS_DECLARE_SYMBOL(name) extern OBS_WEAK const char name;
 #if OBS_CENSUS_LINKED
+/* Declares one censused name as data. See the note above on why not as a function. */
+#define OBS_DECLARE_SYMBOL(name) extern OBS_WEAK const char name;
 /* One table row. The name appears once in the list and is stringified here, so the
  * reported string and the resolved symbol can never drift apart. */
 #define OBS_SYMBOL_ROW(name) {#name, (const void *)&name},
 #else
+#define OBS_DECLARE_SYMBOL(name)
 /* The same row without the address, which is the only part that imports anything.
  *
  * The **name is kept**, so the table, the checks and every record they produce are
@@ -144,7 +141,15 @@ static obs_result census(const char *library, obs_availability availability,
      * scoring that red would bury the real gaps under absences that are correct.
      * This is the same conflation the control check guards against one level down:
      * an absence has to mean one thing before a count of absences means anything. */
-    if (availability == OBS_PREVIOUS || availability == OBS_CURRENT) {
+    obs_generation gen = obs_detected_generation();
+    int is_other_gen = 0;
+    if (availability == OBS_PREVIOUS && gen == OBS_GENERATION_CURRENT) {
+        is_other_gen = 1;
+    } else if (availability == OBS_CURRENT && gen == OBS_GENERATION_PREVIOUS) {
+        is_other_gen = 1;
+    }
+
+    if (is_other_gen) {
         if (present == 0) {
             return obs_skip("belongs to the other console generation, so absence is "
                             "expected rather than a gap");
@@ -231,10 +236,11 @@ OBS_CORPUS_LIBRARIES(OBS_DEFINE_GROUP)
  * The label keeps its `$` in the reported name deliberately.
  * `sym|libSceFont|$Xh3kd9sLpQw` says what is true: something is exported here and this
  * project cannot name it. */
-#define OBS_DECLARE_NID(symbol, label) extern OBS_WEAK const char symbol __asm__(label);
 #if OBS_CENSUS_LINKED
+#define OBS_DECLARE_NID(symbol, label) extern OBS_WEAK const char symbol __asm__(label);
 #define OBS_NID_ROW(symbol, label) {label, (const void *)&symbol},
 #else
+#define OBS_DECLARE_NID(symbol, label)
 #define OBS_NID_ROW(symbol, label) {label, NULL},
 #endif
 #define OBS_DEFINE_NID_GROUP(tag, library, availability, LIST)                         \

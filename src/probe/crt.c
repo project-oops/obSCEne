@@ -137,6 +137,10 @@ __attribute__((used)) static struct {
     uint8_t rest[OBS_THIRD_PARAM_SIZE - 8];
 } obs_third_param = {.size = OBS_THIRD_PARAM_SIZE, .rest = {0}};
 
+#ifndef OBS_PROC_PARAM_SDK_PPR
+#define OBS_PROC_PARAM_SDK_PPR 0u
+#endif
+
 __attribute__((used, section(".sce_process_param"))) static const struct {
     /* Size of this structure. The one field a forward-reading loader must have. */
     uint64_t size;
@@ -144,28 +148,10 @@ __attribute__((used, section(".sce_process_param"))) static const struct {
     uint32_t magic;
     /* How many entries follow the fixed fields. A real launching title states five. */
     uint32_t entry_count;
-    /* Which SDK this was built against. Zero - but for a different reason than before.
-     *
-     * The comment here used to say a real launching executable declares zero too. **It
-     * does not**: read straight out of one at this offset, `11 80 00 08`, `0x08008011`.
-     * That claim came from a kernel log line, `SDK vesion: PS4:00000000 PPR:00000000`,
-     * which was *this program's own* log. A run's own output was read as evidence about
-     * somebody else's build, which is the same mistake as D232, D233 and D235 wearing
-     * different clothes.
-     *
-     * So the value was corrected to the measured one, and then the correction was
-     * measured too. Identical builds differing only in this field, on the same console:
-     *
-     *   import binding   no difference. 98 symbols measured in both, none changed.
-     *   `sceKernelDlsym` 105 of 122 resolvable at zero, 0 of 173 at 0x08008011.
-     *
-     * Declaring a real SDK version stops run-time module resolution answering, and the
-     * census is built on run-time resolution. Zero stays, now on evidence rather than
-     * on a misread log, and `PROC_SDK` in the Makefile repeats the experiment in one
-     * word. (D244) */
+    /* Which SDK this was built against. */
     uint32_t sdk_version;
-    /* Stated separately in the kernel log's `SDK vesion: PS4:... PPR:...`. Zero in the
-     * real title too, and this one is genuinely zero rather than assumed so. */
+    /* Stated separately in the kernel log's `SDK vesion: PS4:... PPR:...`.
+     * Prospero (PPR) SDK version for current-generation native executables. */
     uint32_t sdk_version_second;
     /* Four slots a real executable leaves null. Named `rest` rather than guessed at. */
     uint64_t unknown[4];
@@ -180,22 +166,10 @@ __attribute__((used, section(".sce_process_param"))) static const struct {
     .magic = OBS_PROC_PARAM_MAGIC,
     .entry_count = OBS_PROC_PARAM_ENTRIES,
     .sdk_version = OBS_PROC_PARAM_SDK,
-    .sdk_version_second = 0,
+    .sdk_version_second = OBS_PROC_PARAM_SDK_PPR,
     .unknown = {0},
-    /* Required, and measured rather than assumed.
-     *
-     * The hope was that this one could stay null - this program has no libc of its own,
-     * and announcing libc parameters is what makes the system go looking for the
-     * title's `libc.prx`. It cannot. Built with all three supplied the process got past
-     * the fault; built with **only this one nulled** and the other two left in place,
-     * it faults again at the same instruction and the same address as before:
-     *
-     *     # fault address: 0000000000000028
-     *     # rip: 000000080003333b
-     *
-     * So this is the block the platform library writes into at `+0x28`, it is not
-     * optional, and the bundled modules it obliges the package to carry are the price.
-     * (D219) */
+    /* Required by libkernel's initialization, which unconditionally writes to
+     * *(libc_param + 0x28). Leaving this null produces SIGSEGV at address 0x28. (D219) */
     .libc_param = &obs_libc_param,
     .mem_param = &obs_mem_param,
     .third_param = &obs_third_param,

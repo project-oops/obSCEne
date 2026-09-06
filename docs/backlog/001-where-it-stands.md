@@ -4,10 +4,10 @@
 <!-- obscene:counts -->
 | | |
 |---|---|
-| Behavioural checks | **189** - 79 `spec`, 27 `derived`, 2 `implementations`, 79 `assumed`, 0 `documented`, **2 `hardware`** |
-| Census symbols | **39535** across 372 libraries |
-| Sections | 40 |
-| Imports placed by the manifest | 226 |
+| Behavioural checks | **233** - 80 `spec`, 31 `derived`, 2 `implementations`, 115 `assumed`, 2 `documented`, **3 `hardware`** |
+| Census symbols | **39532** across 374 libraries |
+| Sections | 46 |
+| Imports placed by the manifest | 242 |
 <!-- /obscene:counts -->
 
 **Loaders that run the whole suite: five.** shadPS4, PS5PCEM, fpPS4 and Kyty all reach the end

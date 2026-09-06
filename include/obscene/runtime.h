@@ -63,6 +63,7 @@ void obs_compute_nid(const char *name, char out_nid[12]);
 
 struct payload_args;
 const struct payload_args *obs_get_payload_args(void);
+void obs_set_payload_kexport_table(void *table);
 
 /* Exists solely so the symbol census has something that must resolve. */
 extern const char obs_census_control_present;

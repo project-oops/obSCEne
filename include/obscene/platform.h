@@ -279,9 +279,19 @@ OBS_WEAK int sceKernelReleaseDirectMemory(sce_off_t start, size_t len);
 OBS_WEAK int sceKernelMapDirectMemory(void **addr, size_t len, int prot, int flags,
                                       sce_off_t direct_memory_start,
                                       size_t max_page_size);
+/* The sanctioned way past W^X for a recompiler: create a shared object, then map it writable
+ * and executable separately. Signatures are documented (ps4libdoc / OpenOrbis). Used by
+ * 155-jit, the go/no-go for native emulation. */
+OBS_WEAK int sceKernelJitCreateSharedMemory(const char *name, size_t len, int max_prot,
+                                            int *handle_out);
+OBS_WEAK int sceKernelJitMapSharedMemory(int handle, int prot, void **addr_out);
+OBS_WEAK int sceKernelJitCreateAliasOfSharedMemory(int handle, int prot, void **addr_out);
 OBS_WEAK int sceKernelVirtualQuery(const void *addr, int flags, void *info,
                                    size_t info_size);
 OBS_WEAK int sceKernelMunmap(void *addr, size_t len);
+OBS_WEAK int sceKernelProtectDirectMemory(sce_off_t paddr, size_t len, unsigned int flags);
+OBS_WEAK int sceKernelProtectDirectMemoryForPID(sce_off_t paddr, size_t len, int prot, int pid);
+OBS_WEAK int sceKernelBatchMap(const void *entries, int count, int *completed);
 
 /* ---- libkernel: scheduling ------------------------------------------------- */
 
@@ -440,6 +450,7 @@ OBS_WEAK int scePthreadBarrierWait(ScePthreadBarrier *barrier);
  * buffer.
  */
 
+#if defined(OBSCENE_HOST_BUILD)
 /* An opaque handle, exactly as the vendor spelling of the same lock is. */
 typedef void *ObsPosixRwlock;
 OBS_WEAK int posix_pthread_rwlock_init(ObsPosixRwlock *lock, const void *attr);
@@ -459,6 +470,7 @@ OBS_WEAK int posix_sigismember(const void *set, int signal);
  * anything the platform has not already told us. */
 OBS_WEAK int posix_getpagesize(void);
 OBS_WEAK int posix_usleep(unsigned int microseconds);
+#endif
 
 /* Counting semaphores. `Poll` rather than `Wait`, for the reason above. */
 OBS_WEAK int sceKernelCreateSema(int *out, const char *name, uint32_t attr, int init,
@@ -882,7 +894,21 @@ OBS_WEAK int scePadReadState(int handle, void *data);
  * working keyboard sample. */
 OBS_WEAK int sceKeyboardInit(void);
 OBS_WEAK int sceKeyboardOpen(int user_id, int type, int index, void *param);
+OBS_WEAK int sceKeyboardClose(int handle);
 OBS_WEAK int sceKeyboardReadState(int handle, void *data);
+
+/* ---- libSceMouse ----------------------------------------------------------- */
+OBS_WEAK int sceMouseInit(void);
+OBS_WEAK int sceMouseOpen(int user_id, int type, int index, void *param);
+OBS_WEAK int sceMouseClose(int handle);
+OBS_WEAK int sceMouseRead(int handle, void *data, int num);
+
+/* ---- Extended DualSense (libScePad) ---------------------------------------- */
+OBS_WEAK int scePadSetTriggerEffect(int handle, const void *param);
+OBS_WEAK int scePadGetTriggerEffectState(int handle, void *param);
+OBS_WEAK int scePadSetVibrationMode(int handle, int mode);
+OBS_WEAK int scePadSetVibrationForce(int handle, const void *param);
+OBS_WEAK int scePadGetControllerInformation(int handle, void *info);
 
 #if defined(__cplusplus)
 }
@@ -1062,5 +1088,28 @@ OBS_WEAK uint32_t sceGnmDispatchInitDefaultHardwareState(uint32_t *cmdbuf,
 OBS_WEAK int32_t sceGnmDispatchDirect(uint32_t *cmdbuf, uint32_t size,
                                       uint32_t threads_x, uint32_t threads_y,
                                       uint32_t threads_z, uint32_t flags);
+
+/* ---- libSceAgc: current-generation GPU command-building and shaders --------
+ *
+ * Command builders that write into a caller-supplied command buffer preceded by
+ * a small writer struct {begin, end} sitting 0x38 in front of the buffer.
+ * In System V AMD64, passing up to 6 register arguments avoids stack corruption
+ * for any arity <= 6.
+ */
+OBS_WEAK uint64_t sceAgcCbNop(void *arg0, uint64_t arg1, uint64_t arg2,
+                              uint64_t arg3, uint64_t arg4, uint64_t arg5);
+OBS_WEAK uint64_t sceAgcCbReleaseMem(void *arg0, uint64_t arg1, uint64_t arg2,
+                                     uint64_t arg3, uint64_t arg4, uint64_t arg5);
+OBS_WEAK uint64_t sceAgcDcbDmaData(void *arg0, uint64_t arg1, uint64_t arg2,
+                                   uint64_t arg3, uint64_t arg4, uint64_t arg5);
+OBS_WEAK uint64_t sceAgcDcbWaitRegMem(void *arg0, uint64_t arg1, uint64_t arg2,
+                                      uint64_t arg3, uint64_t arg4, uint64_t arg5);
+OBS_WEAK uint64_t sceAgcDcbResetQueue(void *arg0, uint64_t arg1, uint64_t arg2,
+                                      uint64_t arg3, uint64_t arg4, uint64_t arg5);
+OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
+                                               uint64_t arg3, uint64_t arg4, uint64_t arg5)
+    __asm__("$fYZQG4CU71c");
+OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
+                                     const void *payload, uint64_t arg3);
 
 #endif /* OBSCENE_PLATFORM_H */

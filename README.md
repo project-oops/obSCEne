@@ -26,9 +26,9 @@ suspect, red if it failed, grey if a prerequisite meant it was never attempted.
 > title is realistic.
 
 <!-- obscene:counts -->
-**189 checks across 40 sections**, 39535 censused symbols across 372 libraries.
+**233 checks across 46 sections**, 39532 censused symbols across 374 libraries.
 
-Of those checks, 79 rest on a public specification, 27 on the specification of the system this kernel derives from, 2 on independent implementations that agree, and 79 on this project's own reasoning. **2 have been confirmed on real hardware**, which is the number that limits what any of this can claim.
+Of those checks, 80 rest on a public specification, 31 on the specification of the system this kernel derives from, 2 on independent implementations that agree, and 115 on this project's own reasoning. **3 have been confirmed on real hardware**, which is the number that limits what any of this can claim.
 <!-- /obscene:counts -->
 
 ## Why this exists
@@ -80,8 +80,9 @@ It is a front door rather than an implementation, so any make target still works
 and the one combination that is refused, which shape reaches which loader, and
 what each CI job establishes.
 
-**obSCEne does not build from a clone of only this repository.** It resolves SELFish and
-Prosperous by relative path, as siblings, so the layout is a build requirement rather than a
+**obSCEne does not build from a clone of only this repository.** It resolves SELFish,
+Prosperous and oops-sdk (`../oops-sdk`, the freestanding-C SDK it links into the module and
+eboot) by relative path, as siblings, so the layout is a build requirement rather than a
 convenience. `oops bootstrap obscene` fetches them.
 
 **Compiling the C needs only clang.** A conformance probe that needs a vendor toolchain to

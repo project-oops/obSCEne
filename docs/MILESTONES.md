@@ -4,8 +4,8 @@ Things this project had never done before, each with the evidence that it did.
 
 **Why this is separate from [`WORKLOG.md`](WORKLOG.md).** The worklog is what was done, in
 order, and it is four thousand lines long. A first is a different kind of fact: it is the point
-after which a whole class of work became possible, and it needs to stay findable. Three entries
-so far, and there should never be many: if this file starts needing sections, something that is
+after which a whole class of work became possible, and it needs to stay findable. It is a short
+list and should stay short: if this file starts needing sections, something that is
 not a first has been added to it.
 
 **Why it is separate from [`CHANGELOG.md`](../CHANGELOG.md).** That is a release log - what

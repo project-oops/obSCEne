@@ -31,6 +31,7 @@ got out.
 |---|---|
 | `ps5-full.txt` | the first complete suite this project ran on a console - 14,665 records, 521 checks, the census reaching 10,243 symbols |
 | `ps5-imports.txt` | the run that separated **our** defect from the platform's. Adds `import` records: per symbol, whether the loader bound the import *and* whether a run-time lookup finds the same name in the same library |
+| `ps5-sprx-manifest.tsv` | the retail SPRX filesystem catalog (537 modules) surveyed directly across `/system/common/lib`, `/system_ex/common_ex/lib`, and `/system/priv/lib`, categorized by privilege tier |
 | `crashers.txt` | the ten libraries whose load ends the process. Not a report - a **finding**, in machine-readable form, consumed by `scripts/sweep-build.sh` and `scripts/oops-rebuild-pkg.sh` |
 
 `crashers.txt` is here rather than in a build directory for the reason this whole directory

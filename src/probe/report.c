@@ -579,3 +579,14 @@ void obs_report_import(const char *library, const char *symbol, int linked,
     line_field(&l, resolvable ? "resolvable" : "unresolvable");
     line_end(&l);
 }
+
+void obs_report_module_tier(const char *library, const char *status,
+                            obs_module_tier tier, const char *detail) {
+    line l;
+    line_start(&l, "modtier");
+    line_field(&l, library);
+    line_field(&l, status);
+    line_field(&l, obs_module_tier_name(tier));
+    line_field(&l, detail);
+    line_end(&l);
+}

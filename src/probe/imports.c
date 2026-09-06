@@ -44,6 +44,9 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "sceKernelClose"},
     {"libkernel", "sceKernelGetdents"},
     {"libkernel", "sceKernelLseek"},
+    {"libkernel", "sceKernelJitCreateSharedMemory"},
+    {"libkernel", "sceKernelJitMapSharedMemory"},
+    {"libkernel", "sceKernelJitCreateAliasOfSharedMemory"},
     {"libkernel", "sceKernelGetDirectMemorySize"},
     {"libkernel", "sceKernelAllocateDirectMemory"},
     {"libkernel", "sceKernelAllocateMainDirectMemory"},
@@ -51,6 +54,9 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "sceKernelReleaseDirectMemory"},
     {"libkernel", "sceKernelMapDirectMemory"},
     {"libkernel", "sceKernelMunmap"},
+    {"libkernel", "sceKernelProtectDirectMemory"},
+    {"libkernel", "sceKernelProtectDirectMemoryForPID"},
+    {"libkernel", "sceKernelBatchMap"},
     {"libkernel", "sceKernelUsleep"},
     {"libkernel", "sceKernelIsNeoMode"},
     {"libkernel", "scePthreadSelf"},
@@ -119,19 +125,29 @@ static const obs_import obs_platform_imports[] = {
     {"libSceVideoRecording", "sceVideoRecordingClose"},
     {"libSceVideoRecording", "sceVideoRecordingStop"},
     {"libSceVideoRecording", "sceVideoRecordingGetStatus"},
-    {"libSceVencCore", "sceVencCoreCreateEncoder"},
-    {"libSceVencCore", "sceVencCoreGetAuData"},
-    {"libSceVencCore", "sceVencCoreQueryMemorySize"},
     {"libSceAudioOut", "sceAudioOutInit"},
     {"libSceAudioOut", "sceAudioOutOpen"},
     {"libSceAudioOut", "sceAudioOutClose"},
+    {"libSceAudioOut", "sceAudioOutOutput"},
+    {"libSceAudioOut", "sceAudioOutSetVolume"},
     {"libScePad", "scePadInit"},
     {"libScePad", "scePadOpen"},
     {"libScePad", "scePadClose"},
     {"libScePad", "scePadReadState"},
+    {"libScePad", "scePadRead"},
+    {"libScePad", "scePadSetLightBar"},
+    {"libScePad", "scePadSetVibration"},
+    {"libScePad", "scePadSetTriggerEffect"},
+    {"libScePad", "scePadGetTriggerEffectState"},
+    {"libScePad", "scePadGetControllerInformation"},
     {"libSceKeyboard", "sceKeyboardInit"},
     {"libSceKeyboard", "sceKeyboardOpen"},
+    {"libSceKeyboard", "sceKeyboardClose"},
     {"libSceKeyboard", "sceKeyboardReadState"},
+    {"libSceMouse", "sceMouseInit"},
+    {"libSceMouse", "sceMouseOpen"},
+    {"libSceMouse", "sceMouseClose"},
+    {"libSceMouse", "sceMouseRead"},
     /* The two extra output channels. See obs_write in runtime.c: an emulator that
      * stubs sceKernelWrite discards the whole report, so there is more than one way
      * out. */
@@ -244,6 +260,15 @@ static const obs_import obs_platform_imports[] = {
     {"libSceGnmDriver", "sceGnmSubmitCommandBuffers"},
     {"libSceGnmDriver", "sceGnmSubmitDone"},
 
+    /* libSceAgc: current-generation GPU command builders and shaders */
+    {"libSceAgc", "sceAgcCbNop"},
+    {"libSceAgc", "sceAgcCbReleaseMem"},
+    {"libSceAgc", "sceAgcDcbDmaData"},
+    {"libSceAgc", "sceAgcDcbWaitRegMem"},
+    {"libSceAgc", "sceAgcDcbResetQueue"},
+    {"libSceAgc", "$fYZQG4CU71c"},
+    {"libSceAgc", "sceAgcCreateShader"},
+
     /* Address-probed by the HUD (src/sysinfo.c), never called - its struct layout is
      * unconfirmed. Listed so mkmodule knows the library the presence probe imports
      * from. */
@@ -265,20 +290,6 @@ static const obs_import obs_platform_imports[] = {
     /* The measuring instrument. See src/sections/measure.c. */
     {"libkernel", "sceKernelReadTsc"},
     {"libkernel", "sceKernelGetProcessTimeCounterFrequency"},
-
-    /* The same platform under its POSIX names. See src/sections/posix.c. */
-    {"libScePosix", "posix_pthread_rwlock_init"},
-    {"libScePosix", "posix_pthread_rwlock_destroy"},
-    {"libScePosix", "posix_pthread_rwlock_tryrdlock"},
-    {"libScePosix", "posix_pthread_rwlock_trywrlock"},
-    {"libScePosix", "posix_pthread_rwlock_unlock"},
-    {"libScePosix", "posix_sigemptyset"},
-    {"libScePosix", "posix_sigfillset"},
-    {"libScePosix", "posix_sigaddset"},
-    {"libScePosix", "posix_sigdelset"},
-    {"libScePosix", "posix_sigismember"},
-    {"libScePosix", "posix_getpagesize"},
-    {"libScePosix", "posix_usleep"},
 
     /* POSIX synchronisation. See src/sections/sync.c. */
     {"libkernel", "scePthreadMutexattrInit"},
@@ -329,6 +340,17 @@ static const obs_import obs_platform_imports[] = {
     {"libSceVideoOut", "sceVideoOutRegisterBuffers2"},
     {"libSceVideoOut", "sceVideoOutSetBufferAttribute2"},
     {"libSceVideoOut", "sceVideoOutSubmitFlip"},
+    {"libSceVideoOut", "sceVideoOutAddFlipEvent"},
+    {"libSceVideoOut", "sceVideoOutIsFlipPending"},
+    {"libSceVideoOut", "sceVideoOutSetFlipRate"},
+
+    /* Liverpool flip event queue & synchronization */
+    {"libkernel", "sceKernelCreateEqueue"},
+    {"libkernel", "sceKernelDeleteEqueue"},
+    {"libkernel", "sceKernelWaitEqueue"},
+
+    /* Controller orientation reset */
+    {"libScePad", "scePadResetOrientation"},
 
     /* Ends the run. See src/start.c. */
     {"libSceLibcInternal", "exit"},

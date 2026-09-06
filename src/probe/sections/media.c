@@ -19,6 +19,8 @@
 #include "obscene/harness.h"
 #include "obscene/display.h"
 #include "obscene/platform.h"
+#include "obscene/report.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 /* The main video bus. Additional buses exist for auxiliary outputs. */
@@ -63,6 +65,9 @@ static obs_result check_video_open(void) {
         return obs_skip("no initial user, so there is nobody to open an output for");
     }
     int handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, NULL);
+    if (handle <= 0) {
+        handle = sceVideoOutOpen(0xFF, OBS_VIDEO_BUS_MAIN, 0, NULL);
+    }
     if (handle <= 0) {
         return obs_fail_code("the main video output would not open",
                              (uint64_t)(uint32_t)handle);
@@ -128,12 +133,40 @@ static obs_result check_audio_close_rejects_bad_handle(void) {
     return obs_pass_value((uint64_t)(uint32_t)rc);
 }
 
+#if !defined(OBSCENE_HOST_BUILD)
+#include "oops/audio.h"
+
+static obs_result check_oops_audio(void) {
+    oops_audio_port_t *port = oops_audio_open(48000, 2, 512);
+    if (!port) {
+        int err = oops_audio_get_last_error();
+        return obs_fail_code("oops_audio_open returned NULL", (uint64_t)(uint32_t)err);
+    }
+    /* Generate a tiny burst of silence (512 frames of stereo PCM) */
+    int16_t silence[512 * 2];
+    for (int i = 0; i < 512 * 2; i++) silence[i] = 0;
+
+    int v_rc = oops_audio_set_volume(port, 1.0f, 1.0f);
+    int w_rc = oops_audio_write(port, silence, 512);
+    oops_audio_close(port);
+
+    if (w_rc < 0) {
+        return obs_fail_code("oops_audio_write failed", (uint64_t)(uint32_t)w_rc);
+    }
+    return obs_pass_value((uint64_t)(uint32_t)v_rc);
+}
+#endif
+
 static const obs_check audio_checks[] = {
     {"090-audio/initialise", "libSceAudioOut", "sceAudioOutInit", OBS_CAP_NONE,
      OBS_CAP_AUDIO, (const void *)&sceAudioOutInit, check_audio_init, OBS_FROM_ASSUMED},
     {"090-audio/close-rejects-bad-handle", "libSceAudioOut", "sceAudioOutClose",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAudioOutClose,
      check_audio_close_rejects_bad_handle, OBS_FROM_ASSUMED},
+#if !defined(OBSCENE_HOST_BUILD)
+    {"090-audio/oops-sdk-pcm", "libSceAudioOut", "sceAudioOutOpen", OBS_CAP_NONE,
+     OBS_CAP_AUDIO, (const void *)&sceAudioOutOpen, check_oops_audio, OBS_FROM_ASSUMED},
+#endif
 };
 
 const obs_section obs_section_audio = {
@@ -182,6 +215,176 @@ static obs_result check_pad_close_rejects_bad_handle(void) {
     return obs_pass_value((uint64_t)(uint32_t)rc);
 }
 
+#if !defined(OBSCENE_HOST_BUILD)
+#include "oops/input.h"
+
+static obs_result check_oops_input(void) {
+    if (oops_input_init() != 0) {
+        return obs_skip("oops_input_init could not open pad (no user or disconnected)");
+    }
+    oops_pad_state_t pad;
+    int rc = oops_input_poll(0, &pad);
+    if (rc != 0) {
+        return obs_fail_code("oops_input_poll returned non-zero", (uint64_t)(uint32_t)rc);
+    }
+    return obs_pass_value((uint64_t)pad.buttons);
+}
+#endif
+
+static const char *const pad_dualsense_symbols[] = {
+    "scePadSetTriggerEffect",
+    "scePadGetTriggerEffectState",
+    "scePadSetVibrationMode",
+    "scePadSetVibrationForce",
+    "scePadGetControllerInformation",
+    "scePadDeviceClassGetExtendedInformation",
+    "scePadDeviceClassParseData",
+};
+
+static obs_result check_pad_dualsense_symbols(void) {
+    if (!obs_module_resolution_works()) {
+        return obs_skip("run-time module resolution is unavailable in this process");
+    }
+    int handle = obs_module_open("libScePad");
+    if (handle < 0) {
+        return obs_skip("libScePad did not load");
+    }
+
+    unsigned int resolved = 0;
+    for (size_t i = 0; i < OBS_COUNT(pad_dualsense_symbols); i++) {
+        const char *name = pad_dualsense_symbols[i];
+        const void *addr = obs_module_symbol(handle, name);
+        if (addr != NULL) {
+            resolved++;
+            obs_report_measure("100-input/dualsense-symbols", name, "vaddr",
+                               (uint64_t)(uintptr_t)addr, "offset");
+            if (obs_strcmp(name, "scePadSetTriggerEffect") == 0 && obs_address_is_callable(addr)) {
+                obs_report_buffer("100-input/trigger-prologue", name, "prologue",
+                                  (const unsigned char *)addr, 256);
+            }
+        } else {
+            obs_report_measure("100-input/dualsense-symbols", name, "unresolved", 0, "status");
+        }
+    }
+
+    if (resolved > 0) {
+        return obs_pass_value((uint64_t)resolved);
+    }
+    return obs_skip("no DualSense extended symbols resolved (likely ps4_mode)");
+}
+
+static obs_result check_pad_trigger_state_outparam(void) {
+    if (!obs_module_resolution_works()) {
+        return obs_skip("run-time module resolution is unavailable in this process");
+    }
+    int handle = obs_module_open("libScePad");
+    if (handle < 0) {
+        return obs_skip("libScePad did not load");
+    }
+    int (*fn_get)(int, void *) =
+        (int (*)(int, void *))obs_module_symbol(handle, "scePadGetTriggerEffectState");
+    if (fn_get == NULL || !obs_address_is_callable((const void *)fn_get)) {
+        return obs_skip("scePadGetTriggerEffectState is not resolved");
+    }
+
+    int32_t user = initial_user();
+    int pad_handle = -1;
+    if (user >= 0 && obs_address_is_callable((const void *)&scePadOpen)) {
+        pad_handle = scePadOpen(user, 0, 0, NULL);
+    }
+
+#define OBS_PAD_BUF_SIZE 4096u
+    static uint8_t buf[OBS_PAD_BUF_SIZE];
+    static uint8_t before[OBS_PAD_BUF_SIZE];
+    for (size_t i = 0; i < OBS_PAD_BUF_SIZE; i++) {
+        buf[i] = 0xC7u;
+        before[i] = 0xC7u;
+    }
+
+    int rc = fn_get(pad_handle >= 0 ? pad_handle : 0, buf);
+
+    unsigned int written = 0;
+    for (size_t i = 0; i < OBS_PAD_BUF_SIZE; i++) {
+        if (buf[i] != before[i]) {
+            written = (unsigned int)(i + 1u);
+        }
+    }
+
+    if (pad_handle >= 0 && obs_address_is_callable((const void *)&scePadClose)) {
+        scePadClose(pad_handle);
+    }
+
+    if (written > 0) {
+        obs_report_written("100-input/trigger-state", "scePadGetTriggerEffectState", "out-param",
+                           before, buf, OBS_PAD_BUF_SIZE);
+        return obs_pass_value((uint64_t)written);
+    }
+
+    obs_report_written("100-input/trigger-state", "scePadGetTriggerEffectState", "untouched",
+                       before, buf, OBS_PAD_BUF_SIZE);
+    if (rc != 0) {
+        return obs_partial_value("call returned error code and wrote nothing", (uint64_t)(uint32_t)rc);
+    }
+    return obs_pass();
+#undef OBS_PAD_BUF_SIZE
+}
+
+static obs_result check_pad_controller_info_outparam(void) {
+    if (!obs_module_resolution_works()) {
+        return obs_skip("run-time module resolution is unavailable in this process");
+    }
+    int handle = obs_module_open("libScePad");
+    if (handle < 0) {
+        return obs_skip("libScePad did not load");
+    }
+    int (*fn_info)(int, void *) =
+        (int (*)(int, void *))obs_module_symbol(handle, "scePadGetControllerInformation");
+    if (fn_info == NULL || !obs_address_is_callable((const void *)fn_info)) {
+        return obs_skip("scePadGetControllerInformation is not resolved");
+    }
+
+    int32_t user = initial_user();
+    int pad_handle = -1;
+    if (user >= 0 && obs_address_is_callable((const void *)&scePadOpen)) {
+        pad_handle = scePadOpen(user, 0, 0, NULL);
+    }
+
+#define OBS_PAD_INFO_SIZE 4096u
+    static uint8_t buf[OBS_PAD_INFO_SIZE];
+    static uint8_t before[OBS_PAD_INFO_SIZE];
+    for (size_t i = 0; i < OBS_PAD_INFO_SIZE; i++) {
+        buf[i] = 0xC7u;
+        before[i] = 0xC7u;
+    }
+
+    int rc = fn_info(pad_handle >= 0 ? pad_handle : 0, buf);
+
+    unsigned int written = 0;
+    for (size_t i = 0; i < OBS_PAD_INFO_SIZE; i++) {
+        if (buf[i] != before[i]) {
+            written = (unsigned int)(i + 1u);
+        }
+    }
+
+    if (pad_handle >= 0 && obs_address_is_callable((const void *)&scePadClose)) {
+        scePadClose(pad_handle);
+    }
+
+    if (written > 0) {
+        obs_report_written("100-input/controller-info", "scePadGetControllerInformation", "out-param",
+                           before, buf, OBS_PAD_INFO_SIZE);
+        return obs_pass_value((uint64_t)written);
+    }
+
+    obs_report_written("100-input/controller-info", "scePadGetControllerInformation", "untouched",
+                       before, buf, OBS_PAD_INFO_SIZE);
+    if (rc != 0) {
+        return obs_partial_value("call returned error code and wrote nothing", (uint64_t)(uint32_t)rc);
+    }
+    return obs_pass();
+#undef OBS_PAD_INFO_SIZE
+}
+
 static const obs_check input_checks[] = {
     {"100-input/initialise", "libScePad", "scePadInit", OBS_CAP_NONE, OBS_CAP_INPUT,
      (const void *)&scePadInit, check_pad_init, OBS_FROM_ASSUMED},
@@ -190,12 +393,25 @@ static const obs_check input_checks[] = {
     {"100-input/close-rejects-bad-handle", "libScePad", "scePadClose", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&scePadClose, check_pad_close_rejects_bad_handle,
      OBS_FROM_ASSUMED},
+#if !defined(OBSCENE_HOST_BUILD)
+    {"100-input/oops-sdk-poll", "libScePad", "scePadReadState", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&scePadReadState, check_oops_input, OBS_FROM_ASSUMED},
+#endif
+    {"100-input/dualsense-symbols", "libScePad", "scePadSetTriggerEffect", OBS_CAP_INPUT,
+     OBS_CAP_NONE, (const void *)&scePadSetTriggerEffect, check_pad_dualsense_symbols,
+     OBS_FROM_ASSUMED},
+    {"100-input/trigger-state", "libScePad", "scePadGetTriggerEffectState", OBS_CAP_INPUT,
+     OBS_CAP_NONE, (const void *)&scePadGetTriggerEffectState, check_pad_trigger_state_outparam,
+     OBS_FROM_ASSUMED},
+    {"100-input/controller-info", "libScePad", "scePadGetControllerInformation", OBS_CAP_INPUT,
+     OBS_CAP_NONE, (const void *)&scePadGetControllerInformation, check_pad_controller_info_outparam,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_input = {
     "100-input",
     "Controller input",
-    "Bringing up the controller subsystem and acquiring a pad.",
+    "Bringing up the controller subsystem, acquiring a pad, and DualSense features.",
     input_checks,
     OBS_COUNT(input_checks),
 };

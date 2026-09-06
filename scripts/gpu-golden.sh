@@ -45,8 +45,7 @@ fi
 make host GPU=1 BUILD="$GPU_BUILD" >/dev/null 2>&1 || true
 fresh="${TMPDIR:-/tmp}/gpu-fresh.$$"
 trap 'rm -f "$fresh"' EXIT
-"$GPU_BUILD/obscene-host" 2>/dev/null | grep -E '^OBS\|(gpudev|gpu|gpuop)\|' > "$fresh" || true
-
+(cd "$GPU_BUILD" && ./obscene-host 2>/dev/null | grep -E '^OBS\|(gpudev|gpu|gpuop)\|' > "$fresh") || true
 records=$(wc -l < "$fresh" | tr -d ' ')
 if [ "$records" = "0" ]; then
     # No GPU backend here (no llvmpipe, no device). Nothing to bless or check against.

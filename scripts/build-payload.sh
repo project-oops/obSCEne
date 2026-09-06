@@ -1,19 +1,18 @@
 #!/bin/bash
-# Build an obSCEne payload: obSCEne's crt0 + body, resolution table generated from the target
-# libraries via obscene-tool (which consumes selfish's format primitives). selfish provides the
-# knowledge (dynsym/nid/exports); the crt0 and this orchestration are obSCEne's runtime.
+# Build an obSCEne payload: oops-sdk's crt0 + body, resolution table generated from the target
+# knowledge (dynsym/nid/exports); oops-sdk provides the runtime bootstrapping.
 # Paths are derived from this script's own location rather than hardcoded, so the
-# collection works wherever it is cloned. `$OOPS` is the parent holding all four projects.
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 OOPS="$(cd "$REPO/.." && pwd)"
 SELFISH="${SELFISH:-$OOPS/SELFish}"
+OOPS_SDK="${OOPS_SDK:-$OOPS/oops-sdk}"
 set -e
 export PATH="$HOME/.cargo/bin:$PATH" CARGO_TARGET_DIR="$HOME/obs-tool-target"
 cd "$REPO"
 BODY="$1"; OUT="$HOME/obs-hw/$(basename "$BODY" .c)_payload.elf"
-CRT0="$SELFISH/runtime/crt0.c"
-CFLAGS="-std=c11 -Wall -fvisibility=hidden -target x86_64-unknown-freebsd -ffreestanding -fno-builtin -nostdlib -fPIC -fno-stack-protector -I$SELFISH/runtime/include"
+CRT0="$OOPS_SDK/runtime/crt0.c"
+CFLAGS="-std=c11 -Wall -fvisibility=hidden -target x86_64-unknown-freebsd -ffreestanding -fno-builtin -nostdlib -fPIC -fno-stack-protector -I$OOPS_SDK/include"
 LDFLAGS="-fuse-ld=lld -shared -Wl,-Bsymbolic -Wl,-e,_start -Wl,--unresolved-symbols=ignore-all -Wl,-z,noexecstack -Wl,-z,max-page-size=0x4000 -Wl,-z,common-page-size=0x4000"
 GEN="cargo run --manifest-path tool/Cargo.toml --example gen_payload_table -q --"
 

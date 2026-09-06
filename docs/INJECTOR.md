@@ -19,20 +19,10 @@ To measure real, native Prospero platform behavior (`payload/ps5-native`), `obSC
 
 The probe and injector are strictly decoupled:
 - **The probe never links the injector.** `src/probe/sections/` and `src/probe/runtime.c` remain clean conformance probe code.
-- **The injector never links the probe checks.** `src/injector/` links only `src/common/freestd.c` and its own files.
-- **Shared freestanding layer.** `src/common/` holds freestanding helpers (`freestd.h`/`freestd.c`) and the kernel R/W contract (`krw.h`).
-
-```
+- **The injector never links the probe checks.** The injector is self-contained in `src/probe/injector_entry.c`.
+- **Shared freestanding layer.** Built into `src/probe/injector_entry.c` with zero external dependencies.
 obscene/
-  src/common/                ← Shared freestanding layer
-    freestd.c  freestd.h     ← strlen, format, and memory helpers
-    krw.h                    ← Kernel-R/W interface specification
-  src/injector/              ← Injector payload (does NOT link probe checks)
-    injector.c               ← Entry: init R/W → elevate creds → resolve target → load → hijack
-    loader.c   loader.h      ← Map ELF into process (libelfldr-shaped)
-    procctl.c  procctl.h     ← ptrace-style process control (attach / set-regs / cont)
-    krw.c                    ← R/W implementation consuming session primitive
-    target.c   target.h      ← Target process resolver (foreground app / name / pid)
+  src/probe/injector_entry.c ← Consolidated injector payload
   link/injector.ld           ← ET_DYN payload linker script (16 KiB page aligned)
   docs/INJECTOR.md           ← This specification
 ```
@@ -43,7 +33,6 @@ obscene/
 
 The injector receives `payload_args_t` from the session exploit chain (`kstuff-lite` / `elfldr`):
 
-```c
 typedef struct payload_args {
     int (*sys_dynlib_dlsym)(int, const char *, void *);
     int *rwpipe;

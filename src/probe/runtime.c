@@ -8,7 +8,8 @@
  * can load it.
  */
 
-#include "common/freestd.h"
+#include "oops/freestd.h"
+#include "oops/krw.h"
 #include "obscene/runtime.h"
 #include "obscene/harness.h"
 #include "obscene/sink.h"
@@ -114,6 +115,13 @@ long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
         return ret;
     }
 
+    /* In a native title/eboot process, direct syscall instructions outside libkernel
+     * trigger an unhandled kernel exception (SIGSYS / crash-candidate). Avoid them if
+     * dynamically linked symbols are present or no syscall gadget is known. */
+    if (obs_get_payload_args() == NULL && s_libkernel_syscall_gadget == 0) {
+        return -1;
+    }
+
     __asm__ volatile("movq %5, %%rax\n"
                      "movq %6, %%r10\n"
                      "syscall\n"
@@ -162,8 +170,9 @@ static void obs_debug_out_write(const char *bytes, size_t len) {
         s_fn_debug_out(0, scratch);
     } else if (obs_address_is_callable((const void *)&sceKernelDebugOutText)) {
         (void)sceKernelDebugOutText(0, scratch);
+    } else if (s_libkernel_syscall_gadget != 0) {
+        obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
     }
-    obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
 }
 
 static obs_channel obs_output_channel = OBS_CHANNEL_UNTRIED;
@@ -208,6 +217,14 @@ void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
         s_libkernel_syscall_gadget = (long)getpid_ptr + 0xa;
         obs_libkernel_base_value = (unsigned long)getpid_ptr - 0x5b0UL;
     }
+    if (obs_libkernel_base_value == 0) {
+        if ((payload_args_word0 & 0xffffffff00000000UL) == 0x800000000UL) {
+            obs_libkernel_base_value = 0x800000000UL;
+        } else {
+            obs_libkernel_base_value = payload_args_word0 & ~0xfffffUL;
+        }
+    }
+    (void)payload_args_word0;
     obs_write_tee = NULL;
     obs_write_tee_ctx = NULL;
     obs_payload_output_bootstrapped = 1;
@@ -481,13 +498,21 @@ static int obs_linkmap_readable(uintptr_t p) {
 #if defined(OBSCENE_HOST_BUILD)
     return 0;
 #else
+    /* Never attempt to read from eboot text segment (xotext), which is execute-only on PS5 */
+    if (p >= 0x400000UL && p < 0x440000UL) {
+        return 0;
+    }
     char info[96];
     for (size_t i = 0; i < sizeof(info); i++) {
         info[i] = 0;
     }
     int ret = sceKernelVirtualQuery((const void *)p, 0, info, sizeof(info));
     if (ret == 0) {
-        return 1;
+        int prot = *(const int *)(info + 0x20);
+        if ((prot & 1) != 0) {
+            return 1;
+        }
+        return 0;
     }
     return 0;
 #endif
@@ -508,7 +533,8 @@ static const unsigned char *obs_linkmap_own_dynamic(const char **reason) {
         }
     }
 
-    /* 2. Check main eboot text / data segments by querying virtual memory */
+#if !defined(OBSCENE_TARGET_MODULE)
+    /* 2. Check main eboot text / data segments by querying virtual memory (payload only) */
     uintptr_t addr = 0x400000UL;
     for (int step = 0; step < 32 && addr < 0x80000000UL;) {
         char vq_buf[96];
@@ -552,6 +578,7 @@ static const unsigned char *obs_linkmap_own_dynamic(const char **reason) {
         addr = seg_start + seg_size;
         step++;
     }
+#endif /* !defined(OBSCENE_TARGET_MODULE) */
 
     /* 3. Check libkernel data segment */
     unsigned long lk_base = obs_libkernel_base();
@@ -664,6 +691,30 @@ unsigned int obs_linkmap_walk(int (*cb)(const char *name, unsigned long base,
     }
 
     if (count == 0 && dyn == (const unsigned char *)0) {
+        const payload_args_t *pargs = (const payload_args_t *)obs_get_payload_args();
+        if (pargs != NULL && pargs->kexport_table != NULL) {
+            *reason = "ok";
+            if (cb) {
+                const obs_kexport_table_t *kt =
+                    (const obs_kexport_table_t *)pargs->kexport_table;
+                char nid_buf[12];
+                obs_compute_nid("sceAgcCreateShader", nid_buf);
+                if (obs_kexport_lookup(kt, nid_buf) != NULL) {
+                    cb("libSceAgc", 0, user);
+                    count++;
+                }
+                obs_compute_nid("sceGnmSubmitCommandBuffers", nid_buf);
+                if (obs_kexport_lookup(kt, nid_buf) != NULL) {
+                    cb("libSceGnmDriver", 0, user);
+                    count++;
+                }
+                if (count == 0) {
+                    cb("payload", 0, user);
+                    count++;
+                }
+            }
+            return count;
+        }
         return 0;
     }
     return count;
@@ -788,7 +839,140 @@ typedef struct {
     int64_t r_addend;
 } obs_elf64_rela;
 
+static uintptr_t obs_find_own_base(void) {
+    uintptr_t addr = (uintptr_t)&obs_bind_dynamic_symbols;
+    addr &= ~0x3fffUL;
+    for (int i = 0; i < 4096; i++) {
+        if (addr < 0x10000UL) {
+            break;
+        }
+        if ((obs_get_payload_args() != NULL || obs_linkmap_readable(addr)) &&
+            *(const uint32_t *)addr == 0x464c457f) {
+            return addr;
+        }
+        addr -= 0x4000UL;
+    }
+    return 0;
+}
+
+static void obs_relocate_payload_got(void) {
+    uintptr_t base = obs_find_own_base();
+    if (base == 0) {
+        return;
+    }
+    const obs_elf64_dyn *dyn = _DYNAMIC;
+    if (dyn == NULL) {
+        return;
+    }
+
+    uintptr_t jmprel = 0;
+    size_t pltrelsz = 0;
+    uintptr_t symtab = 0;
+    uintptr_t strtab = 0;
+
+    for (size_t i = 0; dyn[i].d_tag != 0; i++) {
+        switch (dyn[i].d_tag) {
+        case 0x17: /* DT_JMPREL */
+            jmprel = (uintptr_t)dyn[i].d_val;
+            break;
+        case 0x02: /* DT_PLTRELSZ */
+            pltrelsz = (size_t)dyn[i].d_val;
+            break;
+        case 0x06: /* DT_SYMTAB */
+            symtab = (uintptr_t)dyn[i].d_val;
+            break;
+        case 0x05: /* DT_STRTAB */
+            strtab = (uintptr_t)dyn[i].d_val;
+            break;
+        }
+    }
+
+    if (jmprel == 0 || pltrelsz == 0 || symtab == 0 || strtab == 0) {
+        return;
+    }
+
+    if (jmprel < base)
+        jmprel += base;
+    if (symtab < base)
+        symtab += base;
+    if (strtab < base)
+        strtab += base;
+
+    const payload_args_t *pargs = obs_get_payload_args();
+    const obs_elf64_rela *r = (const obs_elf64_rela *)jmprel;
+    size_t count = pltrelsz / sizeof(obs_elf64_rela);
+
+    if (count > 0) {
+        uint64_t slot0_val = *(const uint64_t *)(base + r[0].r_offset);
+        uintptr_t first_stub = 0;
+        if (slot0_val >= base) {
+            first_stub = (uintptr_t)slot0_val - 6;
+        } else if (slot0_val > 0) {
+            first_stub = base + (uintptr_t)slot0_val - 6;
+        }
+        if (first_stub >= 0x10) {
+            uintptr_t plt_start = first_stub - 0x10;
+            uintptr_t plt_end = plt_start + 0x10 + count * 0x10;
+            obs_set_plt_bounds(plt_start, plt_end);
+        }
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        uint32_t sym_idx = (uint32_t)(r[i].r_info >> 32);
+        uint32_t r_type = (uint32_t)(r[i].r_info & 0xffffffff);
+        if (r_type == 7) { /* R_X86_64_JUMP_SLOT */
+            const obs_elf64_sym *sym =
+                (const obs_elf64_sym *)(symtab + (size_t)sym_idx * sizeof(obs_elf64_sym));
+            const char *sym_name = (const char *)(strtab + sym->st_name);
+            uint64_t *got_slot = (uint64_t *)(base + r[i].r_offset);
+
+            const void *resolved = NULL;
+            if (pargs != NULL && pargs->kexport_table != NULL) {
+                char nid[12];
+                obs_compute_nid(sym_name, nid);
+                resolved = obs_kexport_lookup(
+                    (const obs_kexport_table_t *)pargs->kexport_table, nid);
+            }
+            if (resolved == NULL) {
+                int h = obs_module_open("libkernel");
+                if (h >= 0) {
+                    resolved = obs_module_symbol(h, sym_name);
+                }
+            }
+            if (resolved == NULL) {
+                for (unsigned int s = 0; s < obs_section_count; s++) {
+                    const obs_section *sec = obs_sections[s];
+                    if (sec == NULL)
+                        continue;
+                    for (unsigned int c = 0; c < sec->check_count; c++) {
+                        const obs_check *chk = &sec->checks[c];
+                        if (chk->symbol != NULL && obs_strcmp(chk->symbol, sym_name) == 0 &&
+                            chk->library != NULL &&
+                            obs_strcmp(chk->library, "libkernel") != 0 &&
+                            obs_strcmp(chk->library, "obscene") != 0) {
+                            int mod = obs_module_open(chk->library);
+                            if (mod >= 0) {
+                                resolved = obs_module_symbol(mod, sym_name);
+                                if (resolved != NULL)
+                                    break;
+                            }
+                        }
+                    }
+                    if (resolved != NULL)
+                        break;
+                }
+            }
+            if (resolved != NULL && obs_address_is_callable(resolved)) {
+                *got_slot = (uint64_t)(uintptr_t)resolved;
+            } else {
+                *got_slot = 0;
+            }
+        }
+    }
+}
+
 void obs_bind_dynamic_symbols(void) {
+    obs_relocate_payload_got();
     for (unsigned int s = 0; s < obs_section_count; s++) {
         const obs_section *section = obs_sections[s];
         if (section == NULL)
@@ -809,6 +993,24 @@ void obs_bind_dynamic_symbols(void) {
     }
 }
 
+#if !defined(OBSCENE_TARGET_MODULE)
+static int obs_is_ps5(void) {
+    static int s_is_ps5 = -1;
+    if (s_is_ps5 != -1) {
+        return s_is_ps5;
+    }
+    if (obs_libkernel_base_value != 0) {
+        const unsigned char *lk = (const unsigned char *)obs_libkernel_base_value;
+        if (lk[0x5e40] == 0x48 && lk[0x5e41] == 0xc7 && lk[0x5e42] == 0xc0 &&
+            *(const uint32_t *)(lk + 0x5e43) == 585) {
+            s_is_ps5 = 1;
+            return 1;
+        }
+    }
+    s_is_ps5 = 0;
+    return 0;
+}
+
 int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end,
                                   size_t length, size_t alignment, int memory_type,
                                   sce_off_t *physical_address) {
@@ -820,15 +1022,17 @@ int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end,
 
 int sceKernelMapDirectMemory(void **virtual_address, size_t length, int protection,
                              int flags, sce_off_t physical_address, size_t alignment) {
+    long num = obs_is_ps5() ? 585 : 573;
     long ret =
-        obs_invoke_syscall(573, (long)virtual_address, (long)length, (long)protection,
+        obs_invoke_syscall(num, (long)virtual_address, (long)length, (long)protection,
                            (long)flags, (long)physical_address, (long)alignment);
     return (int)ret;
 }
 
 int sceKernelReleaseDirectMemory(sce_off_t physical_address, size_t length) {
+    long num = obs_is_ps5() ? 586 : 574;
     long ret =
-        obs_invoke_syscall(574, (long)physical_address, (long)length, 0, 0, 0, 0);
+        obs_invoke_syscall(num, (long)physical_address, (long)length, 0, 0, 0, 0);
     return (int)ret;
 }
 
@@ -848,41 +1052,46 @@ int sceKernelUsleep(unsigned int microseconds) {
     if (s_fn_usleep != NULL) {
         return s_fn_usleep(microseconds);
     }
-    return 0;
+    struct {
+        long sec;
+        long nsec;
+    } req;
+    req.sec = (long)(microseconds / 1000000u);
+    req.nsec = (long)((microseconds % 1000000u) * 1000u);
+    return (int)obs_invoke_syscall(240, (long)&req, 0, 0, 0, 0, 0);
 }
 
 int sceKernelOpen(const char *path, int flags, uint16_t mode) {
     if (s_fn_open != NULL) {
         return s_fn_open(path, flags, mode);
     }
-    return -1;
+    return (int)obs_invoke_syscall(5, (long)path, (long)flags, (long)mode, 0, 0, 0);
 }
 
 int sceKernelClose(int fd) {
     if (s_fn_close != NULL) {
         return s_fn_close(fd);
     }
-    return -1;
+    return (int)obs_invoke_syscall(6, (long)fd, 0, 0, 0, 0, 0);
 }
 
 sce_ssize_t sceKernelRead(int fd, void *buf, size_t count) {
     if (s_fn_read != NULL) {
         return s_fn_read(fd, buf, count);
     }
-    return -1;
+    return (sce_ssize_t)obs_invoke_syscall(3, (long)fd, (long)buf, (long)count, 0, 0, 0);
 }
 
 sce_ssize_t sceKernelWrite(int fd, const void *buf, size_t count) {
     if (s_fn_write != NULL) {
         return s_fn_write(fd, buf, count);
     }
-    return -1;
+    return (sce_ssize_t)obs_invoke_syscall(4, (long)fd, (long)buf, (long)count, 0, 0, 0);
 }
 
 sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes) {
     long ret = obs_invoke_syscall(272, (long)fd, (long)buf, (long)nbytes, 0, 0, 0);
     return (sce_ssize_t)ret;
 }
-#else
-void obs_bind_dynamic_symbols(void) {}
+#endif /* !defined(OBSCENE_TARGET_MODULE) */
 #endif

@@ -20,8 +20,8 @@ silently stops covering the directory is worse than no index, because it reads a
 
 ## Building it
 
-- [BUILDING.md](BUILDING.md) - `bin/obscene`, what you need installed, the two siblings it does
-  not build without, the make variables, which shape reaches which loader, and
+- [BUILDING.md](BUILDING.md) - `bin/obscene`, what you need installed, the three siblings it does
+  not build without (selfish, prosperous, oops-sdk), the make variables, which shape reaches which loader, and
   what CI runs. Read this before `git clone`: a clone of only this repository does not build,
   and the failure is a missing directory rather than a missing dependency.
 

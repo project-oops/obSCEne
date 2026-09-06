@@ -70,6 +70,10 @@ while [ $# -gt 0 ]; do
 done
 
 [ -f "$EMULATOR" ] || { echo "no emulator at $EMULATOR - see docs/EMULATORS.md" >&2; exit 1; }
+case "$EMULATOR" in
+    /*|[A-Za-z]:[\\/]*) ;;
+    *) EMULATOR="$(pwd)/$EMULATOR" ;;
+esac
 
 work="${TMPDIR:-/tmp}/obscene-run.$$"
 mkdir -p "$work"
@@ -189,7 +193,7 @@ fi
 # Unquoted deliberately: an empty $launch_flag must vanish rather than become an empty
 # argument, which these loaders read as a path and refuse.
 # shellcheck disable=SC2086
-"$EMULATOR" $launch_flag "$staged" >"$stdout" 2>"$stderr" &
+(cd "$work" && "$EMULATOR" $launch_flag "$staged" >"$stdout" 2>"$stderr") &
 emulator_pid=$!
 
 # The shell's process id is not the loader, and for some loaders it never was.

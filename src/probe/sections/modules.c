@@ -463,6 +463,35 @@ static obs_result check_module_handles(void) {
     return obs_pass_value((uint64_t)obs_module_count);
 }
 
+static obs_result check_module_tiers(void) {
+    static const struct {
+        const char *name;
+        obs_module_tier expected_tier;
+    } probes[] = {
+        {"libScePad", OBS_TIER_APP},
+        {"libSceCamera", OBS_TIER_SYSMODULE},
+        {"libScePosixForWebKit", OBS_TIER_SYSTEM},
+        {"libSceAc3Enc", OBS_TIER_ROOT},
+    };
+
+    unsigned int resolved = 0;
+    for (size_t i = 0; i < sizeof(probes) / sizeof(probes[0]); i++) {
+        obs_module_tier tier = OBS_TIER_UNKNOWN;
+        int handle = obs_module_open_tier(probes[i].name, &tier);
+        if (handle >= 0) {
+            resolved++;
+            obs_report_module_tier(probes[i].name, "present", tier, "accessible");
+        } else {
+            obs_report_module_tier(probes[i].name, "absent", probes[i].expected_tier,
+                                   "restricted_or_missing");
+        }
+    }
+
+    obs_report_measure("110-modules/tier-probe", "obs_module_open_tier",
+                       "resolved_tiers", (uint64_t)resolved, "count");
+    return obs_pass_value((uint64_t)resolved);
+}
+
 static const obs_check module_checks[] = {
     {"110-modules/load", "libkernel", "sceKernelLoadStartModule", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelLoadStartModule, check_module_load,
@@ -481,6 +510,9 @@ static const obs_check module_checks[] = {
      OBS_FROM_ASSUMED},
     {"110-modules/info-size", "libkernel", "sceKernelGetModuleInfo", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelGetModuleInfo, check_module_info_size,
+     OBS_FROM_ASSUMED},
+    {"110-modules/tier-probe", "libkernel", "sceKernelLoadStartModule", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceKernelLoadStartModule, check_module_tiers,
      OBS_FROM_ASSUMED},
 };
 
