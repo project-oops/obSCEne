@@ -710,7 +710,7 @@ module-min-noimport: tool | $(BUILD)
 # produce the shape this one must not have. Every check is shared with the module
 # build: a probe whose checks differ between targets measures two different things.
 payload: $(BUILD)
-	$(CC) $(STD) $(STAMP) -DOBSCENE_TARGET='"payload"' -DOBS_NO_UI $(WARNINGS) $(INCLUDE) \
+	$(CC) $(STD) $(STAMP) -DOBSCENE_TARGET='"payload"' -DOBS_NO_UI -DOBS_ZERO_BSS=1 $(WARNINGS) $(INCLUDE) \
 	    $(TARGET_FLAGS) -fuse-ld=lld -shared -Wl,-e,obscene_start \
 	    -Wl,--unresolved-symbols=ignore-all -Wl,-z,noexecstack \
 	    -Wl,-z,max-page-size=0x4000 -Wl,-z,common-page-size=0x4000 \

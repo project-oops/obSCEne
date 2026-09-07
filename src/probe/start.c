@@ -105,6 +105,59 @@ static void obs_boot_note(const char *text) {
     obs_write(text, len);
 }
 
+#if defined(OBS_ZERO_BSS)
+/* Zero this image's .bss before any zero-initialised static is read.
+ *
+ * The homebrew ELF loader that maps the payload (elfldr) loads its segments and applies its
+ * relocations correctly, but does NOT zero the .bss - the p_memsz-beyond-p_filesz tail of the
+ * writable PT_LOAD. Every `static` with no initialiser therefore starts as whatever was in that
+ * page, and the program assumes zero everywhere: `s_inited` in fault.c reads non-zero so
+ * `obs_fault_init` early-returns and the guard never installs (`guard|on|not initialised`),
+ * `obs_sink_tried` reads non-zero so `obs_sink_open` returns its uninitialised path buffer (the
+ * garbled, run-varying `OBS|sink`), and the first check faults on the same class of corruption.
+ * The .data (initialised) loads fine and relocations are applied - a hardware diagnostic showed
+ * .data reads/writes correct while .bss came up as garbage - so .bss is the whole of it. The
+ * system loader zeroes .bss for the eboot, so this is the payload's problem alone: the Makefile
+ * defines OBS_ZERO_BSS only there.
+ *
+ * It reads the program headers from the ELF header (`__ehdr_start` is at link-time vaddr 0, so
+ * its runtime address via PC-relative `lea` is the load base - no GOT, no relocated global) and
+ * zeroes, for each PT_LOAD, the range [p_vaddr + p_filesz, p_vaddr + p_memsz). Touches no global
+ * before it runs, only the mapped image and the stack, and is a harmless no-op where the loader
+ * already zeroed. (D327) */
+static void obs_zero_bss(void) {
+    unsigned long base = 0;
+    __asm__ volatile("lea __ehdr_start(%%rip), %0" : "=r"(base));
+    if (base == 0) {
+        return;
+    }
+    const unsigned char *ehdr = (const unsigned char *)base;
+    unsigned long phoff = *(const unsigned long *)(ehdr + 0x20);       /* e_phoff     */
+    unsigned short phentsize = *(const unsigned short *)(ehdr + 0x36); /* e_phentsize */
+    unsigned short phnum = *(const unsigned short *)(ehdr + 0x38);     /* e_phnum     */
+    if (phoff == 0 || phentsize < 56) {
+        return;
+    }
+    for (unsigned short i = 0; i < phnum; i++) {
+        const unsigned char *ph = ehdr + phoff + (unsigned long)i * phentsize;
+        unsigned int p_type = *(const unsigned int *)(ph + 0x00); /* PT_LOAD == 1 */
+        if (p_type != 1u) {
+            continue;
+        }
+        unsigned long p_vaddr = *(const unsigned long *)(ph + 0x10);
+        unsigned long p_filesz = *(const unsigned long *)(ph + 0x20);
+        unsigned long p_memsz = *(const unsigned long *)(ph + 0x28);
+        if (p_memsz > p_filesz) {
+            unsigned char *z = (unsigned char *)(base + p_vaddr + p_filesz);
+            unsigned long n = p_memsz - p_filesz;
+            for (unsigned long k = 0; k < n; k++) {
+                z[k] = 0;
+            }
+        }
+    }
+}
+#endif
+
 void obscene_start(void);
 
 void obscene_start(void) {
@@ -114,6 +167,11 @@ void obscene_start(void) {
      * loader left. */
     unsigned long obs_pargs_at_entry;
     __asm__ volatile("mov %%rdi, %0" : "=r"(obs_pargs_at_entry));
+#if defined(OBS_ZERO_BSS)
+    /* Before any zero-initialised static is read: zero the .bss the loader left uninitialised.
+     * Reads rdi first (above) so this call cannot clobber the payload args. (D327) */
+    obs_zero_bss();
+#endif
     obs_capture_payload_args(obs_pargs_at_entry);
     /* Bootstrap the output channel from getpid before anything tries to write. Guarded:
      * only attempt when libkernel is not dynamically linked and payload_args is a plausible, aligned pointer. */
