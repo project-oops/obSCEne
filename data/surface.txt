@@ -140,6 +140,9 @@ isprint
 ispunct
 wcslen
 getenv
+scePthreadAttrGetstacksize
+sceKernelSyncOnAddressWait
+sceKernelSyncOnAddressWake
 
 
 
@@ -280,7 +283,6 @@ sceKernelGetSystemSwVersion2
 
 @symbols
 scePthreadAttrSetstacksize
-scePthreadAttrGetstacksize
 scePthreadAttrSetinheritsched
 scePthreadAttrSetschedparam
 scePthreadAttrSetschedpolicy
@@ -745,18 +747,6 @@ sceNetResolverCreate
 sceNetGetsockname
 sceNetHtons
 sceNetInetPton
-@end
-
-@group OBS_SURFACE_SYNC_ON_ADDRESS sync_on_address libkernel_sync_on_address OBS_SHARED
-@note
-/* Synchronization on address: user-space wait and wake operations.
- * sceKernelSyncOnAddressWait calls FreeBSD _umtx_op with UMTX_OP_WAIT (op 2).
- * sceKernelSyncOnAddressWake calls FreeBSD _umtx_op with UMTX_OP_WAKE (op 3). */
-@end
-
-@symbols
-sceKernelSyncOnAddressWait
-sceKernelSyncOnAddressWake
 @end
 
 @group OBS_SURFACE_SYNC_ON_ADDRESS2 sync_on_address2 libkernel_sync_on_address2 OBS_SHARED

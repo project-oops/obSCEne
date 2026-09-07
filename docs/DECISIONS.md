@@ -327,6 +327,8 @@ principles six weeks later.
 | 🟢 | D316 | [Porthole input injection via Ghostpad Virtual Device Interface (VDI)](decisions/D316-porthole-input-injection-and-ghostpad-vdi.md) | decided | 2026-09-03 |
 | 🟢 | D317 | [Porthole video pipeline reusing oops-sdk display and direct memory](decisions/D317-porthole-video-pipeline-reusing-oops-sdk.md) | decided | 2026-09-03 |
 | 🟢 | D320 | [the orbistoun backlog is generated and tiered by what blocks it](decisions/D320-the-orbistoun-backlog-is-generated-and-tiered.md) | decided | 2026-09-03 |
+| 🟡 | D321 | [the encoding and bounds probes poll rather than wait, and resolve by name](decisions/D321-poll-not-wait-and-resolve-by-name-for-the-blocked-premises.md) | assumed | 2026-09-07 |
+| 🟡 | D322 | [the futex is called rather than censused, and every wait runs on a thread nobody joins](decisions/D322-the-futex-is-called-rather-than-censused-and-every-wait-runs-on-a-thread-nobody-joins.md) | assumed | 2026-09-07 |
 
 | | meaning |
 |---|---|

@@ -218,6 +218,14 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "scePthreadAttrDestroy"},
     {"libkernel", "scePthreadAttrSetdetachstate"},
     {"libkernel", "scePthreadAttrGetdetachstate"},
+    {"libkernel", "scePthreadAttrGet"},
+    {"libkernel", "scePthreadAttrGetstackaddr"},
+    {"libkernel", "scePthreadAttrGetstacksize"},
+    /* The futex pair, in its own import library: the guest names
+     * `libkernel_sync_on_address`, not `libkernel`, and an import resolved against the
+     * wrong library resolves against nothing. */
+    {"libkernel_sync_on_address", "sceKernelSyncOnAddressWait"},
+    {"libkernel_sync_on_address", "sceKernelSyncOnAddressWake"},
 
     /* Flexible memory. See src/sections/memory.c. */
     {"libkernel", "sceKernelAvailableFlexibleMemorySize"},

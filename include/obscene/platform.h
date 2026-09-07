@@ -207,6 +207,65 @@ OBS_WEAK int scePthreadAttrInit(ScePthreadAttr *attr);
 OBS_WEAK int scePthreadAttrDestroy(ScePthreadAttr *attr);
 OBS_WEAK int scePthreadAttrSetdetachstate(ScePthreadAttr *attr, int state);
 OBS_WEAK int scePthreadAttrGetdetachstate(const ScePthreadAttr *attr, int *state);
+
+/* The stack an attribute set describes: where it starts, and how big it is.
+ *
+ * # Where the shapes came from
+ *
+ * `scePthreadAttrGetstacksize` was censused for presence until now. Both getters take an
+ * attribute object and one out-pointer, which is FreeBSD's shape for
+ * `pthread_attr_getstackaddr(3)` and `pthread_attr_getstacksize(3)` and is what three
+ * retail titles pass - a Unity shim calls Get, then these two, once each, on itself.
+ *
+ * **The out-parameters are pointer-wide, not `int`.** An address written as four bytes
+ * leaves the caller's neighbouring variable holding the top half, which is the bug the
+ * sibling project's D272 records for the `int`-shaped getters beside these.
+ *
+ * What the address *means* - the lowest byte of the stack, as FreeBSD's is, or its top -
+ * is the open question `031-stackattr` exists to settle, and nothing here assumes it. */
+OBS_WEAK int scePthreadAttrGetstackaddr(const ScePthreadAttr *attr, void **address);
+OBS_WEAK int scePthreadAttrGetstacksize(const ScePthreadAttr *attr, size_t *size);
+
+/* Fill an already-initialised attribute set from a *running* thread.
+ *
+ * FreeBSD's `pthread_attr_get_np(3)` is the reference for the shape - `(thread, attr)`,
+ * the object initialised beforehand, and it comes back describing the thread as it is
+ * rather than as it was asked for. The argument order is read off three retail titles:
+ * the first register holds the handle `scePthreadSelf` answered a moment earlier.
+ *
+ * This is the call the sibling emulator left unimplemented while three titles used it to
+ * find the bottom of the stack their garbage collector scans; each then scanned off the
+ * top of the real stack (its D575). What it reports is worth measuring rather than
+ * inferring. */
+OBS_WEAK int scePthreadAttrGet(ScePthread thread, ScePthreadAttr *attr);
+
+/* ---- libkernel_sync_on_address: waiting on a word --------------------------
+ *
+ * The platform's futex, in its own import library beside `libkernel`. Censused for
+ * presence until now; the census could not load the library, because it is a library
+ * inside the kernel module rather than a module of its own.
+ *
+ * # The shape, and what is deliberately not declared
+ *
+ * FreeBSD `_umtx_op(2)` is the citable analogue and the census note already named it:
+ * the wait is `UMTX_OP_WAIT`, the wake `UMTX_OP_WAKE`. Two arguments each - an address
+ * and a value to compare, an address and a count to wake - which is what three retail
+ * titles pass, every observed call leaving the third register zero.
+ *
+ * **A timeout is not declared, and that is a deliberate omission.** `_umtx_op` has a
+ * timeout slot, and the sibling project refuses a non-zero third register rather than
+ * guessing at its unit (its D573). Declaring one here to probe it would be declaring an
+ * arity nothing establishes, which principle 2 forbids; the omission is recorded in
+ * `docs/backlog/024` as what a later session with a known unit can settle.
+ *
+ * # Both values are 64-bit so the whole register is defined
+ *
+ * Whether the comparison reads 32 or 64 bits is exactly what `032-syncaddr` measures, so
+ * neither width can be assumed here. Passing 64 bits is correct under System V for either
+ * answer - a callee reading the low half ignores the top - while passing 32 would leave
+ * the top half holding whatever was in the register if the callee reads all of it. */
+OBS_WEAK int sceKernelSyncOnAddressWait(void *address, uint64_t value);
+OBS_WEAK int sceKernelSyncOnAddressWake(void *address, uint64_t count);
 OBS_WEAK uint64_t sceKernelGetProcessTimeCounterFrequency(void);
 
 /* ---- libkernel: descriptors ------------------------------------------------ */

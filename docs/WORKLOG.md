@@ -159,11 +159,13 @@ slow way.
 | 2026-09-01 | [dlsym gains a positive check; sysmodule positive left out (no citable id)](worklog/147-dlsym-gains-a-positive-check-sysmodule.md) |
 | 2026-09-01 | [flexible-configured probe added (unblocks orbistoun's allocator work)](worklog/148-flexible-configured-probe-added.md) |
 | 2026-09-01 | [(native process injection & retail container probe) - obSCEne runs live inside retail title](worklog/149-native-process-injection-retail.md) |
-| 2026-09-02 | [(ps5 native title) gen-5 eboot, two-id identity, and native --deploy to a scan root](worklog/150-ps5-native-title-gen5-and-native-deploy.md) |
-| 2026-09-02 | [(ps5 native execution) targeted SDK dictionary, procparam inspection, and PRX module contract (D297-D299)](worklog/151-sdk-versioning-procparam-and-native-execution.md) |
-| 2026-09-03 | [(Porthole M1) Encoder sysmodule load and sceVencCore* entry-point self-resolution (D300)](worklog/152-porthole-m1-encoder-self-resolution.md) |
-| 2026-09-03 | [The conformance matrix, and why the filename is the metadata (D302)](worklog/153-the-conformance-matrix.md) |
-| 2026-09-03 | [Poisoning a scalar out-parameter, and a list of what orbistoun cannot decide (D303)](worklog/154-poisoning-a-scalar-out-parameter.md) |
-| 2026-09-03 | [The orbistoun backlog is the whole list now - 717 questions, tiered by what blocks them (D320)](worklog/155-the-orbistoun-backlog-is-the-whole-list-now.md) |
-| 2026-09-03 | [Porthole M4/M5: Controller input injection (Ghostpad VDI) and dual-socket network server (D316)](worklog/156-porthole-m5-input-injection-and-dual-socket-server.md) |
+| 2026-09-02 | [(ps5 native title) gen-5 eboot, a two-id identity, and `native --deploy` to a scan root](worklog/150-ps5-native-title-gen5-and-native-deploy.md) |
+| 2026-09-02 | [(ps5 native execution) targeted SDK dictionary, procparam inspection, and PRX module contract](worklog/151-sdk-versioning-procparam-and-native-execution.md) |
+| 2026-09-03 | [(Porthole M1) Encoder sysmodule load and sceVencCore* entry-point self-resolution](worklog/152-porthole-m1-encoder-self-resolution.md) |
+| 2026-09-03 | [The conformance matrix, and why the filename is the metadata](worklog/153-the-conformance-matrix.md) |
+| 2026-09-03 | [poisoning a scalar out-parameter, and a list of what orbistoun cannot decide](worklog/154-poisoning-a-scalar-out-parameter.md) |
+| 2026-09-03 | [the orbistoun backlog is the whole list now](worklog/155-the-orbistoun-backlog-is-the-whole-list-now.md) |
+| 2026-09-03 | [Porthole M4/M5: Controller input injection (Ghostpad VDI) and dual-socket network server](worklog/156-porthole-m5-input-injection-and-dual-socket-server.md) |
 | 2026-09-03 | [Porthole Video Pipeline: Integrating and Reusing oops-sdk](worklog/157-porthole-video-pipeline-reusing-oops-sdk.md) |
+| 2026-09-07 | [Two probes for the heaviest premises orbistoun is blocked on](worklog/158-error-encoding-and-sync-bounds-probes.md) |
+| 2026-09-07 | [The futex and the stack attributes stop being census entries](worklog/159-the-futex-and-the-stack-attributes-are-called.md) |

@@ -28,6 +28,11 @@ const obs_section *const obs_sections[] = {
     /* Synchronisation, before anything that might rely on it. Chosen from what an
      * emulator said it had just fixed - see src/sections/sync.c. */
     &obs_section_sync,
+    /* The bounds of what sync just established, before the section that reads the same
+     * primitives under their POSIX names. It calls only the non-blocking `Poll` forms of
+     * the very symbols above, so a reader has the "does it work" verdicts before the
+     * "what do its edges do" measurements. */
+    &obs_section_syncbounds,
     /* POSIX under its own names, after the vendor spelling of the same locks: the
      * comparison check needs both, and reading them in this order puts the vendor
      * result on the page first. */
@@ -36,9 +41,25 @@ const obs_section *const obs_sections[] = {
      * value checks first, and a relation that fails where those passed is the more
      * interesting result for having them above it. */
     &obs_section_relational,
+    /* The failure convention of the POSIX-named exports, after the relations that
+     * exercise the vendor spelling of the same calls. It resolves the posix_ names from
+     * libScePosix, falling back to libkernel - which exports them and always loads, where
+     * libScePosix does not in the app sandbox - and needs nothing the sections below it
+     * establish, so it sits with the other POSIX-facing work rather than among the
+     * resources. */
+    &obs_section_posixerr,
     /* Resources everything else is built from. */
     &obs_section_memory,
     &obs_section_thread,
+    /* The stack a thread stands on, immediately after the section that proves one can be
+     * made: it asks the platform to describe the calling thread, which is the sequence
+     * three retail titles run before their collector scans. */
+    &obs_section_stackattr,
+    /* The futex, after the thread section whose capability its waiter needs. It cannot
+     * sit with the other synchronisation sections above, because those run before
+     * 030-thread has established that a thread can be created at all - and every wait
+     * here happens on one. */
+    &obs_section_syncaddr,
     /* The C runtime, which the allocator builds on both of the above. */
     &obs_section_libc,
     &obs_section_math,

@@ -1244,3 +1244,167 @@ const void *_Getwctolower(void) {
 const void *_Getwctoupper(void) {
     return (const void *)&s_host_wtoupper_tab[16];
 }
+
+/* ---- thread attributes, and the stack they describe --------------------------
+ *
+ * None of the `scePthreadAttr*` family had a host implementation, so every check that
+ * touches one skipped on the host build - `010-kernel/thread-attributes` among them, which
+ * has therefore never passed a known-good implementation. These make that check run and
+ * give `031-stackattr` something to be validated against.
+ *
+ * A small pool with real per-object state, for the reason the event-flag table gives: a
+ * round-trip check and a stub that stores nothing would be testing each other.
+ */
+#define OBS_HOST_ATTR_MAX 16
+typedef struct host_attr {
+    int in_use;
+    int detach;
+    void *stack_addr;
+    size_t stack_size;
+} host_attr;
+static host_attr s_host_attr[OBS_HOST_ATTR_MAX];
+
+int scePthreadAttrInit(ScePthreadAttr *attr) {
+    if (attr == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    for (int i = 0; i < OBS_HOST_ATTR_MAX; i++) {
+        if (!s_host_attr[i].in_use) {
+            s_host_attr[i].in_use = 1;
+            s_host_attr[i].detach = 0;
+            /* A fresh set names no stack, which is what FreeBSD's own getters report for
+             * one nothing has configured. `031-stackattr/fresh-attr-names-no-stack`
+             * records what the platform does here; the host answers the POSIX shape. */
+            s_host_attr[i].stack_addr = NULL;
+            s_host_attr[i].stack_size = 0;
+            *attr = (ScePthreadAttr)&s_host_attr[i];
+            return 0;
+        }
+    }
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int scePthreadAttrDestroy(ScePthreadAttr *attr) {
+    if (attr == NULL || *attr == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    ((host_attr *)*attr)->in_use = 0;
+    return 0;
+}
+
+int scePthreadAttrSetdetachstate(ScePthreadAttr *attr, int state) {
+    if (attr == NULL || *attr == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    ((host_attr *)*attr)->detach = state;
+    return 0;
+}
+
+int scePthreadAttrGetdetachstate(const ScePthreadAttr *attr, int *state) {
+    if (attr == NULL || *attr == NULL || state == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    *state = ((const host_attr *)*attr)->detach;
+    return 0;
+}
+
+/* The running thread's stack, under the convention the platform is being measured for.
+ *
+ * # What this can and cannot validate
+ *
+ * It reports a region that **contains the calling frame, with the address as its lowest
+ * byte** - FreeBSD's convention, and one of the two answers `031-stackattr/address-is-the-base`
+ * exists to tell apart. So the host proves the check's arithmetic classifies base
+ * semantics correctly, and proves the plumbing from Get through the two getters.
+ *
+ * It cannot prove the check would recognise the *other* convention, because a stub can
+ * only implement one. That half is the platform's to answer, which is the point of the
+ * check.
+ *
+ * The region is derived from the address of a local rounded down to a conventional 8 MiB,
+ * rather than from `pthread_getattr_np`: that is glibc-only and needs `_GNU_SOURCE`, and a
+ * portable arithmetic stub is the smaller thing to be wrong about in a file that has to
+ * build wherever the host build runs.
+ */
+#define OBS_HOST_STACK_SPAN ((size_t)8 * 1024 * 1024)
+
+int scePthreadAttrGet(ScePthread thread, ScePthreadAttr *attr) {
+    int frame = 0;
+    if (thread == NULL || attr == NULL || *attr == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    uintptr_t here = (uintptr_t)&frame;
+    uintptr_t base = here & ~(uintptr_t)(OBS_HOST_STACK_SPAN - 1u);
+    host_attr *held = (host_attr *)*attr;
+    held->stack_addr = (void *)base;
+    held->stack_size = OBS_HOST_STACK_SPAN;
+    return 0;
+}
+
+int scePthreadAttrGetstackaddr(const ScePthreadAttr *attr, void **address) {
+    if (attr == NULL || *attr == NULL || address == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    *address = ((const host_attr *)*attr)->stack_addr;
+    return 0;
+}
+
+int scePthreadAttrGetstacksize(const ScePthreadAttr *attr, size_t *size) {
+    if (attr == NULL || *attr == NULL || size == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    *size = ((const host_attr *)*attr)->stack_size;
+    return 0;
+}
+
+/* ---- waiting on a word -------------------------------------------------------
+ *
+ * A mutex and a condition variable behind a generation counter, so a waiter that reached
+ * the wait is released by a wake from another thread. That makes the round trip in
+ * `032-syncaddr/wake-releases-a-waiter` provable on the host, which is the half of the
+ * section that could otherwise only ever be exercised on hardware.
+ *
+ * # It is deliberately coarser than a futex, and the checks are written knowing it
+ *
+ * Every wake releases every waiter, whatever address or count it named. So the host
+ * validates the *mechanism* - the comparison, the immediate return on a mismatch, the
+ * release of a blocked waiter - and cannot validate the per-address or per-count
+ * discrimination. Those are measurements about the platform, and the checks that make
+ * them record what they observe rather than asserting the host's answer.
+ *
+ * The comparison is 64-bit, which is one of the two answers `032-syncaddr/compare-width`
+ * distinguishes, for the same reason the stack stub picks one convention: a stub can
+ * implement one, and which one it implements is stated rather than assumed by a reader.
+ */
+static pthread_mutex_t s_host_sync_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t s_host_sync_cond = PTHREAD_COND_INITIALIZER;
+static uint64_t s_host_sync_generation;
+
+int sceKernelSyncOnAddressWait(void *address, uint64_t value) {
+    if (address == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    pthread_mutex_lock(&s_host_sync_lock);
+    uint64_t seen = *(volatile uint64_t *)address;
+    if (seen != value) {
+        /* The defining property: a word that already differs is not waited on. */
+        pthread_mutex_unlock(&s_host_sync_lock);
+        return 0;
+    }
+    uint64_t entered = s_host_sync_generation;
+    while (s_host_sync_generation == entered) {
+        pthread_cond_wait(&s_host_sync_cond, &s_host_sync_lock);
+    }
+    pthread_mutex_unlock(&s_host_sync_lock);
+    return 0;
+}
+
+int sceKernelSyncOnAddressWake(void *address, uint64_t count) {
+    (void)address;
+    (void)count;
+    pthread_mutex_lock(&s_host_sync_lock);
+    s_host_sync_generation++;
+    pthread_cond_broadcast(&s_host_sync_cond);
+    pthread_mutex_unlock(&s_host_sync_lock);
+    return 0;
+}

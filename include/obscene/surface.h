@@ -129,7 +129,6 @@
  * makes the pthread specification the reference for nearly all of it. */
 #define OBS_SURFACE_PTHREAD(X) \
     X(scePthreadAttrSetstacksize) \
-    X(scePthreadAttrGetstacksize) \
     X(scePthreadAttrSetinheritsched) \
     X(scePthreadAttrSetschedparam) \
     X(scePthreadAttrSetschedpolicy) \
@@ -520,13 +519,6 @@
     X(sceNetHtons) \
     X(sceNetInetPton)
 
-/* Synchronization on address: user-space wait and wake operations.
- * sceKernelSyncOnAddressWait calls FreeBSD _umtx_op with UMTX_OP_WAIT (op 2).
- * sceKernelSyncOnAddressWake calls FreeBSD _umtx_op with UMTX_OP_WAKE (op 3). */
-#define OBS_SURFACE_SYNC_ON_ADDRESS(X) \
-    X(sceKernelSyncOnAddressWait) \
-    X(sceKernelSyncOnAddressWake)
-
 /* Sized variants of wait on address (8-bit, 16-bit, 32-bit, 64-bit). */
 #define OBS_SURFACE_SYNC_ON_ADDRESS2(X) \
     X(sceKernelSyncOnAddressWait8) \
@@ -558,7 +550,6 @@
     L(graphics, "libSceGnmDriver", OBS_PREVIOUS, OBS_SURFACE_GRAPHICS) \
     L(dialog, "libSceCommonDialog", OBS_SHARED, OBS_SURFACE_DIALOG) \
     L(net, "libSceNet", OBS_SHARED, OBS_SURFACE_NET) \
-    L(sync_on_address, "libkernel_sync_on_address", OBS_SHARED, OBS_SURFACE_SYNC_ON_ADDRESS) \
     L(sync_on_address2, "libkernel_sync_on_address2", OBS_SHARED, OBS_SURFACE_SYNC_ON_ADDRESS2)
 
 /* clang-format on */

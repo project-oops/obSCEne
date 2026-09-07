@@ -82,6 +82,17 @@ call:
 > `close` on a bad descriptor - settles it for that call, and a second in another family settles
 > whether it is a convention at all. 24 entries and ~101k calls rest on it.
 
+**Both of the two heaviest premises now have a probe, authored 2026-09-07 (D321).** This
+POSIX-named-encoding question is settled by `019-posixerr` - `posix_read`/`posix_write` on a bad
+descriptor, and a write lock refused while a reader holds it, one provoked failure in each of two
+families. The semaphore and event-flag bounds below - the `need` count, the wait-mode bits, and
+whether the two families agree on a bad-handle code - are settled by `016-syncbounds`. Neither has
+run on hardware yet, so nothing here is answered: the sections are the instrument. See
+`docs/backlog/023`. Note that `016-syncbounds` reaches the semaphore family through the
+non-blocking `sceKernelPollSema`, not `sceKernelWaitSema`, which blocks - so the timeout-unit
+sub-question below is the one part it deliberately leaves for a session that can bring a known unit
+to it.
+
 **719 of those questions were 275 sentences.** `orbistoun-cli questions --premises` groups the
 list by the premise its entries share - word-for-word, never by similarity - and forty premises
 carry 484 of the 719. The heaviest is one sentence under fourteen functions across two

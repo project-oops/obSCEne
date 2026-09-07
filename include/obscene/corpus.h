@@ -7,7 +7,7 @@
  *
  * Declared exactly as surface.h declares its own: `const char`, so only the
  * address can ever be read. The type system forbidding the call is what makes a
- * census of 34,931 symbols safe to hold at all.
+ * census of 34,929 symbols safe to hold at all.
  */
 
 #ifndef OBSCENE_CORPUS_H
@@ -66844,7 +66844,7 @@
     X(curl_url_set) \
     X(curl_version)
 
-/* libkernel: 781 symbols, 778 callable. */
+/* libkernel: 779 symbols, 776 callable. */
 #define OBS_CORPUS_0346_LIBKERNEL(X) \
     X(__Error) \
     X(__Ux86_64_setcontext) \
@@ -67478,14 +67478,12 @@
     X(sceKernelYieldCpumode) \
     X(sceLibcMspaceCreateForMonoMutex) \
     X(scePthreadAtfork) \
-    X(scePthreadAttrGet) \
     X(scePthreadAttrGetguardsize) \
     X(scePthreadAttrGetinheritsched) \
     X(scePthreadAttrGetschedparam) \
     X(scePthreadAttrGetschedpolicy) \
     X(scePthreadAttrGetscope) \
     X(scePthreadAttrGetstack) \
-    X(scePthreadAttrGetstackaddr) \
     X(scePthreadAttrSetcreatesuspend) \
     X(scePthreadAttrSetguardsize) \
     X(scePthreadAttrSetscope) \
@@ -68257,14 +68255,12 @@
     X(sceKernelYieldCpumode) \
     X(sceLibcMspaceCreateForMonoMutex) \
     X(scePthreadAtfork) \
-    X(scePthreadAttrGet) \
     X(scePthreadAttrGetguardsize) \
     X(scePthreadAttrGetinheritsched) \
     X(scePthreadAttrGetschedparam) \
     X(scePthreadAttrGetschedpolicy) \
     X(scePthreadAttrGetscope) \
     X(scePthreadAttrGetstack) \
-    X(scePthreadAttrGetstackaddr) \
     X(scePthreadAttrSetcreatesuspend) \
     X(scePthreadAttrSetguardsize) \
     X(scePthreadAttrSetscope) \

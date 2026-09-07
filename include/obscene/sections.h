@@ -21,6 +21,14 @@ extern const obs_section obs_section_generation;
 /* Resources the rest of the platform is built on. */
 extern const obs_section obs_section_memory;
 extern const obs_section obs_section_thread;
+/* What a thread attribute set says about the stack a running thread is on, and which
+ * end of that stack the address it reports is. After 030-thread: it describes a thread,
+ * so a platform that cannot make one has nothing to describe. */
+extern const obs_section obs_section_stackattr;
+/* The platform's futex - censused for presence and never called until now. Every wait
+ * runs on a worker nobody joins, so a platform that never returns from one loses that
+ * thread rather than the run. */
+extern const obs_section obs_section_syncaddr;
 /* The C runtime, above the kernel primitives its allocator is built on. */
 extern const obs_section obs_section_libc;
 /* Floating point, separated because it fails in its own particular ways. */
@@ -47,7 +55,13 @@ extern const obs_section obs_section_input_ext;
  * is meaningful even when every other section has failed. */
 extern const obs_section obs_section_responsive;
 extern const obs_section obs_section_sync;
+/* The bounds of the primitives 015-sync proves work: what a poll's count argument means,
+ * what a bad handle returns, which wait-mode bits are understood. Never waits. */
+extern const obs_section obs_section_syncbounds;
 extern const obs_section obs_section_posix;
+/* The failure convention of the POSIX-named exports, held against the vendor encoding
+ * their own twins use. Records the encoding rather than asserting one. */
+extern const obs_section obs_section_posixerr;
 extern const obs_section obs_section_relational;
 extern const obs_section obs_section_measure;
 extern const obs_section obs_section_layout;
@@ -65,8 +79,15 @@ extern const obs_section obs_section_jit;
  * value. Describing a hazard is not the same as preventing it: the number still had to
  * be maintained by hand against a list in another file, and it was not. `registry.c`
  * now asserts the two agree at compile time, so the next section added either fits or
- * fails the build. (D259) */
-#define OBS_SCREEN_MAX 48
+ * fails the build. (D259)
+ *
+ * **48 to 56 on 2026-09-07**, for the two sections the stack-attribute and futex probes
+ * added. The ceiling is what two columns hold, not an arbitrary headroom:
+ * `screen.c` splits the list at two columns and its own note puts that at about sixty
+ * sections, so 56 stays inside the layout that exists. Going past it is the point at
+ * which the third column that note describes has to be written, and the assertion in
+ * `registry.c` is what will say so. */
+#define OBS_SCREEN_MAX 56
 
 extern const obs_section obs_section_modules;
 extern const obs_section obs_section_modlink;
