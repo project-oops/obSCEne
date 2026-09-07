@@ -329,6 +329,11 @@ principles six weeks later.
 | 🟢 | D320 | [the orbistoun backlog is generated and tiered by what blocks it](decisions/D320-the-orbistoun-backlog-is-generated-and-tiered.md) | decided | 2026-09-03 |
 | 🟡 | D321 | [the encoding and bounds probes poll rather than wait, and resolve by name](decisions/D321-poll-not-wait-and-resolve-by-name-for-the-blocked-premises.md) | assumed | 2026-09-07 |
 | 🟡 | D322 | [the futex is called rather than censused, and every wait runs on a thread nobody joins](decisions/D322-the-futex-is-called-rather-than-censused-and-every-wait-runs-on-a-thread-nobody-joins.md) | assumed | 2026-09-07 |
+| 🟡 | D323 | [the eboot resolves its output by name, and never calls a raw import](decisions/D323-the-eboot-resolves-its-output-by-name-and-never-calls-a-raw-import.md) | assumed | 2026-09-07 |
+| 🟡 | D324 | [a title entry is not a payload_args, so the dlsym gadget is validated before use](decisions/D324-a-title-entry-is-not-a-payload-args-so-the-dlsym-gadget-is-validated-before-use.md) | assumed | 2026-09-07 |
+| 🟡 | D325 | [a fault guard catches a crashing check, so the suite continues](decisions/D325-a-fault-guard-catches-a-crashing-check-so-the-suite-continues.md) | assumed | 2026-09-07 |
+| 🟡 | D326 | [the guard carries its own setjmp and imports its signal primitives, so a native title is guarded](decisions/D326-the-guard-carries-its-own-setjmp-and-imports-its-signal-primitives-so-a-native-title-is-guarded.md) | assumed | 2026-09-08 |
+| 🟡 | D327 | [the payload zeroes its own .bss, because elfldr does not](decisions/D327-the-payload-zeroes-its-own-bss-because-elfldr-does-not.md) | assumed | 2026-09-08 |
 
 | | meaning |
 |---|---|

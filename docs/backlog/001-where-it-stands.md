@@ -7,7 +7,7 @@
 | Behavioural checks | **246** - 80 `spec`, 37 `derived`, 2 `implementations`, 122 `assumed`, 2 `documented`, **3 `hardware`** |
 | Census symbols | **39527** across 373 libraries |
 | Sections | 50 |
-| Imports placed by the manifest | 247 |
+| Imports placed by the manifest | 245 |
 <!-- /obscene:counts -->
 
 **Loaders that run the whole suite: five.** shadPS4, PS5PCEM, fpPS4 and Kyty all reach the end

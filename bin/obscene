@@ -19,6 +19,8 @@
 # are not run directly:
 #
 #   ./bin/obscene deploy    build the package, install, launch, capture the report - the round-trip
+#   ./bin/obscene sweep     run all three legs (payload, pkg, eboot) in series; two timestamped
+#                           logs per leg under reports/hardware/ (full run + OBS-only)
 #   ./bin/obscene native --deploy   build the ps5 native title and push it to a scan root
 #                           (default /user/data) via prosperous, where an auto-mounter registers it
 #   ./bin/obscene payload-build   build the plain-ELF payload and stop, no console
@@ -91,6 +93,11 @@ case "${1:-help}" in
     # combined `hw deploy` (a separate install-then-launch leaves a dead app0-mount URL). Flags
     # pass through: --gen, --seconds, --name, --build-only, --deploy-only, --no-cache, --jobs.
     deploy)   shift; bash scripts/oops-rebuild-pkg.sh --launch "$@" ;;
+    # `sweep` runs all three delivery legs in series - payload, package, native eboot - and writes
+    # two timestamped files per leg under reports/hardware/: `<TS>-<leg>.log` (the whole run:
+    # build, send/install, device system log) and `<TS>-<leg>.obs.log` (the OBS records only). Six
+    # files for a full sweep. Flags: --seconds N, --corpus 0|1, --only "pkg eboot".
+    sweep)    shift; bash scripts/sweep.sh "$@" ;;
     # `payload` is the other round-trip: build the unsandboxed plain-ELF shape, run it through
     # elfldr, and capture the system log across the run. All out-connections, so no Windows half -
     # it stays in WSL. A crashing payload writes no records but a `signo:` line, and the verb says
