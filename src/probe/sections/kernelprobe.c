@@ -74,7 +74,18 @@ void obs_capture_payload_args(unsigned long args) {
         s_local_payload_args.kdata_base_addr = src->kdata_base_addr;
         s_local_payload_args.payloadout = src->payloadout;
         s_local_payload_args.kexport_table = src->kexport_table;
-        s_have_payload_args = 1;
+        /* Accept these as a genuine payload_args only when the dlsym gadget is a callable
+         * address. A title is entered with rdi pointing at the loader's own handoff
+         * struct, not ours; read as a payload_args its first word (sys_dynlib_dlsym) is a
+         * small non-pointer - 0x2 was measured on hardware - and a consumer that calls
+         * through it faults at 0x2 before the suite starts. The shape check above
+         * (aligned, canonical, readable) does not catch that, because the struct is real
+         * memory; a callable-address check on the one field anything dereferences does.
+         * This keeps this file's stated invariant true for its callers: no primitive is
+         * issued against a struct that is not a payload_args. (D324) */
+        if (obs_address_is_callable((const void *)s_local_payload_args.sys_dynlib_dlsym)) {
+            s_have_payload_args = 1;
+        }
     }
 }
 
@@ -87,10 +98,11 @@ const payload_args_t *obs_get_payload_args(void) {
     if (s_have_payload_args) {
         return &s_local_payload_args;
     }
-    if (obs_payload_args >= 0x10000UL && obs_payload_args < 0x0000800000000000UL &&
-        (obs_payload_args & 0x7UL) == 0) {
-        return (const payload_args_t *)obs_payload_args;
-    }
+    /* No raw-pointer fallback. A pointer that passed the shape check but not the
+     * dlsym-callable check in the capture above is a title's loader handoff struct, not a
+     * payload_args - returning it hands every payload-gated path (sys_call_init, the
+     * kexport walk, the census's kexport shortcut) a struct whose primitives are garbage,
+     * which is the 0x2 fault this pair now exists to prevent. (D324) */
     return NULL;
 }
 
