@@ -15,6 +15,7 @@ version in the `meta` record; new fields may only be appended to the end of a li
 | `build` | build identifier, target (`module`, `payload` or `host`) |
 | `context` | measured run environment `<delivery>/<generation>` (e.g. `payload/ps4-bc`, `payload/ps5-native`), then a basis; the environment a run measured in, orthogonal to a check's `OBS_FROM_*` provenance |
 | `sink` | path the report was also written to, or `none` |
+| `guard` | fault guard `on`/`off`, and a short account of what init resolved - so a run that could catch a crashing check is told from one that could not |
 | `net` | command-socket state (`listening`/`unavailable`), port |
 | `sysinfo` | field (`memory`, `vram`, `generation`, `gpu`, `ip`, `firmware`, `temp`, `storage`, `listening`), state (`known`/`unconfirmed`/`absent`), value (or `unknown`) |
 | `display` | state, detail, code - the code is the platform's own answer where a call refused, `0x0` where none did |
@@ -47,9 +48,9 @@ the expectation behind the verdict:
 | `progress` | check id, how far it got |
 | `module` | module name, handle |
 | `moduleword` | offset, value |
-| `sectiontally` | section id, pass, partial, fail, skip |
+| `sectiontally` | section id, pass, partial, fail, skip, crash |
 | `frontier` | capabilities established, checks blocked, deepest wholly-green section |
-| `tally` | pass, partial, fail, skip |
+| `tally` | pass, partial, fail, skip, crash |
 | `bytes` | check id, symbol, label, offset, hex - one line of a buffer dump. Three labels are counts rather than data and carry an empty hex field: `extent` (last byte written, or with `written` the last byte **changed**), `changed` (how many bytes differ), `untouched` (a run inside the extent the call left alone - a field boundary a hexdump cannot show) |
 | `size` | library, symbol, argument index, size, `accepted`/`rejected`, returned code - one rung of a size ladder. The boundary between the two **is** the structure size, drawn by the platform rather than by this project |
 | `err` | library, symbol, argument description, returned value |
@@ -98,8 +99,8 @@ OBS|context|payload/ps4-bc|elfldr payload; libSceGnm mapped, libSceAgc absent
 OBS|section|020-memory|Direct memory|A full reserve, map, use, unmap and release cycle.
 OBS|try|020-memory/allocate|libkernel|sceKernelAllocateDirectMemory
 OBS|res|020-memory/allocate|pass|0x8804000000||assumed
-OBS|sectiontally|020-memory|1|0|2|4
-OBS|tally|16|4|7|8
+OBS|sectiontally|020-memory|1|0|2|4|0
+OBS|tally|16|4|7|8|0
 OBS|end
 ```
 
@@ -121,10 +122,12 @@ A **regression** is a check that got *worse*, not a check that is failing. A run
 everything fails and nothing changed exits 0, which is correct: nothing regressed. Ask
 `obscene-tool verify` whether a report is sound, and the tally whether the platform is any good.
 
-Statuses are ordered `skip < fail < partial < pass`. `skip` sits below `fail`
+Statuses are ordered `crash < skip < fail < partial < pass`. `skip` sits below `fail`
 deliberately - a check that stopped running tells you *less* than one that ran and
 failed, so losing coverage counts as a regression even though nothing went red. A
-check that disappears from the report entirely counts the same way.
+check that disappears from the report entirely counts the same way. `crash` sits below
+all of them: a check that starts faulting - from a pass, a fail, or even a skip - is the
+most serious regression a run can show.
 
 The `build` record is what lets a diff distinguish "the probe changed" from "the
 platform changed" - very different answers to "did that help?". It is stamped in at
@@ -348,6 +351,13 @@ return - under an emulator, usually a hard crash. This is the intended way to lo
 one, and `obscene-tool pretty` reports it explicitly rather than treating the stream as
 merely truncated.
 
+**The fault guard is the one exception, and it is explicit.** When a call faults and the
+guard recovers the run (see the `crash` status below), the `try` *is* followed by a `res`,
+and that `res` reads `crash`. So a dangling `try` still means "did not return **and was not
+caught**" - the loader took the process down before the guard could land - while a `crash`
+`res` means "faulted, and the run went on". The two are distinguishable, which is the whole
+point of recording the crash rather than leaving the record absent.
+
 A **skipped** check never emits a `try`. It was not attempted, and forging an
 announcement would make a skip indistinguishable from a crash.
 
@@ -359,6 +369,7 @@ announcement would make a skip indistinguishable from a crash.
 | `partial` | It returned, but something was off - a success code with a nonsensical value, or a documented "not supported" answered gracefully |
 | `fail` | It returned an error where success was expected |
 | `skip` | A prerequisite did not hold, so nothing was attempted and nothing was learned |
+| `crash` | The call faulted (SIGSEGV and its kin) and the fault guard recovered the run. The value field carries the signal number. The strongest finding a probe can make; ordered below every other status for regressions |
 
 `partial` exists because an implementation returning zero for everything would
 otherwise look perfect. `skip` exists because without it one broken allocator turns

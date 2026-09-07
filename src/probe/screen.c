@@ -165,6 +165,16 @@ void obs_screen_begin(unsigned int sections, unsigned int checks) {
      *
      * That is exactly the failure announce-before-attempting exists to prevent, in the
      * one place the harness's own `try` records do not reach. */
+#if defined(OBS_NO_UI)
+    /* A headless build - the payload - reports over the socket and the system log and has no
+     * screen. Opening video-out here is pointless, and on the unsandboxed payload it faults
+     * (a reserve/map/register that the elfldr shape does not survive), taking the run down
+     * before a single check. Skip it, reported as headless so an "opening" is never left
+     * dangling. This is why the payload leg of the sweep produced only seven records. (D325) */
+    obs_live = 0;
+    obs_report_display("headless", "no display on this build; reporting without a screen", 0);
+    return;
+#endif
     obs_report_display("opening", "the display is being opened", 0);
 
     obs_display_state state = obs_display_open();
@@ -416,7 +426,7 @@ void obs_screen_redraw(const char *footer) {
     /* Title, and the platform HUD where the tagline used to be. */
     obs_draw_hud(obs_draw_wordmark(OBS_MARGIN, 56, 6) + 24, 50, w);
 
-    obs_tally total = {0, 0, 0, 0};
+    obs_tally total = {0, 0, 0, 0, 0};
     for (unsigned int i = 0; i < obs_row_count; i++) {
         total.pass += obs_rows[i].tally.pass;
         total.partial += obs_rows[i].tally.partial;
@@ -533,6 +543,10 @@ static obs_colour colour_of(obs_status status) {
         return OBS_COLOUR_PARTIAL;
     case OBS_FAIL:
         return OBS_COLOUR_FAIL;
+    case OBS_CRASH:
+        /* No separate palette entry; a crash reads as red on screen, which is where the
+         * eye should go, and the marker below names it. */
+        return OBS_COLOUR_FAIL;
     case OBS_SKIP:
     default:
         return OBS_COLOUR_SKIP;
@@ -547,6 +561,8 @@ static const char *marker_of(obs_status status) {
         return "WARN";
     case OBS_FAIL:
         return "FAIL";
+    case OBS_CRASH:
+        return "CRASH";
     case OBS_SKIP:
     default:
         return "--";

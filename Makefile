@@ -247,6 +247,16 @@ ifneq ($(CHURN),)
 STAMP += -DOBS_THREAD_CHURN=$(CHURN)
 endif
 
+# A self-test of the fault guard: one check that deliberately faults, so a build can prove
+# the guard catches it (reported as a crash, the suite continuing) rather than trusting the
+# mechanism untested. Off by default - it is a test of the harness, not a measurement.
+#
+#   make host FAULT_SELFTEST=1     # run it and watch 000-boot/fault-guard-self-test crash
+FAULT_SELFTEST ?=
+ifneq ($(FAULT_SELFTEST),)
+STAMP += -DOBS_FAULT_SELFTEST
+endif
+
 # Serve the command protocol after the report, over the console socket.
 #
 # Off by default: the ordinary run emits its report and finishes, and a build that always
@@ -329,7 +339,7 @@ TOOL := $(TOOL_TARGET)/release/obscene-tool
 # not threading another condition through every file it touches.
 COMMON_SRC := src/probe/runtime.c src/probe/status.c src/probe/report.c src/probe/harness.c src/probe/registry.c \
               src/probe/imports.c src/probe/display.c src/probe/font.c src/probe/screen.c src/probe/sink.c \
-              src/probe/net.c src/probe/sysinfo.c \
+              src/probe/net.c src/probe/sysinfo.c src/probe/fault.c \
               $(wildcard src/probe/sections/*.c)
 TARGET_SRC := $(COMMON_SRC) src/probe/start.c src/probe/crt.c src/probe/sink_target.c src/probe/net_target.c
 HOST_SRC := $(COMMON_SRC) src/probe/host_main.c src/probe/host_stubs.c src/probe/sink_host.c \
@@ -511,9 +521,13 @@ OBJROOT := $(BUILD)/obj
 
 # Compile flags per target. `-nostdlib` is filtered out of the module/eboot set because it is a
 # link flag; everything else in TARGET_FLAGS is a compile flag.
-HOST_CFLAGS = $(STD) $(STAMP) $(WARNINGS) $(INCLUDE) -DOBSCENE_HOST_BUILD -fno-builtin -O1
+# `-D_DEFAULT_SOURCE` makes the POSIX surface (sigaction/sigsetjmp/sigjmp_buf, used by the
+# fault guard's host path) visible under `-std=c11`, which otherwise hides it. host_stubs.c
+# already defined this locally for its pthreads; it belongs on the whole host build now that
+# more than one file needs it.
+HOST_CFLAGS = $(STD) $(STAMP) $(WARNINGS) $(INCLUDE) -DOBSCENE_HOST_BUILD -D_DEFAULT_SOURCE -fno-builtin -O1
 MODULE_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"module"' -DOBSCENE_TARGET_MODULE=1 $(WARNINGS) $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
-EBOOT_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"module"' -DOBSCENE_TARGET_MODULE=1 -DOBS_CENSUS_LINKED=0 $(WARNINGS) $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
+EBOOT_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"module"' -DOBSCENE_TARGET_MODULE=1 -DOBSCENE_TARGET_EBOOT=1 -DOBS_CENSUS_LINKED=0 $(WARNINGS) $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
 INJECTOR_CFLAGS = $(STD) $(STAMP) -DOBSCENE_TARGET='"injector"' $(WARNINGS) $(INCLUDE) $(filter-out -nostdlib,$(TARGET_FLAGS))
 INJECT_TARGET ?=
 ifneq ($(INJECT_TARGET),)

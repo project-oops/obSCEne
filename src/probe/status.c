@@ -39,6 +39,31 @@ obs_result obs_skip(const char *detail) {
     return r;
 }
 
+obs_result obs_crash(int signal) {
+    /* Named by signal, so a reader sees a bad pointer (SIGSEGV/SIGBUS) apart from a bad
+     * instruction (SIGILL) or a maths trap (SIGFPE) without decoding the value. */
+    const char *why;
+    switch (signal) {
+    case 4:
+        why = "the call faulted (SIGILL) and the run was recovered";
+        break;
+    case 8:
+        why = "the call faulted (SIGFPE) and the run was recovered";
+        break;
+    case 10:
+        why = "the call faulted (SIGBUS) and the run was recovered";
+        break;
+    case 11:
+        why = "the call faulted (SIGSEGV) and the run was recovered";
+        break;
+    default:
+        why = "the call faulted and the run was recovered";
+        break;
+    }
+    obs_result r = {OBS_CRASH, why, (uint64_t)(unsigned int)signal, 1};
+    return r;
+}
+
 const char *obs_status_name(obs_status status) {
     switch (status) {
     case OBS_PASS:
@@ -49,6 +74,8 @@ const char *obs_status_name(obs_status status) {
         return "fail";
     case OBS_SKIP:
         return "skip";
+    case OBS_CRASH:
+        return "crash";
     }
     /* Not reachable through the enum, but a corrupted value should say so rather
      * than read as a pass. */

@@ -158,6 +158,17 @@ void obs_report_sink(const char *path) {
     line_end(&l);
 }
 
+void obs_report_guard(int available, const char *detail) {
+    /* Whether the fault guard is active this run, and what init resolved. A run that is not
+     * guarded (the primitives did not resolve on this loader) says so here, so a crash that
+     * ends it is read as "not caught" rather than "the guard is broken". (D325) */
+    line l;
+    line_start(&l, "guard");
+    line_field(&l, available ? "on" : "off");
+    line_field(&l, detail != NULL ? detail : "");
+    line_end(&l);
+}
+
 void obs_report_resume(unsigned int skipped, int overflowed) {
     /* Emitted whether or not anything was carried, because "nothing was skipped" and
      * "this build cannot skip" are different runs and a reader cannot tell them apart
@@ -371,6 +382,10 @@ void obs_report_section_tally(const obs_section *section, obs_tally tally) {
     line_field_u64(&l, tally.partial);
     line_field_u64(&l, tally.fail);
     line_field_u64(&l, tally.skip);
+    /* Appended, not inserted: a crash count is a new trailing field, which OUTPUT.md's
+     * contract allows without a version bump. A pre-guard parser reads the first four and
+     * ignores this; a current one sees the crashes. (D325) */
+    line_field_u64(&l, tally.crash);
     line_end(&l);
 }
 
@@ -528,6 +543,8 @@ void obs_report_tally(obs_tally tally) {
     line_field_u64(&l, tally.partial);
     line_field_u64(&l, tally.fail);
     line_field_u64(&l, tally.skip);
+    /* Trailing crash count; appended for the same contract reason as the section tally. */
+    line_field_u64(&l, tally.crash);
     line_end(&l);
 }
 

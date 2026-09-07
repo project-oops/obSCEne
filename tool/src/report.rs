@@ -25,6 +25,12 @@ pub const SEPARATOR: char = '|';
 /// What a check concluded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Status {
+    /// The call did not return - it faulted, and the fault guard recovered the run.
+    ///
+    /// **Ordered lowest deliberately**, below `Skip`: a crash is the most severe finding
+    /// a probe can make, so any check that starts crashing (from pass, fail, or even a
+    /// skip) is a regression. It comes from the guard, never from a check directly.
+    Crash,
     /// A prerequisite did not hold, so nothing was attempted.
     ///
     /// **Ordered below `Fail` deliberately.** A check that stopped running tells you
@@ -48,6 +54,7 @@ impl Status {
             "partial" => Some(Self::Partial),
             "fail" => Some(Self::Fail),
             "skip" => Some(Self::Skip),
+            "crash" => Some(Self::Crash),
             _ => None,
         }
     }
@@ -60,6 +67,7 @@ impl Status {
             Self::Partial => "partial",
             Self::Fail => "fail",
             Self::Skip => "skip",
+            Self::Crash => "crash",
         }
     }
 }
@@ -186,6 +194,8 @@ pub struct Tally {
     pub fail: u32,
     /// Checks that were skipped.
     pub skip: u32,
+    /// Checks that faulted and were recovered by the guard.
+    pub crash: u32,
 }
 
 impl Tally {
@@ -196,6 +206,7 @@ impl Tally {
             Status::Partial => self.partial = self.partial.saturating_add(1),
             Status::Fail => self.fail = self.fail.saturating_add(1),
             Status::Skip => self.skip = self.skip.saturating_add(1),
+            Status::Crash => self.crash = self.crash.saturating_add(1),
         }
     }
 
@@ -206,6 +217,7 @@ impl Tally {
             .saturating_add(self.partial)
             .saturating_add(self.fail)
             .saturating_add(self.skip)
+            .saturating_add(self.crash)
     }
 }
 
@@ -377,6 +389,9 @@ fn tally_from(fields: &[&str], from: usize) -> Tally {
         partial: number_at(fields, from.saturating_add(1)).unwrap_or(0),
         fail: number_at(fields, from.saturating_add(2)).unwrap_or(0),
         skip: number_at(fields, from.saturating_add(3)).unwrap_or(0),
+        /* Trailing and optional: a report written before the fault guard has four fields
+         * and reads crash as zero, which is what it was. */
+        crash: number_at(fields, from.saturating_add(4)).unwrap_or(0),
     }
 }
 

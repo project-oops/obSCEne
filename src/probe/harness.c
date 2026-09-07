@@ -17,6 +17,7 @@
  * business rather than any one check's - it is the guard that D226 showed was missing,
  * at the layer where the existing one could not reach - so the two calls that make it
  * possible live here. */
+#include "obscene/fault.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/runtime.h"
@@ -603,11 +604,19 @@ static void tally_add(obs_tally *tally, obs_status status) {
     case OBS_SKIP:
         tally->skip++;
         break;
+    case OBS_CRASH:
+        tally->crash++;
+        break;
     }
 }
 
 obs_tally obs_run_all(void) {
-    obs_tally total = {0, 0, 0, 0};
+    /* Arm the fault guard before any check runs, so a call that would end the process is
+     * caught and recorded instead. A no-op where the primitives cannot be resolved, in
+     * which case a faulting check ends the run exactly as it did before. (D325) */
+    obs_fault_init();
+
+    obs_tally total = {0, 0, 0, 0, 0};
     unsigned int checks = 0;
     for (unsigned int s = 0; s < obs_section_count; s++) {
         checks += obs_sections[s]->check_count;
@@ -641,6 +650,7 @@ obs_tally obs_run_all(void) {
         obs_report_context(context_name, context_basis);
     }
     obs_report_sink(sink);
+    obs_report_guard(obs_fault_available(), obs_fault_detail());
     obs_report_resume(obs_resume_skipped_count(), obs_resume_overflowed());
     /* The status readout the HUD draws, mirrored into the report so a reader that never
      * sees the screen gets the same facts (memory, VRAM, generation, gaps and all).
@@ -665,7 +675,7 @@ obs_tally obs_run_all(void) {
 
     for (unsigned int s = 0; s < obs_section_count; s++) {
         const obs_section *section = obs_sections[s];
-        obs_tally section_tally = {0, 0, 0, 0};
+        obs_tally section_tally = {0, 0, 0, 0, 0};
         obs_report_section(section);
 
         for (unsigned int c = 0; c < section->check_count; c++) {
@@ -744,9 +754,23 @@ obs_tally obs_run_all(void) {
                  * is made before the risk. (D174) */
                 /* Recorded without a redraw: see obs_screen_attempt. */
                 obs_screen_attempt(check->id);
-                result = check->run();
-                if (result.status == OBS_PASS) {
-                    available |= check->provides_caps;
+                /* The fault guard. A check that faults - the futex did, inside libkernel -
+                 * lands back here as a crash rather than ending the run, so the sections
+                 * behind it still run and the crash is a record instead of a silent stop.
+                 * The try is already on the wire (obs_report_attempt above), so a crash
+                 * caught here turns that try into a `crash` res rather than leaving it
+                 * dangling. (D325) */
+                obs_jmp_buf guard;
+                int faulted = OBS_FAULT_ARM(&guard);
+                if (faulted == 0) {
+                    result = check->run();
+                    obs_fault_unregister();
+                    if (result.status == OBS_PASS) {
+                        available |= check->provides_caps;
+                    }
+                } else {
+                    obs_fault_unregister();
+                    result = obs_crash(faulted);
                 }
             }
 

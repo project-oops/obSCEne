@@ -120,6 +120,11 @@ void obs_report_sysinfo(const char *field, const char *state, const char *value)
  * See src/sink.c. */
 void obs_report_sink(const char *path);
 
+/* Whether the fault guard installed this run, and a short account of what resolved. Emitted
+ * once, near the top of the report, so a reader can tell a run that could catch a crash from
+ * one that could not. See src/probe/fault.c. */
+void obs_report_guard(int available, const char *detail);
+
 /* How many checks this run is skipping because a previous run of the same build
  * announced them and never finished, and whether the skip set filled up. */
 void obs_report_resume(unsigned int skipped, int overflowed);

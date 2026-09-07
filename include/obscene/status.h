@@ -26,6 +26,13 @@ typedef enum obs_status {
     /* Grey. A prerequisite did not hold, so this was never attempted. Not a
      * verdict on the function - it says nothing was learned. */
     OBS_SKIP = 3,
+    /* Black. The call did not return - it faulted (SIGSEGV and its kin) and the fault
+     * guard recovered the run. Distinct from FAIL, which is a call that returned an error:
+     * a crash is the strongest finding a probe can make, and folding it into FAIL would
+     * hide it in the counts and read as an ordinary bad result. Principle 1's "a `try` with
+     * no `res` means the call did not return" now has one exception, and this is it - the
+     * `res` names the crash rather than the record being absent. (D325) */
+    OBS_CRASH = 4,
 } obs_status;
 
 /* What one check observed. */
@@ -47,6 +54,10 @@ obs_result obs_partial_value(const char *detail, uint64_t value);
 obs_result obs_fail(const char *detail);
 obs_result obs_fail_code(const char *detail, uint64_t code);
 obs_result obs_skip(const char *detail);
+/* The call faulted and the guard recovered. `signal` is the fault signal number, reported
+ * as the value so a run is diffable on which signal a call raised. Only the fault guard
+ * constructs this; a check never returns it directly. */
+obs_result obs_crash(int signal);
 
 /* Stable lowercase name, used in the machine-readable line. */
 const char *obs_status_name(obs_status status);

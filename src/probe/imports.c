@@ -62,6 +62,9 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "scePthreadSelf"},
     {"libkernel", "scePthreadCreate"},
     {"libkernel", "scePthreadJoin"},
+    {"libkernel", "scePthreadExit"},
+    {"libkernel", "_sigaction"},
+    {"libkernel", "_sigprocmask"},
     {"libkernel", "sceKernelLoadStartModule"},
     {"libkernel", "sceKernelDlsym"},
     {"libSceLibcInternal", "strlen"},
@@ -221,11 +224,12 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "scePthreadAttrGet"},
     {"libkernel", "scePthreadAttrGetstackaddr"},
     {"libkernel", "scePthreadAttrGetstacksize"},
-    /* The futex pair, in its own import library: the guest names
-     * `libkernel_sync_on_address`, not `libkernel`, and an import resolved against the
-     * wrong library resolves against nothing. */
-    {"libkernel_sync_on_address", "sceKernelSyncOnAddressWait"},
-    {"libkernel_sync_on_address", "sceKernelSyncOnAddressWake"},
+    /* The futex pair (`sceKernelSyncOnAddressWait`/`Wake`) is deliberately NOT a linked
+     * import. Its export library `libkernel_sync_on_address` is a namespace inside
+     * `libkernel.sprx`, not a loadable module - so declaring it here made the title
+     * module demand a `needed_module` for a `.sprx` the loader cannot find, and the title
+     * died on load while the payload ran. `032-syncaddr` resolves the pair by name through
+     * `libkernel` at run time instead. (D321-adjacent; reverts D322's linked import.) */
 
     /* Flexible memory. See src/sections/memory.c. */
     {"libkernel", "sceKernelAvailableFlexibleMemorySize"},

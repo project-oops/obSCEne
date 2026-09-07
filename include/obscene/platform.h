@@ -241,31 +241,22 @@ OBS_WEAK int scePthreadAttrGet(ScePthread thread, ScePthreadAttr *attr);
 
 /* ---- libkernel_sync_on_address: waiting on a word --------------------------
  *
- * The platform's futex, in its own import library beside `libkernel`. Censused for
- * presence until now; the census could not load the library, because it is a library
- * inside the kernel module rather than a module of its own.
+ * The platform's futex is NOT declared here as a linked import, and that is the whole
+ * point. Its export library `libkernel_sync_on_address` is a namespace inside
+ * `libkernel.sprx`, not a loadable module of its own - so a linked import made the title
+ * module declare a `needed_module` for a `.sprx` that does not exist, and the title died
+ * on load. `032-syncaddr` resolves `sceKernelSyncOnAddressWait`/`Wake` by name through
+ * `libkernel` at run time, the way `017-posix` and `019-posixerr` resolve theirs, so the
+ * module carries no dependency on a phantom library. (Reverts D322's linked import.)
  *
- * # The shape, and what is deliberately not declared
+ * # The shape, for the host declaration below and the runtime cast in the section
  *
- * FreeBSD `_umtx_op(2)` is the citable analogue and the census note already named it:
- * the wait is `UMTX_OP_WAIT`, the wake `UMTX_OP_WAKE`. Two arguments each - an address
- * and a value to compare, an address and a count to wake - which is what three retail
- * titles pass, every observed call leaving the third register zero.
- *
- * **A timeout is not declared, and that is a deliberate omission.** `_umtx_op` has a
- * timeout slot, and the sibling project refuses a non-zero third register rather than
- * guessing at its unit (its D573). Declaring one here to probe it would be declaring an
- * arity nothing establishes, which principle 2 forbids; the omission is recorded in
- * `docs/backlog/024` as what a later session with a known unit can settle.
- *
- * # Both values are 64-bit so the whole register is defined
- *
- * Whether the comparison reads 32 or 64 bits is exactly what `032-syncaddr` measures, so
- * neither width can be assumed here. Passing 64 bits is correct under System V for either
- * answer - a callee reading the low half ignores the top - while passing 32 would leave
- * the top half holding whatever was in the register if the callee reads all of it. */
-OBS_WEAK int sceKernelSyncOnAddressWait(void *address, uint64_t value);
-OBS_WEAK int sceKernelSyncOnAddressWake(void *address, uint64_t count);
+ * FreeBSD `_umtx_op(2)` is the citable analogue: the wait is `UMTX_OP_WAIT`, the wake
+ * `UMTX_OP_WAKE`. Two arguments each - an address and a value to compare, an address and
+ * a count to wake - which is what three retail titles pass, every observed call leaving
+ * the third register zero. A timeout is deliberately not modelled (its unit is
+ * unestablished; `docs/backlog/024`), and both values are 64-bit so the whole register is
+ * defined whichever width `032-syncaddr` finds the comparison reads. */
 OBS_WEAK uint64_t sceKernelGetProcessTimeCounterFrequency(void);
 
 /* ---- libkernel: descriptors ------------------------------------------------ */
@@ -366,6 +357,20 @@ OBS_WEAK ScePthread scePthreadSelf(void);
 OBS_WEAK int scePthreadCreate(ScePthread *thread, const void *attr,
                               void *(*entry)(void *), void *arg, const char *name);
 OBS_WEAK int scePthreadJoin(ScePthread thread, void **value_out);
+OBS_WEAK void scePthreadExit(void *value);
+
+/* ---- libkernel: fault recovery --------------------------------------------
+ *
+ * The signal primitives the fault guard installs its handler with (fault.c, D325/D326). They
+ * are declared imports, not resolved by dlsym alone, because a native title's dlsym resolves
+ * only the symbols the process already imports - so the guard went unarmed on the eboot until
+ * these were bound like every other call. All are real libkernel exports
+ * (data/hardware/libkernel-vaddrs.txt: _sigaction 0xd100, _sigprocmask 0xcf70; scePthreadExit
+ * above, in data/hardware/ps5-full.txt). `struct sigaction` and `sigset_t` cross as raw bytes
+ * - the guard builds the FreeBSD amd64 layout itself rather than borrow a vendor header
+ * (Principle 6). setjmp/longjmp are not imported: the guard carries its own (fault.c). */
+OBS_WEAK int _sigaction(int sig, const void *act, void *oact);
+OBS_WEAK int _sigprocmask(int how, const void *set, void *oset);
 
 /* ---- libkernel: POSIX synchronisation --------------------------------------
  *
@@ -529,6 +534,11 @@ OBS_WEAK int posix_sigismember(const void *set, int signal);
  * anything the platform has not already told us. */
 OBS_WEAK int posix_getpagesize(void);
 OBS_WEAK int posix_usleep(unsigned int microseconds);
+
+/* The futex, host side only. On the target `032-syncaddr` resolves these by name; on the
+ * host it takes their address directly, and the stubs live in host_stubs.c. */
+OBS_WEAK int sceKernelSyncOnAddressWait(void *address, uint64_t value);
+OBS_WEAK int sceKernelSyncOnAddressWake(void *address, uint64_t count);
 #endif
 
 /* Counting semaphores. `Poll` rather than `Wait`, for the reason above. */

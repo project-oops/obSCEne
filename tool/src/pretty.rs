@@ -36,6 +36,8 @@ impl Palette {
             Status::Partial => "\x1b[33m",
             Status::Pass => "\x1b[32m",
             Status::Fail => "\x1b[31m",
+            // Bold red: a crash is the worst outcome and should catch the eye past a fail.
+            Status::Crash => "\x1b[1;31m",
             Status::Skip => "\x1b[90m",
         }
     }
@@ -80,6 +82,7 @@ fn marker(status: Status) -> &'static str {
         Status::Pass => "OK  ",
         Status::Partial => "WARN",
         Status::Fail => "FAIL",
+        Status::Crash => "CRSH",
         Status::Skip => "--  ",
     }
 }

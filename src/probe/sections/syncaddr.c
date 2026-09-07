@@ -21,6 +21,18 @@
  *     layout in which the wait shares an entry point with the `Wait64` spelling;
  *   * what does a wake with nobody waiting answer.
  *
+ * # The futex is resolved by name, not linked - and that is what keeps the title alive
+ *
+ * `sceKernelSyncOnAddressWait`/`Wake` are exported by a library *namespace* inside
+ * `libkernel.sprx` (`libkernel_sync_on_address`), not by a loadable module of that name -
+ * the hardware dumps carry them in `libkernel`, and no `libkernel_sync_on_address.sprx`
+ * exists. Declaring them as linked imports made the title module declare a `needed_module`
+ * for a `.sprx` the loader cannot find, so the title died before its first record while the
+ * payload - which resolves by address and has no dependency table - ran fine. So they are
+ * resolved at run time through `libkernel`, the way `017-posix` and `019-posixerr` resolve
+ * their names, and nothing is added to the module's dependency table. (D321-adjacent; the
+ * linked-import approach was D322, reverted here.)
+ *
  * # Every wait happens on a thread nobody joins, and that is the whole safety argument
  *
  * A futex wait blocks. There is no `try` form of it, so the rule that a blocking call is
@@ -59,11 +71,64 @@
  * forbids. It is recorded in `docs/backlog/024` as what a later session can settle.
  */
 
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 #include "obscene/status.h"
+
+/* The futex pair, resolved by name at run time. The platform spells the wait as taking an
+ * address and a value to compare, the wake as an address and a count. */
+typedef int (*fn_sa_wait_t)(void *address, uint64_t value);
+typedef int (*fn_sa_wake_t)(void *address, uint64_t count);
+
+#if !defined(OBSCENE_HOST_BUILD)
+static int s_sa_handle = -2;
+
+/* The futex lives in `libkernel` - the export library `libkernel_sync_on_address` is a
+ * namespace inside it, not a loadable module - so open `libkernel` and resolve the names
+ * against it. */
+static int obs_sa_handle(void) {
+    if (s_sa_handle != -2) {
+        return s_sa_handle;
+    }
+    s_sa_handle = obs_module_open("libkernel");
+    return s_sa_handle;
+}
+#endif
+
+static void *obs_sa_symbol(const char *name) {
+#if defined(OBSCENE_HOST_BUILD)
+    /* The host stubs, declared in platform.h's host block and defined in host_stubs.c. */
+    if (obs_strcmp(name, "sceKernelSyncOnAddressWait") == 0)
+        return (void *)&sceKernelSyncOnAddressWait;
+    if (obs_strcmp(name, "sceKernelSyncOnAddressWake") == 0)
+        return (void *)&sceKernelSyncOnAddressWake;
+    return NULL;
+#else
+    int h = obs_sa_handle();
+    if (h < 0) {
+        return NULL;
+    }
+    return (void *)obs_module_symbol(h, name);
+#endif
+}
+
+/* Resolved once and cached: the worker and three checks all reach for the same pair. */
+static fn_sa_wait_t s_sa_wait;
+static fn_sa_wake_t s_sa_wake;
+static int s_sa_resolved;
+
+static void obs_sa_resolve(void) {
+    if (s_sa_resolved) {
+        return;
+    }
+    s_sa_resolved = 1;
+    s_sa_wait = (fn_sa_wait_t)obs_sa_symbol("sceKernelSyncOnAddressWait");
+    s_sa_wake = (fn_sa_wake_t)obs_sa_symbol("sceKernelSyncOnAddressWake");
+}
 
 /* The word the first two waits are made against. Zero, and left zero: the mismatch case
  * passes a different value rather than changing the word, so the blocking case that follows
@@ -97,6 +162,10 @@ static volatile int s_sa_mismatch_rc;
 static volatile int s_sa_blocked_rc;
 static volatile int s_sa_width_rc;
 static int s_sa_worker_started;
+/* The fault signal a wait raised on the worker, or zero. The waits have faulted inside
+ * libkernel on hardware; the worker catches that (D325) and records it here so the main
+ * thread reports a crash rather than the run ending from a thread it cannot join. */
+static volatile int s_sa_faulted;
 
 /* Long enough for the worker to reach its next wait on any plausible scheduler. Generous on
  * purpose: a wake that arrives before anybody is listening looks exactly like a wake that
@@ -107,31 +176,45 @@ static int s_sa_worker_started;
  * wait that never returns is visible as the state it stopped in. */
 static void *obs_sa_worker(void *arg) {
     (void)arg;
-    /* The worker reaches for a symbol whose address the harness guarded for the check that
-     * started it, not for this function - so it is tested again here. Jumping to zero would
-     * end the run to establish something the address already said. */
-    if (!obs_address_is_callable((const void *)&sceKernelSyncOnAddressWait)) {
+    /* The worker reaches for the resolved wait, not for one the harness guarded - so it is
+     * checked again here. Calling through a null pointer would end the run to establish
+     * something the pointer already said. */
+    if (s_sa_wait == NULL) {
         s_sa_state = OBS_SA_ABSENT;
+        return NULL;
+    }
+
+    /* The wait has faulted inside libkernel on hardware. Arm the fault guard on this worker
+     * so a fault lands back here as a recorded crash (s_sa_faulted, read by the main thread)
+     * rather than a SIGSEGV that ends a run nobody can join the worker to rescue. One pad
+     * covers all three waits; the state counter already names which one was in flight. (D325)
+     */
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        s_sa_faulted = sig;
         return NULL;
     }
 
     /* 1. A word that already holds something else. A futex must not wait on this, and the
      *    code it answers is the measurement. */
     s_sa_state = OBS_SA_MISMATCH_ENTER;
-    s_sa_mismatch_rc = sceKernelSyncOnAddressWait(&s_sa_gate, s_sa_gate + 1ull);
+    s_sa_mismatch_rc = s_sa_wait(&s_sa_gate, s_sa_gate + 1ull);
     s_sa_state = OBS_SA_MISMATCH_RETURNED;
 
     /* 2. The same word, matching. This blocks, and the main thread's wake is what ends it. */
     s_sa_state = OBS_SA_BLOCKED_ENTER;
-    s_sa_blocked_rc = sceKernelSyncOnAddressWait(&s_sa_gate, s_sa_gate);
+    s_sa_blocked_rc = s_sa_wait(&s_sa_gate, s_sa_gate);
     s_sa_state = OBS_SA_RELEASED;
 
     /* 3. The width question: matches in 32 bits, differs in 64. Returning means the
      *    comparison read all 64; blocking means it read the low half, and the main thread
      *    releases it either way. */
     s_sa_state = OBS_SA_WIDTH_ENTER;
-    s_sa_width_rc = sceKernelSyncOnAddressWait(&s_sa_width_word, OBS_SA_WIDTH_EXPECT);
+    s_sa_width_rc = s_sa_wait(&s_sa_width_word, OBS_SA_WIDTH_EXPECT);
     s_sa_state = OBS_SA_WIDTH_RETURNED;
+    obs_fault_unregister();
     return NULL;
 }
 
@@ -143,7 +226,11 @@ static void *obs_sa_worker(void *arg) {
  * platform *returns* here is the part a run can see, and whether it is a status or a count
  * of threads woken is exactly what the value distinguishes. */
 static obs_result check_wake_with_no_waiter(void) {
-    int rc = sceKernelSyncOnAddressWake(&s_sa_lonely, 1ull);
+    obs_sa_resolve();
+    if (s_sa_wake == NULL) {
+        return obs_skip("the wake was not resolved for this build");
+    }
+    int rc = s_sa_wake(&s_sa_lonely, 1ull);
     obs_report_error_code("libkernel_sync_on_address", "sceKernelSyncOnAddressWake",
                           "nobody waiting", (uint64_t)(uint32_t)rc);
     obs_report_measure("032-syncaddr/wake-with-no-waiter", "sceKernelSyncOnAddressWake",
@@ -161,6 +248,11 @@ static obs_result check_wake_with_no_waiter(void) {
 static obs_result check_wait_returns_on_mismatch(void) {
     OBS_REQUIRE(&scePthreadCreate, &sceKernelUsleep);
 
+    obs_sa_resolve();
+    if (s_sa_wait == NULL) {
+        return obs_skip("the wait was not resolved for this build");
+    }
+
     s_sa_state = OBS_SA_START;
     ScePthread worker = NULL;
     int rc = scePthreadCreate(&worker, NULL, obs_sa_worker, NULL, "obscene-syncaddr");
@@ -173,6 +265,12 @@ static obs_result check_wait_returns_on_mismatch(void) {
     unsigned int state = s_sa_state;
     if (state == OBS_SA_ABSENT) {
         return obs_skip("the wait was not resolved for this build");
+    }
+    if (s_sa_faulted != 0) {
+        /* The wait faulted inside libkernel and the guard caught it on the worker. That is
+         * the finding - the futex, called as its exports describe it, does not survive
+         * hardware - reported as a crash rather than a fail so the counts keep them apart. */
+        return obs_crash(s_sa_faulted);
     }
     if (state < OBS_SA_MISMATCH_RETURNED) {
         /* It went in and did not come back. The worker is left where it is - joining it is
@@ -197,6 +295,10 @@ static obs_result check_wait_returns_on_mismatch(void) {
 static obs_result check_wake_releases_a_waiter(void) {
     OBS_REQUIRE(&sceKernelUsleep);
 
+    obs_sa_resolve();
+    if (s_sa_wake == NULL) {
+        return obs_skip("the wake was not resolved for this build");
+    }
     if (!s_sa_worker_started) {
         return obs_skip("no worker reached a wait");
     }
@@ -207,7 +309,7 @@ static obs_result check_wake_releases_a_waiter(void) {
      * is indistinguishable from one that does not work, so this is generous. */
     (void)sceKernelUsleep(OBS_SA_SETTLE_US);
 
-    int rc = sceKernelSyncOnAddressWake(&s_sa_gate, 1ull);
+    int rc = s_sa_wake(&s_sa_gate, 1ull);
     obs_report_error_code("libkernel_sync_on_address", "sceKernelSyncOnAddressWake",
                           "one waiter blocked", (uint64_t)(uint32_t)rc);
     obs_report_measure("032-syncaddr/wake-releases-a-waiter", "sceKernelSyncOnAddressWake",
@@ -219,7 +321,7 @@ static obs_result check_wake_releases_a_waiter(void) {
          * platform whose count argument means something other than "how many" would refuse
          * the first and honour this, and that difference is worth recording rather than
          * losing inside a verdict. */
-        int all_rc = sceKernelSyncOnAddressWake(&s_sa_gate, 0x7FFFFFFFull);
+        int all_rc = s_sa_wake(&s_sa_gate, 0x7FFFFFFFull);
         obs_report_measure("032-syncaddr/wake-releases-a-waiter",
                            "sceKernelSyncOnAddressWake", "retry-all",
                            (uint64_t)(int64_t)all_rc, "code");
@@ -245,10 +347,13 @@ static obs_result check_wake_releases_a_waiter(void) {
 
 static obs_result check_compare_width(void) {
     /* The wake is required as well as the sleep: the 32-bit answer leaves the worker
-     * parked, and a width this check cannot release is one it should not measure.
-     * Announced under the wait, so the wake is guarded here rather than by the row (D058). */
-    OBS_REQUIRE(&sceKernelUsleep, &sceKernelSyncOnAddressWake);
+     * parked, and a width this check cannot release is one it should not measure. */
+    OBS_REQUIRE(&sceKernelUsleep);
 
+    obs_sa_resolve();
+    if (s_sa_wake == NULL) {
+        return obs_skip("the wake was not resolved for this build");
+    }
     if (!s_sa_worker_started || s_sa_state < OBS_SA_WIDTH_ENTER) {
         return obs_skip("the worker never reached the width wait");
     }
@@ -262,7 +367,7 @@ static obs_result check_compare_width(void) {
     if (width == OBS_SA_COMPARE_32) {
         /* It is parked on a word whose low half matched. Release it, so the worker leaves
          * rather than being abandoned for a measurement that has already been made. */
-        (void)sceKernelSyncOnAddressWake(&s_sa_width_word, 0x7FFFFFFFull);
+        (void)s_sa_wake(&s_sa_width_word, 0x7FFFFFFFull);
         (void)sceKernelUsleep(OBS_SA_SETTLE_US);
         obs_report_measure("032-syncaddr/compare-width", "sceKernelSyncOnAddressWait",
                            "released-after", (uint64_t)s_sa_state, "state");
@@ -277,19 +382,18 @@ static obs_result check_compare_width(void) {
 static const obs_check syncaddr_checks[] = {
     {"032-syncaddr/wake-with-no-waiter", "libkernel_sync_on_address",
      "sceKernelSyncOnAddressWake", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&sceKernelSyncOnAddressWake, check_wake_with_no_waiter,
-     OBS_FROM_ASSUMED},
+     (const void *)check_wake_with_no_waiter, check_wake_with_no_waiter, OBS_FROM_ASSUMED},
     {"032-syncaddr/wait-returns-on-mismatch", "libkernel_sync_on_address",
      "sceKernelSyncOnAddressWait", OBS_CAP_THREAD, OBS_CAP_NONE,
-     (const void *)&sceKernelSyncOnAddressWait, check_wait_returns_on_mismatch,
+     (const void *)check_wait_returns_on_mismatch, check_wait_returns_on_mismatch,
      OBS_FROM_DERIVED},
     {"032-syncaddr/wake-releases-a-waiter", "libkernel_sync_on_address",
      "sceKernelSyncOnAddressWake", OBS_CAP_THREAD, OBS_CAP_NONE,
-     (const void *)&sceKernelSyncOnAddressWake, check_wake_releases_a_waiter,
+     (const void *)check_wake_releases_a_waiter, check_wake_releases_a_waiter,
      OBS_FROM_DERIVED},
     {"032-syncaddr/compare-width", "libkernel_sync_on_address",
      "sceKernelSyncOnAddressWait", OBS_CAP_THREAD, OBS_CAP_NONE,
-     (const void *)&sceKernelSyncOnAddressWait, check_compare_width, OBS_FROM_ASSUMED},
+     (const void *)check_compare_width, check_compare_width, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_syncaddr = {
