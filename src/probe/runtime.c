@@ -230,6 +230,64 @@ void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
     obs_payload_output_bootstrapped = 1;
 }
 
+/* Resolve the output functions by name for a native title.
+ *
+ * A payload bootstraps these from its dlsym gadget above; a title has no payload args, so
+ * it resolves them the way every section resolves a platform call - by name through the
+ * loader's own sceKernelDlsym (obs_module_symbol). Without it the title's sink falls
+ * through to a raw import, and the sink's imports split across two relocations: the guard
+ * reads `&fn` (a GLOB_DAT slot) while the call goes through a separate JUMP_SLOT, so a
+ * loader that binds the data slot but leaves the linkage slot at its unresolved sentinel
+ * (0x2) passes the guard and jumps to 0x2 on the call. The first boot note - written
+ * before obs_bind_dynamic_symbols could touch the tables - is where that lands. Resolving
+ * a plain data pointer here and calling through it (s_fn_write / s_fn_debug_out) sidesteps
+ * the split entirely: it is null-checkable and never a raw linkage slot.
+ *
+ * Idempotent and guarded: a no-op once the payload path has bootstrapped, it fills only a
+ * pointer still null, rejects anything obs_address_is_callable refuses (the 0x2 sentinel
+ * among them), and does nothing at all where module resolution is unavailable - an
+ * emulator that stubs dlsym - leaving the raw-import channels to carry that case as
+ * before. */
+void obs_bootstrap_title_output(void) {
+    if (obs_payload_output_bootstrapped) {
+        return;
+    }
+    int handle = obs_module_open("libkernel");
+    if (handle < 0) {
+        return;
+    }
+    if (s_fn_debug_out == NULL) {
+        const void *p = obs_module_symbol(handle, "sceKernelDebugOutText");
+        if (obs_address_is_callable(p)) {
+            s_fn_debug_out = (fn_debug_out_t)(uintptr_t)p;
+        }
+    }
+    if (s_fn_write == NULL) {
+        const void *p = obs_module_symbol(handle, "sceKernelWrite");
+        if (obs_address_is_callable(p)) {
+            s_fn_write = (fn_write_t)(uintptr_t)p;
+        }
+    }
+}
+
+/* Whether the raw-import output channels (direct sceKernelWrite/write/puts/putchar) may
+ * be attempted at all.
+ *
+ * A module (emulator) keeps them: a loader that stubs dlsym but binds direct imports has
+ * no other way out, so they run whenever module resolution is unavailable. A native eboot
+ * never does. Its imports split GLOB_DAT (what `&fn`, and so the guard, reads) from
+ * JUMP_SLOT (what the call goes through), and the loader can bind the data slot while
+ * leaving the linkage slot at its unresolved sentinel (0x2) - so a guard that passed still
+ * faults on the call. That is the fault this fix exists for. The eboot's output is the
+ * dlsym-resolved s_fn_* pointers alone (obs_bootstrap_title_output fills them before the
+ * first write); where those cannot be resolved it emits nothing rather than jumping to
+ * 0x2, which is the honest failure. (D323) */
+#if defined(OBSCENE_TARGET_EBOOT)
+#define OBS_RAW_IMPORT_CHANNELS_OK() 0
+#else
+#define OBS_RAW_IMPORT_CHANNELS_OK() (!obs_module_resolution_works())
+#endif
+
 /* Sends what it can through one channel. Returns bytes accepted, zero if the channel
  * is absent or refused. */
 static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
@@ -254,7 +312,18 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
             s_fn_debug_out(0, scratch);
             return len;
         }
-        if (&sceKernelWrite != 0 &&
+        /* The raw import is a last resort, and only where the loader binds it. Where
+         * module resolution works - every console, any emulator with a real dlsym - the
+         * resolved s_fn_write above carries this channel, and the raw call is skipped: its
+         * JUMP_SLOT is what a native title leaves at 0x2, and `&sceKernelWrite` (a GLOB_DAT
+         * read) does not see that. Confined to a dlsym-less emulator, where the slot is
+         * genuinely bound. (D323) */
+        /* The raw import is a last resort, and only where the loader binds it - a
+         * dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK). On a console the resolved
+         * s_fn_write above carries this channel and this is skipped: the raw call goes
+         * through the JUMP_SLOT a native title leaves at 0x2, which `&sceKernelWrite` (a
+         * GLOB_DAT read) cannot see. (D323) */
+        if (OBS_RAW_IMPORT_CHANNELS_OK() &&
             obs_address_is_callable((const void *)&sceKernelWrite)) {
             long n = (long)sceKernelWrite(OBS_FD_STDOUT, bytes, len);
             return n > 0 ? (size_t)n : 0;
@@ -262,47 +331,59 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
         return 0;
     }
     case OBS_CHANNEL_PUTS: {
-        if (&puts == 0) {
-            return 0;
+        /* Confined to a dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK); `puts` splits
+         * GLOB_DAT (the guard reads it via `&puts`) from JUMP_SLOT (the call goes through
+         * it), so a title that leaves the linkage slot unbound would fault on the call the
+         * guard just approved. `obs_address_is_callable`, not `!= 0`: a loader that
+         * resolves an unrecognised import to a small non-null value passes a null check and
+         * faults on the call - how a title died at rip 0x2 with the report unwritten. */
+        if (OBS_RAW_IMPORT_CHANNELS_OK() &&
+            obs_address_is_callable((const void *)&puts)) {
+            /* Only a whole record. `puts` supplies a newline, so handing it a partial line
+             * would break the record in two - something that parses and is wrong, which is
+             * worse than no output. Every caller writes one complete line, so refusing
+             * anything else costs nothing and cannot be got wrong later. */
+            if (len == 0 || len > sizeof(scratch) || bytes[len - 1] != '\n') {
+                return 0;
+            }
+            for (size_t i = 0; i + 1 < len; i++) {
+                scratch[i] = bytes[i];
+            }
+            scratch[len - 1] = '\0';
+            /* Non-negative on success, EOF on failure. A stub returning zero counts as
+             * success, which is why this is tried after the channels that report a count. */
+            if (puts(scratch) < 0) {
+                return 0;
+            }
+            return len;
         }
-        /* Only a whole record. `puts` supplies a newline, so handing it a partial line
-         * would break the record in two - something that parses and is wrong, which is
-         * worse than no output. Every caller writes one complete line, so refusing
-         * anything else costs nothing and cannot be got wrong later. */
-        if (len == 0 || len > sizeof(scratch) || bytes[len - 1] != '\n') {
-            return 0;
-        }
-        for (size_t i = 0; i + 1 < len; i++) {
-            scratch[i] = bytes[i];
-        }
-        scratch[len - 1] = '\0';
-        /* Returns a non-negative value on success, EOF on failure. A stub returning
-         * zero counts as success here, which is why this is tried after the channels
-         * that report a byte count. */
-        if (puts(scratch) < 0) {
-            return 0;
-        }
-        return len;
+        return 0;
     }
     case OBS_CHANNEL_POSIX_WRITE: {
-        if (&write == 0) {
-            return 0;
+        /* Confined to a dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK). On a console the
+         * resolved s_fn_write carries the report and this raw `write` import stays off; it
+         * faulted here as `write(1, ...)` through a `0x2` slot. Callable, not merely
+         * non-null - see the note on the puts channel. */
+        if (OBS_RAW_IMPORT_CHANNELS_OK() &&
+            obs_address_is_callable((const void *)&write)) {
+            long n = (long)write(OBS_FD_STDOUT, bytes, len);
+            return n > 0 ? (size_t)n : 0;
         }
-        long n = (long)write(OBS_FD_STDOUT, bytes, len);
-        return n > 0 ? (size_t)n : 0;
+        return 0;
     }
     case OBS_CHANNEL_PUTCHAR: {
-        if (&putchar == 0) {
-            return 0;
+        /* Confined to a dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK). Returns the
+         * character written; anything else is a failure, and checking for it is what stops
+         * a stub that returns zero reading as success - how the first version lost the
+         * whole report. */
+        if (OBS_RAW_IMPORT_CHANNELS_OK() &&
+            obs_address_is_callable((const void *)&putchar)) {
+            int c = (int)(unsigned char)bytes[0];
+            if (putchar(c) == c) {
+                return 1;
+            }
         }
-        /* Returns the character written. Anything else is a failure, and checking for
-         * it is what stops a stub that returns zero reading as success - which is
-         * exactly how the first version of this lost the whole report. */
-        int c = (int)(unsigned char)bytes[0];
-        if (putchar(c) != c) {
-            return 0;
-        }
-        return 1;
+        return 0;
     }
     case OBS_CHANNEL_UNTRIED:
     case OBS_CHANNEL_NONE:
@@ -491,7 +572,7 @@ void obs_puts(const char *s) {
 
 /* Whether an address can be dereferenced, verified via direct kernel virtual query
  * probe. */
-static int obs_linkmap_readable(uintptr_t p) {
+int obs_linkmap_readable(uintptr_t p) {
     if (p < 0x10000u || p >= 0x0000800000000000UL) {
         return 0;
     }

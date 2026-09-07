@@ -258,7 +258,13 @@ static obs_result check_pad_dualsense_symbols(void) {
             resolved++;
             obs_report_measure("100-input/dualsense-symbols", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            if (obs_strcmp(name, "scePadSetTriggerEffect") == 0 && obs_address_is_callable(addr)) {
+            /* The prologue is dumped only where the text is readable. A library's text is
+             * execute-only on the console (xotext) - callable but not readable - so the old
+             * `obs_address_is_callable` guard passed and the read faulted inside libScePad.
+             * `obs_linkmap_readable` refuses xotext, so this dumps on a loader that maps text
+             * readable (emulators) and skips it on hardware rather than crashing. (D325) */
+            if (obs_strcmp(name, "scePadSetTriggerEffect") == 0 &&
+                obs_linkmap_readable((uintptr_t)addr)) {
                 obs_report_buffer("100-input/trigger-prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }

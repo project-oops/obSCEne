@@ -139,9 +139,18 @@ void obscene_start(void) {
             }
         }
     }
-    /* The first thing, before any platform call that could fault: proof the container
-     * mounted, the loader transferred control, and the crt reached here. On a
-     * foreground-app launch this is the difference between "the package is wrong" and
+    /* Resolve the output functions by name before the first write. A payload bootstrapped
+     * its output above; a title has no payload args, so without this its sink falls
+     * through to a raw import whose linkage slot the loader leaves unresolved (0x2) - and
+     * the boot note below is the call that faults. This uses the same sceKernelDlsym path
+     * every section relies on, so it is as safe as the probe's own resolution, and it must
+     * precede the first write for the write to have a channel that is not a poisoned slot.
+     * No-op for a payload and where dlsym is unavailable. (D323) */
+    obs_bootstrap_title_output();
+
+    /* The first thing after output is resolvable, before any check that could fault: proof
+     * the container mounted, the loader transferred control, and the crt reached here. On
+     * a foreground-app launch this is the difference between "the package is wrong" and
      * "a check took the system down", and those are looked at in entirely different
      * places. */
     obs_boot_note("obscene: eboot entry reached\n");

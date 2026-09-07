@@ -36,6 +36,7 @@
 #include "oops/freestd.h"
 #include "obscene/harness.h"
 #include "obscene/report.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 /* The decode surface libSceAudiodec is expected to export. Both the base and the `Ex`
@@ -105,7 +106,10 @@ static obs_result check_audiodec_symbols(void) {
             resolved++;
             obs_report_measure("108-audiodec/symbols", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            if (obs_address_is_callable(addr)) {
+            /* Readable, not merely callable: library text is execute-only on hardware, so
+             * dump the prologue only where it can be read (emulators), never crashing on a
+             * console. (D325) */
+            if (obs_linkmap_readable((uintptr_t)addr)) {
                 obs_report_buffer("108-audiodec/prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }
@@ -169,7 +173,7 @@ static obs_result check_audiodec_ajm(void) {
             resolved++;
             obs_report_measure("108-audiodec/ajm", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            if (obs_address_is_callable(addr)) {
+            if (obs_linkmap_readable((uintptr_t)addr)) {
                 obs_report_buffer("108-audiodec/ajm-prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }

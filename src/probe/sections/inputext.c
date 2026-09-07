@@ -13,6 +13,7 @@
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 static int32_t inputext_initial_user(void) {
@@ -57,7 +58,10 @@ static obs_result check_keyboard_presence(void) {
             resolved++;
             obs_report_measure("101-input-ext/keyboard-symbols", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            if (obs_address_is_callable(addr)) {
+            /* Readable, not merely callable: library text is execute-only on hardware, so
+             * dump the prologue only where it can be read (emulators), never crashing on a
+             * console. (D325) */
+            if (obs_linkmap_readable((uintptr_t)addr)) {
                 obs_report_buffer("101-input-ext/kbd-prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }
@@ -93,7 +97,7 @@ static obs_result check_mouse_presence(void) {
             resolved++;
             obs_report_measure("101-input-ext/mouse-symbols", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            if (obs_address_is_callable(addr)) {
+            if (obs_linkmap_readable((uintptr_t)addr)) {
                 obs_report_buffer("101-input-ext/mouse-prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }
