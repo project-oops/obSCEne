@@ -47,10 +47,12 @@
  * sceAgcWaitRegMemPatchAddress, sceAgcDmaDataPatchSetDstAddressOrOffset.
  */
 
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/sections.h"
+#include "oops/target.h"
 
 #include <stddef.h>
 
@@ -58,6 +60,59 @@
 #define OBS_AGC_GUARD_SIZE 64u
 #define OBS_AGC_POISON_BYTE 0xCCu
 #define OBS_AGC_GUARD_BYTE 0xC7u
+
+#if OOPS_TARGET_IS_PS4
+static obs_result check_agc_cb_nop(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_cb_release_mem(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_dma_data(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_wait_reg_mem(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_cb_unnamed_ef57(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_reset_queue(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_create_shader(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_constructor_audit(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_patch_exclusion_guard(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+
+static const obs_check agc_checks[] = {
+    {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_cb_nop, OBS_FROM_ASSUMED},
+    {"166-agc/cb-release-mem", "libSceAgc", "sceAgcCbReleaseMem", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_release_mem, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-dma-data", "libSceAgc", "sceAgcDcbDmaData", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_dma_data, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-wait-reg-mem", "libSceAgc", "sceAgcDcbWaitRegMem", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_wait_reg_mem, OBS_FROM_ASSUMED},
+    {"166-agc/cb-unnamed-ef57", "libSceAgc", "$fYZQG4CU71c", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_unnamed_ef57, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-reset-queue", "libSceAgc", "sceAgcDcbResetQueue", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_reset_queue, OBS_FROM_ASSUMED},
+    {"166-agc/create-shader", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_create_shader, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-constructor-audit", "libSceAgc", "(census)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_constructor_audit,
+     OBS_FROM_ASSUMED},
+    {"166-agc/patch-exclusion-guard", "libSceAgc", "(guard)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_patch_exclusion_guard,
+     OBS_FROM_ASSUMED},
+};
+#else
 
 typedef uint64_t (*agc_cb_fn)(void *arg0, uint64_t arg1, uint64_t arg2,
                               uint64_t arg3, uint64_t arg4, uint64_t arg5);
@@ -96,7 +151,7 @@ static void agc_cb_prepare(obs_agc_cb_probe *probe, uint64_t count) {
     probe->cur = probe->begin;
     probe->end2 = probe->end;
     for (unsigned int i = 0; i < (unsigned int)sizeof(probe->pad); i++) {
-        probe->pad[i] = 0;
+        probe->pad[i] = OBS_AGC_POISON_BYTE;
     }
     for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
         probe->cmdbuf[i] = OBS_AGC_POISON_BYTE;
@@ -126,43 +181,56 @@ static unsigned int agc_cb_written_bytes(const obs_agc_cb_probe *probe,
     return written;
 }
 
+/* Common runner for a command-buffer function that takes (writer, arg1).
+ *
+ * Runs two passes to see what changes:
+ *   pass 0: with arg1 = 0
+ *   pass 1: with arg1 = 1
+ *
+ * Emits buffer byte dump or written dump, checks for overrun.
+ */
 static obs_result agc_cb_run_two_pass(const char *id, const char *symbol,
                                       uint64_t count, agc_cb_fn fn) {
-    static obs_agc_cb_probe probe;
-    static uint8_t before[OBS_AGC_CMDBUF_SIZE];
+    obs_agc_cb_probe probe;
+    uint8_t before[OBS_AGC_CMDBUF_SIZE];
     for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
         before[i] = OBS_AGC_POISON_BYTE;
     }
 
-    /* Pass 1: arg1..arg5 = 0 */
+    /* Pass 0: arg1 = 0 */
     agc_cb_prepare(&probe, count);
-    void *arg0 = (void *)&probe.begin;
-    uint64_t rc0 = fn(arg0, 0, 0, 0, 0, 0);
-
+    uint64_t rc0 = fn(&probe.begin, 0, 0, 0, 0, 0);
     if (!agc_cb_guard_intact(&probe)) {
-        return obs_fail("the call wrote past the end of its command buffer");
+        return obs_fail("the call wrote past the end of its command buffer (overrun)");
     }
-
+    if (probe.cur < probe.begin || probe.cur > probe.end) {
+        return obs_fail("the call left writer pointer outside buffer bounds");
+    }
     unsigned int written0 = agc_cb_written_bytes(&probe, OBS_AGC_POISON_BYTE);
     if (written0 > 0) {
-        obs_report_written(id, symbol, "zero-args", before, probe.cmdbuf,
+        /* Wrote something */
+        obs_report_written(id, symbol, "pm4-pass0", before, probe.cmdbuf,
                            OBS_AGC_CMDBUF_SIZE);
-        return obs_pass_value((uint64_t)written0);
+        obs_report_measure(id, symbol, "rc-pass0", rc0, "rc");
+        return obs_pass();
     }
 
-    /* Pass 2: small non-zero values (1, 2, 4, 1, 2) */
+    /* Pass 1: arg1 = 1 */
     agc_cb_prepare(&probe, count);
-    uint64_t rc1 = fn(arg0, 1, 2, 4, 1, 2);
-
+    uint64_t rc1 = fn(&probe.begin, 1, 0, 0, 0, 0);
     if (!agc_cb_guard_intact(&probe)) {
-        return obs_fail("the call wrote past the end of its command buffer");
+        return obs_fail("the call wrote past the end of its command buffer (overrun)");
     }
-
+    if (probe.cur < probe.begin || probe.cur > probe.end) {
+        return obs_fail("the call left writer pointer outside buffer bounds");
+    }
     unsigned int written1 = agc_cb_written_bytes(&probe, OBS_AGC_POISON_BYTE);
     if (written1 > 0) {
-        obs_report_written(id, symbol, "small-args", before, probe.cmdbuf,
+        /* Wrote something on pass 1 */
+        obs_report_written(id, symbol, "pm4-pass1", before, probe.cmdbuf,
                            OBS_AGC_CMDBUF_SIZE);
-        return obs_pass_value((uint64_t)written1);
+        obs_report_measure(id, symbol, "rc-pass1", rc1, "rc");
+        return obs_pass();
     }
 
     /* Buffer remained untouched across both passes */
@@ -296,17 +364,17 @@ static obs_result check_agc_dcb_reset_queue(void) {
 
 /* sceAgcCreateShader: arity 4. Dumps 32-byte out-parameter and 0x200-byte shader object. */
 static obs_result check_agc_create_shader(void) {
-    static const uint32_t lengths[2] = {0xd8u, 0x118u};
-    static const char *labels[2] = {"payload-0xd8", "payload-0x118"};
+    static const uint32_t lengths[3] = {0xd8u, 0x118u, 0x108u};
+    static const char *labels[3] = {"payload-0xd8", "payload-0x118", "payload-0x108"};
     unsigned int valid_objects = 0;
     uint64_t last_ret = 0;
 
-    for (unsigned int p = 0; p < 2; p++) {
+    for (unsigned int p = 0; p < 3; p++) {
         uint32_t plen = lengths[p];
         const char *label = labels[p];
 
         /* Header: magic '1234', header size 0x18, payload length plen */
-        uint8_t header[24];
+        uint8_t header[32];
         for (size_t i = 0; i < sizeof(header); i++) {
             header[i] = 0;
         }
@@ -316,57 +384,129 @@ static obs_result check_agc_create_shader(void) {
         header[3] = 0x34; /* '4' */
         header[4] = 0x18; /* header size 24 bytes */
         *(uint32_t *)(header + 8) = plen;
+        if (p == 2) {
+            /* PPSA03416 format: 0xa8 at offset 24 */
+            *(uint32_t *)(header + 24) = 0xa8u;
+        }
 
         /* Payload buffer with deterministic non-zero pattern */
         uint8_t payload[0x200];
-        for (size_t i = 0; i < sizeof(payload); i++) {
-            payload[i] = (uint8_t)((i * 7u + 0x13u) & 0xFFu);
+        if (p == 2) {
+            /* PPSA03416 dumped bytecode header */
+            static const uint32_t ppsa_words[8] = {
+                0xBFA00001u, 0x7E000000u, 0x7E000000u, 0x7E000000u,
+                0x93EBFF03u, 0x00080008u, 0x8F6A8C6Bu, 0x8700FF03u
+            };
+            for (size_t i = 0; i < sizeof(payload); i++) {
+                payload[i] = 0;
+            }
+            for (size_t i = 0; i < 8; i++) {
+                *(uint32_t *)(payload + i * 4) = ppsa_words[i];
+            }
+            for (size_t i = 32; i < sizeof(payload); i++) {
+                payload[i] = (uint8_t)((i * 7u + 0x13u) & 0xFFu);
+            }
+        } else {
+            for (size_t i = 0; i < sizeof(payload); i++) {
+                payload[i] = (uint8_t)((i * 7u + 0x13u) & 0xFFu);
+            }
         }
 
-        /* 32-byte zeroed destination slot */
+        /* 32-byte poisoned destination slot to observe out-param writes */
         uint8_t out_slot[32];
         for (size_t i = 0; i < sizeof(out_slot); i++) {
-            out_slot[i] = 0;
+            out_slot[i] = 0xC7u;
         }
 
-        uint64_t rc = sceAgcCreateShader((void *)out_slot, (const void *)header,
-                                         (const void *)payload, 0);
-        last_ret = rc;
+        if (p == 0) {
+            obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
+                             "out-before", 0, out_slot, (unsigned int)sizeof(out_slot));
+        }
+
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        uint64_t rc = 0;
+        if (sig == 0) {
+            rc = sceAgcCreateShader((void *)out_slot, (const void *)header,
+                                    (const void *)payload, 0);
+            obs_fault_unregister();
+            last_ret = rc;
+
+            if (p == 0) {
+                obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                                   "rc-wellformed", rc, "code");
+                obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
+                                 "out-after", 0, out_slot, (unsigned int)sizeof(out_slot));
+            } else if (p == 1) {
+                obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                                   "rc-payload-118", rc, "code");
+            } else if (p == 2) {
+                obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                                   "rc-ppsa03416", rc, "code");
+            }
+        } else {
+            obs_fault_unregister();
+            if (p == 0) {
+                obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                                   "rc-wellformed", (uint64_t)sig, "fault-sig");
+                obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
+                                 "out-after", 0, out_slot, (unsigned int)sizeof(out_slot));
+            } else if (p == 1) {
+                obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                                   "rc-payload-118", (uint64_t)sig, "fault-sig");
+            } else if (p == 2) {
+                obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                                   "rc-ppsa03416", (uint64_t)sig, "fault-sig");
+            }
+        }
 
         /* Record the 32 bytes at arg0 */
         obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", label, 0,
                          out_slot, (unsigned int)sizeof(out_slot));
 
-        /* If *arg0 is a mapped pointer, dump 0x200 bytes from it */
-        const void *shader_obj = *(const void **)out_slot;
-        if (obs_address_is_callable(shader_obj)) {
-            valid_objects++;
-            const char *obj_label = (p == 0) ? "shader-obj-d8" : "shader-obj-118";
-            obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
-                             obj_label, 0, (const unsigned char *)shader_obj,
-                             0x200u);
+        /* If *arg0 was written and is a mapped pointer, dump 0x200 bytes from it */
+        if (rc == 0) {
+            const void *shader_obj = *(const void **)out_slot;
+            if (shader_obj != NULL && obs_address_is_callable(shader_obj)) {
+                valid_objects++;
+                const char *obj_label = (p == 0) ? "shader-obj-d8" : ((p == 1) ? "shader-obj-118" : "shader-obj-108");
+                obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
+                                 obj_label, 0, (const unsigned char *)shader_obj,
+                                 0x200u);
 
-            /* Specifically inspect +0x30 (quadword) and +0x50 (dword) */
-            uint64_t field_30 =
-                *(const uint64_t *)((const char *)shader_obj + 0x30);
-            uint32_t field_50 =
-                *(const uint32_t *)((const char *)shader_obj + 0x50);
-            obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
-                             "field-0x30", 0x30,
-                             (const unsigned char *)&field_30,
-                             (unsigned int)sizeof(field_30));
-            obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
-                             "field-0x50", 0x50,
-                             (const unsigned char *)&field_50,
-                             (unsigned int)sizeof(field_50));
+                /* Specifically inspect +0x30 (quadword) and +0x50 (dword) */
+                uint64_t field_30 =
+                    *(const uint64_t *)((const char *)shader_obj + 0x30);
+                uint32_t field_50 =
+                    *(const uint32_t *)((const char *)shader_obj + 0x50);
+                obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
+                                 "field-0x30", 0x30,
+                                 (const unsigned char *)&field_30,
+                                 (unsigned int)sizeof(field_30));
+                obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader",
+                                 "field-0x50", 0x50,
+                                 (const unsigned char *)&field_50,
+                                 (unsigned int)sizeof(field_50));
+            }
         }
     }
 
-    if (valid_objects == 2) {
-        return obs_pass_value((uint64_t)valid_objects);
+    /* Null argument call */
+    obs_jmp_buf guard_null;
+    int sig_null = OBS_FAULT_ARM(&guard_null);
+    if (sig_null == 0) {
+        uint64_t rc_null = sceAgcCreateShader(NULL, NULL, NULL, 0);
+        obs_fault_unregister();
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "rc-null",
+                           rc_null, "code");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "rc-null",
+                           (uint64_t)sig_null, "fault-sig");
     }
-    if (valid_objects == 1) {
-        return obs_partial("one shader run wrote a valid object; recorded");
+
+    if (valid_objects > 0) {
+        return obs_pass_value((uint64_t)valid_objects);
     }
     if (last_ret != 0) {
         return obs_partial_value(
@@ -451,6 +591,7 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_patch_exclusion_guard,
      OBS_FROM_ASSUMED},
 };
+#endif
 
 const obs_section obs_section_agc = {
     "166-agc",

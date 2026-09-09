@@ -38,6 +38,9 @@ impl Palette {
             Status::Fail => "\x1b[31m",
             // Bold red: a crash is the worst outcome and should catch the eye past a fail.
             Status::Crash => "\x1b[1;31m",
+            // Cyan: unresolved but distinct from a grey skip - it wants an input, not
+            // dismissal. (D328)
+            Status::Pending => "\x1b[36m",
             Status::Skip => "\x1b[90m",
         }
     }
@@ -83,6 +86,7 @@ fn marker(status: Status) -> &'static str {
         Status::Partial => "WARN",
         Status::Fail => "FAIL",
         Status::Crash => "CRSH",
+        Status::Pending => "PEND",
         Status::Skip => "--  ",
     }
 }

@@ -99,7 +99,10 @@ OBS_WEAK uint64_t sceKernelReadTsc(void);
  * stack - and it is the only part being taken. */
 OBS_WEAK int sceKernelDirectMemoryQuery(sce_off_t offset, int flags, void *info,
                                         size_t size);
+OBS_WEAK int sceKernelReserveVirtualRange(void **addr_out, size_t len, int flags,
+                                          size_t alignment);
 OBS_WEAK int sceKernelGetSystemSwVersion(void *version);
+OBS_WEAK int *__error(void);
 
 /* The kernel answering questions about itself, by name.
  *
@@ -933,6 +936,16 @@ OBS_WEAK int sceAudioOutInit(void);
 OBS_WEAK int sceAudioOutOpen(int user_id, int type, int index, uint32_t length,
                              uint32_t frequency, uint32_t param);
 OBS_WEAK int sceAudioOutClose(int handle);
+/* The behavioural half of the audio surface, called rather than censused so the SDK can
+ * settle what a header states without evidence: whether a selector of 0 opens stereo or
+ * mono (the port-state record carries the channel count), which chunk sizes an open
+ * accepts, whether output blocks, and what the volume flags mean. `sceAudioOutOutput` takes
+ * a `const void *` sample buffer; `sceAudioOutGetPortState` writes a state record read as
+ * bytes (its layout is what the probe is measuring, so none is declared); `sceAudioOutSetVolume`
+ * takes a flag and a volume array. Arities from the OpenOrbis toolchain, a permitted source. */
+OBS_WEAK int sceAudioOutOutput(int handle, const void *ptr);
+OBS_WEAK int sceAudioOutGetPortState(int handle, void *state);
+OBS_WEAK int sceAudioOutSetVolume(int handle, int flag, int *vol);
 
 /* ---- libScePad ------------------------------------------------------------- */
 
@@ -949,6 +962,12 @@ OBS_WEAK int scePadClose(int handle);
  * button offset and masks come from the OpenOrbis SDK, an open-source toolchain, which
  * is a permitted provenance source. */
 OBS_WEAK int scePadReadState(int handle, void *data);
+/* The batched read, called rather than censused so the SDK can confirm the record stride:
+ * `scePadRead` returns how many records it filled and writes that many into the buffer, so
+ * the write extent divided by the count is the stride a batched reader must use. Same `void *`
+ * reasoning as `scePadReadState` - only the extent and the button word are read. (num is the
+ * count requested.) Arity from the OpenOrbis toolchain, a permitted source. */
+OBS_WEAK int scePadRead(int handle, void *data, int num);
 
 /* ---- libSceKeyboard -------------------------------------------------------- */
 
@@ -1059,6 +1078,11 @@ OBS_WEAK int scePadGetControllerInformation(int handle, void *info);
  * get wrong; it lives here with the rest of them now. */
 #define OBS_VIDEO_BUS_MAIN 0
 
+/* The main audio-out port type. 0 is `SCE_AUDIO_OUT_PORT_TYPE_MAIN` in the OpenOrbis
+ * toolchain, an open-source and so permitted source; a named constant rather than a bare 0
+ * in the audio probes. */
+#define OBS_AUDIO_OUT_PORT_TYPE_MAIN 0
+
 #define OBS_SEEK_SET 0
 #define OBS_SEEK_CUR 1
 #define OBS_SEEK_END 2
@@ -1137,6 +1161,21 @@ OBS_WEAK int sceNetAccept(int s, void *addr, uint32_t *paddrlen);
 OBS_WEAK int sceNetRecv(int s, void *buf, uint64_t len, int flags);
 OBS_WEAK int sceNetSend(int s, const void *buf, uint64_t len, int flags);
 OBS_WEAK int sceNetSocketClose(int s);
+/* The socket-option and connect calls Porthole's accept loop depends on, called rather than
+ * censused so the probe can settle what two public sources disagree on: the non-blocking
+ * option value (0x1200 in the OpenOrbis/CTurt headers, 0x1100 in vitasdk) and the would-block
+ * code a non-blocking recv returns. `sceNetConnect` is here for the accept-inherits probe's
+ * loopback self-connect. Arities from the OpenOrbis toolchain, a permitted source. */
+OBS_WEAK int sceNetSetsockopt(int s, int level, int optname, const void *optval,
+                              uint32_t optlen);
+OBS_WEAK int sceNetConnect(int s, const void *addr, uint32_t addrlen);
+
+/* Socket-option and flag constants the net probes name rather than pass as bare numbers. The
+ * two SO_NBIO values are the disagreeing public sources (D329); the probe tries 0x1200 first. */
+#define OBS_NET_SOL_SOCKET 0xFFFF
+#define OBS_NET_SO_NBIO_OPENORBIS 0x1200
+#define OBS_NET_SO_NBIO_VITASDK 0x1100
+#define OBS_NET_MSG_DONTWAIT 0x80
 
 /* The GPU command-building half of libSceGnmDriver.
  *
@@ -1180,5 +1219,8 @@ OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_
     __asm__("$fYZQG4CU71c");
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
                                      const void *payload, uint64_t arg3);
+
+/* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
+OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb, uint64_t arg1, uint64_t arg2);
 
 #endif /* OBSCENE_PLATFORM_H */

@@ -20,8 +20,7 @@ printf '=== derive (module)\n'
 # It must say that rather than pass: a check that quietly succeeds on a file it cannot
 # read is worse than no check.
 printf '=== derive (payload, must refuse)\n'
-pelf="$BUILD/obscene-payload.elf"
-[ -f "$pelf" ] || pelf="$BUILD/obscene.elf"
+pelf="$BUILD/obscene-probe-prospero.elf"
 if "$TOOL" derive "$pelf"; then
     echo "FAIL: derive accepted a payload" >&2
     exit 1

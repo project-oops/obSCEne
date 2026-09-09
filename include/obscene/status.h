@@ -33,6 +33,14 @@ typedef enum obs_status {
      * no `res` means the call did not return" now has one exception, and this is it - the
      * `res` names the crash rather than the record being absent. (D325) */
     OBS_CRASH = 4,
+    /* Blue. The check can run, but has not been given the input it needs - a controller
+     * attached, a button pressed, a stick deflected. Distinct from SKIP, which says the
+     * check does not apply here: PENDING says it does apply and is waiting. It is never
+     * blocking and never fatal - the check samples its window, finds nothing, and reports
+     * that it is still waiting, so a re-run once the input is provided produces the real
+     * result. A `try` with no `res` still means the call did not return; a PENDING `res`
+     * means the call returned but the peripheral did not. (D328) */
+    OBS_PENDING = 5,
 } obs_status;
 
 /* What one check observed. */
@@ -58,6 +66,10 @@ obs_result obs_skip(const char *detail);
  * as the value so a run is diffable on which signal a call raised. Only the fault guard
  * constructs this; a check never returns it directly. */
 obs_result obs_crash(int signal);
+/* The check needs an input it has not been given (a peripheral, a button press). Non-blocking
+ * and non-fatal: it reports what it is waiting for and nothing more, and a re-run with the
+ * input produces the real result. (D328) */
+obs_result obs_pending(const char *detail);
 
 /* Stable lowercase name, used in the machine-readable line. */
 const char *obs_status_name(obs_status status);

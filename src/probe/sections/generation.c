@@ -25,6 +25,7 @@
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/sections.h"
+#include "oops/target.h"
 
 /* Discriminators.
  *
@@ -32,8 +33,10 @@
  * graphics driver has no counterpart on current hardware, and the current
  * generation's does not exist on the previous one. Declared as data so they can only
  * be probed, never called - the same rule the census follows, for the same reason. */
+#if !OOPS_TARGET_IS_PS5
 extern OBS_WEAK const char sceGnmSubmitCommandBuffers;
 extern OBS_WEAK const char sceGnmDrawIndex;
+#endif
 /* The current generation has exactly one discriminator here, not two, because only
  * one has a source (D008). A name invented to round out the pair would resolve on
  * nothing and quietly misreport current-generation hardware as unidentifiable - the
@@ -43,7 +46,9 @@ extern OBS_WEAK const char sceGnmDrawIndex;
  * removed. The previous generation's submit-done and the current generation's
  * command-buffer acquire: both unambiguous, both already declared this way somewhere,
  * and having them here means one file owns the question. */
+#if !OOPS_TARGET_IS_PS5
 extern OBS_WEAK const char sceGnmSubmitDone;
+#endif
 
 /* What the probe concluded. Read by later sections and by the report renderer, so an
  * other-generation absence can be shown as expected rather than as a fault. */
@@ -61,8 +66,12 @@ static obs_generation detected = OBS_GENERATION_UNKNOWN;
  * and not another still answers, and any of them resolving is evidence the driver is
  * there. */
 static int obs_previous_present(void) {
+#if OOPS_TARGET_IS_PS5
+    return 0;
+#else
     return &sceGnmSubmitCommandBuffers != NULL || &sceGnmDrawIndex != NULL ||
            &sceGnmSubmitDone != NULL;
+#endif
 }
 
 /* The current generation's driver is asked for **at run time**, not linked.
@@ -82,6 +91,12 @@ static int obs_previous_present(void) {
  * The markers stay the same two, for the reason above them - more markers rather than
  * fewer - and so does the meaning of the answer. (D230) */
 static int obs_current_present(void) {
+#if OOPS_TARGET_IS_PS4
+    /* When targeting PS4 (EI_ABIVERSION 0), attempting to open current-generation
+     * EI_ABIVERSION 2 libraries causes the loader to reject them with
+     * 'ABIVERSION mismatch' in system logs. Skip probe on PS4 targets. */
+    return -1;
+#else
     /* Unanswerable, not absent.
      *
      * A loader that cannot resolve modules by name says "no" to every one, so without
@@ -132,6 +147,7 @@ static int obs_current_present(void) {
         return -1;
     }
     return 0;
+#endif
 }
 
 /* The detected generation, computed on demand.

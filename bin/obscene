@@ -96,7 +96,7 @@ case "${1:-help}" in
     # `sweep` runs all three delivery legs in series - payload, package, native eboot - and writes
     # two timestamped files per leg under reports/hardware/: `<TS>-<leg>.log` (the whole run:
     # build, send/install, device system log) and `<TS>-<leg>.obs.log` (the OBS records only). Six
-    # files for a full sweep. Flags: --seconds N, --corpus 0|1, --only "pkg eboot".
+    # files for a full sweep. Flags: --seconds N, --corpus 0|1, --only "pkg eboot", --deploy-only.
     sweep)    shift; bash scripts/sweep.sh "$@" ;;
     # `payload` is the other round-trip: build the unsandboxed plain-ELF shape, run it through
     # elfldr, and capture the system log across the run. All out-connections, so no Windows half -
@@ -110,7 +110,7 @@ case "${1:-help}" in
     payload-build)  shift; make payload "$@" ;;
     injector-build) shift; make injector "$@" ;;
     payload)  shift; bash scripts/payload-run.sh "$@" ;;
-    # `inject` runs the native process injector: builds both obscene-payload.elf and
+    # `inject` runs the native process injector: builds both obscene-probe-prospero.elf and
     # obscene-injector.elf, sends the injector through elfldr, which hijacks the foreground title
     # to run obSCEne natively.
     inject|injector) shift; bash scripts/payload-run.sh --injector "$@" ;;

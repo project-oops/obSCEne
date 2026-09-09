@@ -60,6 +60,7 @@ const obs_section *const obs_sections[] = {
      * 030-thread has established that a thread can be created at all - and every wait
      * here happens on one. */
     &obs_section_syncaddr,
+    &obs_section_fiber,
     /* The C runtime, which the allocator builds on both of the above. */
     &obs_section_libc,
     &obs_section_math,
@@ -84,6 +85,12 @@ const obs_section *const obs_sections[] = {
     &obs_section_audio,
     &obs_section_input,
     &obs_section_input_ext,
+    /* Network reachability, for Porthole (D329). */
+    &obs_section_net,
+    /* System UI reachability (REQ-20260909T2157Z-5b1e): probes SceShellUI process identity,
+     * mapped WebKit/JavaScript modules, export reachability across 3 routes, JS evaluation
+     * entry points, and process takeover refusal. */
+    &obs_section_shellui,
     /* Recording, last of the presentation layer: it drives the encoder behind the same
      * output the video section acquires, so a reader wants to know whether that output
      * works before reading anything about what it encodes.

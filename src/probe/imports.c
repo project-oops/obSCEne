@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 
+#include "oops/target.h"
 #include "obscene/platform.h"
 
 typedef struct obs_import {
@@ -55,8 +56,9 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "sceKernelMapDirectMemory"},
     {"libkernel", "sceKernelMunmap"},
     {"libkernel", "sceKernelProtectDirectMemory"},
-    {"libkernel", "sceKernelProtectDirectMemoryForPID"},
     {"libkernel", "sceKernelBatchMap"},
+    {"libkernel", "sceKernelDirectMemoryQuery"},
+    {"libkernel", "sceKernelReserveVirtualRange"},
     {"libkernel", "sceKernelUsleep"},
     {"libkernel", "sceKernelIsNeoMode"},
     {"libkernel", "scePthreadSelf"},
@@ -67,6 +69,16 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "_sigprocmask"},
     {"libkernel", "sceKernelLoadStartModule"},
     {"libkernel", "sceKernelDlsym"},
+    {"libkernel", "__error"},
+    {"libkernel", "__sys_socketex"},
+    {"libkernel", "_sendto"},
+    {"libkernel", "_setsockopt"},
+    {"libkernel", "accept"},
+    {"libkernel", "bind"},
+    {"libkernel", "close"},
+    {"libkernel", "connect"},
+    {"libkernel", "listen"},
+    {"libkernel", "recv"},
     {"libSceLibcInternal", "strlen"},
     {"libSceLibcInternal", "strcmp"},
     {"libSceLibcInternal", "strncmp"},
@@ -133,6 +145,7 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAudioOut", "sceAudioOutClose"},
     {"libSceAudioOut", "sceAudioOutOutput"},
     {"libSceAudioOut", "sceAudioOutSetVolume"},
+    {"libSceAudioOut", "sceAudioOutGetPortState"},
     {"libScePad", "scePadInit"},
     {"libScePad", "scePadOpen"},
     {"libScePad", "scePadClose"},
@@ -248,10 +261,12 @@ static const obs_import obs_platform_imports[] = {
     {"libSceNet", "sceNetRecv"},
     {"libSceNet", "sceNetSend"},
     {"libSceNet", "sceNetSocketClose"},
+    {"libSceNet", "sceNetSetsockopt"},
+    {"libSceNet", "sceNetConnect"},
 
-    /* The GPU command-builders (src/sections/gnm.c). Only the two whose arity two
-     * independent reimplementations confirm; the rest of libSceGnmDriver stays in the
-     * census, uncalled. */
+#if !OOPS_TARGET_IS_PS5
+    /* The GPU command-builders (src/sections/gnm.c). Only on PS4 targets (Orbis/Neo).
+     * Excluded on PS5 targets so libSceGnmDriver is not in DT_NEEDED. */
     {"libSceGnmDriver", "sceGnmDispatchInitDefaultHardwareState"},
     {"libSceGnmDriver", "sceGnmDispatchDirect"},
     /* Called by checks and, until now, declared only by the census.
@@ -271,7 +286,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceGnmDriver", "sceGnmDrawIndex"},
     {"libSceGnmDriver", "sceGnmSubmitCommandBuffers"},
     {"libSceGnmDriver", "sceGnmSubmitDone"},
+#endif
 
+#if !OOPS_TARGET_IS_PS4
     /* libSceAgc: current-generation GPU command builders and shaders */
     {"libSceAgc", "sceAgcCbNop"},
     {"libSceAgc", "sceAgcCbReleaseMem"},
@@ -280,6 +297,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "sceAgcDcbResetQueue"},
     {"libSceAgc", "$fYZQG4CU71c"},
     {"libSceAgc", "sceAgcCreateShader"},
+    /* libSceAgcDriver: current-generation GPU driver submission */
+    {"libSceAgcDriver", "sceAgcDriverSubmitDcb"},
+#endif
 
     /* Address-probed by the HUD (src/sysinfo.c), never called - its struct layout is
      * unconfirmed. Listed so mkmodule knows the library the presence probe imports
@@ -363,6 +383,13 @@ static const obs_import obs_platform_imports[] = {
 
     /* Controller orientation reset */
     {"libScePad", "scePadResetOrientation"},
+
+    /* Gnm driver functions used by oops-sdk gnm_display on Orbis */
+    {"libSceGnmDriver", "sceGnmDispatchDirect"},
+    {"libSceGnmDriver", "sceGnmDispatchInitDefaultHardwareState"},
+    {"libSceGnmDriver", "sceGnmDrawIndex"},
+    {"libSceGnmDriver", "sceGnmSubmitCommandBuffers"},
+    {"libSceGnmDriver", "sceGnmSubmitDone"},
 
     /* Ends the run. See src/start.c. */
     {"libSceLibcInternal", "exit"},

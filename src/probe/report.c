@@ -169,6 +169,33 @@ void obs_report_guard(int available, const char *detail) {
     line_end(&l);
 }
 
+void obs_report_resolution(int works, const char *detail) {
+    /* Whether module enumeration and dlsym work here at all. In payload mode they do not - the
+     * loader hands the payload no module list and no dlsym handle - so every `module|...|0x0`
+     * and every "symbol unresolvable" below is "the enumeration could not see it", not "the
+     * library is absent". Without this line the two are identical, which is the distinction the
+     * honest-failure principle exists to keep. Emitted once, near the top. (D329) */
+    line l;
+    line_start(&l, "resolution");
+    line_field(&l, works ? "works" : "unavailable");
+    line_field(&l, detail != NULL ? detail : "");
+    line_end(&l);
+}
+
+void obs_report_peripherals(int pad, int keyboard, int mouse, int audio) {
+    /* What was attached when the run started, one field per device, so a peripheral probe's
+     * extent of zero reads as "nothing plugged in" rather than "the call wrote nothing" - the
+     * difference between a PENDING waiting for you and a real finding. Detected by opening and
+     * closing each once at run start; a device that would not open reads 0. (D328) */
+    line l;
+    line_start(&l, "peripherals");
+    line_field(&l, pad ? "pad" : "-");
+    line_field(&l, keyboard ? "keyboard" : "-");
+    line_field(&l, mouse ? "mouse" : "-");
+    line_field(&l, audio ? "audio" : "-");
+    line_end(&l);
+}
+
 void obs_report_resume(unsigned int skipped, int overflowed) {
     /* Emitted whether or not anything was carried, because "nothing was skipped" and
      * "this build cannot skip" are different runs and a reader cannot tell them apart
@@ -386,6 +413,8 @@ void obs_report_section_tally(const obs_section *section, obs_tally tally) {
      * contract allows without a version bump. A pre-guard parser reads the first four and
      * ignores this; a current one sees the crashes. (D325) */
     line_field_u64(&l, tally.crash);
+    /* Pending appended after crash, same trailing-field contract. (D328) */
+    line_field_u64(&l, tally.pending);
     line_end(&l);
 }
 
@@ -545,6 +574,8 @@ void obs_report_tally(obs_tally tally) {
     line_field_u64(&l, tally.skip);
     /* Trailing crash count; appended for the same contract reason as the section tally. */
     line_field_u64(&l, tally.crash);
+    /* Trailing pending count, appended after crash. (D328) */
+    line_field_u64(&l, tally.pending);
     line_end(&l);
 }
 

@@ -16,6 +16,8 @@ version in the `meta` record; new fields may only be appended to the end of a li
 | `context` | measured run environment `<delivery>/<generation>` (e.g. `payload/ps4-bc`, `payload/ps5-native`), then a basis; the environment a run measured in, orthogonal to a check's `OBS_FROM_*` provenance |
 | `sink` | path the report was also written to, or `none` |
 | `guard` | fault guard `on`/`off`, and a short account of what init resolved - so a run that could catch a crashing check is told from one that could not |
+| `peripherals` | four fields - pad, keyboard, mouse, audio - each the device name when it opened at run start or `-` when it did not, so a peripheral probe's `pending` reads against what was attached |
+| `resolution` | whether module enumeration and dlsym work here (`works`/`unavailable`) and a short reason - so a `module\|...\|0x0` and an unresolvable symbol read as "not seen" rather than "absent" in a leg that could not enumerate (payload mode) |
 | `net` | command-socket state (`listening`/`unavailable`), port |
 | `sysinfo` | field (`memory`, `vram`, `generation`, `gpu`, `ip`, `firmware`, `temp`, `storage`, `listening`), state (`known`/`unconfirmed`/`absent`), value (or `unknown`) |
 | `display` | state, detail, code - the code is the platform's own answer where a call refused, `0x0` where none did |
@@ -48,9 +50,9 @@ the expectation behind the verdict:
 | `progress` | check id, how far it got |
 | `module` | module name, handle |
 | `moduleword` | offset, value |
-| `sectiontally` | section id, pass, partial, fail, skip, crash |
+| `sectiontally` | section id, pass, partial, fail, skip, crash, pending |
 | `frontier` | capabilities established, checks blocked, deepest wholly-green section |
-| `tally` | pass, partial, fail, skip, crash |
+| `tally` | pass, partial, fail, skip, crash, pending |
 | `bytes` | check id, symbol, label, offset, hex - one line of a buffer dump. Three labels are counts rather than data and carry an empty hex field: `extent` (last byte written, or with `written` the last byte **changed**), `changed` (how many bytes differ), `untouched` (a run inside the extent the call left alone - a field boundary a hexdump cannot show) |
 | `size` | library, symbol, argument index, size, `accepted`/`rejected`, returned code - one rung of a size ladder. The boundary between the two **is** the structure size, drawn by the platform rather than by this project |
 | `err` | library, symbol, argument description, returned value |
@@ -122,12 +124,15 @@ A **regression** is a check that got *worse*, not a check that is failing. A run
 everything fails and nothing changed exits 0, which is correct: nothing regressed. Ask
 `obscene-tool verify` whether a report is sound, and the tally whether the platform is any good.
 
-Statuses are ordered `crash < skip < fail < partial < pass`. `skip` sits below `fail`
-deliberately - a check that stopped running tells you *less* than one that ran and
+Statuses are ordered `crash < pending < skip < fail < partial < pass`. `skip` sits below
+`fail` deliberately - a check that stopped running tells you *less* than one that ran and
 failed, so losing coverage counts as a regression even though nothing went red. A
 check that disappears from the report entirely counts the same way. `crash` sits below
 all of them: a check that starts faulting - from a pass, a fail, or even a skip - is the
-most serious regression a run can show.
+most serious regression a run can show. `pending` sits between `crash` and `skip`: like a
+skip it resolved nothing, but unlike a skip it *can* run - it is one input away from an
+answer (a controller plugged in, a button pressed), so it is worth seeing apart from a
+skip and does not count against coverage the way a skip does.
 
 The `build` record is what lets a diff distinguish "the probe changed" from "the
 platform changed" - very different answers to "did that help?". It is stamped in at
@@ -370,6 +375,7 @@ announcement would make a skip indistinguishable from a crash.
 | `fail` | It returned an error where success was expected |
 | `skip` | A prerequisite did not hold, so nothing was attempted and nothing was learned |
 | `crash` | The call faulted (SIGSEGV and its kin) and the fault guard recovered the run. The value field carries the signal number. The strongest finding a probe can make; ordered below every other status for regressions |
+| `pending` | The check can run but was not given the input it needs - a peripheral attached, a button pressed, a stick deflected. Never blocking and never fatal: it samples its window, finds nothing, and reports that it is still waiting. A re-run with the input provided produces the real result. Distinct from `skip`, which says the check does not apply here (D328) |
 
 `partial` exists because an implementation returning zero for everything would
 otherwise look perfect. `skip` exists because without it one broken allocator turns

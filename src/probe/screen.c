@@ -48,6 +48,8 @@
 #include "obscene/report.h"
 #include "obscene/sections.h"
 #include "obscene/sysinfo.h"
+#include "obscene/runtime.h"
+#include "oops/target.h"
 
 /* `OBS_SCREEN_MAX` comes from `obscene/sections.h`, beside the list it has to be larger
  * than, and `registry.c` asserts the two agree. It was defined here and drifted. (D259)
@@ -149,6 +151,75 @@ static unsigned int obs_row_count = 0;
 static unsigned int obs_total_sections = 0;
 static unsigned int obs_total_checks = 0;
 static int obs_live = 0;
+static int s_obs_pltauth_failed = 0;
+static int obs_draw_wordmark(int x, int y, int scale);
+
+int obs_pltauth_is_failed(void) {
+    return s_obs_pltauth_failed;
+}
+
+int obs_pltauth_check(void) {
+#if defined(OBSCENE_HOST_BUILD) || OOPS_TARGET_IS_PS4
+    return 1;
+#else
+    /* Check /dev/pltauth device node */
+    int fd = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/dev/pltauth", 0 /* O_RDONLY */, 0, 0, 0, 0);
+    if (fd < 0) {
+        fd = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/dev/pltauth", 2 /* O_RDWR */, 0, 0, 0, 0);
+    }
+    if (fd < 0) {
+        return 0;
+    }
+    long ret = obs_invoke_syscall(54 /* SYS_ioctl */, (long)fd, (long)0xdeadbeef, 0, 0, 0, 0);
+    (void)obs_invoke_syscall(6 /* SYS_close */, (long)fd, 0, 0, 0, 0, 0);
+    return (ret == 0) ? 1 : 0;
+#endif
+}
+
+void obs_screen_show_pltauth_error(void) {
+    if (!obs_live) {
+        return;
+    }
+    int w = obs_display_width();
+    int h = obs_display_height();
+    if (w == 0 || h == 0) {
+        return;
+    }
+
+    for (int frame = 0; frame < 3; frame++) {
+        obs_display_clear(OBS_COLOUR_GROUND);
+
+        int x0 = OBS_MARGIN;
+        (void)obs_draw_wordmark(x0, 56, 6);
+
+        int card_y = 150;
+        int card_h = 280;
+        int card_w = w - x0 * 2;
+        obs_display_rect(x0, card_y, card_w, card_h, 0xFF221115u);
+        obs_display_rect(x0, card_y, card_w, 4, OBS_COLOUR_FAIL);
+        obs_display_rect(x0, card_y + card_h - 4, card_w, 4, OBS_COLOUR_FAIL);
+
+        obs_display_text(x0 + 36, card_y + 36, "PLTAUTH FAILED :(", OBS_COLOUR_FAIL, 4);
+
+        obs_display_text(x0 + 36, card_y + 96,
+                         "PFAUTHCLIENT ENTITLEMENT VERIFICATION FAILED (0X80DE0051)",
+                         OBS_COLOUR_INK, 2);
+
+        obs_display_text(x0 + 36, card_y + 136,
+                         "NATIVE PROSPERO (CATEGORY 0) HOMEBREW REQUIRES PLTAUTH-PATCH",
+                         OBS_COLOUR_DIM, 2);
+
+        obs_display_text(x0 + 36, card_y + 176,
+                         "ACTION: LOAD PLTAUTH-PATCH.ELF VIA PROSPEROUS PAYLOAD MANAGER",
+                         OBS_COLOUR_ACCENT, 2);
+
+        obs_display_text(x0 + 36, card_y + 216,
+                         "THEN RELAUNCH THIS APPLICATION",
+                         OBS_COLOUR_INK, 2);
+
+        obs_display_flip();
+    }
+}
 
 void obs_screen_begin(unsigned int sections, unsigned int checks) {
     obs_total_sections = sections;
@@ -186,6 +257,20 @@ void obs_screen_begin(unsigned int sections, unsigned int checks) {
     static const char *const names[] = {"untried", "ready", "absent", "failed"};
     obs_report_display(names[(int)state], obs_display_status_text(),
                        obs_display_status_code());
+
+#if !OOPS_TARGET_IS_PS4
+    if (obs_pltauth_check() == 0) {
+        s_obs_pltauth_failed = 1;
+        obs_boot_note("obscene: FATAL: /dev/pltauth bypass is not active!\n");
+        obs_boot_note("obscene: PFAuthClient will reject native Prospero execution (0x80de0051)\n");
+        obs_boot_note("obscene: Load pltauth-patch.elf via Prosperous payload manager to enable native execution\n");
+        obs_report_display("failed", "pltauth bypass missing (PFAuthClient 0x80de0051)", 0x80de0051);
+        if (obs_live) {
+            obs_screen_show_pltauth_error();
+        }
+        return;
+    }
+#endif
 
     if (obs_live) {
         obs_screen_redraw(0);
@@ -345,6 +430,17 @@ void obs_screen_hud(void) {
     if (!obs_live) {
         return;
     }
+#if !OOPS_TARGET_IS_PS4
+    if (obs_pltauth_check() == 0) {
+        s_obs_pltauth_failed = 1;
+        obs_boot_note("obscene: FATAL: /dev/pltauth bypass is not active!\n");
+        obs_boot_note("obscene: PFAuthClient will reject native Prospero execution (0x80de0051)\n");
+        obs_boot_note("obscene: Load pltauth-patch.elf via Prosperous payload manager to enable native execution\n");
+        obs_report_display("failed", "pltauth bypass missing (PFAuthClient 0x80de0051)", 0x80de0051);
+        obs_screen_show_pltauth_error();
+        return;
+    }
+#endif
     /* Drawn a few times, not once. The suite screen converges because it redraws after
      * every section; a serving build draws the HUD and then blocks on `accept`, so a
      * single flip that the presenter has not yet scanned out leaves a black window. A
@@ -426,7 +522,7 @@ void obs_screen_redraw(const char *footer) {
     /* Title, and the platform HUD where the tagline used to be. */
     obs_draw_hud(obs_draw_wordmark(OBS_MARGIN, 56, 6) + 24, 50, w);
 
-    obs_tally total = {0, 0, 0, 0, 0};
+    obs_tally total = {0, 0, 0, 0, 0, 0};
     for (unsigned int i = 0; i < obs_row_count; i++) {
         total.pass += obs_rows[i].tally.pass;
         total.partial += obs_rows[i].tally.partial;
@@ -547,6 +643,9 @@ static obs_colour colour_of(obs_status status) {
         /* No separate palette entry; a crash reads as red on screen, which is where the
          * eye should go, and the marker below names it. */
         return OBS_COLOUR_FAIL;
+    case OBS_PENDING:
+        /* Grey like a skip: nothing has been learned yet. The marker names it. */
+        return OBS_COLOUR_SKIP;
     case OBS_SKIP:
     default:
         return OBS_COLOUR_SKIP;
@@ -563,6 +662,8 @@ static const char *marker_of(obs_status status) {
         return "FAIL";
     case OBS_CRASH:
         return "CRASH";
+    case OBS_PENDING:
+        return "PEND";
     case OBS_SKIP:
     default:
         return "--";
@@ -684,6 +785,7 @@ static void obs_screen_wait(unsigned int microseconds) {
 #define OBS_PAD_L1 0x00000400u
 #define OBS_PAD_R1 0x00000800u
 #define OBS_PAD_CIRCLE 0x00002000u
+#define OBS_PAD_CROSS 0x00004000u
 
 /* ~90 ms a poll: responsive to a press without spinning the CPU on a screen that is
  * idle. */
@@ -855,6 +957,18 @@ void obs_screen_present(void) {
 
     obs_pad_open();
     obs_kb_open();
+
+    if (s_obs_pltauth_failed) {
+        /* Hold the pltauth error on screen and wait for user exit / controller intervention */
+        for (;;) {
+            obs_screen_wait(OBS_PAD_POLL_MICROSECONDS);
+            uint32_t now = obs_nav_input();
+            if (now & (OBS_PAD_CIRCLE | OBS_PAD_CROSS)) {
+                break;
+            }
+        }
+        return;
+    }
 
     unsigned int pages = page_count();
     unsigned int page = 0;

@@ -50,4 +50,14 @@ void obs_screen_present(void);
  * the suite. See src/start.c and src/screen.c. */
 void obs_screen_hud(void);
 
+/* Checks if /dev/pltauth is patched for native Prospero category 0 execution.
+ * Returns 1 if pltauth is patched (or on PS4/host), 0 if unpatched/failing. */
+int obs_pltauth_check(void);
+
+/* Returns 1 if the pltauth check failed at startup. */
+int obs_pltauth_is_failed(void);
+
+/* Displays the 'PLTAUTH FAILED :(' visual error card. */
+void obs_screen_show_pltauth_error(void);
+
 #endif /* OBSCENE_SCREEN_H */

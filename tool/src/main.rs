@@ -1888,6 +1888,7 @@ fn print_diff(comparison: &diff::Comparison) {
             ("fail", delta(after.fail, before.fail)),
             ("skip", delta(after.skip, before.skip)),
             ("crash", delta(after.crash, before.crash)),
+            ("pending", delta(after.pending, before.pending)),
         ];
         let moved: Vec<String> = deltas
             .iter()

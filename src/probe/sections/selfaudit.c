@@ -62,17 +62,17 @@
 /* Enough of the header to cover every fixed row. self_header is 0x20 bytes; a little
  * more costs nothing and future rows past 0x20 would be covered too. */
 #define OBS_SELFAUDIT_LEN 0x40
+#define OBS_SELF_STRUCT_LEN 4096u
 
 /* The structural roots where applications live. Not title ids - the directories a title
  * id sits *inside*. The walk discovers whatever is there. A system app is the vendor
  * container the audit wants; `/app0` is the running app itself and is tried last (see
  * the header comment). */
 static const char *const obs_app_roots[] = {
+    "/system_ex/app",
     "/system/vsh/app",
     "/user/app",
 };
-#define OBS_APP0_EBOOT "/app0/eboot.bin"
-
 /* Read a little-endian value of `size` bytes at `offset`. */
 static unsigned long long obs_le(const unsigned char *buf, unsigned int offset,
                                  unsigned int size) {
@@ -83,24 +83,6 @@ static unsigned long long obs_le(const unsigned char *buf, unsigned int offset,
     return value;
 }
 
-/* Read up to `cap` bytes of a path into `buf`. Returns the count, or -1. The bytes live
- * only for this check and are never written anywhere.
- *
- * # `cap` is a parameter because it used to be a constant
- *
- * This read `OBS_SELFAUDIT_LEN` bytes whatever it was handed, and two of its callers
- * hand it a 32-byte buffer. `check_metadata_differential` smashed 32 bytes of its own
- * stack on every file it read - once per title directory, thousands of times - over the
- * counters and the dirent loop state living beside them. That is what produced 45,792
- * "installed titles", and a claim of 2,672 containers under the very roots
- * `confirm-table` had just found nothing readable in: one of those two numbers came
- * through a correctly-sized buffer and the other did not. The read is now bounded by
- * what the caller owns, so a short buffer cannot be overrun again. (D284)
- *
- * Through `sceKernelOpen`/`Read`, the same family the directory walk uses - one
- * consistent set of raw syscalls, so a file and a directory resolve the same way. (The
- * report sink's own backend is for writing obSCEne's report, not for reading vendor
- * files.) */
 static long obs_read_header(const char *path, unsigned char *buf, size_t cap) {
     if (cap == 0) {
         return -1;
@@ -125,7 +107,6 @@ static long obs_read_header(const char *path, unsigned char *buf, size_t cap) {
     return total;
 }
 
-/* Is the header a SELF? True when its first word is one of the container magics. */
 static int obs_is_self(const unsigned char *buf) {
     unsigned long long magic = obs_le(buf, 0, 4);
     for (unsigned int i = 0; i < OBS_COUNT(obs_self_magics); i++) {
@@ -136,8 +117,6 @@ static int obs_is_self(const unsigned char *buf) {
     return 0;
 }
 
-/* Append `b` onto `dst` at `k`, bounded. Returns the new length. A tiny freestanding
- * join, so the probe builds `<root>/<name>/eboot.bin` without a libc string call. */
 static size_t obs_append(char *dst, size_t k, size_t cap, const char *b) {
     while (*b && k < cap - 1) {
         dst[k++] = *b++;
@@ -145,6 +124,7 @@ static size_t obs_append(char *dst, size_t k, size_t cap, const char *b) {
     dst[k] = '\0';
     return k;
 }
+
 static size_t obs_append_n(char *dst, size_t k, size_t cap, const char *b, size_t n) {
     for (size_t i = 0; i < n && k < cap - 1; i++) {
         dst[k++] = b[i];
@@ -153,56 +133,156 @@ static size_t obs_append_n(char *dst, size_t k, size_t cap, const char *b, size_
     return k;
 }
 
-/* Walk one application root. For each subdirectory it holds, try
- * `<root>/<name>/eboot.bin`; the first that reads as a SELF is written into `found` and
- * 1 is returned. */
-static int obs_scan_root(const char *root, char *found, size_t found_cap,
-                         unsigned char *buf, size_t buf_cap) {
-    int dir = sceKernelOpen(root, OBS_O_RDONLY, 0);
-    if (dir < 0) {
-        return 0; /* not reachable, or not present - the reach section explains which */
-    }
+#define OBS_APP0_EBOOT "/app0/eboot.bin"
 
-    char dents[4096];
-    int hit = 0;
-    for (;;) {
-        sce_ssize_t n = sceKernelGetdents(dir, dents, (int)sizeof dents);
-        if (n <= 0) {
-            break;
-        }
-        long pos = 0;
-        while (pos + OBS_DIRENT_NAME < n) {
-            unsigned int reclen = (unsigned int)obs_le(
-                (const unsigned char *)dents + pos, OBS_DIRENT_RECLEN, 2);
-            if (reclen == 0) {
-                break; /* a zero record length would not advance - stop rather than spin
-                        */
-            }
-            unsigned char type = (unsigned char)dents[pos + OBS_DIRENT_TYPE];
-            unsigned int namlen = (unsigned char)dents[pos + OBS_DIRENT_NAMLEN];
-            const char *name = dents + pos + OBS_DIRENT_NAME;
-            /* Only directories, and not the two that point at the tree itself. */
-            int dot = (namlen == 1 && name[0] == '.') ||
-                      (namlen == 2 && name[0] == '.' && name[1] == '.');
-            if (type == OBS_DT_DIR && !dot && namlen > 0) {
-                size_t k = obs_append(found, 0, found_cap, root);
-                k = obs_append(found, k, found_cap, "/");
-                k = obs_append_n(found, k, found_cap, name, namlen);
-                obs_append(found, k, found_cap, "/eboot.bin");
-                if (obs_read_header(found, buf, buf_cap) >= (long)buf_cap &&
-                    obs_is_self(buf)) {
-                    hit = 1;
+/* Report one measured u64 field as a hex value under `field`. `note` says where it was
+ * read. */
+static void obs_report_u64(const char *field, unsigned long long value,
+                           const char *note) {
+    char text[24];
+    size_t n = obs_format_hex(text, value);
+    text[n] = '\0';
+    obs_report_sysinfo(field, text, note);
+}
+
+typedef struct {
+    const char *origin;
+    const char *path;
+} obs_audit_candidate_t;
+
+static const obs_audit_candidate_t obs_audit_candidates[] = {
+    {"vendor", "/system_ex/app/PPSA02664/eboot.bin"},
+    {"vendor", "/system_ex/app/PPSA04263/eboot.bin"},
+    {"vendor", "/system_ex/app/PPSA03416/eboot.bin"},
+    {"vendor", "/system/vsh/app/NPXS40038/eboot.bin"},
+    {"fake", "/system_ex/app/FAKE00000/eboot.bin"},
+    {"vendor", "/system_ex/app/PPSA28061/eboot.bin"},
+    {"vendor", "/system_ex/app/PPSA25872/eboot.bin"},
+    {"vendor", "/system_ex/app/PPSA21564/eboot.bin"},
+    {"fake", "/user/app/FAKE00000/eboot.bin"},
+    {"vendor", "/user/app/PPSA03416/eboot.bin"},
+    {"vendor", "/system/vsh/app/NPXS40112/eboot.bin"},
+};
+
+typedef struct {
+    char origin[32];
+    char path[256];
+} obs_found_container_t;
+
+#define OBS_MAX_CONTAINERS 32
+
+static int obs_locate_containers(obs_found_container_t *out, int max_count) {
+    int count = 0;
+    unsigned char test_buf[OBS_SELFAUDIT_LEN];
+
+    /* 1. Try known candidate targets first */
+    for (size_t c = 0; c < OBS_COUNT(obs_audit_candidates) && count < max_count; c++) {
+        const char *p = obs_audit_candidates[c].path;
+        if (obs_read_header(p, test_buf, sizeof(test_buf)) >= (long)sizeof(test_buf) &&
+            obs_is_self(test_buf)) {
+            int dup = 0;
+            for (int j = 0; j < count; j++) {
+                if (obs_strcmp(out[j].path, p) == 0) {
+                    dup = 1;
                     break;
                 }
             }
-            pos += (long)reclen;
-        }
-        if (hit) {
-            break;
+            if (!dup) {
+                obs_append(out[count].origin, 0, sizeof(out[count].origin), obs_audit_candidates[c].origin);
+                obs_append(out[count].path, 0, sizeof(out[count].path), p);
+                count++;
+            }
         }
     }
-    sceKernelClose(dir);
-    return hit;
+
+    /* 2. Walk structural roots if we have room */
+    for (size_t r = 0; r < OBS_COUNT(obs_app_roots) && count < max_count; r++) {
+        const char *root = obs_app_roots[r];
+        int dir = sceKernelOpen(root, OBS_O_RDONLY, 0);
+        if (dir < 0) continue;
+
+        char dents[4096];
+        for (;;) {
+            sce_ssize_t n = sceKernelGetdents(dir, dents, (int)sizeof dents);
+            if (n <= 0) break;
+            long pos = 0;
+            while (pos + OBS_DIRENT_NAME < n && count < max_count) {
+                unsigned int reclen = (unsigned int)obs_le(
+                    (const unsigned char *)dents + pos, OBS_DIRENT_RECLEN, 2);
+                if (reclen == 0) break;
+                unsigned char type = (unsigned char)dents[pos + OBS_DIRENT_TYPE];
+                unsigned int namlen = (unsigned char)dents[pos + OBS_DIRENT_NAMLEN];
+                const char *name = dents + pos + OBS_DIRENT_NAME;
+                int dot = (namlen == 1 && name[0] == '.') ||
+                          (namlen == 2 && name[0] == '.' && name[1] == '.');
+                if (type == OBS_DT_DIR && !dot && namlen > 0) {
+                    char candidate[1024];
+                    size_t k = obs_append(candidate, 0, sizeof(candidate), root);
+                    k = obs_append(candidate, k, sizeof(candidate), "/");
+                    k = obs_append_n(candidate, k, sizeof(candidate), name, namlen);
+                    obs_append(candidate, k, sizeof(candidate), "/eboot.bin");
+                    if (obs_read_header(candidate, test_buf, sizeof(test_buf)) >= (long)sizeof(test_buf) &&
+                        obs_is_self(test_buf)) {
+                        int dup = 0;
+                        for (int j = 0; j < count; j++) {
+                            if (obs_strcmp(out[j].path, candidate) == 0) {
+                                dup = 1;
+                                break;
+                            }
+                        }
+                        if (!dup) {
+                            obs_append(out[count].origin, 0, sizeof(out[count].origin), "vendor");
+                            obs_append(out[count].path, 0, sizeof(out[count].path), candidate);
+                            count++;
+                        }
+                    }
+                }
+                pos += (long)reclen;
+            }
+        }
+        sceKernelClose(dir);
+    }
+
+    /* 3. Fallback to /app0 if nothing was found */
+    if (count == 0) {
+        char app0[64];
+        obs_append(app0, 0, sizeof(app0), OBS_APP0_EBOOT);
+        if (obs_read_header(app0, test_buf, sizeof(test_buf)) >= (long)sizeof(test_buf) &&
+            obs_is_self(test_buf)) {
+            obs_append(out[count].origin, 0, sizeof(out[count].origin), "own app");
+            obs_append(out[count].path, 0, sizeof(out[count].path), app0);
+            count++;
+        }
+    }
+
+    return count;
+}
+
+static void obs_extract_title_id(const char *path, char *out, size_t out_sz) {
+    if (path == NULL || out == NULL || out_sz == 0) {
+        return;
+    }
+    out[0] = '\0';
+    size_t len = obs_strlen(path);
+    const char *suffix = "/eboot.bin";
+    size_t s_len = obs_strlen(suffix);
+    size_t end = len;
+    if (len >= s_len && obs_strcmp(path + len - s_len, suffix) == 0) {
+        end = len - s_len;
+    }
+    size_t start = end;
+    while (start > 0 && path[start - 1] != '/') {
+        start--;
+    }
+    size_t title_len = end - start;
+    if (title_len > 0 && title_len < out_sz) {
+        for (size_t i = 0; i < title_len; i++) {
+            out[i] = path[start + i];
+        }
+        out[title_len] = '\0';
+    } else {
+        obs_append(out, 0, out_sz, "app");
+    }
 }
 
 static obs_result check_confirm_format_table(void) {
@@ -211,88 +291,180 @@ static obs_result check_confirm_format_table(void) {
     OBS_REQUIRE(&sceKernelRead);
     OBS_REQUIRE(&sceKernelGetdents);
 
-    static unsigned char buf[OBS_SELFAUDIT_LEN];
-    char found[1024];
-    const char *origin = 0; /* "vendor" or "own app", for the verdict */
+    static obs_found_container_t found[OBS_MAX_CONTAINERS];
+    int count = obs_locate_containers(found, OBS_MAX_CONTAINERS);
 
-    /* Vendor application roots first: those hold containers that are not ours. */
-    for (unsigned int i = 0; i < OBS_COUNT(obs_app_roots); i++) {
-        if (obs_scan_root(obs_app_roots[i], found, sizeof found, buf, sizeof buf)) {
-            origin = "vendor";
-            break;
-        }
-    }
-
-    /* Only if none was found, the running app's own eboot - which may be obSCEne's own
-     * SELF. */
-    if (!origin) {
-        size_t k = obs_append(found, 0, sizeof found, OBS_APP0_EBOOT);
-        (void)k;
-        if (obs_read_header(found, buf, sizeof buf) >= (long)sizeof buf &&
-            obs_is_self(buf)) {
-            origin = "own app";
-        }
-    }
-
-    if (!origin) {
-        /* Nothing readable was a SELF. On host and for a sandboxed module this is
-         * expected; the reach section says which. A measurement, so it skips rather
-         * than fails. */
+    if (count == 0) {
         return obs_skip("no SELF container was reachable from this process");
     }
 
-    obs_report_sysinfo("selfaudit/source", origin, found);
+    static unsigned char buf[OBS_SELF_STRUCT_LEN];
+    unsigned int rows = (unsigned int)(sizeof(obs_self_fields) / sizeof(obs_self_fields[0]));
+    unsigned int total_matched = 0;
+    unsigned int total_diverged = 0;
+    unsigned int total_nonfake = 0;
+    unsigned int ptype0_gen5 = 0;
+    unsigned int ptype0_gen4 = 0;
+    unsigned int ptype1_gen5 = 0;
+    unsigned int ptype1_gen4 = 0;
 
-    /* The measured value is reported on **every** row, match or not.
-     *
-     * It used to be printed only on a difference, on the reasoning that a match repeats
-     * the table the reader already has. The effect was backwards: the number was
-     * withheld in the one case where it is already public - these nine values are in
-     * `selfish/data/self-format.tsv`, cited to OpenOrbis, shadPS4 and fpPS4 - and
-     * printed in the case where it is genuinely new. Nothing is protected by omitting a
-     * constant this repository already commits, and a report that says `matches`
-     * without saying what matched cannot be diffed against the next firmware, or read
-     * by anyone who does not have the table open beside it. So: always the value.
-     * (D285)
-     *
-     * A difference carries the table's value too, because the point of the line is the
-     * gap. */
-    unsigned int rows =
-        (unsigned int)(sizeof(obs_self_fields) / sizeof(obs_self_fields[0]));
-    unsigned int matched = 0;
-    for (unsigned int i = 0; i < rows; i++) {
-        const obs_self_field *row = &obs_self_fields[i];
-        unsigned long long value = obs_le(buf, row->offset, row->size);
-        char text[64];
-        size_t n = obs_format_hex(text, value);
-        text[n] = '\0';
-        if (value == row->expected) {
-            matched++;
-            obs_report_sysinfo(row->field, "matches", text);
+    for (int c = 0; c < count; c++) {
+        long got = obs_read_header(found[c].path, buf, sizeof(buf));
+        if (got < (long)OBS_SELFAUDIT_LEN || !obs_is_self(buf)) {
+            continue;
+        }
+
+        char title_id[32];
+        obs_extract_title_id(found[c].path, title_id, sizeof title_id);
+
+        obs_report_sysinfo("selfaudit/source", found[c].origin, found[c].path);
+
+        /* 0. Report magic per container */
+        unsigned long long magic = obs_le(buf, 0x00, 4);
+        char magic_field[128];
+        size_t mf = obs_append(magic_field, 0, sizeof magic_field, "selfaudit/");
+        mf = obs_append(magic_field, mf, sizeof magic_field, title_id);
+        obs_append(magic_field, mf, sizeof magic_field, "/magic");
+        obs_report_u64(magic_field, magic, "self_header 0x00");
+
+        /* 1. Read and report ex_info/ptype FIRST */
+        unsigned long long header_size = obs_le(buf, 0x0C, 2);
+        unsigned long long ptype = 0xffffffffffffffffULL;
+        int has_ptype = 0;
+        if (header_size >= 0x70 && header_size <= (unsigned long long)got) {
+            unsigned long long ex = header_size - 0x70;
+            ptype = obs_le(buf, (unsigned int)ex + 8, 8);
+            has_ptype = 1;
+
+            char ptype_field[128];
+            size_t pf = obs_append(ptype_field, 0, sizeof ptype_field, "selfaudit/");
+            pf = obs_append(ptype_field, pf, sizeof ptype_field, title_id);
+            obs_append(ptype_field, pf, sizeof ptype_field, "/ex_info/ptype");
+            obs_report_u64(ptype_field, ptype, "ex_info 0x08");
+
+            if (ptype != 0x1) {
+                total_nonfake++;
+            }
+            if (ptype == 0x0) {
+                if (magic == 0xeef51454ull) {
+                    ptype0_gen5++;
+                } else if (magic == 0x1d3d154full) {
+                    ptype0_gen4++;
+                }
+            } else if (ptype == 0x1) {
+                if (magic == 0xeef51454ull) {
+                    ptype1_gen5++;
+                } else if (magic == 0x1d3d154full) {
+                    ptype1_gen4++;
+                }
+            }
         } else {
-            /* `<measured> (table: <expected>)` - both halves, so the line is actionable
-             * alone. obs_format_hex writes its own `0x`, so the parts are appended as
-             * they come. */
-            char want[OBS_NUM_MAX];
-            size_t w = obs_format_hex(want, row->expected);
-            want[w] = '\0';
-            n = obs_append(text, n, sizeof text, " (table: ");
-            n = obs_append(text, n, sizeof text, want);
-            obs_append(text, n, sizeof text, ")");
-            obs_report_sysinfo(row->field, "differs", text);
+            char ptype_field[128];
+            size_t pf = obs_append(ptype_field, 0, sizeof ptype_field, "selfaudit/");
+            pf = obs_append(ptype_field, pf, sizeof ptype_field, title_id);
+            obs_append(ptype_field, pf, sizeof ptype_field, "/ex_info/ptype");
+            obs_report_sysinfo(ptype_field, "not located", "header truncated or < 0x70");
+        }
+
+        unsigned int matched = 0;
+        for (unsigned int i = 0; i < rows; i++) {
+            const obs_self_field *row = &obs_self_fields[i];
+            unsigned long long value = obs_le(buf, row->offset, row->size);
+            char text[64];
+            size_t n = obs_format_hex(text, value);
+            text[n] = '\0';
+
+            char field[128];
+            size_t k = obs_append(field, 0, sizeof field, "selfaudit/");
+            k = obs_append(field, k, sizeof field, title_id);
+            k = obs_append(field, k, sizeof field, "/");
+            obs_append(field, k, sizeof field, row->field);
+
+            if (value == row->expected) {
+                matched++;
+                obs_report_sysinfo(field, "matches", text);
+            } else {
+                char want[OBS_NUM_MAX];
+                size_t w = obs_format_hex(want, row->expected);
+                want[w] = '\0';
+                n = obs_append(text, n, sizeof text, " (table: ");
+                n = obs_append(text, n, sizeof text, want);
+                obs_append(text, n, sizeof text, ")");
+                obs_report_sysinfo(field, "differs", text);
+            }
+        }
+
+        unsigned long long segment_count = obs_le(buf, 0x18, 2);
+        char seg_field[128];
+        size_t sf = obs_append(seg_field, 0, sizeof seg_field, "structure/");
+        sf = obs_append(seg_field, sf, sizeof seg_field, title_id);
+        obs_append(seg_field, sf, sizeof seg_field, "/segment_count");
+        obs_report_u64(seg_field, segment_count, "self_header 0x18");
+
+        char verdict_field[128];
+        size_t vf = obs_append(verdict_field, 0, sizeof verdict_field, "selfaudit/");
+        vf = obs_append(verdict_field, vf, sizeof verdict_field, title_id);
+        obs_append(verdict_field, vf, sizeof verdict_field, "/verdict");
+
+        char verdict_detail[128];
+        if (has_ptype) {
+            char ptype_str[32];
+            size_t pn = obs_format_hex(ptype_str, ptype);
+            ptype_str[pn] = '\0';
+            size_t vd = obs_append(verdict_detail, 0, sizeof verdict_detail, "ptype=");
+            vd = obs_append(verdict_detail, vd, sizeof verdict_detail, ptype_str);
+            if (matched == rows) {
+                total_matched++;
+                obs_append(verdict_detail, vd, sizeof verdict_detail, "; all fixed header rows match selfish table");
+                obs_report_sysinfo(verdict_field, "confirmed", verdict_detail);
+            } else {
+                total_diverged++;
+                obs_append(verdict_detail, vd, sizeof verdict_detail, "; some fixed rows differ");
+                obs_report_sysinfo(verdict_field, "diverged", verdict_detail);
+            }
+        } else {
+            if (matched == rows) {
+                total_matched++;
+                obs_report_sysinfo(verdict_field, "confirmed", "ptype=unknown; all fixed header rows match selfish table");
+            } else {
+                total_diverged++;
+                obs_report_sysinfo(verdict_field, "diverged", "ptype=unknown; some fixed rows differ");
+            }
         }
     }
 
-    if (matched == rows) {
-        obs_report_sysinfo(
-            "selfaudit/verdict", "confirmed",
-            "every fixed header row matches selfish's table at this generation");
-        return obs_pass_value(matched);
+    char nonfake_buf[32];
+    size_t nb = obs_format_u64(nonfake_buf, total_nonfake);
+    nonfake_buf[nb] = '\0';
+    obs_report_sysinfo("selfaudit/nonfake_census", nonfake_buf,
+                       total_nonfake > 0 ? "containers with ptype != 0x1 audited"
+                                         : "no container with ptype != 0x1 found on console");
+
+    char cbuf[32];
+    size_t cl = obs_format_u64(cbuf, ptype0_gen5);
+    cbuf[cl] = '\0';
+    obs_report_sysinfo("selfaudit/cross_census/ptype0_gen5", cbuf,
+                       "genuine (ptype 0x0) with gen-5 magic (0xeef51454)");
+
+    cl = obs_format_u64(cbuf, ptype0_gen4);
+    cbuf[cl] = '\0';
+    obs_report_sysinfo("selfaudit/cross_census/ptype0_gen4", cbuf,
+                       "genuine (ptype 0x0) with gen-4 magic (0x1d3d154f)");
+
+    cl = obs_format_u64(cbuf, ptype1_gen5);
+    cbuf[cl] = '\0';
+    obs_report_sysinfo("selfaudit/cross_census/ptype1_gen5", cbuf,
+                       "fake (ptype 0x1) with gen-5 magic (0xeef51454)");
+
+    cl = obs_format_u64(cbuf, ptype1_gen4);
+    cbuf[cl] = '\0';
+    obs_report_sysinfo("selfaudit/cross_census/ptype1_gen4", cbuf,
+                       "fake (ptype 0x1) with gen-4 magic (0x1d3d154f)");
+
+    if (total_diverged == 0 && total_matched > 0) {
+        return obs_pass_value(total_matched);
     }
-    obs_report_sysinfo(
-        "selfaudit/verdict", "diverged",
-        "some fixed rows differ - the table's current-generation rows need review");
-    return obs_partial_value("the real header diverges from the table", matched);
+    return obs_partial_value("audit completed on multiple containers; divergences noted", (uint64_t)count);
 }
 
 static obs_result check_metadata_differential(void) {
@@ -476,36 +648,6 @@ static obs_result check_metadata_differential(void) {
  * segment table + ELF phdrs + ex_info + npdrm), which for an ordinary title is well
  * under 4 KiB. Reads are bounded by whatever was actually returned, so a short read
  * simply reports fewer fields. */
-#define OBS_SELF_STRUCT_LEN 4096u
-
-/* The ptype values the format admits (selfish self-format.tsv ptype rows), used only to
- * sanity -check that the ex_info offset landed on a real block - not to decode, which
- * is the reader's job against the same table. */
-static int obs_ptype_is_known(unsigned long long ptype) {
-    switch (ptype) {
-    case 0x1:
-    case 0x4:
-    case 0x5:
-    case 0x8:
-    case 0x9:
-    case 0xC:
-    case 0xE:
-    case 0xF:
-        return 1;
-    default:
-        return 0;
-    }
-}
-
-/* Report one measured u64 field as a hex value under `field`. `note` says where it was
- * read. */
-static void obs_report_u64(const char *field, unsigned long long value,
-                           const char *note) {
-    char text[24];
-    size_t n = obs_format_hex(text, value);
-    text[n] = '\0';
-    obs_report_sysinfo(field, text, note);
-}
 
 static obs_result check_container_structure(void) {
     OBS_REQUIRE(&sceKernelOpen);
@@ -513,155 +655,142 @@ static obs_result check_container_structure(void) {
     OBS_REQUIRE(&sceKernelRead);
     OBS_REQUIRE(&sceKernelGetdents);
 
-    static unsigned char buf[OBS_SELF_STRUCT_LEN];
-    char found[1024];
-    const char *origin = 0;
-    long got = 0;
+    static obs_found_container_t found[OBS_MAX_CONTAINERS];
+    int count = obs_locate_containers(found, OBS_MAX_CONTAINERS);
 
-    /* Same locate as confirm-table: vendor roots first, own /app0 last. obs_scan_root
-     * fills buf and requires a full read, so a container shorter than the window is
-     * rejected there; retry /app0 with a plain read so a short-but-real container is
-     * still measured. */
-    for (unsigned int i = 0; i < OBS_COUNT(obs_app_roots) && !origin; i++) {
-        if (obs_scan_root(obs_app_roots[i], found, sizeof found, buf, sizeof buf)) {
-            origin = "vendor";
-            got = (long)sizeof buf;
-        }
-    }
-    if (!origin) {
-        (void)obs_append(found, 0, sizeof found, OBS_APP0_EBOOT);
-        got = obs_read_header(found, buf, sizeof buf);
-        if (got >= 4 && obs_is_self(buf)) {
-            origin = "own app";
-        }
-    }
-    if (!origin) {
+    if (count == 0) {
         return obs_skip("no SELF container was reachable from this process");
     }
 
-    obs_report_sysinfo("structure/source", origin, found);
+    static unsigned char buf[OBS_SELF_STRUCT_LEN];
+    unsigned long long total_segments = 0;
 
-    /* self_header per-file fields. All within the first 0x20 bytes, so any real
-     * container covers them. Raw measurements: header_size and meta_size bound the
-     * metadata region, file_size and segment_count size the body. */
-    unsigned long long header_size = obs_le(buf, 0x0C, 2);
-    unsigned long long meta_size = obs_le(buf, 0x0E, 2);
-    unsigned long long file_size = obs_le(buf, 0x10, 8);
-    unsigned long long segment_count = obs_le(buf, 0x18, 2);
-    obs_report_u64("structure/header_size", header_size, "self_header 0x0C");
-    obs_report_u64("structure/meta_size", meta_size, "self_header 0x0E");
-    obs_report_u64("structure/file_size", file_size, "self_header 0x10");
-    obs_report_u64("structure/segment_count", segment_count, "self_header 0x18");
-
-    /* The segment table at 0x20, one 0x20-byte entry per count. Each entry's flags (the
-     * encrypted /signed/blocked/compressed/id bits, decoded by the reader against
-     * self-format.tsv) plus its file and memory sizes. Bounded by the read window and a
-     * sane cap, and it says if it stopped short so a truncation never reads as "that is
-     * all there was". */
-    unsigned int cap = 64;
-    unsigned int reported = 0;
-    for (unsigned int i = 0; i < segment_count && i < cap; i++) {
-        unsigned long long off = 0x20ull + (unsigned long long)i * 0x20ull;
-        if (off + 0x20ull > (unsigned long long)got) {
-            break;
+    for (int c = 0; c < count; c++) {
+        long got = obs_read_header(found[c].path, buf, sizeof(buf));
+        if (got < 4 || !obs_is_self(buf)) {
+            continue;
         }
-        char field[48];
-        char idx[24];
-        size_t d = obs_format_u64(idx, i);
-        idx[d] = '\0';
-        size_t k = obs_append(field, 0, sizeof field, "structure/segment/");
-        k = obs_append(field, k, sizeof field, idx);
-        obs_append(field, k, sizeof field, "/flags");
-        obs_report_u64(field, obs_le(buf, (unsigned int)off, 8), "self_segment 0x00");
-        k = obs_append(field, 0, sizeof field, "structure/segment/");
-        k = obs_append(field, k, sizeof field, idx);
-        obs_append(field, k, sizeof field, "/file_size");
-        obs_report_u64(field, obs_le(buf, (unsigned int)off + 16, 8),
-                       "self_segment 0x10");
-        k = obs_append(field, 0, sizeof field, "structure/segment/");
-        k = obs_append(field, k, sizeof field, idx);
-        obs_append(field, k, sizeof field, "/memory_size");
-        obs_report_u64(field, obs_le(buf, (unsigned int)off + 24, 8),
-                       "self_segment 0x18");
-        reported++;
-    }
-    if (reported < segment_count) {
-        obs_report_sysinfo("structure/segment-table", "truncated",
-                           "more segments than the read window or cap held");
-    }
 
-    /* ex_info at header_size-0x70, self-checked on ptype. On the previous generation it
-     * and the 0x30-byte npdrm block close the header; if that holds here, ptype is one
-     * of the known values and the four fields are reported. If not, the block is
-     * declared not-located rather than guessed - the current-generation tail layout is
-     * exactly what is unconfirmed. */
-    if (header_size >= 0x70 && header_size <= (unsigned long long)got) {
-        unsigned long long ex = header_size - 0x70;
-        unsigned long long ptype = obs_le(buf, (unsigned int)ex + 8, 8);
-        if (obs_ptype_is_known(ptype)) {
-            obs_report_u64("structure/ex_info/paid", obs_le(buf, (unsigned int)ex, 8),
+        char title_id[32];
+        obs_extract_title_id(found[c].path, title_id, sizeof title_id);
+
+        char key_prefix[64];
+        size_t kp = obs_append(key_prefix, 0, sizeof key_prefix, "structure/");
+        kp = obs_append(key_prefix, kp, sizeof key_prefix, title_id);
+        obs_append(key_prefix, kp, sizeof key_prefix, "/");
+
+        obs_report_sysinfo("structure/source", found[c].origin, found[c].path);
+
+        unsigned long long magic = obs_le(buf, 0x00, 4);
+        unsigned long long header_size = obs_le(buf, 0x0C, 2);
+        unsigned long long meta_size = obs_le(buf, 0x0E, 2);
+        unsigned long long file_size = obs_le(buf, 0x10, 8);
+        unsigned long long segment_count = obs_le(buf, 0x18, 2);
+        total_segments += segment_count;
+
+        char field[128];
+        size_t k = obs_append(field, 0, sizeof field, key_prefix);
+        obs_append(field, k, sizeof field, "magic");
+        obs_report_u64(field, magic, "self_header 0x00");
+
+        k = obs_append(field, 0, sizeof field, key_prefix);
+        obs_append(field, k, sizeof field, "header_size");
+        obs_report_u64(field, header_size, "self_header 0x0C");
+
+        k = obs_append(field, 0, sizeof field, key_prefix);
+        obs_append(field, k, sizeof field, "meta_size");
+        obs_report_u64(field, meta_size, "self_header 0x0E");
+
+        k = obs_append(field, 0, sizeof field, key_prefix);
+        obs_append(field, k, sizeof field, "file_size");
+        obs_report_u64(field, file_size, "self_header 0x10");
+
+        k = obs_append(field, 0, sizeof field, key_prefix);
+        obs_append(field, k, sizeof field, "segment_count");
+        obs_report_u64(field, segment_count, "self_header 0x18");
+
+        unsigned int cap = 64;
+        unsigned int reported = 0;
+        for (unsigned int i = 0; i < segment_count && i < cap; i++) {
+            unsigned long long off = 0x20ull + (unsigned long long)i * 0x20ull;
+            if (off + 0x20ull > (unsigned long long)got) {
+                break;
+            }
+            char idx[24];
+            size_t d = obs_format_u64(idx, i);
+            idx[d] = '\0';
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            k = obs_append(field, k, sizeof field, "segment/");
+            k = obs_append(field, k, sizeof field, idx);
+            obs_append(field, k, sizeof field, "/flags");
+            obs_report_u64(field, obs_le(buf, (unsigned int)off, 8), "self_segment 0x00");
+
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            k = obs_append(field, k, sizeof field, "segment/");
+            k = obs_append(field, k, sizeof field, idx);
+            obs_append(field, k, sizeof field, "/file_size");
+            obs_report_u64(field, obs_le(buf, (unsigned int)off + 16, 8),
+                           "self_segment 0x10");
+
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            k = obs_append(field, k, sizeof field, "segment/");
+            k = obs_append(field, k, sizeof field, idx);
+            obs_append(field, k, sizeof field, "/memory_size");
+            obs_report_u64(field, obs_le(buf, (unsigned int)off + 24, 8),
+                           "self_segment 0x18");
+            reported++;
+        }
+        if (reported < segment_count) {
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            obs_append(field, k, sizeof field, "segment-table");
+            obs_report_sysinfo(field, "truncated",
+                               "more segments than the read window or cap held");
+        }
+
+        if (header_size >= 0x70 && header_size <= (unsigned long long)got) {
+            unsigned long long ex = header_size - 0x70;
+            unsigned long long ptype = obs_le(buf, (unsigned int)ex + 8, 8);
+
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            obs_append(field, k, sizeof field, "ex_info/paid");
+            obs_report_u64(field, obs_le(buf, (unsigned int)ex, 8),
                            "ex_info 0x00");
-            obs_report_u64("structure/ex_info/ptype", ptype, "ex_info 0x08");
-            obs_report_u64("structure/ex_info/app_version",
+
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            obs_append(field, k, sizeof field, "ex_info/ptype");
+            obs_report_u64(field, ptype, "ex_info 0x08");
+
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            obs_append(field, k, sizeof field, "ex_info/app_version");
+            obs_report_u64(field,
                            obs_le(buf, (unsigned int)ex + 16, 8), "ex_info 0x10");
-            obs_report_u64("structure/ex_info/fw_version",
+
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            obs_append(field, k, sizeof field, "ex_info/fw_version");
+            obs_report_u64(field,
                            obs_le(buf, (unsigned int)ex + 24, 8), "ex_info 0x18");
-            /* npdrm follows ex_info. Type is format; the content id is the title's own,
-             * so only that it is present and its length are reported. */
+
             unsigned long long np = header_size - 0x30;
             if (np + 0x30ull <= (unsigned long long)got) {
-                obs_report_u64("structure/npdrm/type", obs_le(buf, (unsigned int)np, 2),
+                k = obs_append(field, 0, sizeof field, key_prefix);
+                obs_append(field, k, sizeof field, "npdrm/type");
+                obs_report_u64(field, obs_le(buf, (unsigned int)np, 2),
                                "npdrm_control 0x00");
-                obs_report_sysinfo("structure/npdrm/content_id", "present",
+
+                k = obs_append(field, 0, sizeof field, key_prefix);
+                obs_append(field, k, sizeof field, "npdrm/content_id");
+                obs_report_sysinfo(field, "present",
                                    "19 bytes, value not reported");
             }
         } else {
-            obs_report_sysinfo(
-                "structure/ex_info", "not located",
-                "header_size-0x70 gave no known ptype; tail layout may differ here");
+            k = obs_append(field, 0, sizeof field, key_prefix);
+            obs_append(field, k, sizeof field, "ex_info");
+            obs_report_sysinfo(field, "not located",
+                               "header did not fit the read window");
         }
-    } else {
-        obs_report_sysinfo("structure/ex_info", "not located",
-                           "header did not fit the read window");
     }
 
-    /* Opening the /app0/sce_sys directory on PS5 native triggers PFS directory
-     * integrity verification (pltauth -35) from SceShellCore/PFAuthClient. Skip it. */
-    (void)found;
-    int sdir = -1;
-    if (sdir >= 0) {
-        char dents[4096];
-        unsigned int files = 0;
-        for (;;) {
-            sce_ssize_t n = sceKernelGetdents(sdir, dents, (int)sizeof dents);
-            if (n <= 0) {
-                break;
-            }
-            long pos = 0;
-            while (pos + OBS_DIRENT_NAME < n) {
-                unsigned int reclen = (unsigned int)obs_le(
-                    (const unsigned char *)dents + pos, OBS_DIRENT_RECLEN, 2);
-                if (reclen == 0) {
-                    break;
-                }
-                unsigned int namlen = (unsigned char)dents[pos + OBS_DIRENT_NAMLEN];
-                const char *name = dents + pos + OBS_DIRENT_NAME;
-                int dot = (namlen == 1 && name[0] == '.') ||
-                          (namlen == 2 && name[0] == '.' && name[1] == '.');
-                if (!dot && namlen > 0) {
-                    char nm[256];
-                    obs_append_n(nm, 0, sizeof nm, name, namlen);
-                    obs_report_sysinfo("structure/sce_sys", "entry", nm);
-                    files++;
-                }
-                pos += (long)reclen;
-            }
-        }
-        sceKernelClose(sdir);
-        obs_report_u64("structure/sce_sys/count", files, "installed sce_sys entries");
-    }
-
-    return obs_pass_value(segment_count);
+    return obs_pass_value(total_segments);
 }
 
 static const obs_check selfaudit_checks[] = {

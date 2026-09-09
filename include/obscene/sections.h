@@ -21,6 +21,7 @@ extern const obs_section obs_section_generation;
 /* Resources the rest of the platform is built on. */
 extern const obs_section obs_section_memory;
 extern const obs_section obs_section_thread;
+extern const obs_section obs_section_fiber;
 /* What a thread attribute set says about the stack a running thread is on, and which
  * end of that stack the address it reports is. After 030-thread: it describes a thread,
  * so a platform that cannot make one has nothing to describe. */
@@ -49,6 +50,8 @@ extern const obs_section obs_section_videobuf;
 extern const obs_section obs_section_audio;
 extern const obs_section obs_section_input;
 extern const obs_section obs_section_input_ext;
+extern const obs_section obs_section_net;
+extern const obs_section obs_section_shellui;
 
 /* Not a layer. A census of the whole known surface, placed last because it answers a
  * different question from everything above it and because it is the one section that

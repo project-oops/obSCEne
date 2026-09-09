@@ -29,7 +29,8 @@
 set -e
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
-BUILD="${1:?usage: build-native.sh <BUILD>}"
+BUILD="${1:?usage: build-native.sh <BUILD> [TARGET]}"
+TARGET_NAME="${2:-prospero}"
 SELFISH="${SELFISH:-../selfish}"
 # obSCEne's own identity, read from the one place it lives (data/identity.toml). The native title has
 # its OWN id (content_id_native), distinct from the package's, so the two can be installed side by
@@ -56,7 +57,7 @@ if [ "${NO_EBOOT:-0}" = "1" ]; then
     category_arg=(--category 65536)
 fi
 
-out="$BUILD/native"
+out="$BUILD/$TARGET_NAME"
 rm -rf "$out"
 mkdir -p "$out"
 

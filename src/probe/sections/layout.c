@@ -42,11 +42,13 @@
  */
 
 #include "obscene/display.h"
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
+#include "oops/krw.h"
 
 /* Far larger than anything these calls are documented to write. */
 #define OBS_LAYOUT_BUFFER 256u
@@ -135,30 +137,139 @@ static obs_result layout_report(const char *id, const char *symbol, const char *
 }
 
 static obs_result check_direct_memory_query(void) {
-    /* No OBS_REQUIRE, and there used to be one for `sceKernelGetDirectMemorySize`.
-     *
-     * D058 requires guarding every symbol a check calls *other than its own*, because
-     * every platform declaration is weak and jumping to zero ends the run. Neither of
-     * the two query checks here calls that function - it appeared in nothing but the
-     * guard itself.
-     *
-     * A guard on an uncalled symbol is the inverse mistake, and it is not harmless: it
-     * makes the check skip on a platform that has `sceKernelDirectMemoryQuery` and
-     * happens not to export the other one, and the skip reads as "the symbol is not
-     * present" about a symbol that is present. The announced symbol is guarded by the
-     * harness, and it is the only one either check touches. */
+    int (*fn_query)(sce_off_t, int, void *, size_t) = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelDirectMemoryQuery)) {
+        fn_query = &sceKernelDirectMemoryQuery;
+    }
+    if (fn_query == NULL) {
+        const payload_args_t *pargs = obs_get_payload_args();
+        if (pargs != NULL && pargs->kexport_table != NULL) {
+            char nid[12];
+            obs_compute_nid("sceKernelDirectMemoryQuery", nid);
+            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            if (ka != NULL && obs_address_is_callable(ka)) {
+                fn_query = (int (*)(sce_off_t, int, void *, size_t))ka;
+            }
+        }
+    }
+    if (fn_query == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        void *a = NULL;
+        if (sceKernelDlsym(0x2001, "sceKernelDirectMemoryQuery", &a) == 0 && obs_address_is_callable(a)) {
+            fn_query = (int (*)(sce_off_t, int, void *, size_t))a;
+        } else if (sceKernelDlsym(0x2001, "BHouLQzh0X0", &a) == 0 && obs_address_is_callable(a)) {
+            fn_query = (int (*)(sce_off_t, int, void *, size_t))a;
+        }
+    }
+    if (fn_query == NULL) {
+        const void *sym_self = obs_module_symbol(OBS_HANDLE_SELF, "sceKernelDirectMemoryQuery");
+        if (sym_self != NULL && obs_address_is_callable(sym_self)) {
+            fn_query = (int (*)(sce_off_t, int, void *, size_t))sym_self;
+        }
+    }
 
-    /* The call `docs/HARDWARE-PROBE.md` names first: four experiments on the emulator
-     * side went into establishing that it writes 24 bytes, and one hexdump from
-     * hardware ends that class of work permanently.
-     *
-     * Queried from offset zero, which is where any direct memory a platform has must
-     * begin. */
+    obs_report_measure("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
+                       "resolved", fn_query != NULL ? 1 : 0, "bool");
+    if (fn_query == NULL) {
+        return obs_skip("sceKernelDirectMemoryQuery is not available");
+    }
+
+    unsigned char buf[64];
+
+    /* (1) Query offset 0x0 with flags = 0, passing a 64-byte buffer pre-filled with 0xAA */
+    memset(buf, 0xAA, sizeof(buf));
+    for (unsigned int off = 0; off < 64u; off += 16u) {
+        obs_report_bytes("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
+                         "before-flags-0", off, &buf[off], 16u);
+    }
+    int rc0 = fn_query(0, 0, buf, sizeof(buf));
+    obs_report_measure("130-layout/direct-memory-query", "offset-0-flags-0",
+                       "rc", (uint64_t)(uint32_t)rc0, "code");
+    for (unsigned int off = 0; off < 64u; off += 16u) {
+        obs_report_bytes("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
+                         "after-flags-0", off, &buf[off], 16u);
+    }
+
+    uint64_t f0_start = 0, f0_field1 = 0, f0_flags = 0;
+    if (rc0 == 0) {
+        memcpy(&f0_start, &buf[0], 8);
+        memcpy(&f0_field1, &buf[8], 8);
+        memcpy(&f0_flags, &buf[16], 8);
+        obs_report_measure("130-layout/direct-memory-query", "flags-0-field-0-start",
+                           "raw", f0_start, "address");
+        obs_report_measure("130-layout/direct-memory-query", "flags-0-field-1-extent-or-end",
+                           "raw", f0_field1, "raw");
+        obs_report_measure("130-layout/direct-memory-query", "flags-0-field-2-flags",
+                           "raw", f0_flags, "raw");
+    }
+
+    /* (2) Query offset 0x0 with flags = 1 (next-region walk) */
+    memset(buf, 0xAA, sizeof(buf));
+    for (unsigned int off = 0; off < 64u; off += 16u) {
+        obs_report_bytes("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
+                         "before-flags-1", off, &buf[off], 16u);
+    }
+    int rc1 = fn_query(0, 1, buf, sizeof(buf));
+    obs_report_measure("130-layout/direct-memory-query", "offset-0-flags-1",
+                       "rc", (uint64_t)(uint32_t)rc1, "code");
+    for (unsigned int off = 0; off < 64u; off += 16u) {
+        obs_report_bytes("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
+                         "after-flags-1", off, &buf[off], 16u);
+    }
+
+    uint64_t f1_start = 0, f1_field1 = 0;
+    if (rc1 == 0) {
+        memcpy(&f1_start, &buf[0], 8);
+        memcpy(&f1_field1, &buf[8], 8);
+        obs_report_measure("130-layout/direct-memory-query", "flags-1-field-0-start",
+                           "raw", f1_start, "address");
+        obs_report_measure("130-layout/direct-memory-query", "flags-1-field-1-extent-or-end",
+                           "raw", f1_field1, "raw");
+
+        /* Query subsequent region to clarify field 2: region_end vs region_size */
+        uint64_t next_probe_off = (f0_field1 > f0_start) ? f0_field1 : (f0_start + f0_field1);
+        memset(buf, 0xAA, sizeof(buf));
+        int rc_subseq = fn_query((sce_off_t)next_probe_off, 1, buf, sizeof(buf));
+        obs_report_measure("130-layout/direct-memory-query", "subsequent-query",
+                           "rc", (uint64_t)(uint32_t)rc_subseq, "code");
+        if (rc_subseq == 0) {
+            uint64_t sub_start = 0, sub_field1 = 0;
+            memcpy(&sub_start, &buf[0], 8);
+            memcpy(&sub_field1, &buf[8], 8);
+            obs_report_measure("130-layout/direct-memory-query", "subseq-field-0-start",
+                               "raw", sub_start, "address");
+            obs_report_measure("130-layout/direct-memory-query", "subseq-field-1-extent-or-end",
+                               "raw", sub_field1, "raw");
+            int is_absolute_end = (sub_field1 > sub_start && sub_start > 0);
+            obs_report_measure("130-layout/direct-memory-query", "field-1-is-absolute-end",
+                               "verdict", (uint64_t)is_absolute_end, "bool");
+        }
+    }
+
+    /* (3) Query past last valid physical address */
+    size_t total_dmem = 0;
+    if (obs_address_is_callable((const void *)&sceKernelGetDirectMemorySize)) {
+        total_dmem = sceKernelGetDirectMemorySize();
+    }
+    if (total_dmem == 0) {
+        total_dmem = (size_t)16ULL * 1024ULL * 1024ULL * 1024ULL;
+    }
+    sce_off_t past_addr = (sce_off_t)total_dmem + (sce_off_t)0x10000000L;
+    memset(buf, 0xAA, sizeof(buf));
+    int rc_past0 = fn_query(past_addr, 0, buf, sizeof(buf));
+    obs_report_measure("130-layout/direct-memory-query", "past-last-address-flags-0",
+                       "rc", (uint64_t)(uint32_t)rc_past0, "code");
+
+    memset(buf, 0xAA, sizeof(buf));
+    int rc_past1 = fn_query(past_addr, 1, buf, sizeof(buf));
+    obs_report_measure("130-layout/direct-memory-query", "past-last-address-flags-1",
+                       "rc", (uint64_t)(uint32_t)rc_past1, "code");
+
+    /* Also execute baseline layout probe */
     layout_probe probe;
     layout_prepare(&probe);
-    int rc = sceKernelDirectMemoryQuery(0, 0, probe.buffer, OBS_LAYOUT_BUFFER);
+    int rc_base = fn_query(0, 0, probe.buffer, OBS_LAYOUT_BUFFER);
     return layout_report("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
-                         "info", &probe, rc);
+                         "info", &probe, rc_base);
 }
 
 /* What does the second argument select?
@@ -576,16 +687,51 @@ static obs_result check_query_short_buffer_overrun(void) {
  * census lists are (D016). The marker below has to be bare - clang-format does not
  * recognise it with anything appended, which is why the first attempt did nothing. */
 /* clang-format off */
+static const void *layout_resolve_sym(const char *lib, const char *sym) {
+    int h = obs_module_open(lib);
+    const void *p = obs_module_symbol(h >= 0 ? h : 1, sym);
+    if (p != NULL && obs_address_is_callable(p)) {
+        return p;
+    }
+    p = obs_module_symbol(1, sym);
+    if (p != NULL && obs_address_is_callable(p)) {
+        return p;
+    }
+    p = obs_module_symbol(OBS_HANDLE_SELF, sym);
+    if (p != NULL && obs_address_is_callable(p)) {
+        return p;
+    }
+#if !defined(OBSCENE_HOST_BUILD)
+    if (krw_is_ready()) {
+        pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+        uintptr_t kaddr = krw_dynlib_resolve_any(pid, sym);
+        if (kaddr >= 0x10000UL && obs_address_is_callable((const void *)kaddr)) {
+            return (const void *)kaddr;
+        }
+    }
+#endif
+    return NULL;
+}
+
 static obs_result check_user_service_layout(void) {
+    int (*fn_user_init)(const void *) =
+        (int (*)(const void *))layout_resolve_sym("libSceUserService", "sceUserServiceInitialize");
+    if (fn_user_init != NULL && obs_address_is_callable((const void *)fn_user_init)) {
+        (void)fn_user_init(NULL);
+    }
+
     int32_t (*fn_get_user_list)(int32_t *userIdList) =
-        (int32_t (*)(int32_t *))obs_module_symbol(OBS_HANDLE_SELF,
+        (int32_t (*)(int32_t *))layout_resolve_sym("libSceUserService",
                                                   "sceUserServiceGetLoginUserIdList");
     int32_t (*fn_get_initial_user)(int32_t *userId) =
-        (int32_t (*)(int32_t *))obs_module_symbol(OBS_HANDLE_SELF,
+        (int32_t (*)(int32_t *))layout_resolve_sym("libSceUserService",
                                                   "sceUserServiceGetInitialUser");
     int32_t (*fn_get_user_name)(int32_t userId, char *userName, size_t size) =
-        (int32_t (*)(int32_t, char *, size_t))obs_module_symbol(
-            OBS_HANDLE_SELF, "sceUserServiceGetUserName");
+        (int32_t (*)(int32_t, char *, size_t))layout_resolve_sym(
+            "libSceUserService", "sceUserServiceGetUserName");
+
+    obs_report_measure("130-layout/user-service", "sceUserServiceGetLoginUserIdList",
+                       "resolved", (uint64_t)(fn_get_user_list != NULL ? 1 : 0), "bool");
 
     if (fn_get_user_list == NULL && fn_get_initial_user == NULL) {
         return obs_skip("libSceUserService symbols not available in this context");
@@ -626,6 +772,188 @@ static obs_result check_user_service_layout(void) {
     }
 
     return obs_pass_value((uint64_t)(uint32_t)initial_user_id);
+}
+
+static obs_result check_app_content_layout(void) {
+    typedef int (*fn_load_t)(uint16_t id);
+    fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
+    if (fn_load == NULL) {
+        fn_load = (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
+    }
+    if (fn_load != NULL && obs_address_is_callable((const void *)fn_load)) {
+        (void)fn_load(0x00B4); /* OOPS_SYSMODULE_APP_CONTENT */
+    }
+
+    int32_t (*fn_init)(const void *, void *) =
+        (int32_t (*)(const void *, void *))layout_resolve_sym("libSceAppContent", "sceAppContentInitialize");
+    int32_t (*fn_mount2)(uint32_t, char *) =
+        (int32_t (*)(uint32_t, char *))layout_resolve_sym("libSceAppContent", "sceAppContentTemporaryDataMount2");
+
+    obs_report_measure("130-layout/app-content", "sceAppContentInitialize",
+                       "resolved", (uint64_t)(fn_init != NULL ? 1 : 0), "bool");
+    obs_report_measure("130-layout/app-content", "sceAppContentTemporaryDataMount2",
+                       "resolved", (uint64_t)(fn_mount2 != NULL ? 1 : 0), "bool");
+
+    if (fn_init == NULL && fn_mount2 == NULL) {
+        return obs_skip("libSceAppContent symbols not available in this context");
+    }
+
+    if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
+        layout_probe init_probe;
+        layout_prepare(&init_probe);
+        layout_probe boot_probe1;
+        layout_prepare(&boot_probe1);
+
+        obs_jmp_buf buf;
+        int sig = OBS_FAULT_ARM(&buf);
+        if (sig == 0) {
+            int32_t rc1 = fn_init((const void *)init_probe.buffer, (void *)boot_probe1.buffer);
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentInitialize",
+                               "return_code_1", (uint64_t)(uint32_t)rc1, "code");
+            obs_report_bytes("130-layout/app-content", "sceAppContentInitialize",
+                             "boot_param_1", 0, boot_probe1.buffer, 64);
+        } else {
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentInitialize",
+                               "faulted_1", (uint64_t)(uint32_t)sig, "signal");
+        }
+
+        layout_probe boot_probe2;
+        layout_prepare(&boot_probe2);
+        sig = OBS_FAULT_ARM(&buf);
+        if (sig == 0) {
+            int32_t rc2 = fn_init((const void *)init_probe.buffer, (void *)boot_probe2.buffer);
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentInitialize",
+                               "return_code_2", (uint64_t)(uint32_t)rc2, "code");
+            obs_report_bytes("130-layout/app-content", "sceAppContentInitialize",
+                             "boot_param_2", 0, boot_probe2.buffer, 64);
+        } else {
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentInitialize",
+                               "faulted_2", (uint64_t)(uint32_t)sig, "signal");
+        }
+    }
+
+    if (fn_mount2 != NULL && obs_address_is_callable((const void *)fn_mount2)) {
+        layout_probe mount_probe;
+        layout_prepare(&mount_probe);
+        obs_jmp_buf buf;
+        int sig = OBS_FAULT_ARM(&buf);
+        if (sig == 0) {
+            int32_t rc_mount = fn_mount2(0u, (char *)mount_probe.buffer);
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentTemporaryDataMount2",
+                               "return_code", (uint64_t)(uint32_t)rc_mount, "code");
+            obs_report_bytes("130-layout/app-content", "sceAppContentTemporaryDataMount2",
+                             "mount_point", 0, mount_probe.buffer, 64);
+        } else {
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentTemporaryDataMount2",
+                               "faulted", (uint64_t)(uint32_t)sig, "signal");
+        }
+
+        layout_probe mount_probe_fmt;
+        layout_prepare(&mount_probe_fmt);
+        sig = OBS_FAULT_ARM(&buf);
+        if (sig == 0) {
+            int32_t rc_mount_fmt = fn_mount2(1u, (char *)mount_probe_fmt.buffer);
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentTemporaryDataMount2",
+                               "return_code_format", (uint64_t)(uint32_t)rc_mount_fmt, "code");
+            obs_report_bytes("130-layout/app-content", "sceAppContentTemporaryDataMount2",
+                             "mount_point_format", 0, mount_probe_fmt.buffer, 64);
+        } else {
+            obs_fault_unregister();
+            obs_report_measure("130-layout/app-content", "sceAppContentTemporaryDataMount2",
+                               "faulted_format", (uint64_t)(uint32_t)sig, "signal");
+        }
+    }
+
+    return obs_pass();
+}
+
+static obs_result check_savedata_layout(void) {
+    typedef int (*fn_load_t)(uint16_t id);
+    fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
+    if (fn_load == NULL) {
+        fn_load = (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
+    }
+    int load_rc = -1;
+    if (fn_load != NULL && obs_address_is_callable((const void *)fn_load)) {
+        load_rc = fn_load(0x00B6); /* OOPS_SYSMODULE_SAVE_DATA */
+    }
+    obs_report_measure("130-layout/savedata", "sceSysmoduleLoadModule", "rc",
+                       (uint64_t)(uint32_t)load_rc, "code");
+
+    int32_t (*fn_init)(void *) =
+        (int32_t (*)(void *))layout_resolve_sym("libSceSaveData", "sceSaveDataInitialize3");
+    int32_t (*fn_term)(void) =
+        (int32_t (*)(void))layout_resolve_sym("libSceSaveData", "sceSaveDataTerminate");
+    int32_t (*fn_mount2)(void *) =
+        (int32_t (*)(void *))layout_resolve_sym("libSceSaveData", "sceSaveDataMount2");
+
+    obs_report_measure("130-layout/savedata", "sceSaveDataInitialize3",
+                       "resolved", (uint64_t)(fn_init != NULL ? 1 : 0), "bool");
+    obs_report_measure("130-layout/savedata", "sceSaveDataMount2",
+                       "resolved", (uint64_t)(fn_mount2 != NULL ? 1 : 0), "bool");
+    obs_report_measure("130-layout/savedata", "sceSaveDataTerminate",
+                       "resolved", (uint64_t)(fn_term != NULL ? 1 : 0), "bool");
+
+    if (fn_init == NULL && fn_mount2 == NULL) {
+        return obs_skip("libSceSaveData symbols not available in this context");
+    }
+
+    if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
+        layout_probe init_probe;
+        layout_prepare(&init_probe);
+
+        obs_jmp_buf buf;
+        int sig = OBS_FAULT_ARM(&buf);
+        if (sig == 0) {
+            int32_t rc = fn_init((void *)init_probe.buffer);
+            obs_fault_unregister();
+            obs_report_measure("130-layout/savedata", "sceSaveDataInitialize3",
+                               "return_code", (uint64_t)(uint32_t)rc, "code");
+            obs_report_bytes("130-layout/savedata", "sceSaveDataInitialize3",
+                             "init_param", 0, init_probe.buffer, 64);
+            if (rc == 0 && fn_term != NULL && obs_address_is_callable((const void *)fn_term)) {
+                (void)fn_term();
+            }
+        } else {
+            obs_fault_unregister();
+            obs_report_measure("130-layout/savedata", "sceSaveDataInitialize3",
+                               "faulted", (uint64_t)(uint32_t)sig, "signal");
+        }
+    }
+
+    return obs_pass();
+}
+
+static obs_result check_common_dialog_layout(void) {
+    int32_t (*fn_init)(void) =
+        (int32_t (*)(void))layout_resolve_sym("libSceCommonDialog", "sceCommonDialogInitialize");
+
+    obs_report_measure("130-layout/common-dialog", "sceCommonDialogInitialize",
+                       "resolved", (uint64_t)(fn_init != NULL ? 1 : 0), "bool");
+
+    if (fn_init == NULL) {
+        return obs_skip("sceCommonDialogInitialize not available in this context");
+    }
+
+    if (obs_address_is_callable((const void *)fn_init)) {
+        int32_t rc1 = fn_init();
+        obs_report_measure("130-layout/common-dialog", "sceCommonDialogInitialize",
+                           "return_code", (uint64_t)(uint32_t)rc1, "code");
+
+        int32_t rc2 = fn_init();
+        obs_report_measure("130-layout/common-dialog", "sceCommonDialogInitialize",
+                           "return_code_2", (uint64_t)(uint32_t)rc2, "code");
+        return obs_pass_value((uint64_t)(uint32_t)rc1);
+    }
+
+    return obs_skip("sceCommonDialogInitialize address not callable");
 }
 /* clang-format on */
 
@@ -779,6 +1107,18 @@ static const obs_check layout_checks[] = {
     {"130-layout/network-interfaces", "libSceNet", "getifaddrs", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_network_interface_layout,
      check_network_interface_layout, OBS_FROM_ASSUMED},
+    {"130-layout/app-content-layout", "libSceAppContent",
+     "sceAppContentInitialize", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_app_content_layout, check_app_content_layout,
+     OBS_FROM_ASSUMED},
+    {"130-layout/common-dialog-layout", "libSceCommonDialog",
+     "sceCommonDialogInitialize", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_common_dialog_layout, check_common_dialog_layout,
+     OBS_FROM_ASSUMED},
+    {"130-layout/savedata-layout", "libSceSaveData",
+     "sceSaveDataInitialize3", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_savedata_layout, check_savedata_layout,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_layout = {

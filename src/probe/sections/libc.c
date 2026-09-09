@@ -873,6 +873,42 @@ static obs_result check_wctype_and_fpu(void) {
     return obs_pass_value((uint64_t)mxcsr);
 }
 
+static obs_result check_vtable_bytes(void) {
+    static const char *const symbols[] = {
+        "_ZTVSt9bad_alloc",
+        "_ZTVN10__cxxabiv117__class_type_infoE",
+        "_ZTVN10__cxxabiv120__si_class_type_infoE",
+        "_ZTVSt11logic_error",
+        "_ZTVSt13runtime_error",
+        "_ZTVNSt8ios_base7failureE",
+        "_ZSt21_sceLibcClassicLocale",
+        "_Stdout",
+        "_Stderr",
+        "__stack_chk_guard",
+    };
+    unsigned int resolved = 0;
+    for (size_t i = 0; i < OBS_COUNT(symbols); i++) {
+        const char *sym = symbols[i];
+        const void *addr = obs_module_symbol(OBS_HANDLE_SELF, sym);
+        if (addr == NULL) {
+            addr = obs_module_symbol(1, sym);
+        }
+        obs_report_measure("035-libc/vtable-bytes", sym, "resolved", addr != NULL ? 1 : 0, "status");
+        if (addr != NULL) {
+            resolved++;
+            obs_report_measure("035-libc/vtable-bytes", sym, "address", (uint64_t)(uintptr_t)addr, "address");
+            const unsigned char *raw = (const unsigned char *)addr;
+            for (unsigned int off = 0; off < 64; off += 16) {
+                obs_report_bytes("035-libc/vtable-bytes", sym, "bytes", off, &raw[off], 16);
+            }
+        }
+    }
+    if (resolved == 0) {
+        return obs_partial("none of the requested symbols resolved");
+    }
+    return obs_pass_value((uint64_t)resolved);
+}
+
 static const obs_check libc_checks[] = {
     {"035-libc/strlen", "libSceLibcInternal", "strlen", OBS_CAP_NONE, OBS_CAP_LIBC,
      (const void *)&strlen, check_strlen, OBS_FROM_SPEC},
@@ -940,6 +976,9 @@ static const obs_check libc_checks[] = {
     {"035-libc/fpu-wctype", "libSceLibcInternal", "_Getwctype", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_wctype_and_fpu, check_wctype_and_fpu,
      OBS_FROM_SPEC},
+    {"035-libc/vtable-bytes", "libSceLibcInternal", "_ZTVSt9bad_alloc", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_vtable_bytes, check_vtable_bytes,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_libc = {

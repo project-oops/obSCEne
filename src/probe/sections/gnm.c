@@ -43,6 +43,7 @@
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/sections.h"
+#include "oops/target.h"
 
 /* Oversized on purpose: `sceGnmDispatchInitDefaultHardwareState` reserves 0x100 dwords,
  * so the buffer is comfortably past that, and a guard band behind it catches a call
@@ -53,6 +54,25 @@
 #define OBS_GNM_GUARD 64u
 #define OBS_GNM_PATTERN 0xC7u
 
+#if OOPS_TARGET_IS_PS5
+static obs_result check_gnm_dispatch_init(void) {
+    return obs_skip("libSceGnmDriver is previous-generation; excluded from native PS5 target");
+}
+
+static obs_result check_gnm_dispatch_direct(void) {
+    return obs_skip("libSceGnmDriver is previous-generation; excluded from native PS5 target");
+}
+
+static const obs_check gnm_checks[] = {
+    {"165-gnm/dispatch-init", "libSceGnmDriver",
+     "sceGnmDispatchInitDefaultHardwareState", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_gnm_dispatch_init,
+     OBS_FROM_ASSUMED},
+    {"165-gnm/dispatch-direct", "libSceGnmDriver", "sceGnmDispatchDirect", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gnm_dispatch_direct,
+     OBS_FROM_ASSUMED},
+};
+#else
 typedef struct {
     uint32_t cmdbuf[OBS_GNM_DWORDS];
     unsigned char guard[OBS_GNM_GUARD];
@@ -103,7 +123,6 @@ static int gnm_dump(const char *id, const char *symbol, const gnm_probe *probe,
                       (unsigned int)sizeof probe->cmdbuf);
     return 1;
 }
-
 /* sceGnmDispatchInitDefaultHardwareState(cmdbuf, size): writes the default compute
  * hardware state as PM4 and returns the reserved packet size (0x100 dwords), or 0 if
  * the buffer is too small. The buffer is well past 0x100, so 0 would be a surprise
@@ -156,6 +175,7 @@ static const obs_check gnm_checks[] = {
      OBS_CAP_NONE, (const void *)&sceGnmDispatchDirect, check_gnm_dispatch_direct,
      OBS_FROM_ASSUMED},
 };
+#endif
 
 const obs_section obs_section_gnm = {
     "165-gnm",

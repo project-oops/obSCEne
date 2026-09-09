@@ -10,7 +10,8 @@
 #        -> package    (selfish pack --image ... --out obscene.pkg)
 set -e
 
-BUILD="${1:?usage: build-pkg.sh <BUILD>}"
+BUILD="${1:?usage: build-pkg.sh <BUILD> [TARGET]}"
+TARGET_NAME="${2:-orbis}"
 SELFISH="${SELFISH:-../selfish}"
 GEN="${GEN:-4}"
 # The title identity lives in one place, read by both this and build-native.sh (data/identity.toml),
@@ -80,7 +81,7 @@ else
     selfish() { ( cd "$SELFISH" && PATH="$HOME/.cargo/bin:$PATH" cargo run -q -p selfish-cli -- "$@" ); }
 fi
 image="$BUILD/obscene.pfs.img"
-out="$BUILD/obscene.pkg"
+out="$BUILD/obscene-probe-${TARGET_NAME}.pkg"
 
 # STEP 1 - the filesystem image.
 #
@@ -192,5 +193,4 @@ selfish pack --image "$image" --content-id "$CONTENT_ID" --out "$out" \
     --entry "0x200=$ent/names.bin" \
     --entry "0x1001=$ent/playgo-chunk.dat" \
     "${icon_arg[@]}"
-
 echo "build-pkg: wrote $out"

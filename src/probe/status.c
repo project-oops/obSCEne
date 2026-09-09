@@ -64,6 +64,11 @@ obs_result obs_crash(int signal) {
     return r;
 }
 
+obs_result obs_pending(const char *detail) {
+    obs_result r = {OBS_PENDING, detail, 0, 0};
+    return r;
+}
+
 const char *obs_status_name(obs_status status) {
     switch (status) {
     case OBS_PASS:
@@ -76,6 +81,8 @@ const char *obs_status_name(obs_status status) {
         return "skip";
     case OBS_CRASH:
         return "crash";
+    case OBS_PENDING:
+        return "pending";
     }
     /* Not reachable through the enum, but a corrupted value should say so rather
      * than read as a pass. */

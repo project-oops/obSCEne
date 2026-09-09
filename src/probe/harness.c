@@ -306,7 +306,23 @@ static const obs_sysmodule_id_map obs_sysmodules[] = {
     {"libScePad", 0x0027},      {"libSceVideoOut", 0x0028},
     {"libSceVideodec2", 0x008e},{"libSceAudiodec", 0x0088},
     {"libSceKeyboard", 0x00a8}, {"libSceMouse", 0x00a9},
+    {"libSceAppContent", 0x00b4},
+    {"libSceCommonDialog", 0x00a4},
+    {"libSceCommonDialog", 0x0096},
 };
+
+static int obs_mod_name_match(const char *mod_name, const char *lib) {
+    if (obs_strcmp(mod_name, lib) == 0) {
+        return 1;
+    }
+    size_t len = obs_strlen(lib);
+    for (size_t i = 0; i < len; i++) {
+        if (mod_name[i] != lib[i]) {
+            return 0;
+        }
+    }
+    return (mod_name[len] == '.' || mod_name[len] == '\0');
+}
 
 int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
     if (tier_out != NULL) {
@@ -351,7 +367,7 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                 *(size_t *)info = sizeof(info);
                 if (sceKernelGetModuleInfo(mod_id, info) == 0) {
                     const char *mod_name = (const char *)(info + 8);
-                    if (obs_strcmp(mod_name, library) == 0) {
+                    if (obs_mod_name_match(mod_name, library)) {
                         if (tier_out != NULL) {
                             *tier_out = OBS_TIER_APP;
                         }
@@ -395,17 +411,20 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
     }
 
     /* 3. Try loading via sceSysmoduleLoadModule / sceSysmoduleLoadModuleInternal */
+    /* Sysmodule loading is disallowed in unsigned payload mode and trips signo 0xa0020101 */
     /* clang-format off */
     int (*fn_sysmodule_load)(uint16_t) = NULL;
-    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
-        fn_sysmodule_load = sceSysmoduleLoadModule;
-    } else {
-        const void *internal_sym = obs_module_symbol(1, "sceSysmoduleLoadModuleInternal");
-        if (internal_sym == NULL) {
-            internal_sym = obs_module_symbol(0x2001, "sceSysmoduleLoadModuleInternal");
-        }
-        if (internal_sym != NULL && obs_address_is_callable(internal_sym)) {
-            fn_sysmodule_load = (int (*)(uint16_t))internal_sym;
+    if (obs_get_payload_args() == NULL) {
+        if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+            fn_sysmodule_load = sceSysmoduleLoadModule;
+        } else {
+            const void *internal_sym = obs_module_symbol(1, "sceSysmoduleLoadModuleInternal");
+            if (internal_sym == NULL) {
+                internal_sym = obs_module_symbol(0x2001, "sceSysmoduleLoadModuleInternal");
+            }
+            if (internal_sym != NULL && obs_address_is_callable(internal_sym)) {
+                fn_sysmodule_load = (int (*)(uint16_t))internal_sym;
+            }
         }
     }
     /* clang-format on */
@@ -436,7 +455,7 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                                 *(size_t *)info = sizeof(info);
                                 if (sceKernelGetModuleInfo(mod_id, info) == 0) {
                                     const char *mod_name = (const char *)(info + 8);
-                                    if (obs_strcmp(mod_name, library) == 0) {
+                                    if (obs_mod_name_match(mod_name, library)) {
                                         return mod_id;
                                     }
                                 }
@@ -551,22 +570,34 @@ const void *obs_module_symbol(int handle, const char *name) {
         return address;
     }
     /* 5. Iterate all loaded module IDs */
+    int mod_list[128];
+    for (size_t k = 0; k < 128; k++) mod_list[k] = 0;
+    size_t mod_count = 0;
+    int got_list = 0;
     if (obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
-        int mod_list[128];
-        size_t mod_count = 0;
         if (sceKernelGetModuleList(mod_list, 128, &mod_count) == 0 && mod_count > 0) {
-            for (size_t i = 0; i < mod_count && i < 128; i++) {
-                int mod_id = mod_list[i];
-                if (mod_id <= 0)
-                    continue;
-                if (fn_dlsym(mod_id, nid, &address) == 0 &&
-                    obs_address_is_callable(address)) {
-                    return address;
-                }
-                if (fn_dlsym(mod_id, name, &address) == 0 &&
-                    obs_address_is_callable(address)) {
-                    return address;
-                }
+            got_list = 1;
+        }
+    }
+#if !defined(OBSCENE_HOST_BUILD)
+    if (!got_list) {
+        if (obs_invoke_syscall(592, (long)mod_list, 128, (long)&mod_count, 0, 0, 0) == 0 && mod_count > 0) {
+            got_list = 1;
+        }
+    }
+#endif
+    if (got_list) {
+        for (size_t i = 0; i < mod_count && i < 128; i++) {
+            int mod_id = mod_list[i];
+            if (mod_id <= 0)
+                continue;
+            if (fn_dlsym(mod_id, nid, &address) == 0 &&
+                obs_address_is_callable(address)) {
+                return address;
+            }
+            if (fn_dlsym(mod_id, name, &address) == 0 &&
+                obs_address_is_callable(address)) {
+                return address;
             }
         }
     }
@@ -590,6 +621,102 @@ int obs_module_resolution_works(void) {
 /* Storage behind OBS_NO_SYMBOL. Its address is all that matters. */
 const char obs_no_symbol_marker = 0;
 
+/* Whether a peripheral is attached, by opening and closing it once. Run-level facts, reported
+ * so a peripheral probe's PENDING reads against what was plugged in. Each is fully guarded: a
+ * loader without the symbol resolves it weak-null and the device reads absent. (D328) */
+static int32_t obs_peripheral_user(void) {
+    int32_t user = 0;
+    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser) &&
+        sceUserServiceGetInitialUser(&user) != 0) {
+        return -1;
+    }
+    return user;
+}
+
+static int obs_peripheral_pad(void) {
+    if (!obs_address_is_callable((const void *)&scePadOpen)) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&scePadInit)) {
+        scePadInit();
+    }
+    int32_t user = obs_peripheral_user();
+    if (user < 0) {
+        return 0;
+    }
+    int handle = scePadOpen(user, 0, 0, NULL);
+    if (handle <= 0) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&scePadClose)) {
+        scePadClose(handle);
+    }
+    return 1;
+}
+
+static int obs_peripheral_keyboard(void) {
+    if (!obs_address_is_callable((const void *)&sceKeyboardOpen)) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&sceKeyboardInit)) {
+        sceKeyboardInit();
+    }
+    int32_t user = obs_peripheral_user();
+    if (user < 0) {
+        return 0;
+    }
+    int handle = sceKeyboardOpen(user, 0, 0, NULL);
+    if (handle < 0) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&sceKeyboardClose)) {
+        sceKeyboardClose(handle);
+    }
+    return 1;
+}
+
+static int obs_peripheral_mouse(void) {
+    if (!obs_address_is_callable((const void *)&sceMouseOpen)) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&sceMouseInit)) {
+        sceMouseInit();
+    }
+    int32_t user = obs_peripheral_user();
+    if (user < 0) {
+        return 0;
+    }
+    int handle = sceMouseOpen(user, 0, 0, NULL);
+    if (handle < 0) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&sceMouseClose)) {
+        sceMouseClose(handle);
+    }
+    return 1;
+}
+
+static int obs_peripheral_audio(void) {
+    if (!obs_address_is_callable((const void *)&sceAudioOutOpen)) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&sceAudioOutInit)) {
+        sceAudioOutInit();
+    }
+    int32_t user = obs_peripheral_user();
+    if (user < 0) {
+        user = 0xFF;
+    }
+    int handle = sceAudioOutOpen(user, OBS_AUDIO_OUT_PORT_TYPE_MAIN, 0, 512, 48000, 0);
+    if (handle <= 0) {
+        return 0;
+    }
+    if (obs_address_is_callable((const void *)&sceAudioOutClose)) {
+        sceAudioOutClose(handle);
+    }
+    return 1;
+}
+
 static void tally_add(obs_tally *tally, obs_status status) {
     switch (status) {
     case OBS_PASS:
@@ -607,6 +734,9 @@ static void tally_add(obs_tally *tally, obs_status status) {
     case OBS_CRASH:
         tally->crash++;
         break;
+    case OBS_PENDING:
+        tally->pending++;
+        break;
     }
 }
 
@@ -616,7 +746,7 @@ obs_tally obs_run_all(void) {
      * which case a faulting check ends the run exactly as it did before. (D325) */
     obs_fault_init();
 
-    obs_tally total = {0, 0, 0, 0, 0};
+    obs_tally total = {0, 0, 0, 0, 0, 0};
     unsigned int checks = 0;
     for (unsigned int s = 0; s < obs_section_count; s++) {
         checks += obs_sections[s]->check_count;
@@ -651,6 +781,16 @@ obs_tally obs_run_all(void) {
     }
     obs_report_sink(sink);
     obs_report_guard(obs_fault_available(), obs_fault_detail());
+    /* What is plugged in, so the peripheral probes' PENDING reads against it. (D328) */
+    obs_report_peripherals(obs_peripheral_pad(), obs_peripheral_keyboard(),
+                           obs_peripheral_mouse(), obs_peripheral_audio());
+    /* Whether the enumeration could look at all, so a module handle of 0x0 below reads as "not
+     * seen" rather than "absent" - the distinction payload mode could not make. (D329) */
+    obs_report_resolution(obs_module_resolution_works(),
+                          obs_module_resolution_works()
+                              ? "module list and dlsym resolve here"
+                              : "no module list and no dlsym here (payload mode): a module "
+                                "handle of 0x0 below means not seen, not absent");
     obs_report_resume(obs_resume_skipped_count(), obs_resume_overflowed());
     /* The status readout the HUD draws, mirrored into the report so a reader that never
      * sees the screen gets the same facts (memory, VRAM, generation, gaps and all).
@@ -673,9 +813,13 @@ obs_tally obs_run_all(void) {
      * first section finishes. Safe when there is no display. */
     obs_screen_begin(obs_section_count, obs_total_checks());
 
+    if (obs_pltauth_is_failed()) {
+        return total;
+    }
+
     for (unsigned int s = 0; s < obs_section_count; s++) {
         const obs_section *section = obs_sections[s];
-        obs_tally section_tally = {0, 0, 0, 0, 0};
+        obs_tally section_tally = {0, 0, 0, 0, 0, 0};
         obs_report_section(section);
 
         for (unsigned int c = 0; c < section->check_count; c++) {

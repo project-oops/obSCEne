@@ -27,6 +27,7 @@
 #include "obscene/corpus.h"
 #include "obscene/nids.h"
 #include "obscene/surface.h"
+#include "oops/target.h"
 
 typedef struct obs_symbol {
     const char *name;
@@ -104,6 +105,12 @@ static obs_result census(const char *library, obs_availability availability,
             "resolve modules by name, so no library here could be found - which is "
             "a fact about the loader rather than about any library");
     }
+
+#if OOPS_TARGET_IS_PS4
+    if (availability == OBS_CURRENT) {
+        return obs_skip("current-generation library excluded on PS4 target");
+    }
+#endif
 
     int handle = obs_module_open(library);
     if (handle < 0) {

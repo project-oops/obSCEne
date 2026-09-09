@@ -100,6 +100,10 @@ static obs_result check_gadget_resolves(void) {
     obs_gadget = (obs_kernel_call)((unsigned char *)address + OBS_GADGET_OFFSET);
     obs_report_measure("137-kernelcall/gadget", "sceKernelDlsym", "gadget",
                        (uint64_t)obs_gadget, "address");
+    obs_report_measure("137-kernelcall/route", "syscall", "payload-args",
+                       obs_get_payload_args() != NULL ? 1 : 0, "flag");
+    obs_report_measure("137-kernelcall/route", "syscall", "gadget",
+                       (uint64_t)obs_syscall_gadget_address(), "address");
     return obs_pass_value((uint64_t)OBS_GADGET_OFFSET);
 }
 

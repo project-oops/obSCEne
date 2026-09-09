@@ -72,7 +72,7 @@ BUILD="${BUILD:-$HOME/obs}"
 if [ "$use_injector" = 1 ]; then
     if [ "$do_build" = 1 ]; then
         echo "=== build payload and injector (make payload injector HARDWARE=1) ==="
-        rm -f "$BUILD/obscene-injector.elf" "$BUILD/obscene-payload.elf"
+        rm -f "$BUILD/obscene-injector.elf" "$BUILD/obscene-probe-prospero.elf"
         target_make_flag=()
         if [ -n "$title" ]; then
             title_upper="$(echo "$title" | tr '[:lower:]' '[:upper:]')"
@@ -84,20 +84,18 @@ if [ "$use_injector" = 1 ]; then
     fi
     elf="$BUILD/obscene-injector.elf"
     [ -f "$elf" ] || { echo "payload-run.sh: injector binary not found at $elf" >&2; exit 1; }
-    pelf="$BUILD/obscene-payload.elf"
-    [ -f "$pelf" ] || pelf="$BUILD/obscene.elf"
+    pelf="$BUILD/obscene-probe-prospero.elf"
     echo "using injector: $elf ($(stat -c %s "$elf") bytes)"
     [ -f "$pelf" ] && echo "using payload:  $pelf ($(stat -c %s "$pelf") bytes)"
 else
     if [ "$do_build" = 1 ]; then
         echo "=== build payload (make payload HARDWARE=1) ==="
-        rm -f "$BUILD/obscene-payload.elf" "$BUILD/obscene.elf"
+        rm -f "$BUILD/obscene-probe-prospero.elf"
         make -C "$REPO" payload HARDWARE=1 BUILD="$BUILD" "${make_flags[@]}"
     else
         echo "=== skipping build (--deploy-only) ==="
     fi
-    elf="$BUILD/obscene-payload.elf"
-    [ -f "$elf" ] || elf="$BUILD/obscene.elf"
+    elf="$BUILD/obscene-probe-prospero.elf"
     [ -f "$elf" ] || { echo "payload-run.sh: payload binary not found at $elf" >&2; exit 1; }
     echo "using: $elf ($(stat -c %s "$elf") bytes)"
 fi

@@ -8,6 +8,7 @@
 
 #include "obscene/harness.h"
 #include "obscene/platform.h"
+#include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 
@@ -162,6 +163,10 @@ const obs_section obs_section_boot = {
 /* ---- 010-kernel ------------------------------------------------------------ */
 
 static obs_result check_process_time(void) {
+    obs_report_measure("010-kernel/syscall-route", "syscall", "payload-args",
+                       obs_get_payload_args() != NULL ? 1 : 0, "flag");
+    obs_report_measure("010-kernel/syscall-route", "syscall", "gadget",
+                       (uint64_t)obs_syscall_gadget_address(), "address");
     uint64_t first = sceKernelGetProcessTime();
     /* Burn a little time without sleeping, so this stays independent of the timer
      * section running later. */
@@ -169,6 +174,7 @@ static obs_result check_process_time(void) {
     for (uint64_t i = 0; i < 200000u; i++) {
         spin += i;
     }
+    (void)spin;
     uint64_t second = sceKernelGetProcessTime();
     if (second < first) {
         return obs_fail_code("process time went backwards", second);

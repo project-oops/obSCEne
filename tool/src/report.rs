@@ -31,6 +31,11 @@ pub enum Status {
     /// a probe can make, so any check that starts crashing (from pass, fail, or even a
     /// skip) is a regression. It comes from the guard, never from a check directly.
     Crash,
+    /// The check can run but was not given the input it needs - a peripheral, a button
+    /// press. **Ordered between `Crash` and `Skip`:** unresolved like a skip but carrying
+    /// an action (provide the input and re-run), so it is worth seeing apart from a plain
+    /// skip. Never blocking, never fatal. (D328)
+    Pending,
     /// A prerequisite did not hold, so nothing was attempted.
     ///
     /// **Ordered below `Fail` deliberately.** A check that stopped running tells you
@@ -55,6 +60,7 @@ impl Status {
             "fail" => Some(Self::Fail),
             "skip" => Some(Self::Skip),
             "crash" => Some(Self::Crash),
+            "pending" => Some(Self::Pending),
             _ => None,
         }
     }
@@ -68,6 +74,7 @@ impl Status {
             Self::Fail => "fail",
             Self::Skip => "skip",
             Self::Crash => "crash",
+            Self::Pending => "pending",
         }
     }
 }
@@ -196,6 +203,8 @@ pub struct Tally {
     pub skip: u32,
     /// Checks that faulted and were recovered by the guard.
     pub crash: u32,
+    /// Checks waiting on an input they have not been given. (D328)
+    pub pending: u32,
 }
 
 impl Tally {
@@ -207,6 +216,7 @@ impl Tally {
             Status::Fail => self.fail = self.fail.saturating_add(1),
             Status::Skip => self.skip = self.skip.saturating_add(1),
             Status::Crash => self.crash = self.crash.saturating_add(1),
+            Status::Pending => self.pending = self.pending.saturating_add(1),
         }
     }
 
@@ -218,6 +228,7 @@ impl Tally {
             .saturating_add(self.fail)
             .saturating_add(self.skip)
             .saturating_add(self.crash)
+            .saturating_add(self.pending)
     }
 }
 
@@ -392,6 +403,9 @@ fn tally_from(fields: &[&str], from: usize) -> Tally {
         /* Trailing and optional: a report written before the fault guard has four fields
          * and reads crash as zero, which is what it was. */
         crash: number_at(fields, from.saturating_add(4)).unwrap_or(0),
+        /* Trailing and optional too: a report written before pending existed reads it as
+         * zero. (D328) */
+        pending: number_at(fields, from.saturating_add(5)).unwrap_or(0),
     }
 }
 
@@ -438,6 +452,10 @@ OBS|end
         assert!(Status::Skip < Status::Fail);
         assert!(Status::Fail < Status::Partial);
         assert!(Status::Partial < Status::Pass);
+        // Crash is most severe; pending sits between it and skip - unresolved, but an
+        // input away from an answer rather than a finding. (D328)
+        assert!(Status::Crash < Status::Pending);
+        assert!(Status::Pending < Status::Skip);
     }
 
     #[test]

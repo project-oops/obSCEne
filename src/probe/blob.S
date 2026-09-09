@@ -1,7 +1,7 @@
 /*
  * Embedded probe ELF payload blob.
  *
- * Links obscene-payload.elf into the injector payload so that a single
+ * Links obscene-probe-<target>.elf into the injector payload so that a single
  * `hw send` command transmits both injector and probe in one trip.
  */
 

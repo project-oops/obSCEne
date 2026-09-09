@@ -123,19 +123,19 @@ jobs:
       - name: Stage
         run: |
           mkdir -p dist
-          cp build/obscene-payload.elf dist/obscene-payload.elf
+          cp build/obscene-probe-prospero.elf dist/obscene-probe-prospero.elf 2>/dev/null || cp build/obscene-payload.elf dist/obscene-probe-prospero.elf
           cp build/obscene-min.elf     dist/obscene-payload-min.elf 2>/dev/null || true
           ls -l dist
         working-directory: OOPS/obscene
       - name: No shipped artifact contains the blind prober
         run: |
-          strings dist/obscene-payload.elf | grep -q "built without OBS_BULK" \
-            || { echo "::error::obscene-payload.elf may contain the blind prober"; exit 1; }
+          strings dist/obscene-probe-prospero.elf | grep -q "built without OBS_BULK" \
+            || { echo "::error::obscene-probe-prospero.elf may contain the blind prober"; exit 1; }
         working-directory: OOPS/obscene
       - uses: actions/upload-artifact@v4
         with:
-          name: obscene-payload.elf
-          path: OOPS/obscene/dist/obscene-payload.elf
+          name: obscene-probe-prospero.elf
+          path: OOPS/obscene/dist/obscene-probe-prospero.elf
 
   artifact-injector:
     name: "shape: native process injector (homebrew loader)"
@@ -253,14 +253,16 @@ jobs:
       - name: Stage
         run: |
           mkdir -p dist
-          [ -d build/native ] || { echo "no build/native - scripts/build-native.sh wrote nothing" >&2; exit 1; }
-          ( cd build/native && zip -qr ../../dist/obscene-probe.zip . )
-          unzip -l dist/obscene-probe.zip
+          tree="build/prospero"
+          [ -d "$tree" ] || tree="build/native"
+          [ -d "$tree" ] || { echo "no native build tree found - scripts/build-native.sh wrote nothing" >&2; exit 1; }
+          ( cd "$tree" && zip -qr ../../dist/obscene-probe-prospero.zip . )
+          unzip -l dist/obscene-probe-prospero.zip
         working-directory: OOPS/obscene
       - uses: actions/upload-artifact@v4
         with:
-          name: obscene-probe.zip
-          path: OOPS/obscene/dist/obscene-probe.zip
+          name: obscene-probe-prospero.zip
+          path: OOPS/obscene/dist/obscene-probe-prospero.zip
 
   artifact-pkg:
     name: "shape: package (installer)"
@@ -303,14 +305,14 @@ jobs:
       - name: Stage
         run: |
           mkdir -p dist
-          cp build/obscene.pkg dist/obscene.pkg 2>/dev/null || echo "no package yet - see build log"
+          cp build/obscene-probe-orbis.pkg dist/obscene-probe-orbis.pkg 2>/dev/null || cp build/obscene.pkg dist/obscene-probe-orbis.pkg 2>/dev/null || echo "no package yet - see build log"
           ls -l dist || true
         working-directory: OOPS/obscene
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: obscene.pkg
-          path: OOPS/obscene/dist/obscene.pkg
+          name: obscene-probe-orbis.pkg
+          path: OOPS/obscene/dist/obscene-probe-orbis.pkg
           if-no-files-found: ignore
 
   provenance:
@@ -430,15 +432,14 @@ jobs:
           cd dist
           ls -l
           rename() { [ -f "$1" ] && mv "$1" "$2" && echo "  $1 -> $2" || true; }
-          # `probe` is the probe in its three deliverable forms - a bare payload, an installable
-          # package, and a title directory - so the name says what it is and the extension says
-          # how it gets on. The injector is a different program, not a form of the probe.
-          rename obscene-payload.elf  obscene-probe.elf
-          rename obscene.pkg          obscene-probe.pkg
-          rename obscene-injector.elf obscene-injector.elf
-          # The emulator shape keeps its own name: it is not for hardware at all, and calling it
-          # a probe form would put it alongside three things you can send to a console.
-          rename obscene-module.elf   obscene-module.elf
+          # Release assets keyed by target and format (CONVENTIONS section 2)
+          rename obscene-payload.elf          obscene-probe-prospero.elf
+          rename obscene-probe.elf            obscene-probe-prospero.elf
+          rename obscene.pkg                  obscene-probe-orbis.pkg
+          rename obscene-probe.pkg            obscene-probe-orbis.pkg
+          rename obscene-probe.zip            obscene-probe-prospero.zip
+          rename obscene-injector.elf         obscene-injector.elf
+          rename obscene-module.elf           obscene-module.elf
           ls -l
 
       - name: Delete previous latest-main
@@ -462,13 +463,14 @@ jobs:
             sending the wrong one to real hardware has taken a loader down and cost a reboot.
             Read `docs/ARTIFACTS.md` before sending anything anywhere.
 
-            | file | runs as | what that means |
-            |---|---|---|
-            | `obscene-probe.elf` | **`ps4_mode`** - the backward-compatibility sandbox | a homebrew ELF loader maps the segments. `libSceAgc` cannot be mapped, dynamic introspection is refused, `DT_DEBUG` is absent (D276) |
-            | `obscene-probe.pkg` | **`ps4_mode`** - installs as a `ps4_game` title | the installer, then the system loader. A ps4-format, previous-generation package; the current-generation driver is inaccessible from inside it (D255) |
-            | `obscene-probe.zip` | **native PS5 title** | unpack where an auto-mounter scans. What makes it native is `param.json` plus native registration, not the eboot magic - a real title's eboot is `4F 15 3D 1D`, same as this one (D293) |
-            | `obscene-injector.elf` | **native PS5 process** | a homebrew ELF loader runs it, then it hijacks a native-category process and executes the probe inside it. This is the only shape that measures native behaviour from a running title (D276, `docs/INJECTOR.md`) |
-            | `obscene-module.elf` | emulators | their "not a SELF" path. Not for hardware at all |
+            | file | target | format | what that means |
+            |---|---|---|---|
+            | `obscene-probe-prospero.elf` | `prospero` | `elf` | a homebrew ELF loader maps the segments in the compatibility sandbox |
+            | `obscene-probe-orbis.pkg` | `orbis` | `pkg` | previous-generation package, installs via installer |
+            | `obscene-probe-prospero.zip` | `prospero` | `title` | native PS5 title directory, unpacked where auto-mounter scans |
+            | `obscene-probe-orbis.zip` | `orbis` | `title` | previous-generation title directory |
+            | `obscene-injector.elf` | `prospero` | `elf` | native process injector, hijacks running title |
+            | `obscene-module.elf` | emulators | `elf` | ET_SCE_DYNEXEC module for emulators |
 
             So: the `.elf` and `.pkg` measure the compatibility sandbox, the `.zip` measures a
             native title launched by the system loader, and the injector measures a native

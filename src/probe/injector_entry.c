@@ -1,7 +1,7 @@
 /*
  * obSCEne Injector Entry Point.
  *
- * Thin payload launcher that resolves the target process, embeds obscene-payload.elf,
+ * Thin payload launcher that resolves the target process, embeds obscene-probe-<target>.elf,
  * and delegates process control, remote ELF mapping, and thread hijacking to oops-sdk.
  */
 

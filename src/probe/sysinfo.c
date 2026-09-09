@@ -9,6 +9,7 @@
 #include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sysinfo.h"
+#include "oops/target.h"
 
 static unsigned int obs_listening_port;
 static const char *obs_session_secret;
@@ -38,6 +39,8 @@ const char *obs_sysinfo_label(obs_sys_field field) {
         return "GEN";
     case OBS_SYS_GPU:
         return "GPU";
+    case OBS_SYS_TARGET:
+        return "TGT";
     case OBS_SYS_MEMORY:
         return "MEM";
     case OBS_SYS_VRAM:
@@ -258,17 +261,27 @@ obs_sys_state obs_sysinfo_value(obs_sys_field field, char *buf, size_t n) {
         }
 
     case OBS_SYS_GPU: {
-        /* The graphics driver present, which the GEN field drops when it falls to
-         * `ps4_mode`. `obs_gpu_drivers` asks the driver question rather than the
-         * generation one, so gnm - here and rendering - is reported instead of
-         * discarded. NULL means neither driver resolved. */
+        /* The graphics driver present, qualified with target codename.
+         * `obs_gpu_drivers` asks which driver resolves. NULL means neither driver resolved. */
         const char *driver = obs_gpu_drivers();
         if (driver == (const char *)0) {
             return OBS_SYS_ABSENT;
         }
-        obs_put(buf, n, driver);
+        if (driver[0] == 'g' && driver[1] == 'n' && driver[2] == 'm' && driver[3] == '+') {
+            obs_put(buf, n, driver);
+        } else {
+#if OOPS_TARGET_IS_PS5
+            obs_put(buf, n, (OOPS_TARGET == OOPS_TARGET_TRINITY) ? "agc (trinity)" : "agc (prospero)");
+#else
+            obs_put(buf, n, (OOPS_TARGET == OOPS_TARGET_NEO) ? "gnm (neo)" : "gnm (orbis)");
+#endif
+        }
         return OBS_SYS_KNOWN;
     }
+
+    case OBS_SYS_TARGET:
+        obs_put(buf, n, oops_target_name(oops_get_target()));
+        return OBS_SYS_KNOWN;
 
     case OBS_SYS_MEMORY:
         if (obs_address_is_callable(
@@ -412,6 +425,8 @@ __attribute__((unused)) static const char *obs_field_key(obs_sys_field field) {
         return "generation";
     case OBS_SYS_GPU:
         return "gpu";
+    case OBS_SYS_TARGET:
+        return "target";
     case OBS_SYS_MEMORY:
         return "memory";
     case OBS_SYS_VRAM:

@@ -402,16 +402,12 @@
     X(sceVideoOutAdjustColor)
 
 #define OBS_SURFACE_AUDIOOUT(X) \
-    X(sceAudioOutOutput) \
     X(sceAudioOutOutputs) \
-    X(sceAudioOutSetVolume) \
     X(sceAudioOutGetLastOutputTime) \
-    X(sceAudioOutGetPortState) \
     X(sceAudioOutGetSystemState) \
     X(sceAudioOutSetMixLevelPadSpk)
 
 #define OBS_SURFACE_PAD(X) \
-    X(scePadRead) \
     X(scePadSetLightBar) \
     X(scePadResetLightBar) \
     X(scePadSetVibration) \
@@ -512,7 +508,6 @@
  * cannot be both censused (const char, uncallable) and called. Listen and Accept are new,
  * declared there too. What remains here is the part still probed for presence only. */
 #define OBS_SURFACE_NET(X) \
-    X(sceNetConnect) \
     X(sceNetEpollCreate) \
     X(sceNetResolverCreate) \
     X(sceNetGetsockname) \

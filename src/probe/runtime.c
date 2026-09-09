@@ -76,6 +76,36 @@ unsigned long obs_libkernel_base(void) {
     return obs_libkernel_base_value;
 }
 
+static obs_loader_weak_entry_t s_loader_weak_entries[OBS_LOADER_WEAK_COUNT] = {
+    {"__sys_socketex", 0, 0},
+    {"bind", 0, 0},
+    {"_sendto", 0, 0},
+    {"_setsockopt", 0, 0},
+    {"recv", 0, 0},
+    {"accept", 0, 0},
+    {"listen", 0, 0},
+    {"connect", 0, 0},
+    {"close", 0, 0},
+    {"__error", 0, 0},
+};
+
+const obs_loader_weak_entry_t *obs_get_loader_weak_entries(size_t *count) {
+    if (count != NULL) {
+        *count = OBS_LOADER_WEAK_COUNT;
+    }
+    return s_loader_weak_entries;
+}
+
+#if defined(OBSCENE_HOST_BUILD)
+int obs_has_syscall_route(void) {
+    return 0;
+}
+
+uintptr_t obs_syscall_gadget_address(void) {
+    return 0;
+}
+#endif
+
 #if !defined(OBSCENE_HOST_BUILD)
 typedef struct {
     int64_t d_tag;
@@ -95,6 +125,20 @@ extern const obs_elf64_dyn _DYNAMIC[];
  * length, and a record longer than the buffer is refused rather than truncated: half a
  * record still parses, which is worse than none. (D233) */
 static long s_libkernel_syscall_gadget = 0;
+
+int obs_has_syscall_route(void) {
+    if (s_libkernel_syscall_gadget != 0) {
+        return 1;
+    }
+    if (obs_get_payload_args() != NULL) {
+        return 1;
+    }
+    return 0;
+}
+
+uintptr_t obs_syscall_gadget_address(void) {
+    return (uintptr_t)s_libkernel_syscall_gadget;
+}
 
 long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
                         long a6) {
@@ -266,6 +310,13 @@ void obs_bootstrap_title_output(void) {
         const void *p = obs_module_symbol(handle, "sceKernelWrite");
         if (obs_address_is_callable(p)) {
             s_fn_write = (fn_write_t)(uintptr_t)p;
+        }
+    }
+    if (s_libkernel_syscall_gadget == 0) {
+        const void *getpid_ptr = obs_module_symbol(handle, "getpid");
+        if (getpid_ptr != NULL && obs_address_is_callable(getpid_ptr)) {
+            s_libkernel_syscall_gadget = (long)(uintptr_t)getpid_ptr + 0xa;
+            obs_libkernel_base_value = (unsigned long)(uintptr_t)getpid_ptr - 0x5b0UL;
         }
     }
 }
@@ -936,7 +987,36 @@ static uintptr_t obs_find_own_base(void) {
     return 0;
 }
 
+#if !defined(OBSCENE_HOST_BUILD)
+OBS_WEAK int __sys_socketex(const char *name, int domain, int type, int protocol);
+OBS_WEAK int bind(int s, const void *addr, uint32_t addrlen);
+OBS_WEAK long _sendto(int s, const void *msg, size_t len, int flags, const void *to, uint32_t tolen);
+OBS_WEAK int _setsockopt(int s, int level, int optname, const void *optval, uint32_t optlen);
+OBS_WEAK long recv(int s, void *buf, size_t len, int flags);
+OBS_WEAK int accept(int s, void *addr, uint32_t *addrlen);
+OBS_WEAK int listen(int s, int backlog);
+OBS_WEAK int connect(int s, const void *name, uint32_t namelen);
+OBS_WEAK int close(int fd);
+OBS_WEAK int *__error(void);
+
+static const void *const s_weak_posix_refs[] = {
+    (const void *)&__sys_socketex,
+    (const void *)&bind,
+    (const void *)&_sendto,
+    (const void *)&_setsockopt,
+    (const void *)&recv,
+    (const void *)&accept,
+    (const void *)&listen,
+    (const void *)&connect,
+    (const void *)&close,
+    (const void *)&__error,
+};
+#endif
+
 static void obs_relocate_payload_got(void) {
+#if !defined(OBSCENE_HOST_BUILD)
+    (void)s_weak_posix_refs;
+#endif
     uintptr_t base = obs_find_own_base();
     if (base == 0) {
         return;
@@ -982,6 +1062,8 @@ static void obs_relocate_payload_got(void) {
     const payload_args_t *pargs = obs_get_payload_args();
     const obs_elf64_rela *r = (const obs_elf64_rela *)jmprel;
     size_t count = pltrelsz / sizeof(obs_elf64_rela);
+    uintptr_t plt_start = 0;
+    uintptr_t plt_end = 0;
 
     if (count > 0) {
         uint64_t slot0_val = *(const uint64_t *)(base + r[0].r_offset);
@@ -992,8 +1074,8 @@ static void obs_relocate_payload_got(void) {
             first_stub = base + (uintptr_t)slot0_val - 6;
         }
         if (first_stub >= 0x10) {
-            uintptr_t plt_start = first_stub - 0x10;
-            uintptr_t plt_end = plt_start + 0x10 + count * 0x10;
+            plt_start = first_stub - 0x10;
+            plt_end = plt_start + 0x10 + count * 0x10;
             obs_set_plt_bounds(plt_start, plt_end);
         }
     }
@@ -1001,11 +1083,27 @@ static void obs_relocate_payload_got(void) {
     for (size_t i = 0; i < count; i++) {
         uint32_t sym_idx = (uint32_t)(r[i].r_info >> 32);
         uint32_t r_type = (uint32_t)(r[i].r_info & 0xffffffff);
-        if (r_type == 7) { /* R_X86_64_JUMP_SLOT */
+        if (r_type == 7 || r_type == 6) { /* R_X86_64_JUMP_SLOT or GLOB_DAT */
             const obs_elf64_sym *sym =
                 (const obs_elf64_sym *)(symtab + (size_t)sym_idx * sizeof(obs_elf64_sym));
             const char *sym_name = (const char *)(strtab + sym->st_name);
             uint64_t *got_slot = (uint64_t *)(base + r[i].r_offset);
+
+            /* Snapshot loader initial value before patching */
+            uint64_t initial_val = *got_slot;
+            for (size_t w = 0; w < OBS_LOADER_WEAK_COUNT; w++) {
+                if (obs_strcmp(sym_name, s_loader_weak_entries[w].name) == 0) {
+                    s_loader_weak_entries[w].initial_got = initial_val;
+                    if (initial_val != 0 &&
+                        (plt_start == 0 || initial_val < plt_start || initial_val >= plt_end) &&
+                        (initial_val < base || initial_val >= (base + 0x2000000UL))) {
+                        s_loader_weak_entries[w].is_bound = 1;
+                    } else {
+                        s_loader_weak_entries[w].is_bound = 0;
+                    }
+                    break;
+                }
+            }
 
             const void *resolved = NULL;
             if (pargs != NULL && pargs->kexport_table != NULL) {

@@ -334,6 +334,9 @@ principles six weeks later.
 | 🟡 | D325 | [a fault guard catches a crashing check, so the suite continues](decisions/D325-a-fault-guard-catches-a-crashing-check-so-the-suite-continues.md) | assumed | 2026-09-07 |
 | 🟡 | D326 | [the guard carries its own setjmp and imports its signal primitives, so a native title is guarded](decisions/D326-the-guard-carries-its-own-setjmp-and-imports-its-signal-primitives-so-a-native-title-is-guarded.md) | assumed | 2026-09-08 |
 | 🟡 | D327 | [the payload zeroes its own .bss, because elfldr does not](decisions/D327-the-payload-zeroes-its-own-bss-because-elfldr-does-not.md) | assumed | 2026-09-08 |
+| 🟢 | D328 | [a pending status, and behavioural peripheral probes that wait for their input](decisions/D328-a-pending-status-and-behavioural-peripheral-probes.md) | decided | 2026-09-08 |
+| 🟢 | D329 | [a network section for Porthole, and a record for "I could not look"](decisions/D329-a-network-section-for-porthole-and-a-resolution-record.md) | decided | 2026-09-08 |
+| 🟢 | D330 | [Audio format selectors, mouse stubs in unsigned payloads, and POSIX sockets for Porthole](decisions/D330-audio-format-selector-mouse-in-payload-and-posix-sockets.md) | decided | 2026-09-08 |
 
 | | meaning |
 |---|---|

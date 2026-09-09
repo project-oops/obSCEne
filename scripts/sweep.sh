@@ -14,9 +14,10 @@
 # install has the console fetch *from us*, which needs the Windows-native tool on the LAN
 # address; everything else connects *out* and runs from the Linux tool in WSL.
 #
-#   --seconds N   per-leg run/capture window, stops early on the end record  (default 240)
-#   --corpus 0|1  mined-census on/off - 0 is the fast behavioural pass        (default 0)
-#   --only LEGS   a subset, space-separated, e.g. --only "pkg eboot"          (default all)
+#   --seconds N      per-leg run/capture window, stops early on the end record  (default 240)
+#   --corpus 0|1     mined-census on/off - 0 is the fast behavioural pass        (default 0)
+#   --only LEGS      a subset, space-separated, e.g. --only "pkg eboot"          (default all)
+#   --deploy-only    skip rebuild and deploy pre-built artifacts                 (default build)
 set -u
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -45,12 +46,14 @@ fi
 SECONDS_WIN=320
 CORPUS_VAL="${CORPUS:-0}"
 legs="payload pkg eboot"
+do_build=1
 while [ $# -gt 0 ]; do
     case "$1" in
         --seconds) SECONDS_WIN="$2"; shift 2 ;;
         --corpus)  CORPUS_VAL="$2"; shift 2 ;;
         --only)    legs="$2"; shift 2 ;;
-        -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --deploy-only) do_build=0; shift ;;
+        -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "sweep.sh: unknown option $1 (try --help)" >&2; exit 2 ;;
     esac
 done
@@ -90,10 +93,10 @@ ensure_tools() {
 # so the next leg captures nothing. Killing the tool PID directly reaps it. So each leg writes
 # reader/runner output to files and captures `$!` of the bare tool, with no pipe on either.
 poll_and_stop() {
-    local tmp="$1" reader="$2" runner="$3" i=0
+    local tmp="$1" reader="$2" runner="$3" init_bytes="${4:-0}" i=0
     while [ "$i" -lt "$SECONDS_WIN" ]; do
         sleep 2; i=$((i + 2))
-        grep -qaE '^OBS\|(end|tally)\||exited on signal|# fault address:' "$tmp" 2>/dev/null && { sleep 2; break; }
+        tail -c +$((init_bytes + 1)) "$tmp" 2>/dev/null | grep -qaE '^OBS\|end\||exited on signal|# fault address:' && { sleep 2; break; }
         kill -0 "$reader" 2>/dev/null || break
     done
     kill -9 "$runner" 2>/dev/null || true
@@ -103,51 +106,109 @@ poll_and_stop() {
 }
 
 leg_payload() {
-    echo "=== BUILD: make payload (HARDWARE=1 CORPUS=$CORPUS) ==="
-    rm -f "$B/obscene-payload.elf" "$B/obscene.elf"
-    make -C "$REPO" payload HARDWARE=1 BUILD="$B" TOOL_TARGET="$TT" 2>&1
-    local elf="$B/obscene-payload.elf"; [ -f "$elf" ] || elf="$B/obscene.elf"
-    [ -f "$elf" ] || { echo "sweep: no payload elf built"; return 1; }
+    local elf=""
+    if [ "$do_build" = 1 ]; then
+        echo "=== BUILD: make payload (HARDWARE=1 CORPUS=$CORPUS) ==="
+        rm -f "$B/obscene-probe-prospero.elf"
+        make -C "$REPO" payload HARDWARE=1 BUILD="$B" TOOL_TARGET="$TT" BUILD_ID="swp$TS" 2>&1
+        elf="$B/obscene-probe-prospero.elf"
+    else
+        echo "=== skipping build (--deploy-only) ==="
+        if [ -n "${BUILD:-}" ] && [ -f "$B/obscene-probe-prospero.elf" ]; then
+            elf="$B/obscene-probe-prospero.elf"
+        elif [ -f "$REPO/build/obscene-probe-prospero.elf" ]; then
+            elf="$REPO/build/obscene-probe-prospero.elf"
+        fi
+    fi
+    [ -n "$elf" ] && [ -f "$elf" ] || { echo "sweep: no payload elf found"; return 1; }
     echo "payload elf: $elf ($(stat -c %s "$elf") bytes)"
+    ( "$LTOOL" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
     echo "=== SEND (elfldr) + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
     local tmp trun; tmp="$(mktemp)"; trun="$(mktemp)"
     "$LTOOL" hw logs --seconds "$((SECONDS_WIN + 15))" >"$tmp" 2>/dev/null &
     local reader=$!; sleep 3
+    local init_bytes=0
+    [ -f "$tmp" ] && init_bytes=$(stat -c %s "$tmp" 2>/dev/null || echo 0)
     "$LTOOL" hw send "$elf" --seconds "$SECONDS_WIN" >"$trun" 2>&1 &
     local runner=$!
-    poll_and_stop "$tmp" "$reader" "$runner"
+    (
+        for i in $(seq 1 40); do
+            sleep 1
+            python3 -c '
+import socket
+try:
+    s = socket.create_connection(("192.168.1.211", 9899), timeout=2)
+    s.sendall(b"HELLO_SWEEP_PORT_9899\n")
+    data = s.recv(1024)
+    s.close()
+    print("Port 9899 echo ok:", data)
+    exit(0)
+except Exception:
+    exit(1)
+' 2>/dev/null && break
+        done
+    ) &
+    local probe_pid=$!
+    poll_and_stop "$tmp" "$reader" "$runner" "$init_bytes"
+    kill "$probe_pid" 2>/dev/null || true
     tr -d '\r' <"$trun"; rm -f "$trun"
-    echo "=== DEVICE SYSTEM LOG (payload) ==="; tr -d '\r' <"$tmp"; rm -f "$tmp"
+    echo "=== DEVICE SYSTEM LOG (payload) ==="
+    tail -c +$((init_bytes + 1)) "$tmp" 2>/dev/null | tr -d '\r'; rm -f "$tmp"
 }
 
 leg_pkg() {
-    echo "=== BUILD: make pkg (ps4 package, HARDWARE=1 CORPUS=$CORPUS) ==="
-    make -C "$REPO" pkg HARDWARE=1 BUILD="$B" TOOL_TARGET="$TT" 2>&1
-    [ -f "$B/obscene.pkg" ] || { echo "sweep: no pkg built"; return 1; }
-    cp -f "$B/obscene.pkg" "$REPO/build/obscene.pkg"
-    local win_pkg; win_pkg="$(wslpath -w "$REPO/build/obscene.pkg")"
-    echo "pkg: $REPO/build/obscene.pkg"
-    echo "=== close OBSC00001 + INSTALL (Windows serve, console fetches) ==="
+    if [ "$do_build" = 1 ]; then
+        echo "=== BUILD: make pkg (ps4 package, HARDWARE=1 CORPUS=$CORPUS) ==="
+        make -C "$REPO" pkg HARDWARE=1 BUILD="$B" TOOL_TARGET="$TT" 2>&1
+        [ -f "$B/obscene-probe-orbis.pkg" ] || { echo "sweep: no pkg built"; return 1; }
+        cp -f "$B/obscene-probe-orbis.pkg" "$REPO/build/obscene-probe-orbis.pkg"
+    else
+        echo "=== skipping build (--deploy-only) ==="
+        if [ -n "${BUILD:-}" ] && [ -f "$B/obscene-probe-orbis.pkg" ]; then
+            cp -f "$B/obscene-probe-orbis.pkg" "$REPO/build/obscene-probe-orbis.pkg"
+        fi
+    fi
+    [ -f "$REPO/build/obscene-probe-orbis.pkg" ] || { echo "sweep: no pkg found at $REPO/build/obscene-probe-orbis.pkg"; return 1; }
+    local win_pkg; win_pkg="$(wslpath -w "$REPO/build/obscene-probe-orbis.pkg")"
+    echo "pkg: $REPO/build/obscene-probe-orbis.pkg ($(stat -c %s "$REPO/build/obscene-probe-orbis.pkg") bytes)"
+    echo "=== close OBSC00001 & PPSA99980 + INSTALL (Windows serve, console fetches) ==="
+    ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw install "$win_pkg" --seconds 80 2>&1 | tr -d '\r' )
     echo "=== LAUNCH OBSC00001 + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
     local tmp trun; tmp="$(mktemp)"; trun="$(mktemp)"
     "$LTOOL" hw logs --seconds "$((SECONDS_WIN + 15))" >"$tmp" 2>/dev/null &
     local reader=$!; sleep 3
+    local init_bytes=0
+    [ -f "$tmp" ] && init_bytes=$(stat -c %s "$tmp" 2>/dev/null || echo 0)
     "$LTOOL" hw launch OBSC00001 --seconds "$SECONDS_WIN" >"$trun" 2>&1 &
     local runner=$!
-    poll_and_stop "$tmp" "$reader" "$runner"
+    poll_and_stop "$tmp" "$reader" "$runner" "$init_bytes"
     tr -d '\r' <"$trun"; rm -f "$trun"
-    echo "=== DEVICE SYSTEM LOG (pkg) ==="; tr -d '\r' <"$tmp"; rm -f "$tmp"
+    echo "=== DEVICE SYSTEM LOG (pkg) ==="
+    tail -c +$((init_bytes + 1)) "$tmp" 2>/dev/null | tr -d '\r'; rm -f "$tmp"
 }
 
 leg_eboot() {
-    echo "=== BUILD: make native (gen-5 eboot title, CORPUS=$CORPUS) ==="
-    make -C "$REPO" native BUILD="$B" TOOL_TARGET="$TT" 2>&1
-    local dir="$B/native/PPSA99980"
-    [ -d "$dir" ] || { echo "sweep: no native title dir at $dir"; return 1; }
+    local dir=""
+    if [ "$do_build" = 1 ]; then
+        echo "=== BUILD: make native (gen-5 eboot title, CORPUS=$CORPUS) ==="
+        make -C "$REPO" native BUILD="$B" TOOL_TARGET="$TT" 2>&1
+        dir="$B/prospero/PPSA99980"
+    else
+        echo "=== skipping build (--deploy-only) ==="
+        if [ -n "${BUILD:-}" ] && [ -d "$B/prospero/PPSA99980" ]; then
+            dir="$B/prospero/PPSA99980"
+        elif [ -d "$REPO/build/prospero/PPSA99980" ]; then
+            dir="$REPO/build/prospero/PPSA99980"
+        fi
+    fi
+    [ -n "$dir" ] && [ -d "$dir" ] || { echo "sweep: no native title dir found"; return 1; }
     echo "native dir: $dir"
-    echo "=== close PPSA99980 + UPLOAD (install-native, FTP out) ==="
+    echo "=== close OBSC00001 & PPSA99980 + UPLOAD (install-native, FTP out) ==="
+    ( "$LTOOL" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
+    ( cd /mnt/c && "$WEXE" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw install-native "$dir" 2>&1 | tr -d '\r' )
     echo "waiting 20s for ShadowMountPlus to register the title..."; sleep 20
@@ -155,11 +216,13 @@ leg_eboot() {
     local tmp trun; tmp="$(mktemp)"; trun="$(mktemp)"
     "$LTOOL" hw logs --seconds "$((SECONDS_WIN + 15))" >"$tmp" 2>/dev/null &
     local reader=$!; sleep 3
+    local init_bytes=0
+    [ -f "$tmp" ] && init_bytes=$(stat -c %s "$tmp" 2>/dev/null || echo 0)
     "$LTOOL" hw launch PPSA99980 --seconds "$SECONDS_WIN" >"$trun" 2>&1 &
     local runner=$!
-    poll_and_stop "$tmp" "$reader" "$runner"
+    poll_and_stop "$tmp" "$reader" "$runner" "$init_bytes"
     tr -d '\r' <"$trun"; rm -f "$trun"
-    echo "=== DEVICE SYSTEM LOG (eboot) ==="; tr -d '\r' <"$tmp"; rm -f "$tmp"
+    echo "=== DEVICE SYSTEM LOG (eboot) ==="
 }
 
 # Run one leg: tee the whole thing to the full log, then extract the OBS records (dedup with
@@ -179,6 +242,17 @@ run_leg() {
     local n end crash; n=$(grep -acE '^OBS\|' "$obs" 2>/dev/null || true)
     end=$(grep -acE '^OBS\|end' "$obs" 2>/dev/null || true)
     crash=$(grep -acE '\|crash\|' "$obs" 2>/dev/null || true)
+    if [ "$end" -eq 0 ] && [ "$leg" = "payload" ]; then
+        echo "sweep: payload log incomplete, pulling /mnt/usb0/obscene/report.txt..."
+        local usbtmp; usbtmp="$(mktemp)"
+        if "$LTOOL" hw pull /mnt/usb0/obscene/report.txt --into "$usbtmp" 2>/dev/null; then
+            grep -aE '^OBS\|' "$usbtmp" 2>/dev/null >> "$obs" || true
+            awk '!seen[$0]++' "$obs" > "$obs.tmp" && mv -f "$obs.tmp" "$obs"
+            n=$(grep -acE '^OBS\|' "$obs" 2>/dev/null || true)
+            end=$(grep -acE '^OBS\|end' "$obs" 2>/dev/null || true)
+        fi
+        rm -f "$usbtmp"
+    fi
     echo ">>> $leg: ${n:-0} OBS records, end=${end:-0}, crashes(caught)=${crash:-0}  ->  ${TS}-${leg}.obs.log"
 }
 

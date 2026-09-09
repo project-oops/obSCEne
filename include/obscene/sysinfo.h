@@ -60,6 +60,7 @@ typedef enum obs_sys_field {
     OBS_SYS_GENERATION, /* which console generation resolved, or the mode we run in */
     OBS_SYS_GPU, /* the graphics driver that resolves (gnm/agc), separate from the mode
                   */
+    OBS_SYS_TARGET,  /* compiled target platform / codename */
     OBS_SYS_MEMORY,  /* flexible memory available */
     OBS_SYS_VRAM,    /* graphics / shared memory */
     OBS_SYS_TEMP,    /* SoC temperature */

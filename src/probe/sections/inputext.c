@@ -10,6 +10,7 @@
  */
 
 #include "oops/freestd.h"
+#include "oops/krw.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -18,12 +19,48 @@
 
 static int32_t inputext_initial_user(void) {
     int32_t user = -1;
-    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
-        if (sceUserServiceGetInitialUser(&user) != 0) {
-            return -1;
+    const void *fn_get = (const void *)&sceUserServiceGetInitialUser;
+    const void *fn_init = (const void *)&sceUserServiceInitialize;
+    if (!obs_address_is_callable(fn_get)) {
+        int h = obs_module_open("libSceUserService");
+        if (h >= 0) {
+            fn_get = obs_module_symbol(h, "sceUserServiceGetInitialUser");
+            fn_init = obs_module_symbol(h, "sceUserServiceInitialize");
         }
     }
+    if (obs_address_is_callable(fn_get)) {
+        int (*get_user)(int32_t *) = (int (*)(int32_t *))fn_get;
+        if (get_user(&user) != 0 && obs_address_is_callable(fn_init)) {
+            ((int (*)(void *))fn_init)(NULL);
+            (void)get_user(&user);
+        }
+    }
+    if (user < 0) {
+        user = 0xFF; /* Fallback to system user (SCE_USER_SERVICE_USER_ID_SYSTEM) */
+    }
     return user;
+}
+
+/* Resolve a peripheral symbol via direct import, obs_module_symbol, or kernel dispatch table. */
+static const void *inputext_sym(const char *name, const void *direct) {
+    if (obs_address_is_callable(direct)) {
+        return direct;
+    }
+    int handle = obs_module_open(strncmp(name, "sceMouse", 8) == 0 ? "libSceMouse" : "libSceKeyboard");
+    const void *p = obs_module_symbol(handle, name);
+    if (obs_address_is_callable(p)) {
+        return p;
+    }
+#if !defined(OBSCENE_HOST_BUILD)
+    if (krw_is_ready()) {
+        pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+        uintptr_t kaddr = krw_dynlib_resolve_any(pid, name);
+        if (kaddr >= 0x10000UL && obs_address_is_callable((const void *)kaddr)) {
+            return (const void *)kaddr;
+        }
+    }
+#endif
+    return NULL;
 }
 
 static const char *const keyboard_symbols[] = {
@@ -54,14 +91,26 @@ static obs_result check_keyboard_presence(void) {
     for (size_t i = 0; i < OBS_COUNT(keyboard_symbols); i++) {
         const char *name = keyboard_symbols[i];
         const void *addr = obs_module_symbol(handle, name);
+#if !defined(OBSCENE_HOST_BUILD)
+        if (addr == NULL && krw_is_ready()) {
+            pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+            uintptr_t kaddr = krw_dynlib_resolve_any(pid, name);
+            if (kaddr >= 0x10000UL && obs_address_is_callable((const void *)kaddr)) {
+                addr = (const void *)kaddr;
+            }
+        }
+#endif
         if (addr != NULL) {
             resolved++;
             obs_report_measure("101-input-ext/keyboard-symbols", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            /* Readable, not merely callable: library text is execute-only on hardware, so
+            /* Readable, not merely callable: library text is execute-only (xotext) on hardware, so
              * dump the prologue only where it can be read (emulators), never crashing on a
              * console. (D325) */
-            if (obs_linkmap_readable((uintptr_t)addr)) {
+            int readable = obs_linkmap_readable((uintptr_t)addr);
+            obs_report_measure("101-input-ext/keyboard-symbols", name,
+                               readable ? "readable-text" : "xotext", (uint64_t)readable, "flag");
+            if (readable) {
                 obs_report_buffer("101-input-ext/kbd-prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }
@@ -93,11 +142,23 @@ static obs_result check_mouse_presence(void) {
     for (size_t i = 0; i < OBS_COUNT(mouse_symbols); i++) {
         const char *name = mouse_symbols[i];
         const void *addr = obs_module_symbol(handle, name);
+#if !defined(OBSCENE_HOST_BUILD)
+        if (addr == NULL && krw_is_ready()) {
+            pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+            uintptr_t kaddr = krw_dynlib_resolve_any(pid, name);
+            if (kaddr >= 0x10000UL && obs_address_is_callable((const void *)kaddr)) {
+                addr = (const void *)kaddr;
+            }
+        }
+#endif
         if (addr != NULL) {
             resolved++;
             obs_report_measure("101-input-ext/mouse-symbols", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            if (obs_linkmap_readable((uintptr_t)addr)) {
+            int readable = obs_linkmap_readable((uintptr_t)addr);
+            obs_report_measure("101-input-ext/mouse-symbols", name,
+                               readable ? "readable-text" : "xotext", (uint64_t)readable, "flag");
+            if (readable) {
                 obs_report_buffer("101-input-ext/mouse-prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }
@@ -120,30 +181,48 @@ static obs_result check_keyboard_read_outparam(void) {
     if (!obs_module_resolution_works()) {
         return obs_skip("run-time module resolution is unavailable in this process");
     }
-    int mod = obs_module_open("libSceKeyboard");
-    if (mod < 0) {
-        return obs_skip("libSceKeyboard did not load");
+    const void *p_init = inputext_sym("sceKeyboardInit", (const void *)&sceKeyboardInit);
+    const void *p_open = inputext_sym("sceKeyboardOpen", (const void *)&sceKeyboardOpen);
+    const void *p_close = inputext_sym("sceKeyboardClose", (const void *)&sceKeyboardClose);
+    const void *p_read = inputext_sym("sceKeyboardReadState", (const void *)&sceKeyboardReadState);
+
+    if (p_read == NULL) {
+        return obs_skip("sceKeyboardReadState did not resolve");
     }
 
-    int (*fn_init)(void) = (int (*)(void))obs_module_symbol(mod, "sceKeyboardInit");
-    int (*fn_open)(int32_t, int, int, void *) =
-        (int (*)(int32_t, int, int, void *))obs_module_symbol(mod, "sceKeyboardOpen");
-    int (*fn_close)(int) = (int (*)(int))obs_module_symbol(mod, "sceKeyboardClose");
-    int (*fn_read)(int, void *) = (int (*)(int, void *))obs_module_symbol(mod, "sceKeyboardReadState");
+    int is_callable = obs_address_is_callable(p_read);
+    int is_readable = obs_linkmap_readable((uintptr_t)p_read);
+    obs_report_measure("101-input-ext/kbd-read", "sceKeyboardReadState", "vaddr",
+                       (uint64_t)(uintptr_t)p_read, "vaddr");
+    obs_report_measure("101-input-ext/kbd-read", "sceKeyboardReadState",
+                       is_readable ? "readable-text" : "xotext", (uint64_t)is_readable, "flag");
+    obs_report_measure("101-input-ext/kbd-read", "sceKeyboardReadState",
+                       is_callable ? "callable" : "not-callable", (uint64_t)is_callable, "flag");
 
-    if (fn_read == NULL || !obs_address_is_callable((const void *)fn_read)) {
+    if (!is_callable) {
         return obs_skip("sceKeyboardReadState is not callable");
     }
+
+    int32_t user = inputext_initial_user();
+    if (user < 0) {
+        return obs_skip("no initial user for keyboard");
+    }
+
+    int (*fn_init)(void) = (int (*)(void))p_init;
+    int (*fn_open)(int32_t, int, int, void *) = (int (*)(int32_t, int, int, void *))p_open;
+    int (*fn_close)(int) = (int (*)(int))p_close;
+    int (*fn_read)(int, void *) = (int (*)(int, void *))p_read;
 
     if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
         fn_init();
     }
 
-    int32_t user = inputext_initial_user();
     int handle = -1;
-    if (user >= 0 && fn_open != NULL && obs_address_is_callable((const void *)fn_open)) {
+    if (fn_open != NULL && obs_address_is_callable((const void *)fn_open)) {
         handle = fn_open(user, 0, 0, NULL);
     }
+    obs_report_measure("101-input-ext/kbd-read", "sceKeyboardOpen",
+                       handle >= 0 ? "handle" : "refused", (uint64_t)(uint32_t)handle, "handle");
 
 #define OBS_KBD_BUF_SIZE 4096u
     static uint8_t buf[OBS_KBD_BUF_SIZE];
@@ -154,6 +233,8 @@ static obs_result check_keyboard_read_outparam(void) {
     }
 
     int rc = fn_read(handle >= 0 ? handle : 0, buf);
+    obs_report_measure("101-input-ext/kbd-read", "sceKeyboardReadState", "rc",
+                       (uint64_t)(uint32_t)rc, "code");
 
     unsigned int written = 0;
     for (size_t i = 0; i < OBS_KBD_BUF_SIZE; i++) {
@@ -186,30 +267,54 @@ static obs_result check_mouse_read_outparam(void) {
     if (!obs_module_resolution_works()) {
         return obs_skip("run-time module resolution is unavailable in this process");
     }
-    int mod = obs_module_open("libSceMouse");
-    if (mod < 0) {
-        return obs_skip("libSceMouse did not load");
+    const void *p_init = inputext_sym("sceMouseInit", (const void *)&sceMouseInit);
+    const void *p_open = inputext_sym("sceMouseOpen", (const void *)&sceMouseOpen);
+    const void *p_close = inputext_sym("sceMouseClose", (const void *)&sceMouseClose);
+    const void *p_read = inputext_sym("sceMouseRead", (const void *)&sceMouseRead);
+
+    if (p_read == NULL) {
+        return obs_skip("sceMouseRead did not resolve");
     }
 
-    int (*fn_init)(void) = (int (*)(void))obs_module_symbol(mod, "sceMouseInit");
-    int (*fn_open)(int32_t, int, int, void *) =
-        (int (*)(int32_t, int, int, void *))obs_module_symbol(mod, "sceMouseOpen");
-    int (*fn_close)(int) = (int (*)(int))obs_module_symbol(mod, "sceMouseClose");
-    int (*fn_read)(int, void *, int) = (int (*)(int, void *, int))obs_module_symbol(mod, "sceMouseRead");
+    int is_callable = obs_address_is_callable(p_read);
+    int is_readable = obs_linkmap_readable((uintptr_t)p_read);
+    obs_report_measure("101-input-ext/mouse-read", "sceMouseRead", "vaddr",
+                       (uint64_t)(uintptr_t)p_read, "vaddr");
+    obs_report_measure("101-input-ext/mouse-read", "sceMouseRead",
+                       is_readable ? "readable-text" : "xotext", (uint64_t)is_readable, "flag");
+    obs_report_measure("101-input-ext/mouse-read", "sceMouseRead",
+                       is_callable ? "callable" : "not-callable", (uint64_t)is_callable, "flag");
 
-    if (fn_read == NULL || !obs_address_is_callable((const void *)fn_read)) {
+    if (!is_callable) {
         return obs_skip("sceMouseRead is not callable");
     }
+
+    int32_t user = inputext_initial_user();
+    if (user < 0) {
+        return obs_skip("no initial user for mouse");
+    }
+
+    if (obs_get_payload_args() != NULL) {
+        obs_report_measure("101-input-ext/mouse-read", "sceMouseInit", "unlinked-stub",
+                           (uint64_t)(uintptr_t)p_init, "vaddr");
+        return obs_skip("sceMouse symbols in libkernel are unlinked stubs in payload mode (calling triggers signo 0xa0020101)");
+    }
+
+    int (*fn_init)(void) = (int (*)(void))p_init;
+    int (*fn_open)(int32_t, int, int, void *) = (int (*)(int32_t, int, int, void *))p_open;
+    int (*fn_close)(int) = (int (*)(int))p_close;
+    int (*fn_read)(int, void *, int) = (int (*)(int, void *, int))p_read;
 
     if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
         fn_init();
     }
 
-    int32_t user = inputext_initial_user();
     int handle = -1;
-    if (user >= 0 && fn_open != NULL && obs_address_is_callable((const void *)fn_open)) {
+    if (fn_open != NULL && obs_address_is_callable((const void *)fn_open)) {
         handle = fn_open(user, 0, 0, NULL);
     }
+    obs_report_measure("101-input-ext/mouse-read", "sceMouseOpen",
+                       handle >= 0 ? "handle" : "refused", (uint64_t)(uint32_t)handle, "handle");
 
 #define OBS_MOUSE_BUF_SIZE 4096u
     static uint8_t buf[OBS_MOUSE_BUF_SIZE];
@@ -220,6 +325,8 @@ static obs_result check_mouse_read_outparam(void) {
     }
 
     int rc = fn_read(handle >= 0 ? handle : 0, buf, 1);
+    obs_report_measure("101-input-ext/mouse-read", "sceMouseRead", "rc",
+                       (uint64_t)(uint32_t)rc, "code");
 
     unsigned int written = 0;
     for (size_t i = 0; i < OBS_MOUSE_BUF_SIZE; i++) {
@@ -247,6 +354,232 @@ static obs_result check_mouse_read_outparam(void) {
 #undef OBS_MOUSE_BUF_SIZE
 }
 
+/* ---- keyboard and mouse behavioural probes, called directly (D328) ----------------------
+ *
+ * These call the read functions as imports so they run in every leg, and report PENDING - not
+ * skip, not fault - when no peripheral is attached or the key/movement they watch for never
+ * arrives. A re-run with the input answers the same probe. */
+
+static uint8_t s_ie_buf[4096];
+static uint8_t s_ie_before[4096];
+
+static void obs_ie_fill(void) {
+    for (size_t i = 0; i < sizeof s_ie_buf; i++) {
+        s_ie_buf[i] = 0xC7u;
+        s_ie_before[i] = 0xC7u;
+    }
+}
+
+static unsigned int obs_ie_extent(void) {
+    unsigned int extent = 0;
+    for (size_t i = 0; i < sizeof s_ie_buf; i++) {
+        if (s_ie_buf[i] != s_ie_before[i]) {
+            extent = (unsigned int)(i + 1u);
+        }
+    }
+    return extent;
+}
+
+static void obs_ie_nap(void) {
+    if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+        sceKernelUsleep(50000);
+    }
+}
+
+/* A keyboard with a key held: read once idle, then sample while shift and a letter are held,
+ * and dump both. The two records locate the modifier and key-code fields within the 96-byte
+ * layout; a run with no keyboard, or with no key pressed, is PENDING. */
+static obs_result check_keyboard_held(void) {
+    const void *p_read = inputext_sym("sceKeyboardReadState", (const void *)&sceKeyboardReadState);
+    const void *p_init = inputext_sym("sceKeyboardInit", (const void *)&sceKeyboardInit);
+    const void *p_open = inputext_sym("sceKeyboardOpen", (const void *)&sceKeyboardOpen);
+    const void *p_close = inputext_sym("sceKeyboardClose", (const void *)&sceKeyboardClose);
+
+    if (!obs_address_is_callable(p_read)) {
+        return obs_skip("sceKeyboardReadState is not callable");
+    }
+    int (*fn_read)(int, void *) = (int (*)(int, void *))p_read;
+    int (*fn_init)(void) = (int (*)(void))p_init;
+    int (*fn_open)(int32_t, int, int, void *) = (int (*)(int32_t, int, int, void *))p_open;
+    int (*fn_close)(int) = (int (*)(int))p_close;
+
+    int32_t user = inputext_initial_user();
+    if (user < 0) {
+        return obs_skip("no initial user for keyboard");
+    }
+    if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
+        fn_init();
+    }
+    int handle = -1;
+    if (fn_open != NULL && obs_address_is_callable((const void *)fn_open)) {
+        handle = fn_open(user, 0, 0, NULL);
+    }
+    if (handle < 0) {
+        return obs_pending("no keyboard attached: connect one and re-run");
+    }
+    /* Idle snapshot. */
+    obs_ie_fill();
+    (void)fn_read(handle, s_ie_buf);
+    unsigned int idle_extent = obs_ie_extent();
+    static uint8_t idle[96];
+    for (size_t i = 0; i < 96; i++) {
+        idle[i] = s_ie_buf[i];
+    }
+    obs_report_buffer("101-input-ext/keyboard-held", "sceKeyboardReadState", "idle", idle, 96);
+
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "hold-shift-and-a-letter-now", 4, "prompt-seconds");
+    unsigned int best_diff = 0;
+    static uint8_t held[96];
+    for (int i = 0; i < 80; i++) {
+        obs_ie_fill();
+        if (fn_read(handle, s_ie_buf) == 0 || obs_ie_extent() >= 16u) {
+            unsigned int diff = 0;
+            for (size_t b = 0; b < 96; b++) {
+                if (s_ie_buf[b] != idle[b]) {
+                    diff++;
+                }
+            }
+            if (diff > best_diff) {
+                best_diff = diff;
+                for (size_t b = 0; b < 96; b++) {
+                    held[b] = s_ie_buf[b];
+                }
+            }
+        }
+        obs_ie_nap();
+    }
+    if (fn_close != NULL && obs_address_is_callable((const void *)fn_close)) {
+        fn_close(handle);
+    }
+    if (best_diff == 0) {
+        return obs_pending("keyboard open, but no key was held in the window");
+    }
+    obs_report_buffer("101-input-ext/keyboard-held", "sceKeyboardReadState", "held", held, 96);
+    (void)idle_extent;
+    return obs_pass_value((uint64_t)best_diff);
+}
+
+/* A mouse attached and moving: one record for the extent, four for the stride, and a sampled
+ * button word. No mouse, or no movement, is PENDING. */
+static obs_result check_mouse_moving(void) {
+    const void *p_read = inputext_sym("sceMouseRead", (const void *)&sceMouseRead);
+    const void *p_init = inputext_sym("sceMouseInit", (const void *)&sceMouseInit);
+    const void *p_open = inputext_sym("sceMouseOpen", (const void *)&sceMouseOpen);
+    const void *p_close = inputext_sym("sceMouseClose", (const void *)&sceMouseClose);
+
+    if (!obs_address_is_callable(p_read)) {
+        return obs_skip("sceMouseRead is not callable");
+    }
+    int (*fn_read)(int, void *, int) = (int (*)(int, void *, int))p_read;
+    int (*fn_init)(void) = (int (*)(void))p_init;
+    int (*fn_open)(int32_t, int, int, void *) = (int (*)(int32_t, int, int, void *))p_open;
+    int (*fn_close)(int) = (int (*)(int))p_close;
+
+    int32_t user = inputext_initial_user();
+    if (user < 0) {
+        return obs_skip("no initial user for mouse");
+    }
+    if (obs_get_payload_args() != NULL) {
+        return obs_skip("sceMouse symbols in libkernel are unlinked stubs in payload mode");
+    }
+    if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
+        fn_init();
+    }
+    int handle = -1;
+    if (fn_open != NULL && obs_address_is_callable((const void *)fn_open)) {
+        handle = fn_open(user, 0, 0, NULL);
+    }
+    if (handle < 0) {
+        return obs_pending("no mouse attached: connect one and re-run");
+    }
+    obs_ie_fill();
+    (void)fn_read(handle, s_ie_buf, 1);
+    unsigned int extent_one = obs_ie_extent();
+    obs_report_written("101-input-ext/mouse-moving", "sceMouseRead",
+                       extent_one > 0 ? "one-record" : "untouched", s_ie_before, s_ie_buf,
+                       sizeof s_ie_buf);
+
+    obs_ie_fill();
+    (void)fn_read(handle, s_ie_buf, 4);
+    unsigned int extent_four = obs_ie_extent();
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "extent-one",
+                       (uint64_t)extent_one, "bytes");
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "extent-four",
+                       (uint64_t)extent_four, "bytes");
+
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "move-and-hold-a-button-now",
+                       3, "prompt-seconds");
+    uint32_t button_or = 0;
+    for (int i = 0; i < 60; i++) {
+        obs_ie_fill();
+        if (fn_read(handle, s_ie_buf, 1) >= 0 || obs_ie_extent() >= 4u) {
+            /* Mouse record: buttons in the first word (OpenOrbis). OR across the window. */
+            button_or |= (uint32_t)s_ie_buf[0] | ((uint32_t)s_ie_buf[1] << 8) |
+                         ((uint32_t)s_ie_buf[2] << 16) | ((uint32_t)s_ie_buf[3] << 24);
+        }
+        obs_ie_nap();
+    }
+    if (fn_close != NULL && obs_address_is_callable((const void *)fn_close)) {
+        fn_close(handle);
+    }
+    if (extent_one == 0) {
+        return obs_pending("mouse open, but no record was read: move it and re-run");
+    }
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "button-or",
+                       (uint64_t)button_or, "bits");
+    return obs_pass_value((uint64_t)extent_one);
+}
+
+/* Reachability from a payload: try to bring libSceKeyboard and libSceMouse up through
+ * sysmodule and see whether their read symbols resolve afterwards. Today they resolve only in
+ * the app context; the eboot answer is the finding, and it is different per leg by design. */
+static obs_result check_periph_reachability(void) {
+    unsigned int reachable = 0;
+    /* Keyboard. */
+    int kbd = obs_module_open("libSceKeyboard");
+    const void *kbd_read = kbd >= 0 ? obs_module_symbol(kbd, "sceKeyboardReadState") : NULL;
+#if !defined(OBSCENE_HOST_BUILD)
+    if (kbd_read == NULL && krw_is_ready()) {
+        pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+        uintptr_t addr = krw_dynlib_resolve_any(pid, "sceKeyboardReadState");
+        if (addr >= 0x10000UL && obs_address_is_callable((const void *)addr)) {
+            kbd_read = (const void *)addr;
+        }
+    }
+#endif
+    obs_report_measure("101-input-ext/reachability", "libSceKeyboard",
+                       kbd >= 0 ? "loaded" : "unavailable", (uint64_t)(uint32_t)kbd, "handle");
+    if (obs_address_is_callable(kbd_read)) {
+        reachable++;
+        obs_report_measure("101-input-ext/reachability", "sceKeyboardReadState", "resolved",
+                           (uint64_t)(uintptr_t)kbd_read, "vaddr");
+    }
+    /* Mouse. */
+    int mouse = obs_module_open("libSceMouse");
+    const void *mouse_read = mouse >= 0 ? obs_module_symbol(mouse, "sceMouseRead") : NULL;
+#if !defined(OBSCENE_HOST_BUILD)
+    if (mouse_read == NULL && krw_is_ready()) {
+        pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+        uintptr_t addr = krw_dynlib_resolve_any(pid, "sceMouseRead");
+        if (addr >= 0x10000UL && obs_address_is_callable((const void *)addr)) {
+            mouse_read = (const void *)addr;
+        }
+    }
+#endif
+    obs_report_measure("101-input-ext/reachability", "libSceMouse",
+                       mouse >= 0 ? "loaded" : "unavailable", (uint64_t)(uint32_t)mouse, "handle");
+    if (obs_address_is_callable(mouse_read)) {
+        reachable++;
+        obs_report_measure("101-input-ext/reachability", "sceMouseRead", "resolved",
+                           (uint64_t)(uintptr_t)mouse_read, "vaddr");
+    }
+    if (reachable == 0) {
+        return obs_partial("neither libSceKeyboard nor libSceMouse could be reached here");
+    }
+    return obs_pass_value((uint64_t)reachable);
+}
+
 static const obs_check input_ext_checks[] = {
     {"101-input-ext/keyboard-presence", "libSceKeyboard", "sceKeyboardReadState",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_keyboard_presence,
@@ -260,6 +593,15 @@ static const obs_check input_ext_checks[] = {
     {"101-input-ext/mouse-read", "libSceMouse", "sceMouseRead",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_mouse_read_outparam,
      check_mouse_read_outparam, OBS_FROM_ASSUMED},
+    {"101-input-ext/keyboard-held", "libSceKeyboard", "sceKeyboardReadState",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_keyboard_held, check_keyboard_held,
+     OBS_FROM_ASSUMED},
+    {"101-input-ext/mouse-moving", "libSceMouse", "sceMouseRead",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_mouse_moving, check_mouse_moving,
+     OBS_FROM_ASSUMED},
+    {"101-input-ext/reachability", "libSceKeyboard", "sceKeyboardReadState",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_periph_reachability, check_periph_reachability,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_input_ext = {

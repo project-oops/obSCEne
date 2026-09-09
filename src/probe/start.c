@@ -96,7 +96,7 @@ OBS_WEAK int sceKernelDebugOutText(int channel, const char *text);
  * precisely the records that matter, because the crash is what discarded it. Every call
  * is guarded, because a platform without these resolves them to null and jumping to
  * zero would end the run this exists to explain. */
-static void obs_boot_note(const char *text) {
+void obs_boot_note(const char *text) {
     if (text == NULL)
         return;
     size_t len = obs_strlen(text);
@@ -180,20 +180,21 @@ void obscene_start(void) {
         obs_bootstrap_payload_output(((unsigned long *)obs_pargs_at_entry)[0]);
     }
 
-    /* If payload arguments provide kernel R/W but no staged kexport table,
-     * initialize KRW and dump exports so payload symbol resolution succeeds. */
+    /* If payload arguments provide kernel R/W, initialize KRW. If no staged
+     * kexport table was provided, dump exports so payload symbol resolution succeeds. */
     static obs_kexport_table_t s_payload_kexport_table;
     const payload_args_t *pargs_init = obs_get_payload_args();
     if (pargs_init != NULL) {
         sys_call_init(pargs_init);
     }
-    if (pargs_init != NULL && pargs_init->kexport_table == NULL &&
-        (pargs_init->rwpipe != NULL || pargs_init->rwpair != NULL)) {
+    if (pargs_init != NULL && (pargs_init->rwpipe != NULL || pargs_init->rwpair != NULL)) {
         if (krw_init(pargs_init) == 0) {
-            pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
-            if (krw_dump_all_exports(pid, &s_payload_kexport_table) == 0 &&
-                s_payload_kexport_table.count > 0) {
-                obs_set_payload_kexport_table(&s_payload_kexport_table);
+            if (pargs_init->kexport_table == NULL) {
+                pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+                if (krw_dump_all_exports(pid, &s_payload_kexport_table) == 0 &&
+                    s_payload_kexport_table.count > 0) {
+                    obs_set_payload_kexport_table(&s_payload_kexport_table);
+                }
             }
         }
     }

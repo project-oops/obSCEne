@@ -169,6 +169,9 @@ const obs_section obs_section_file = {
 /* ---- 050-time -------------------------------------------------------------- */
 
 static obs_result check_usleep(void) {
+    if (!obs_has_syscall_route() && !obs_address_is_callable((const void *)&sceKernelUsleep)) {
+        return obs_skip("no syscall route available (no payload args and no syscall gadget)");
+    }
     OBS_REQUIRE(&sceKernelGetProcessTime);
     uint64_t before = sceKernelGetProcessTime();
     int rc = sceKernelUsleep(2000);

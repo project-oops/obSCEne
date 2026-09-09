@@ -86,6 +86,11 @@ scePadSetTriggerEffect
 sceKeyboardReadState
 sceMouseRead
 scePadReadState
+scePadRead
+sceAudioOutOutput
+sceAudioOutSetVolume
+sceAudioOutGetPortState
+sceNetConnect
 putchar
 puts
 exit
@@ -586,11 +591,8 @@ sceVideoOutAdjustColor
 @end
 
 @symbols
-sceAudioOutOutput
 sceAudioOutOutputs
-sceAudioOutSetVolume
 sceAudioOutGetLastOutputTime
-sceAudioOutGetPortState
 sceAudioOutGetSystemState
 sceAudioOutSetMixLevelPadSpk
 @end
@@ -600,7 +602,6 @@ sceAudioOutSetMixLevelPadSpk
 @end
 
 @symbols
-scePadRead
 scePadSetLightBar
 scePadResetLightBar
 scePadSetVibration
@@ -741,7 +742,6 @@ sceImeDialogGetStatus
 @end
 
 @symbols
-sceNetConnect
 sceNetEpollCreate
 sceNetResolverCreate
 sceNetGetsockname

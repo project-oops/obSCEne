@@ -195,6 +195,17 @@ int obs_display_height(void) {
     return obs_fb != 0 ? OBS_FB_HEIGHT : 0;
 }
 
+int obs_display_get_video_handle(void) {
+#if defined(OBSCENE_HOST_BUILD)
+    return -1;
+#else
+    if (s_oops_disp) {
+        return oops_display_get_video_handle(s_oops_disp);
+    }
+    return obs_video_handle;
+#endif
+}
+
 obs_display_state obs_display_status(void) {
     return obs_state;
 }
@@ -430,7 +441,7 @@ obs_display_state obs_display_open(void) {
 
 #if defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5)
     /* Prospero native title: use AGC backend via oops-sdk */
-    s_oops_disp = oops_display_open(OOPS_DISPLAY_BACKEND_AGC, OBS_FB_WIDTH, OBS_FB_HEIGHT);
+    s_oops_disp = oops_display_open(OOPS_DISPLAY_BACKEND_AUTO, OBS_FB_WIDTH, OBS_FB_HEIGHT);
     if (s_oops_disp && oops_display_is_ready(s_oops_disp)) {
         obs_fb = oops_display_get_framebuffer(s_oops_disp);
         obs_state = OBS_DISPLAY_READY;

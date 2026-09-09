@@ -126,5 +126,6 @@ int obs_display_holds_output(void);
 /* Width and height of the framebuffer, or zero when there is none. */
 int obs_display_width(void);
 int obs_display_height(void);
+int obs_display_get_video_handle(void);
 
 #endif /* OBSCENE_DISPLAY_H */

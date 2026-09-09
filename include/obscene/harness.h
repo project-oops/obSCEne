@@ -240,6 +240,7 @@ typedef struct obs_tally {
     unsigned int fail;
     unsigned int skip;
     unsigned int crash;
+    unsigned int pending;
 } obs_tally;
 
 /* Runs every registered section in order. Returns the tally. */

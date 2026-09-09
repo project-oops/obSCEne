@@ -137,7 +137,7 @@ BUILD="${BUILD:-$HOME/obs-pkg}"
 # process cannot open `$HOME` inside the distro without going through `\wsl$`, so it is copied
 # into the build directory - `build/` is gitignored and keeps the root clean.
 mkdir -p "$OBSCENE/build"
-staged="$OBSCENE/build/obscene.pkg"
+staged="$OBSCENE/build/obscene-probe-orbis.pkg"
 
 if [ "$build" = 1 ]; then
     # Nothing from a previous run survives into this one.
@@ -148,7 +148,7 @@ if [ "$build" = 1 ]; then
     # the belief it is the current one is the worst outcome this script can produce, so the file
     # is removed first and both build steps are checked through `PIPESTATUS` rather than by
     # looking for output that a previous run could have left behind.
-    rm -f "$BUILD/obscene.pkg" "$staged"
+    rm -f "$BUILD/obscene-probe-orbis.pkg" "$staged"
 
     echo "=== 1/3  selfish (the formats) ==="
     CARGO_TARGET_DIR="$HOME/selfish-target" \
@@ -171,15 +171,15 @@ if [ "$build" = 1 ]; then
         EXCLUDE=$(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$record" | tr '\n' ' ')
         echo "excluding $(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$record" | wc -l) known process kill(s) from $record"
     fi
-    echo "=== 2/3  obscene.pkg ==="
+    echo "=== 2/3  obscene-probe-orbis.pkg ==="
     cd "$OBSCENE"
     CARGO_TARGET_DIR="$HOME/obs-tool-target" \
         make -j"$JOBS" pkg CC="$CC_FOR_MAKE" GEN="$GEN" HARDWARE=1 BUILD="$BUILD" SELFISH="$SELFISH" EXCLUDE="$EXCLUDE" PROC_SDK="${PROC_SDK:-0}" BUILD_ID="${BUILD_ID:-dev}" DISPLAY_PAIR="${DISPLAY_PAIR:-0}" DISPLAY_MEM="${DISPLAY_MEM:-3}" DISPLAY_PROBE="${DISPLAY_PROBE:-0}" 2>&1 \
         | grep -vE "^clang|^\s+-" || true
     [ "${PIPESTATUS[0]}" = 0 ] || { echo "oops-rebuild-pkg.sh: make pkg failed (the compiler output is above)" >&2; exit 1; }
 
-    [ -f "$BUILD/obscene.pkg" ] || { echo "oops-rebuild-pkg.sh: make pkg reported success and produced no package" >&2; exit 1; }
-    cp "$BUILD/obscene.pkg" "$staged"
+    [ -f "$BUILD/obscene-probe-orbis.pkg" ] || { echo "oops-rebuild-pkg.sh: make pkg reported success and produced no package" >&2; exit 1; }
+    cp "$BUILD/obscene-probe-orbis.pkg" "$staged"
     echo "built:  $staged  ($(stat -c %s "$staged") bytes)"
 fi
 

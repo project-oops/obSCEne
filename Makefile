@@ -35,45 +35,45 @@
 CC := clang
 AR ?= ar
 BUILD ?= build
+# The four axes of a build and a run (OOPS/docs/CONVENTIONS.md section 2):
+#   * Target:   orbis | neo | prospero | trinity (hardware compiled for; default: prospero)
+#   * Format:   elf | eboot | title | pkg (shape delivered as)
+#   * Category: BIG_APP | SYSTEM_APP | MINI_APP | DAEMON | MEDIA_APP (title declaration)
+#   * Context:  measured at run time via OBS|context (e.g. payload/ps4-bc, native/ps5-native)
+#
+# Backward-compatibility alias: if GEN is passed on the command line without TARGET:
+ifeq ($(origin TARGET),undefined)
+    ifeq ($(GEN),4)
+        TARGET := orbis
+    else ifeq ($(GEN),5)
+        TARGET := prospero
+    endif
+endif
+
 OOPS_SDK ?= $(abspath ../oops-sdk)
 include $(OOPS_SDK)/oops-sdk.mk
 
-# Which console generation the module declares itself for.
-#
-# 5 is what this probe is for and the default. 4 exists because the loaders disagree and
-# all of them are right to: shadPS4 is a previous-generation emulator and refuses a
-# module marked for the current one, while Kyty and craziiEmu read the marker as the
-# current generation. Building GEN=4 tells that loader something true rather than
-# disguising the module.
-GEN ?= 5
-
-# Which dynamic-table convention the module writes: legacy or current.
-#
-# `legacy` is what this module has always written and what every loader in the toolkit
-# accepts. `current` is what all six retail current-generation dumps use - standard ELF tags
-# for the standard tables, vendor tags only for vendor concepts. Under `legacy` a reader that
-# follows retail modules finds none of our imports at all. (D193)
-#
-# It follows the generation, because that is what the evidence says it is.
-#
-# Measured across the five loaders on 2026-08-26, building both ways:
-#
-#   shadPS4   gen 4   current -> refuses the standard tags, then faults
-#   fpPS4     gen 4   current -> no records
-#   Kyty      gen 4   current -> works (lenient)
-#   PS5PCEM   gen 5   current -> works
-#   orbistoun gen 5   current -> works
-#
-# shadPS4 says why, plainly: `unsupported dynamic tag 0x02 / 0x03 / 0x07 / 0x61000043 /
-# 0x61000047`. Those are the standard ELF tags and the high vendor range - a previous-generation
-# emulator does not know them, and is right not to, because previous-generation modules do not
-# use them.
-#
-# So the two conventions are not better and worse, they are older and newer, and a module should
-# write the one matching what it claims to be. Six retail current-generation dumps use `current`;
-# every loader that accepts a previous-generation module wants `legacy`. Override to build a
-# module that disagrees with its own generation, which is only useful for testing exactly this.
-TABLE ?= $(if $(filter 5,$(GEN)),current,legacy)
+# Which console generation and dynamic table convention to target.
+# Derived from TARGET (orbis | neo | prospero | trinity, defined in oops-sdk.mk; default: prospero).
+ifeq ($(filter 1 2,$(OOPS_TARGET_NUM)),)
+    # PS5 native (Prospero / Trinity)
+    GEN ?= 5
+    TABLE ?= current
+    EBOOT_GEN ?= 5
+    EBOOT_TABLE ?= current
+    EBOOT_KIND ?= executable
+    PRIVILEGE ?= root
+    SDK ?= $(if $(filter trinity,$(TARGET)),ps5-trinity,ps5-native)
+else
+    # PS4 (Orbis / Neo)
+    GEN ?= 4
+    TABLE ?= legacy
+    EBOOT_GEN ?= 4
+    EBOOT_TABLE ?= legacy
+    EBOOT_KIND ?= fixed
+    PRIVILEGE ?= app
+    SDK ?= $(if $(filter neo,$(TARGET)),ps4-neo,ps4)
+endif
 
 WARNINGS := -Wall -Wextra -Werror -Wshadow -Wconversion -Wsign-conversion \
             -Wstrict-prototypes -Wmissing-prototypes -Wvla
@@ -477,8 +477,6 @@ EBOOT_TABLE ?= $(TABLE)
 #   executable  0xFE10   what native current-generation (PS5) eboots carry and what kstuff expects
 EBOOT_KIND ?= $(if $(filter 5,$(EBOOT_GEN)),executable,fixed)
 
-PRIVILEGE ?= app
-
 TARGET_LD ?= $(SELFISH)/link/module.ld
 
 # Lazily expanded (`=`, not `:=`) so a target-specific `TARGET_LD` is picked up. With `:=` the
@@ -607,9 +605,9 @@ $(OOPS_SDK_INJECTOR_OBJ): $(OBJROOT)/injector/oops-sdk/%.o: $(OOPS_SDK_DIR)/src/
 	$(CC) $(INJECTOR_CFLAGS) -MMD -MP -c -o $@ $<
 
 
-$(OBJROOT)/injector/blob.o: src/probe/blob.S $(BUILD)/obscene-payload.elf $(OBJROOT)/injector/.flags
+$(OBJROOT)/injector/blob.o: src/probe/blob.S $(BUILD)/obscene-probe-$(TARGET).elf $(OBJROOT)/injector/.flags
 	@mkdir -p $(@D)
-	$(CC) $(INJECTOR_CFLAGS) -DEMBED_PAYLOAD_PATH='"$(BUILD)/obscene-payload.elf"' -c -o $@ $<
+	$(CC) $(INJECTOR_CFLAGS) -DEMBED_PAYLOAD_PATH='"$(BUILD)/obscene-probe-$(TARGET).elf"' -c -o $@ $<
 
 # Three shapes, and the distinction that matters is which loader accepts them.
 #
@@ -635,7 +633,7 @@ $(BUILD):
 # there is nothing to do.
 .PHONY: tool
 tool:
-	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) $(CARGO) build --release --quiet
+	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) OOPS_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo dev) $(CARGO) build --release --quiet
 
 # Which library each import comes from.
 #
@@ -714,8 +712,7 @@ payload: $(BUILD)
 	    $(TARGET_FLAGS) -fuse-ld=lld -shared -Wl,-e,obscene_start \
 	    -Wl,--unresolved-symbols=ignore-all -Wl,-z,noexecstack \
 	    -Wl,-z,max-page-size=0x4000 -Wl,-z,common-page-size=0x4000 \
-	    -o $(BUILD)/obscene-payload.elf $(TARGET_SRC) $(OOPS_SDK_C_SRCS)
-	@cp -f $(BUILD)/obscene-payload.elf $(BUILD)/obscene.elf 2>/dev/null || true
+	    -o $(BUILD)/obscene-probe-$(TARGET).elf $(TARGET_SRC) $(OOPS_SDK_C_SRCS)
 
 # The standalone injector payload.
 #
@@ -762,7 +759,6 @@ payload-min: | $(BUILD)
 	    -Wl,--unresolved-symbols=ignore-all -Wl,-z,noexecstack \
 	    -Wl,-z,max-page-size=0x4000 -Wl,-z,common-page-size=0x4000 \
 	    -o $(BUILD)/obscene-min.elf src/probe/min.c src/probe/crt.c
-	@cp -f $(BUILD)/obscene-min.elf $(BUILD)/obscene-payload-min.elf 2>/dev/null || true
 
 # ---------------------------------------------------------------------------------------
 # The loading mechanisms, as artifacts
@@ -773,11 +769,11 @@ payload-min: | $(BUILD)
 #
 # Shapes, loaders, and their release artifacts:
 #
-#   obscene-payload.elf   plain ET_DYN      a homebrew ELF loader maps it itself
-#   obscene-injector.elf  plain ET_DYN      session R/W injector into foreground native title
-#   obscene.module.elf    vendor ELF        emulators, via their "not a SELF" path
-#   obscene-eboot.zip     fSELF (eboot.bin) THE SYSTEM LOADER, from an app directory
-#   obscene.pkg           package           the installer, then the system loader
+#   obscene-probe-prospero.elf  plain ET_DYN      a homebrew ELF loader maps it itself
+#   obscene-injector.elf        plain ET_DYN      session R/W injector into foreground native title
+#   obscene.module.elf          vendor ELF        emulators, via their "not a SELF" path
+#   obscene-probe-prospero.zip  fSELF (eboot.bin) THE SYSTEM LOADER, from an app directory
+#   obscene-probe-orbis.pkg     package           the installer, then the system loader
 #
 # The first two are built. They answer "what do the libraries do" and say **nothing** about
 # the loader: elfldr maps segments itself, and an emulator's loader is somebody's reading of
@@ -842,8 +838,6 @@ payload-min: | $(BUILD)
 # privileges and under emulators that stub everything, where requiring the whole census is
 # exactly what is wanted.
 EBOOT_LIBS ?= 16
-PRIVILEGE ?= 0
-SDK ?= 0
 
 eboot-libs-guard: $(BUILD)/symbols-no-census.txt
 	@if [ "$(EBOOT_LIBS)" != "any" ]; then \
@@ -900,28 +894,23 @@ eboot: tool eboot-libs-guard $(BUILD)/symbols-no-census.txt $(EBOOT_OBJ) $(OOPS_
 # built without it is never the package anybody wanted. `pkg-min` declared it and this
 # did not, which is the whole of the difference - `build-pkg.sh` warned and then died
 # several steps later on a missing file, reporting `NotFound` with no path.
-pkg: EBOOT_GEN = 4
-pkg: EBOOT_TABLE = legacy
-pkg: EBOOT_KIND = fixed
-pkg: eboot sce-module | $(BUILD)
-	@SELFISH=$(SELFISH) GEN=4 bash scripts/build-pkg.sh $(BUILD)
+PKG_TARGET ?= $(if $(filter neo,$(TARGET)),neo,orbis)
+
+pkg: | $(BUILD)
+	@$(MAKE) eboot sce-module TARGET=$(PKG_TARGET) BUILD=$(BUILD)
+	@SELFISH=$(SELFISH) GEN=4 bash scripts/build-pkg.sh $(BUILD) $(PKG_TARGET)
 
 # obSCEne as a native title entry.
 #
 # `pkg` builds a previous-generation package: it installs through the compatibility path and is
-# badged accordingly. `native` builds the current generation's own title layout — a directory
-# described by param.json, with a Gen-5 native eboot (e_type 0xFE10, EI_ABIVERSION 2, current tables)
-# accepted by kstuff under kstuff's native PS5 auth rules.
+# badged accordingly. `native` builds the title layout described by param.json, with eboot
+# laid out under build/prospero/** or build/orbis/** according to TARGET.
+NATIVE_TARGET ?= $(if $(filter trinity,$(TARGET)),trinity,prospero)
+
 .PHONY: native
-native: EBOOT_GEN = 5
-native: EBOOT_TABLE = legacy
-native: EBOOT_KIND = executable
-native: TARGET_LD = $(SELFISH)/link/native_eboot.ld
-native: PRIVILEGE = root
-native: SDK = ps5-native
-native: MODULE_GEN = 5
-native: eboot sce-module | $(BUILD)
-	@SELFISH=$(SELFISH) PRIVILEGE=$(PRIVILEGE) SDK=$(SDK) bash scripts/build-native.sh $(BUILD)
+native: | $(BUILD)
+	@$(MAKE) eboot sce-module TARGET=$(NATIVE_TARGET) BUILD=$(BUILD)
+	@SELFISH=$(SELFISH) PRIVILEGE=root SDK=$(if $(filter trinity,$(NATIVE_TARGET)),ps5-trinity,ps5-native) bash scripts/build-native.sh $(BUILD) $(NATIVE_TARGET)
 # The same package around the *minimal* module, which is what to send at a console first.
 # `module-min` is one import and one library, built by the same linker script through the same
 # `mkmodule` with the same tags, so everything structural is present and everything about scale
@@ -1107,7 +1096,7 @@ pretty: host tool
 # harness behaves.
 check: module payload host
 	@echo "--- tooling tests ---"
-	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) $(CARGO) test --quiet
+	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) OOPS_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo dev) $(CARGO) test --quiet
 	@echo "--- host harness ---"
 	-cd $(BUILD) && ./obscene-host > host-report.txt
 	@$(TOOL) verify $(BUILD)/host-report.txt

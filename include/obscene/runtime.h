@@ -37,6 +37,7 @@ void obs_bootstrap_title_output(void);
  * confirms exports against. See src/runtime.c. */
 unsigned long obs_libkernel_base(void);
 long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6);
+void obs_boot_note(const char *text);
 
 /* Point every subsequent record at an extra destination, or clear it with NULL.
  *
@@ -107,5 +108,19 @@ void obs_run_context(char *name, size_t name_cap, char *basis, size_t basis_cap)
  * import symbols against all loaded module handles using sys_dynlib_dlsym. Enables full
  * native PS5 execution. */
 void obs_bind_dynamic_symbols(void);
+
+/* Whether a syscall route exists (payload args captured or s_libkernel_syscall_gadget found). */
+int obs_has_syscall_route(void);
+uintptr_t obs_syscall_gadget_address(void);
+
+/* Loader weak-binding query for REQ-20260909T1315Z-ed26 */
+typedef struct {
+    const char *name;
+    uint64_t initial_got;
+    int is_bound;
+} obs_loader_weak_entry_t;
+
+#define OBS_LOADER_WEAK_COUNT 10
+const obs_loader_weak_entry_t *obs_get_loader_weak_entries(size_t *count);
 
 #endif /* OBSCENE_RUNTIME_H */

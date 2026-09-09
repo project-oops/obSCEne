@@ -125,6 +125,16 @@ void obs_report_sink(const char *path);
  * one that could not. See src/probe/fault.c. */
 void obs_report_guard(int available, const char *detail);
 
+/* Which peripherals were attached at run start - pad, keyboard, mouse, audio - so a
+ * peripheral probe's PENDING (or a zero extent) is read against what was plugged in rather
+ * than as a defect. Emitted once, near the top of the report. (D328) */
+void obs_report_peripherals(int pad, int keyboard, int mouse, int audio);
+
+/* Whether module enumeration and dlsym work in this environment. When they do not (payload
+ * mode), a `module|...|0x0` and an unresolvable symbol mean "not seen", not "absent" - this
+ * says which, so the two are not read as the same thing. Emitted once, near the top. (D329) */
+void obs_report_resolution(int works, const char *detail);
+
 /* How many checks this run is skipping because a previous run of the same build
  * announced them and never finished, and whether the skip set filled up. */
 void obs_report_resume(unsigned int skipped, int overflowed);
