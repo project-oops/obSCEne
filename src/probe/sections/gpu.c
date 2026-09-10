@@ -21,9 +21,9 @@
  * The device name rides on every record (`gpudev`), so a software result (llvmpipe) is
  * never mistaken for silicon.
  *
- * The kernel list is generated: drop a `.comp` in `src/probe/shaders`, regenerate, and it is
- * swept automatically. No edit here scales the corpus - the specificity lives in the
- * shaders, which is where it belongs.
+ * The kernel list is generated: drop a `.comp` in `src/probe/shaders`, regenerate, and
+ * it is swept automatically. No edit here scales the corpus - the specificity lives in
+ * the shaders, which is where it belongs.
  *
  * # What these kernels do and do not pin down
  *

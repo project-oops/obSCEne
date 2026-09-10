@@ -3,54 +3,58 @@
  *
  * # The one question this exists to settle
  *
- * `libScePosix` exports POSIX under a `posix_` prefix, and every one of those exports is
- * a rename of a call whose failure convention POSIX fixes: a file call returns -1 and
- * sets errno, a pthread call returns the errno itself. The vendor's own `sceKernel*` and
- * `scePthread*` twins do neither - they return `0x8002_0000 | errno`, a scheme measured
- * across five families and seven provoked failures by the sibling project (its D398).
+ * `libScePosix` exports POSIX under a `posix_` prefix, and every one of those exports
+ * is a rename of a call whose failure convention POSIX fixes: a file call returns -1
+ * and sets errno, a pthread call returns the errno itself. The vendor's own
+ * `sceKernel*` and `scePthread*` twins do neither - they return `0x8002_0000 | errno`,
+ * a scheme measured across five families and seven provoked failures by the sibling
+ * project (its D398).
  *
  * So which convention does a *POSIX-named* export use when it fails - POSIX's, or the
  * vendor's? No POSIX-named export has ever been measured, and 24 of orbistoun's open
- * questions and roughly 101k recorded calls rest on the answer (docs/backlog/022). It is
- * one call to find out, and this section makes it in two independent families so the
+ * questions and roughly 101k recorded calls rest on the answer (docs/backlog/022). It
+ * is one call to find out, and this section makes it in two independent families so the
  * result is a convention rather than a single data point:
  *
  *   * the file family - `posix_read` and `posix_write` on descriptor -1;
  *   * the pthread family - `posix_pthread_rwlock_trywrlock` while a read lock is held.
  *
- * A single family could be a quirk of one call. Two families that disagree refute "it is
- * a convention" outright, which is the cheaper thing to look for; two that agree make the
- * convention credible for the rest of the 149 names nobody will call by hand.
+ * A single family could be a quirk of one call. Two families that disagree refute "it
+ * is a convention" outright, which is the cheaper thing to look for; two that agree
+ * make the convention credible for the rest of the 149 names nobody will call by hand.
  *
  * # Where these resolve, and why it is not only libScePosix
  *
  * The names are resolved by name, the way `017-posix` resolves them, from `libScePosix`
- * first and then `libkernel`. The fallback is not optional: the captured console runs show
- * `libScePosix` does not load in the PS5 app sandbox, which is why `017-posix` skips all
- * five of its checks there - and the same `posix_` names are exported by `libkernel`, which
- * this program is already running on. Resolving only libScePosix would make this section
- * skip on the one platform whose answer the premise is waiting for. See `obs_posixerr_symbol`.
+ * first and then `libkernel`. The fallback is not optional: the captured console runs
+ * show `libScePosix` does not load in the PS5 app sandbox, which is why `017-posix`
+ * skips all five of its checks there - and the same `posix_` names are exported by
+ * `libkernel`, which this program is already running on. Resolving only libScePosix
+ * would make this section skip on the one platform whose answer the premise is waiting
+ * for. See `obs_posixerr_symbol`.
  *
  * # It records the encoding; it fails only on an accepted bad argument
  *
  * The encoding is the finding, and no expectation about it is asserted - a `-1`, a bare
  * errno and a `0x8002...` are all legitimate answers this section reports rather than
- * grades, the same stance `140-oracle/error-codes` takes for the vendor-named calls. The
- * one thing that *is* a failure is the platform accepting the bad argument: a read on a
- * closed descriptor that returns a byte count, or a write lock granted while a reader
- * holds it, is a broken implementation whatever encoding it would have used, and POSIX
- * settles that it must be refused. That postcondition is why these carry OBS_FROM_DERIVED
- * rather than ASSUMED: the refusal is POSIX's, the encoding is the open measurement.
+ * grades, the same stance `140-oracle/error-codes` takes for the vendor-named calls.
+ * The one thing that *is* a failure is the platform accepting the bad argument: a read
+ * on a closed descriptor that returns a byte count, or a write lock granted while a
+ * reader holds it, is a broken implementation whatever encoding it would have used, and
+ * POSIX settles that it must be refused. That postcondition is why these carry
+ * OBS_FROM_DERIVED rather than ASSUMED: the refusal is POSIX's, the encoding is the
+ * open measurement.
  *
  * # Why nothing here blocks, and nothing needs a struct layout
  *
- * A read or write on descriptor -1 fails before touching the buffer; a `trywrlock` never
- * waits. The rwlock handle is an opaque pointer-sized slot, exactly as 017-posix's rwlock
- * check treats it, so no layout is assumed. `posix_pthread_mutex_lock` on an invalid
- * handle - the other shape this question could take - is deliberately avoided: on a real
- * lock it blocks, and on the host oracle an invalid handle is undefined behaviour, so it
- * could neither run safely on hardware nor be validated under `make host`. The provoked
- * failures chosen here are deterministic and safe in both places. (See docs/decisions/D321.)
+ * A read or write on descriptor -1 fails before touching the buffer; a `trywrlock`
+ * never waits. The rwlock handle is an opaque pointer-sized slot, exactly as
+ * 017-posix's rwlock check treats it, so no layout is assumed.
+ * `posix_pthread_mutex_lock` on an invalid handle - the other shape this question could
+ * take - is deliberately avoided: on a real lock it blocks, and on the host oracle an
+ * invalid handle is undefined behaviour, so it could neither run safely on hardware nor
+ * be validated under `make host`. The provoked failures chosen here are deterministic
+ * and safe in both places. (See docs/decisions/D321.)
  */
 
 #include "obscene/harness.h"
@@ -101,12 +105,13 @@ static int obs_posixerr_handle(void) {
 /* libkernel, the fallback, and on real hardware the one that actually answers.
  *
  * `libScePosix` does not load in the PS5 app sandbox - the captured console runs report
- * `900-surface/corpus_..._libScePosix fail - this library could not be loaded`, which is
- * why `017-posix` skips all five of its checks there. The same `posix_`-prefixed names
- * are exported by `libkernel` (see `data/hardware/libkernel-vaddrs.txt`: `posix_read`,
- * `posix_write`, `posix_pthread_rwlock_*`), and `libkernel` is the library this program is
- * already running on, so it is present by definition. Without this fallback the whole
- * premise this section exists to settle would skip on the console it most needs to run on. */
+ * `900-surface/corpus_..._libScePosix fail - this library could not be loaded`, which
+ * is why `017-posix` skips all five of its checks there. The same `posix_`-prefixed
+ * names are exported by `libkernel` (see `data/hardware/libkernel-vaddrs.txt`:
+ * `posix_read`, `posix_write`, `posix_pthread_rwlock_*`), and `libkernel` is the
+ * library this program is already running on, so it is present by definition. Without
+ * this fallback the whole premise this section exists to settle would skip on the
+ * console it most needs to run on. */
 static int obs_libkernel_handle(void) {
     if (s_libkernel_handle != -2) {
         return s_libkernel_handle;
@@ -118,8 +123,10 @@ static int obs_libkernel_handle(void) {
 
 static void *obs_posixerr_symbol(const char *name) {
 #if defined(OBSCENE_HOST_BUILD)
-    if (obs_strcmp(name, "posix_read") == 0) return (void *)&read;
-    if (obs_strcmp(name, "posix_write") == 0) return (void *)&write;
+    if (obs_strcmp(name, "posix_read") == 0)
+        return (void *)&read;
+    if (obs_strcmp(name, "posix_write") == 0)
+        return (void *)&write;
     if (obs_strcmp(name, "posix_pthread_rwlock_init") == 0)
         return (void *)&posix_pthread_rwlock_init;
     if (obs_strcmp(name, "posix_pthread_rwlock_destroy") == 0)
@@ -132,9 +139,10 @@ static void *obs_posixerr_symbol(const char *name) {
         return (void *)&posix_pthread_rwlock_unlock;
     return NULL;
 #else
-    /* libScePosix first, so where it does resolve the answer is that library's own; then
-     * libkernel, which exports the same names and is always present. A name absent from a
-     * loaded libScePosix falls through too, not just the case where the library is gone. */
+    /* libScePosix first, so where it does resolve the answer is that library's own;
+     * then libkernel, which exports the same names and is always present. A name absent
+     * from a loaded libScePosix falls through too, not just the case where the library
+     * is gone. */
     int h = obs_posixerr_handle();
     if (h >= 0) {
         const void *addr = obs_module_symbol(h, name);
@@ -150,11 +158,11 @@ static void *obs_posixerr_symbol(const char *name) {
 #endif
 }
 
-/* The convention a returned code belongs to, named rather than numbered so a report reads
- * without a key. The vendor scheme is `0x8002_0000 | errno`; a bare small value is the
- * pthread convention (the errno itself); an all-ones word is the file convention (-1).
- * Everything else is recorded as it is, because guessing is what this section exists not
- * to do. */
+/* The convention a returned code belongs to, named rather than numbered so a report
+ * reads without a key. The vendor scheme is `0x8002_0000 | errno`; a bare small value
+ * is the pthread convention (the errno itself); an all-ones word is the file convention
+ * (-1). Everything else is recorded as it is, because guessing is what this section
+ * exists not to do. */
 #define OBS_ENC_POSIX_MINUS1 0u /* -1, the file convention */
 #define OBS_ENC_POSIX_ERRNO 1u  /* a bare small errno, the pthread convention */
 #define OBS_ENC_VENDOR 2u       /* 0x8002_0000 | errno */
@@ -163,11 +171,11 @@ static void *obs_posixerr_symbol(const char *name) {
 
 /* Classify a return whose success is a non-negative count (the file calls).
  *
- * Order matters: the vendor scheme `0x8002_0000 | errno` is a large *positive* value when
- * a call that returns a signed count hands it back, so it has to be tested before the
- * "non-negative means the bad descriptor was accepted" rule - otherwise a vendor-encoded
- * refusal reads as a broken accept. `-1` is checked first because it is the file
- * convention and unambiguous. */
+ * Order matters: the vendor scheme `0x8002_0000 | errno` is a large *positive* value
+ * when a call that returns a signed count hands it back, so it has to be tested before
+ * the "non-negative means the bad descriptor was accepted" rule - otherwise a
+ * vendor-encoded refusal reads as a broken accept. `-1` is checked first because it is
+ * the file convention and unambiguous. */
 static unsigned int obs_encoding_of_count(sce_ssize_t ret) {
     if (ret == -1) {
         return OBS_ENC_POSIX_MINUS1;
@@ -206,9 +214,9 @@ static unsigned int obs_encoding_of_status(int ret) {
 
 /* The file family: a read and a write on descriptor -1.
  *
- * Both must fail - the descriptor is closed - and the failure's encoding is the finding.
- * A scratch buffer is passed so the call has somewhere to point; on a bad descriptor it
- * is never touched. */
+ * Both must fail - the descriptor is closed - and the failure's encoding is the
+ * finding. A scratch buffer is passed so the call has somewhere to point; on a bad
+ * descriptor it is never touched. */
 static obs_result check_fd_encoding(void) {
     fn_read_t fn_read = (fn_read_t)obs_posixerr_symbol("posix_read");
     fn_write_t fn_write = (fn_write_t)obs_posixerr_symbol("posix_write");
@@ -284,8 +292,9 @@ static obs_result check_pthread_encoding(void) {
     unsigned int enc = obs_encoding_of_status(writer);
     obs_report_error_code("libScePosix", "posix_pthread_rwlock_trywrlock",
                           "write lock while read-held", (uint64_t)(uint32_t)writer);
-    obs_report_measure("019-posixerr/pthread-encoding", "posix_pthread_rwlock_trywrlock",
-                       "encoding", (uint64_t)enc, "encoding");
+    obs_report_measure("019-posixerr/pthread-encoding",
+                       "posix_pthread_rwlock_trywrlock", "encoding", (uint64_t)enc,
+                       "encoding");
 
     if (writer == 0) {
         /* The writer was let in while a reader held the lock. Release it before tearing
@@ -303,8 +312,9 @@ static obs_result check_pthread_encoding(void) {
 }
 
 static const obs_check posixerr_checks[] = {
-    {"019-posixerr/fd-encoding", "libScePosix", "posix_read", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_fd_encoding, check_fd_encoding, OBS_FROM_DERIVED},
+    {"019-posixerr/fd-encoding", "libScePosix", "posix_read", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_fd_encoding, check_fd_encoding,
+     OBS_FROM_DERIVED},
     {"019-posixerr/pthread-encoding", "libScePosix", "posix_pthread_rwlock_trywrlock",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_pthread_encoding,
      check_pthread_encoding, OBS_FROM_DERIVED},
@@ -315,7 +325,8 @@ const obs_section obs_section_posixerr = {
     "POSIX-named error encoding",
     "Which failure convention the platform's POSIX-named exports use - POSIX's -1 and "
     "errno, or the vendor 0x8002 encoding its own twins use - measured in the file and "
-    "pthread families by one provoked failure each. Records the encoding; fails only if "
+    "pthread families by one provoked failure each. Records the encoding; fails only "
+    "if "
     "a bad argument is accepted.",
     posixerr_checks,
     OBS_COUNT(posixerr_checks),

@@ -29,12 +29,13 @@
  *
  * `sceKernelPollSema` asks the same question about the `need` count and the bad handle
  * and always returns. It is the safe counterpart, exactly as `sceKernelPollEventFlag`
- * is the safe counterpart of `sceKernelWaitEventFlag` in 015-sync. So `sceKernelWaitSema`
- * is deliberately *not* called here: its only measurable behaviour beyond Poll's is the
- * timeout, and the timeout cannot be measured without a bounded wait, which needs the
- * unit this probe would be trying to discover. That one question is left for a hardware
- * session that can approach it with a known unit; everything else about the semaphore's
- * bounds is settled here without ever risking the hang. (See docs/decisions/D321.)
+ * is the safe counterpart of `sceKernelWaitEventFlag` in 015-sync. So
+ * `sceKernelWaitSema` is deliberately *not* called here: its only measurable behaviour
+ * beyond Poll's is the timeout, and the timeout cannot be measured without a bounded
+ * wait, which needs the unit this probe would be trying to discover. That one question
+ * is left for a hardware session that can approach it with a known unit; everything
+ * else about the semaphore's bounds is settled here without ever risking the hang. (See
+ * docs/decisions/D321.)
  *
  * # Nothing is left behind
  *
@@ -56,8 +57,8 @@
 #define OBS_SB_BIT_B 0x0000000100000000ull
 
 /* Invalid semaphore handles. The handle is an `int`; zero is "no semaphore" and -1 is
- * the conventional invalid descriptor. Neither can block - there is nothing to wait on -
- * so this is safe where a wait would not be. */
+ * the conventional invalid descriptor. Neither can block - there is nothing to wait on
+ * - so this is safe where a wait would not be. */
 #define OBS_SB_SEMA_NULL 0
 #define OBS_SB_SEMA_BAD (-1)
 
@@ -85,16 +86,16 @@ static obs_result check_sema_bad_handle(void) {
         return obs_fail("a poll on an invalid semaphore handle reported success");
     }
     /* The value is the finding, not the verdict: the code a bad handle returns is what
-     * the sibling project needs, and comparing it against the event-flag family's is the
-     * open question this feeds. */
+     * the sibling project needs, and comparing it against the event-flag family's is
+     * the open question this feeds. */
     return obs_pass_value((uint64_t)(uint32_t)bad_rc);
 }
 
 /* Is `need` a count or a flag?
  *
  * orbistoun models the count as one-unit-and-block; what a `need` above one asks for is
- * unestablished (D540). Signal three tokens in, then poll for two and two again: under a
- * count, the first succeeds and leaves one, so the second fails; under a flag, both
+ * unestablished (D540). Signal three tokens in, then poll for two and two again: under
+ * a count, the first succeeds and leaves one, so the second fails; under a flag, both
  * behave the same. A `need` of zero is polled last, because "does asking for nothing
  * always succeed" is its own parameter-handling fact and one no document settles. */
 static obs_result check_sema_count(void) {
@@ -151,9 +152,9 @@ static obs_result check_sema_count(void) {
 
 /* What does a poll on a null event flag return?
  *
- * The other half of the bad-handle question above. `015-sync/event-flag-rejects-bad-handle`
- * reports the verdict; this records the *code*, because the code is what settles whether
- * the two families agree. */
+ * The other half of the bad-handle question above.
+ * `015-sync/event-flag-rejects-bad-handle` reports the verdict; this records the
+ * *code*, because the code is what settles whether the two families agree. */
 static obs_result check_event_flag_bad_handle(void) {
     uint64_t pattern = 0;
     int rc = sceKernelPollEventFlag(NULL, OBS_SB_BIT_A, OBS_EVF_WAITMODE_AND, &pattern);
@@ -169,10 +170,10 @@ static obs_result check_event_flag_bad_handle(void) {
  *
  * Only bit 0 - AND, "every named bit must be set" - has ever been modelled; what the
  * rest of the word selects is unestablished (D540). The discriminator is one flag with
- * one of two bits set: under AND, a poll for both bits fails; under an OR-shaped mode it
- * would succeed on the one that is present. So each candidate mode is asked exactly that
- * question, and the answer says whether the mode is AND-shaped, OR-shaped, or refused -
- * without this program having to name a constant it cannot confirm.
+ * one of two bits set: under AND, a poll for both bits fails; under an OR-shaped mode
+ * it would succeed on the one that is present. So each candidate mode is asked exactly
+ * that question, and the answer says whether the mode is AND-shaped, OR-shaped, or
+ * refused - without this program having to name a constant it cannot confirm.
  *
  * A poll never blocks whatever the mode, so sweeping unknown mode values is safe. */
 #define OBS_SB_MODE_CANDIDATES 4
@@ -208,18 +209,19 @@ static obs_result check_event_flag_waitmode(void) {
 
     /* The control, under the one mode known to work: A is present, B is not, and both
      * together are not - which is the AND contract stated in three answers. Measured
-     * before the sweep so a platform that fails it is caught before its mode answers are
-     * trusted. */
+     * before the sweep so a platform that fails it is caught before its mode answers
+     * are trusted. */
     uint64_t pat = 0;
-    int present = sceKernelPollEventFlag(flag, OBS_SB_BIT_A, OBS_EVF_WAITMODE_AND, &pat);
+    int present =
+        sceKernelPollEventFlag(flag, OBS_SB_BIT_A, OBS_EVF_WAITMODE_AND, &pat);
     int absent = sceKernelPollEventFlag(flag, OBS_SB_BIT_B, OBS_EVF_WAITMODE_AND, &pat);
     int both = sceKernelPollEventFlag(flag, OBS_SB_BIT_A | OBS_SB_BIT_B,
                                       OBS_EVF_WAITMODE_AND, &pat);
 
     /* The sweep: for each candidate mode, poll for both bits when only one is set. A
      * success means the mode is not AND (one present bit satisfied it); a distinct
-     * refusal means it is AND-shaped or unknown. The raw code is recorded so the analysis
-     * can tell "not satisfied" from "mode rejected". */
+     * refusal means it is AND-shaped or unknown. The raw code is recorded so the
+     * analysis can tell "not satisfied" from "mode rejected". */
     for (int i = 0; i < OBS_SB_MODE_CANDIDATES; i++) {
         pat = 0;
         int mode_rc = sceKernelPollEventFlag(flag, OBS_SB_BIT_A | OBS_SB_BIT_B,
@@ -249,7 +251,8 @@ static const obs_check syncbounds_checks[] = {
      OBS_CAP_NONE, (const void *)&sceKernelPollSema, check_sema_bad_handle,
      OBS_FROM_ASSUMED},
     {"016-syncbounds/sema-count", "libkernel", "sceKernelPollSema", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceKernelPollSema, check_sema_count, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, (const void *)&sceKernelPollSema, check_sema_count,
+     OBS_FROM_ASSUMED},
     {"016-syncbounds/event-flag-bad-handle", "libkernel", "sceKernelPollEventFlag",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelPollEventFlag,
      check_event_flag_bad_handle, OBS_FROM_ASSUMED},
@@ -262,8 +265,10 @@ const obs_section obs_section_syncbounds = {
     "016-syncbounds",
     "Semaphore and event-flag bounds",
     "What the semaphore poll's count argument means, what a bad handle returns in each "
-    "family, and which event-flag wait-mode bits the platform understands. Records what "
-    "it observes; never waits, so it is safe on a platform whose primitives are broken.",
+    "family, and which event-flag wait-mode bits the platform understands. Records "
+    "what "
+    "it observes; never waits, so it is safe on a platform whose primitives are "
+    "broken.",
     syncbounds_checks,
     OBS_COUNT(syncbounds_checks),
 };

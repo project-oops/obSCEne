@@ -56,21 +56,21 @@
 
 #if OOPS_TARGET_IS_PS5
 static obs_result check_gnm_dispatch_init(void) {
-    return obs_skip("libSceGnmDriver is previous-generation; excluded from native PS5 target");
+    return obs_skip(
+        "libSceGnmDriver is previous-generation; excluded from native PS5 target");
 }
 
 static obs_result check_gnm_dispatch_direct(void) {
-    return obs_skip("libSceGnmDriver is previous-generation; excluded from native PS5 target");
+    return obs_skip(
+        "libSceGnmDriver is previous-generation; excluded from native PS5 target");
 }
 
 static const obs_check gnm_checks[] = {
     {"165-gnm/dispatch-init", "libSceGnmDriver",
      "sceGnmDispatchInitDefaultHardwareState", OBS_CAP_NONE, OBS_CAP_NONE,
-     OBS_NO_SYMBOL, check_gnm_dispatch_init,
-     OBS_FROM_ASSUMED},
+     OBS_NO_SYMBOL, check_gnm_dispatch_init, OBS_FROM_ASSUMED},
     {"165-gnm/dispatch-direct", "libSceGnmDriver", "sceGnmDispatchDirect", OBS_CAP_NONE,
-     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gnm_dispatch_direct,
-     OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gnm_dispatch_direct, OBS_FROM_ASSUMED},
 };
 #else
 typedef struct {

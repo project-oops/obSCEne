@@ -280,7 +280,8 @@ void obs_set_plt_bounds(uintptr_t start, uintptr_t end);
 /* Four privilege/security tiers for module access on PlayStation:
  * - OBS_TIER_APP: Standard application sandbox (/system/common/lib/, /app0/sce_module/)
  * - OBS_TIER_SYSMODULE: Dynamic on-demand sysmodule via sceSysmoduleLoadModule
- * - OBS_TIER_SYSTEM: Extended system application (/system_ex/common_ex/lib/, auth_id 0x38...01)
+ * - OBS_TIER_SYSTEM: Extended system application (/system_ex/common_ex/lib/, auth_id
+ * 0x38...01)
  * - OBS_TIER_ROOT: Kernel / root privileged (/system/priv/lib/, auth_id 0x80...01)
  */
 typedef enum {

@@ -1,10 +1,12 @@
 /*
- * The fault guard. See include/obscene/fault.h for the model and D325 for why it exists.
+ * The fault guard. See include/obscene/fault.h for the model and D325 for why it
+ * exists.
  *
- * Two builds share this. The host installs POSIX handlers directly against libc, which is
- * what lets the mechanism be proven on an ordinary machine before a console runs it. The
- * target resolves the same primitives by name through the loader - `sigsetjmp`,
- * `siglongjmp`, `_sigaction` and `scePthreadSelf`, all exported by libraries a title loads
+ * Two builds share this. The host installs POSIX handlers directly against libc, which
+ * is what lets the mechanism be proven on an ordinary machine before a console runs it.
+ * The target resolves the same primitives by name through the loader - `sigsetjmp`,
+ * `siglongjmp`, `_sigaction` and `scePthreadSelf`, all exported by libraries a title
+ * loads
  * - because it links no libc.
  */
 
@@ -45,7 +47,8 @@ static void obs_term_handler(int sig) {
     if (obs_address_is_callable((const void *)&exit)) {
         exit(128 + sig);
     }
-    for (;;) {}
+    for (;;) {
+    }
 #endif
 }
 
@@ -59,16 +62,16 @@ static struct {
 
 static int s_available = 0;
 static int s_inited = 0;
-/* What init resolved and how the install went, stated in the report so a run that is not
- * guarded says why rather than looking the same as one that is. */
+/* What init resolved and how the install went, stated in the report so a run that is
+ * not guarded says why rather than looking the same as one that is. */
 static char s_detail[80] = "not initialised";
 
 #if !defined(OBSCENE_HOST_BUILD)
-/* The platform primitives, resolved once at init. The two setjmp pointers are declared in
- * the header because the arm macro calls whichever resolved at the check's own call site.
- * `sigsetjmp` (two args, saves the signal mask) is preferred; `setjmp` (one arg) is the
- * fallback, and then the handler restores the mask itself with sigprocmask so a second
- * fault is still caught. */
+/* The platform primitives, resolved once at init. The two setjmp pointers are declared
+ * in the header because the arm macro calls whichever resolved at the check's own call
+ * site. `sigsetjmp` (two args, saves the signal mask) is preferred; `setjmp` (one arg)
+ * is the fallback, and then the handler restores the mask itself with sigprocmask so a
+ * second fault is still caught. */
 int (*obs_sigsetjmp_fn)(void *, int) = 0;
 int (*obs_setjmp_fn)(void *) = 0;
 static void (*s_siglongjmp_fn)(void *, int) = 0;
@@ -190,9 +193,9 @@ static void obs_fault_handler(int sig) {
         obs_fault_unregister();
         /* Unblock this signal before leaving the handler, so a later fault is caught
          * again. `siglongjmp` restores the mask itself (savemask=1); the plain-longjmp
-         * fallback does not, so this does it - unblocking a signal siglongjmp is about to
-         * unblock too is harmless. sigset_t is four 32-bit words; the signal's bit is
-         * (sig-1) in the first. */
+         * fallback does not, so this does it - unblocking a signal siglongjmp is about
+         * to unblock too is harmless. sigset_t is four 32-bit words; the signal's bit
+         * is (sig-1) in the first. */
         if (s_sigprocmask_fn != 0 && sig >= 1 && sig <= 32) {
             unsigned char set[16];
             for (int i = 0; i < 16; i++) {
@@ -208,14 +211,14 @@ static void obs_fault_handler(int sig) {
         }
     }
     /* No pad on this thread. On the console that is a platform-spawned service thread
-     * (libScePad, video, audio) faulting outside any armed check - the suite's own threads
-     * are always armed while they run risky code. Terminate just this thread rather than
-     * restoring the default disposition: sigaction is process-global, so restoring it would
-     * both end the whole process AND leave the guard disarmed for every thread after,
-     * which is how a single service-thread fault was disarming the guard before a later
-     * check crashed uncaught. The main thread keeps its guard and the suite runs on. Only
-     * if the thread cannot be exited is the default restored, as a last resort against an
-     * infinite re-fault. (D325) */
+     * (libScePad, video, audio) faulting outside any armed check - the suite's own
+     * threads are always armed while they run risky code. Terminate just this thread
+     * rather than restoring the default disposition: sigaction is process-global, so
+     * restoring it would both end the whole process AND leave the guard disarmed for
+     * every thread after, which is how a single service-thread fault was disarming the
+     * guard before a later check crashed uncaught. The main thread keeps its guard and
+     * the suite runs on. Only if the thread cannot be exited is the default restored,
+     * as a last resort against an infinite re-fault. (D325) */
     if (s_pthread_exit_fn != 0) {
         s_pthread_exit_fn(0);
     }
@@ -234,9 +237,10 @@ static const void *obs_fault_sym(int handle, const char *name) {
     return obs_address_is_callable(p) ? p : 0;
 }
 
-/* Resolve a name from libkernel, then libSceLibcInternal. The signal entry points are the
- * former's, the standard-C ones (`setjmp`/`longjmp`) the latter's, and either might carry a
- * given spelling - so both are tried rather than assuming which library owns it. */
+/* Resolve a name from libkernel, then libSceLibcInternal. The signal entry points are
+ * the former's, the standard-C ones (`setjmp`/`longjmp`) the latter's, and either might
+ * carry a given spelling - so both are tried rather than assuming which library owns
+ * it. */
 static const void *obs_fault_resolve(const char *name) {
     int h = obs_module_open("libkernel");
     const void *p = (h >= 0) ? obs_fault_sym(h, name) : 0;
@@ -251,21 +255,23 @@ static const void *obs_fault_resolve(const char *name) {
 
 /* A freestanding setjmp/longjmp, so the guard does not depend on libc exporting them.
  *
- * The pkg loader resolves setjmp/longjmp from libSceLibcInternal through sceKernelDlsym, so
- * the guard arms and catches there. A native eboot cannot: its libSceLibcInternal reads base
- * 0x0 and sceKernelDlsym returns ESRCH for that module's exports - the modules that DO
- * resolve are libkernel's, which is why the eboot's klog output (sceKernelDebugOutText) works
- * while its guard did not, so one late uncaught crash truncated the whole native run before
- * OBS|end. Rather than leave the guard off on the delivery shape a late crash most hurts,
- * save and restore the state a non-local jump needs directly. This is our own code
- * implementing the x86-64 SysV ABI, not a vendor declaration - the same footing as any
- * runtime.c helper (Principle 8). It is also our own defined symbol, not an import, so it
- * carries none of the GLOB_DAT/JUMP_SLOT split that leaves a native title's imports at 0x2
- * (D323): the call is a link-time PC-relative branch. The signal mask is not saved here; the
- * handler unblocks the fault signal with sigprocmask before jumping, exactly as it does for
- * the resolved plain-setjmp fallback. (D326)
+ * The pkg loader resolves setjmp/longjmp from libSceLibcInternal through
+ * sceKernelDlsym, so the guard arms and catches there. A native eboot cannot: its
+ * libSceLibcInternal reads base 0x0 and sceKernelDlsym returns ESRCH for that module's
+ * exports - the modules that DO resolve are libkernel's, which is why the eboot's klog
+ * output (sceKernelDebugOutText) works while its guard did not, so one late uncaught
+ * crash truncated the whole native run before OBS|end. Rather than leave the guard off
+ * on the delivery shape a late crash most hurts, save and restore the state a non-local
+ * jump needs directly. This is our own code implementing the x86-64 SysV ABI, not a
+ * vendor declaration - the same footing as any runtime.c helper (Principle 8). It is
+ * also our own defined symbol, not an import, so it carries none of the
+ * GLOB_DAT/JUMP_SLOT split that leaves a native title's imports at 0x2 (D323): the call
+ * is a link-time PC-relative branch. The signal mask is not saved here; the handler
+ * unblocks the fault signal with sigprocmask before jumping, exactly as it does for the
+ * resolved plain-setjmp fallback. (D326)
  *
- * jb 8-byte slots: 0 rbx, 1 rbp, 2 r12, 3 r13, 4 r14, 5 r15, 6 rsp (as after ret), 7 rip. */
+ * jb 8-byte slots: 0 rbx, 1 rbp, 2 r12, 3 r13, 4 r14, 5 r15, 6 rsp (as after ret), 7
+ * rip. */
 __asm__(".text\n"
         ".p2align 4\n"
         ".global obs_local_setjmp\n"
@@ -303,10 +309,11 @@ __asm__(".text\n"
 extern int obs_local_setjmp(void *env);
 extern void obs_local_longjmp(void *env, int val);
 
-/* Append "tag" then a single '0'/'1' to s_detail, bounded. Lets the guard record state which
- * primitives resolved, so a run that is guarded but still dies (or is not guarded at all)
- * shows the exact gap rather than only pass/fail - the difference between "no signal
- * primitive resolved" and "resolved but the platform did not deliver the signal". */
+/* Append "tag" then a single '0'/'1' to s_detail, bounded. Lets the guard record state
+ * which primitives resolved, so a run that is guarded but still dies (or is not guarded
+ * at all) shows the exact gap rather than only pass/fail - the difference between "no
+ * signal primitive resolved" and "resolved but the platform did not deliver the
+ * signal". */
 static void obs_fault_flag(const char *tag, int v) {
     unsigned int i = 0;
     while (i + 1u < sizeof s_detail && s_detail[i] != '\0') {
@@ -322,12 +329,12 @@ static void obs_fault_flag(const char *tag, int v) {
     s_detail[i] = '\0';
 }
 
-/* Prefer a bound import over dlsym. A native title's dlsym resolves only the symbols the
- * process already imports, so a primitive the eboot links directly (imports.c) is found this
- * way when dlsym cannot see it - the gap that left the guard unarmed on the eboot while its
- * imported output worked. The callable check rejects a weak-unbound 0 and the 0x2 unresolved
- * sentinel, falling through to dlsym, which is what a module or emulator with a real dlsym
- * uses. (D326) */
+/* Prefer a bound import over dlsym. A native title's dlsym resolves only the symbols
+ * the process already imports, so a primitive the eboot links directly (imports.c) is
+ * found this way when dlsym cannot see it - the gap that left the guard unarmed on the
+ * eboot while its imported output worked. The callable check rejects a weak-unbound 0
+ * and the 0x2 unresolved sentinel, falling through to dlsym, which is what a module or
+ * emulator with a real dlsym uses. (D326) */
 static const void *obs_fault_pick(const void *import_addr, const char *name) {
     if (obs_address_is_callable(import_addr)) {
         return import_addr;
@@ -345,9 +352,10 @@ void obs_fault_init(void) {
     const void *slj = obs_fault_resolve("siglongjmp");
     const void *sj = obs_fault_resolve("setjmp");
     const void *lj = obs_fault_resolve("longjmp");
-    /* The signal primitives and the thread calls are imports (imports.c), so their bound
-     * address is tried before dlsym - the native title resolves them no other way. The POSIX
-     * spellings stay as dlsym fallbacks for a loader that exports them under those names. */
+    /* The signal primitives and the thread calls are imports (imports.c), so their
+     * bound address is tried before dlsym - the native title resolves them no other
+     * way. The POSIX spellings stay as dlsym fallbacks for a loader that exports them
+     * under those names. */
     const void *sa = obs_fault_pick((const void *)&_sigaction, "_sigaction");
     if (sa == 0) {
         sa = obs_fault_resolve("sigaction");
@@ -376,8 +384,9 @@ void obs_fault_init(void) {
     s_pthread_exit_fn = (void (*)(void *))(uintptr_t)pex;
     /* clang-format on */
 
-    /* Whether the fault-recovery primitives resolved, captured before the pair-selection
-     * clears one, so the report's bitmap reflects what the loader actually offered. */
+    /* Whether the fault-recovery primitives resolved, captured before the
+     * pair-selection clears one, so the report's bitmap reflects what the loader
+     * actually offered. */
     int b_sa = (sa != 0);
     int b_spm = (spm != 0);
     int b_pex = (pex != 0);
@@ -385,10 +394,10 @@ void obs_fault_init(void) {
 
     /* The arm and the jump must use the same pair, or a sigsetjmp buffer meets a plain
      * longjmp. Prefer the sig variants (they save the mask); then the loader's plain
-     * setjmp/longjmp; then our own freestanding pair, so a loader that resolves neither (a
-     * native eboot, whose libSceLibcInternal dlsym does not work) still arms the guard rather
-     * than running every check unguarded. Clear whichever pair is not used so the macro and
-     * the handler cannot disagree. (D326) */
+     * setjmp/longjmp; then our own freestanding pair, so a loader that resolves neither
+     * (a native eboot, whose libSceLibcInternal dlsym does not work) still arms the
+     * guard rather than running every check unguarded. Clear whichever pair is not used
+     * so the macro and the handler cannot disagree. (D326) */
     if (obs_sigsetjmp_fn != 0 && s_siglongjmp_fn != 0) {
         obs_setjmp_fn = 0;
         s_longjmp_fn = 0;
@@ -410,9 +419,9 @@ void obs_fault_init(void) {
         return;
     }
 
-    /* struct sigaction (FreeBSD amd64): handler at 0, sa_flags int at 8, sigset_t[4] at 12.
-     * Built as bytes so no vendor header is needed - the layout is the FreeBSD ABI, cited
-     * like every other struct this program reads. */
+    /* struct sigaction (FreeBSD amd64): handler at 0, sa_flags int at 8, sigset_t[4]
+     * at 12. Built as bytes so no vendor header is needed - the layout is the FreeBSD
+     * ABI, cited like every other struct this program reads. */
     unsigned char act[32];
     for (int i = 0; i < 32; i++) {
         act[i] = 0;

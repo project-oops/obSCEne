@@ -126,7 +126,8 @@ static void *exc_concurrent_worker(void *arg) {
         }
         __asm__ volatile("" : : : "memory");
     }
-    if (s_concurrent_in_handler && s_active_raise_fn != NULL && s_target_thread != NULL) {
+    if (s_concurrent_in_handler && s_active_raise_fn != NULL &&
+        s_target_thread != NULL) {
         s_concurrent_raise_rc = s_active_raise_fn(s_target_thread, 30);
     }
     s_concurrent_worker_done = 1;
@@ -154,20 +155,23 @@ static obs_result check_exception_handler_ordering(void) {
 
     const void *addr_install = obs_module_symbol(1, "sceKernelInstallExceptionHandler");
     if (addr_install == NULL) {
-        addr_install = obs_module_symbol(OBS_HANDLE_SELF, "sceKernelInstallExceptionHandler");
+        addr_install =
+            obs_module_symbol(OBS_HANDLE_SELF, "sceKernelInstallExceptionHandler");
     }
     const void *addr_raise = obs_module_symbol(1, "sceKernelRaiseException");
     if (addr_raise == NULL) {
         addr_raise = obs_module_symbol(OBS_HANDLE_SELF, "sceKernelRaiseException");
     }
 
-    obs_report_measure("030-thread/exception-handler", "sceKernelInstallExceptionHandler", "address",
+    obs_report_measure("030-thread/exception-handler",
+                       "sceKernelInstallExceptionHandler", "address",
                        (uint64_t)(uintptr_t)addr_install, "address");
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "address",
-                       (uint64_t)(uintptr_t)addr_raise, "address");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "address", (uint64_t)(uintptr_t)addr_raise, "address");
 
     if (addr_install == NULL || addr_raise == NULL) {
-        return obs_skip("sceKernelInstallExceptionHandler or sceKernelRaiseException not resolved");
+        return obs_skip(
+            "sceKernelInstallExceptionHandler or sceKernelRaiseException not resolved");
     }
 
     typedef void (*fn_handler_t)(uint64_t, uint64_t, uint64_t);
@@ -178,9 +182,11 @@ static obs_result check_exception_handler_ordering(void) {
 
     const void *addr_remove = obs_module_symbol(1, "sceKernelRemoveExceptionHandler");
     if (addr_remove == NULL) {
-        addr_remove = obs_module_symbol(OBS_HANDLE_SELF, "sceKernelRemoveExceptionHandler");
+        addr_remove =
+            obs_module_symbol(OBS_HANDLE_SELF, "sceKernelRemoveExceptionHandler");
     }
-    obs_report_measure("030-thread/exception-handler", "sceKernelRemoveExceptionHandler", "address",
+    obs_report_measure("030-thread/exception-handler",
+                       "sceKernelRemoveExceptionHandler", "address",
                        (uint64_t)(uintptr_t)addr_remove, "address");
 
     ScePthread self = NULL;
@@ -204,12 +210,15 @@ static obs_result check_exception_handler_ordering(void) {
     s_exc_handler1_arg1 = 0;
     s_exc_handler1_arg2 = 0;
     int rc_inst1 = fn_install(30, probe_exc_handler_1);
-    obs_report_measure("030-thread/exception-handler", "sceKernelInstallExceptionHandler", "rc-1",
+    obs_report_measure("030-thread/exception-handler",
+                       "sceKernelInstallExceptionHandler", "rc-1",
                        (uint64_t)(uint32_t)rc_inst1, "rc");
 
-    /* 2. install(30, handler2) second time (duplicate rejected with 0x80020023 / EAGAIN) */
+    /* 2. install(30, handler2) second time (duplicate rejected with 0x80020023 /
+     * EAGAIN) */
     int rc_inst2 = fn_install(30, probe_exc_handler_2);
-    obs_report_measure("030-thread/exception-handler", "sceKernelInstallExceptionHandler", "rc-2",
+    obs_report_measure("030-thread/exception-handler",
+                       "sceKernelInstallExceptionHandler", "rc-2",
                        (uint64_t)(uint32_t)rc_inst2, "rc");
 
     /* 3. Delivering raise(self, 30) */
@@ -227,39 +236,42 @@ static obs_result check_exception_handler_ordering(void) {
     uint64_t arg2_val = s_exc_handler1_arg2;
     uint64_t handler_rsp = s_exc_handler1_rsp;
 
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rc-with-handler",
-                       (uint64_t)(uint32_t)rc_raise, "rc");
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "flag-after-raise",
-                       (uint64_t)flag_val, "flag");
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "arg0-received",
-                       arg0_val, "signum");
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "arg1-received",
-                       arg1_val, "arg1");
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "arg2-received",
-                       arg2_val, "arg2");
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rsi-rdx-identical",
-                       (uint64_t)(arg1_val == arg2_val ? 1u : 0u), "bool");
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "handler-rsp",
-                       handler_rsp, "address");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "rc-with-handler", (uint64_t)(uint32_t)rc_raise, "rc");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "flag-after-raise", (uint64_t)flag_val, "flag");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "arg0-received", arg0_val, "signum");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "arg1-received", arg1_val, "arg1");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "arg2-received", arg2_val, "arg2");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "rsi-rdx-identical", (uint64_t)(arg1_val == arg2_val ? 1u : 0u),
+                       "bool");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "handler-rsp", handler_rsp, "address");
     int64_t diff = (int64_t)arg1_val - (int64_t)handler_rsp;
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "context-delta-from-rsp",
-                       (uint64_t)diff, "bytes");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "context-delta-from-rsp", (uint64_t)diff, "bytes");
 
     if (flag_val > 0 && s_exc_context_len >= 0x140u) {
         for (unsigned int off = 0; off < s_exc_context_len; off += 16u) {
-            unsigned int chunk = (s_exc_context_len - off < 16u) ? (s_exc_context_len - off) : 16u;
-            obs_report_bytes("030-thread/exception-handler", "sceKernelRaiseException", "context",
-                             off, &s_exc_context_buf[off], chunk);
+            unsigned int chunk =
+                (s_exc_context_len - off < 16u) ? (s_exc_context_len - off) : 16u;
+            obs_report_bytes("030-thread/exception-handler", "sceKernelRaiseException",
+                             "context", off, &s_exc_context_buf[off], chunk);
         }
 
         uint64_t f8_val = s_exc_f8_val;
-        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "offset-0xf8-value",
-                           f8_val, "raw");
+        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                           "offset-0xf8-value", f8_val, "raw");
 
         typedef int (*fn_vq_t)(const void *, int, void *, size_t);
         fn_vq_t fn_vq = (fn_vq_t)obs_module_symbol(1, "sceKernelVirtualQuery");
         if (fn_vq == NULL) {
-            fn_vq = (fn_vq_t)obs_module_symbol(OBS_HANDLE_SELF, "sceKernelVirtualQuery");
+            fn_vq =
+                (fn_vq_t)obs_module_symbol(OBS_HANDLE_SELF, "sceKernelVirtualQuery");
         }
         if (fn_vq == NULL && &sceKernelVirtualQuery != NULL) {
             fn_vq = (fn_vq_t)sceKernelVirtualQuery;
@@ -268,33 +280,38 @@ static obs_result check_exception_handler_ordering(void) {
         int f8_is_mapped = 0;
         if (f8_val > 0x10000u && f8_val < 0x00007fffffffffffULL && fn_vq != NULL) {
             unsigned char vq_info[64];
-            int qrc = fn_vq((const void *)(uintptr_t)f8_val, 0, vq_info, sizeof(vq_info));
+            int qrc =
+                fn_vq((const void *)(uintptr_t)f8_val, 0, vq_info, sizeof(vq_info));
             if (qrc == 0) {
                 f8_is_mapped = 1;
             }
         }
-        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "offset-0xf8-mapped",
-                           (uint64_t)f8_is_mapped, "bool");
+        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                           "offset-0xf8-mapped", (uint64_t)f8_is_mapped, "bool");
         if (f8_is_mapped) {
             const unsigned char *p_f8 = (const unsigned char *)(uintptr_t)f8_val;
             for (unsigned int off = 0; off < 0x40u; off += 16u) {
-                obs_report_bytes("030-thread/exception-handler", "sceKernelRaiseException", "offset-0xf8-target",
-                                 off, &p_f8[off], 16u);
+                obs_report_bytes("030-thread/exception-handler",
+                                 "sceKernelRaiseException", "offset-0xf8-target", off,
+                                 &p_f8[off], 16u);
             }
         }
 
         if (fn_vq != NULL) {
             unsigned char vq_ctx[64];
-            if (fn_vq((const void *)(uintptr_t)arg1_val, 0, vq_ctx, sizeof(vq_ctx)) == 0) {
+            if (fn_vq((const void *)(uintptr_t)arg1_val, 0, vq_ctx, sizeof(vq_ctx)) ==
+                0) {
                 uint64_t reg_start = 0;
                 uint64_t reg_end = 0;
                 for (unsigned int i = 0; i < 8u; i++) {
                     reg_start |= ((uint64_t)vq_ctx[i]) << (i * 8u);
                     reg_end |= ((uint64_t)vq_ctx[8u + i]) << (i * 8u);
                 }
-                obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "context-region-start",
+                obs_report_measure("030-thread/exception-handler",
+                                   "sceKernelRaiseException", "context-region-start",
                                    reg_start, "address");
-                obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "context-region-end",
+                obs_report_measure("030-thread/exception-handler",
+                                   "sceKernelRaiseException", "context-region-end",
                                    reg_end, "address");
             }
         }
@@ -314,62 +331,71 @@ static obs_result check_exception_handler_ordering(void) {
             s_active_raise_fn = fn_raise;
 
             ScePthread worker_thread;
-            int rc_th = scePthreadCreate(&worker_thread, NULL, exc_concurrent_worker, NULL, "exc-conc");
+            int rc_th = scePthreadCreate(&worker_thread, NULL, exc_concurrent_worker,
+                                         NULL, "exc-conc");
             if (rc_th == 0) {
                 int rc_main_raise = fn_raise(self, 30);
-                obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rc-main-raise-concurrent",
+                obs_report_measure("030-thread/exception-handler",
+                                   "sceKernelRaiseException",
+                                   "rc-main-raise-concurrent",
                                    (uint64_t)(uint32_t)rc_main_raise, "rc");
                 void *worker_ret = NULL;
                 scePthreadJoin(worker_thread, &worker_ret);
-                obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rc-concurrent-thread",
+                obs_report_measure("030-thread/exception-handler",
+                                   "sceKernelRaiseException", "rc-concurrent-thread",
                                    (uint64_t)(uint32_t)s_concurrent_raise_rc, "rc");
-                obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "handler-reentered",
+                obs_report_measure("030-thread/exception-handler",
+                                   "sceKernelRaiseException", "handler-reentered",
                                    (uint64_t)s_concurrent_handler_reentered, "count");
             }
             fn_remove(30);
             fn_install(30, probe_exc_handler_1);
         }
     } else {
-        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rc-concurrent-thread",
-                           0xffffffff, "skipped");
-        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "handler-reentered",
-                           0, "count");
+        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                           "rc-concurrent-thread", 0xffffffff, "skipped");
+        obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                           "handler-reentered", 0, "count");
     }
 
     /* Inverted arg order: raise(30, self) in case (signum, thread) */
     typedef int (*fn_raise_inv_t)(int signum, ScePthread thread);
     fn_raise_inv_t fn_raise_inv = (fn_raise_inv_t)addr_raise;
     int rc_raise_inv = fn_raise_inv(30, self);
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rc-inverted-args",
-                       (uint64_t)(uint32_t)rc_raise_inv, "rc");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "rc-inverted-args", (uint64_t)(uint32_t)rc_raise_inv, "rc");
 
     /* 5. raise(self, 31) - signal nothing was installed for while 30 is installed */
     int rc_raise31 = fn_raise(self, 31);
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rc-unhandled-sig31",
-                       (uint64_t)(uint32_t)rc_raise31, "rc");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "rc-unhandled-sig31", (uint64_t)(uint32_t)rc_raise31, "rc");
 
     /* 6. raise(self, 30) with no handler installed */
     int rc_uninst = fn_install(30, NULL);
-    obs_report_measure("030-thread/exception-handler", "sceKernelInstallExceptionHandler", "rc-uninstall",
+    obs_report_measure("030-thread/exception-handler",
+                       "sceKernelInstallExceptionHandler", "rc-uninstall",
                        (uint64_t)(uint32_t)rc_uninst, "rc");
 
     if (addr_remove != NULL) {
         fn_remove_t fn_remove = (fn_remove_t)addr_remove;
         int rc_rem = fn_remove(30);
-        obs_report_measure("030-thread/exception-handler", "sceKernelRemoveExceptionHandler", "rc-remove",
+        obs_report_measure("030-thread/exception-handler",
+                           "sceKernelRemoveExceptionHandler", "rc-remove",
                            (uint64_t)(uint32_t)rc_rem, "rc");
     }
 
     /* Calling fn_raise(self, 30) with no handler installed delivers unhandled
      * signal 30 (0x1e) to the process, terminating it (measured on console:
      * "mDBG: Sending signal(pid: ..., tid: ..., signo: 0x1e)").
-     * We report 0x1e as unhandled-signal-delivers, and test with an invalid thread handle
-     * which safely returns 0x80020003 (ESRCH) without terminating the process. */
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "unhandled-signal-delivers",
-                       0x1e, "signo");
+     * We report 0x1e as unhandled-signal-delivers, and test with an invalid thread
+     * handle which safely returns 0x80020003 (ESRCH) without terminating the process.
+     */
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "unhandled-signal-delivers", 0x1e, "signo");
     int rc_bad_thread = fn_raise((ScePthread)1, 30);
-    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException", "rc-bad-thread-no-handler",
-                       (uint64_t)(uint32_t)rc_bad_thread, "rc");
+    obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
+                       "rc-bad-thread-no-handler", (uint64_t)(uint32_t)rc_bad_thread,
+                       "rc");
 
     return obs_pass();
 }
@@ -380,14 +406,18 @@ static obs_result check_thread_affinity(void) {
     typedef int (*fn_getaffinity_t)(ScePthread, uint64_t *);
     typedef int (*fn_setaffinity_t)(ScePthread, uint64_t);
 
-    fn_getaffinity_t fn_get = (fn_getaffinity_t)obs_module_symbol(1, "scePthreadGetaffinity");
+    fn_getaffinity_t fn_get =
+        (fn_getaffinity_t)obs_module_symbol(1, "scePthreadGetaffinity");
     if (fn_get == NULL) {
-        fn_get = (fn_getaffinity_t)obs_module_symbol(OBS_HANDLE_SELF, "scePthreadGetaffinity");
+        fn_get = (fn_getaffinity_t)obs_module_symbol(OBS_HANDLE_SELF,
+                                                     "scePthreadGetaffinity");
     }
 
-    fn_setaffinity_t fn_set = (fn_setaffinity_t)obs_module_symbol(1, "scePthreadSetaffinity");
+    fn_setaffinity_t fn_set =
+        (fn_setaffinity_t)obs_module_symbol(1, "scePthreadSetaffinity");
     if (fn_set == NULL) {
-        fn_set = (fn_setaffinity_t)obs_module_symbol(OBS_HANDLE_SELF, "scePthreadSetaffinity");
+        fn_set = (fn_setaffinity_t)obs_module_symbol(OBS_HANDLE_SELF,
+                                                     "scePthreadSetaffinity");
     }
 
     obs_report_measure("030-thread/affinity", "scePthreadGetaffinity", "resolved",
@@ -411,16 +441,18 @@ static obs_result check_thread_affinity(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            return obs_fail_code("scePthreadGetaffinity faulted", (uint64_t)(uint32_t)sig);
+            return obs_fail_code("scePthreadGetaffinity faulted",
+                                 (uint64_t)(uint32_t)sig);
         }
     }
 
     obs_report_measure("030-thread/affinity", "scePthreadGetaffinity", "rc",
                        (uint64_t)(uint32_t)rc_get, "code");
-    obs_report_measure("030-thread/affinity", "scePthreadGetaffinity", "mask",
-                       mask, "mask");
+    obs_report_measure("030-thread/affinity", "scePthreadGetaffinity", "mask", mask,
+                       "mask");
 
-    if (fn_set != NULL && obs_address_is_callable((const void *)fn_set) && rc_get == 0) {
+    if (fn_set != NULL && obs_address_is_callable((const void *)fn_set) &&
+        rc_get == 0) {
         int rc_set = -1;
         obs_jmp_buf buf;
         int sig = OBS_FAULT_ARM(&buf);
@@ -429,7 +461,8 @@ static obs_result check_thread_affinity(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            return obs_fail_code("scePthreadSetaffinity faulted", (uint64_t)(uint32_t)sig);
+            return obs_fail_code("scePthreadSetaffinity faulted",
+                                 (uint64_t)(uint32_t)sig);
         }
         obs_report_measure("030-thread/affinity", "scePthreadSetaffinity", "rc",
                            (uint64_t)(uint32_t)rc_set, "code");
@@ -456,7 +489,8 @@ static obs_result check_thread_name(void) {
     if (fn_set == NULL) {
         fn_set = (fn_setname_t)obs_module_symbol(1, "scePthreadRename");
         if (fn_set == NULL) {
-            fn_set = (fn_setname_t)obs_module_symbol(OBS_HANDLE_SELF, "scePthreadRename");
+            fn_set =
+                (fn_setname_t)obs_module_symbol(OBS_HANDLE_SELF, "scePthreadRename");
         }
     }
 
@@ -566,18 +600,17 @@ static const obs_check thread_checks[] = {
      (const void *)&scePthreadCreate, check_create, OBS_FROM_SPEC},
     {"030-thread/join", "libkernel", "scePthreadJoin", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&scePthreadJoin, check_join, OBS_FROM_SPEC},
-    {"030-thread/exception-handler", "libkernel", "sceKernelRaiseException", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_exception_handler_ordering,
+    {"030-thread/exception-handler", "libkernel", "sceKernelRaiseException",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_exception_handler_ordering,
      check_exception_handler_ordering, OBS_FROM_ASSUMED},
     {"030-thread/affinity", "libkernel", "scePthreadGetaffinity", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_thread_affinity,
-     check_thread_affinity, OBS_FROM_ASSUMED},
-    {"030-thread/name", "libkernel", "scePthreadGetname", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_thread_name,
-     check_thread_name, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, (const void *)check_thread_affinity, check_thread_affinity,
+     OBS_FROM_ASSUMED},
+    {"030-thread/name", "libkernel", "scePthreadGetname", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_thread_name, check_thread_name, OBS_FROM_ASSUMED},
     {"030-thread/priority", "libkernel", "scePthreadGetprio", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_thread_priority,
-     check_thread_priority, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, (const void *)check_thread_priority, check_thread_priority,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_thread = {

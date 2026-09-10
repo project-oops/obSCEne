@@ -215,8 +215,8 @@ OBS_WEAK int scePthreadAttrGetdetachstate(const ScePthreadAttr *attr, int *state
  *
  * # Where the shapes came from
  *
- * `scePthreadAttrGetstacksize` was censused for presence until now. Both getters take an
- * attribute object and one out-pointer, which is FreeBSD's shape for
+ * `scePthreadAttrGetstacksize` was censused for presence until now. Both getters take
+ * an attribute object and one out-pointer, which is FreeBSD's shape for
  * `pthread_attr_getstackaddr(3)` and `pthread_attr_getstacksize(3)` and is what three
  * retail titles pass - a Unity shim calls Get, then these two, once each, on itself.
  *
@@ -224,8 +224,9 @@ OBS_WEAK int scePthreadAttrGetdetachstate(const ScePthreadAttr *attr, int *state
  * leaves the caller's neighbouring variable holding the top half, which is the bug the
  * sibling project's D272 records for the `int`-shaped getters beside these.
  *
- * What the address *means* - the lowest byte of the stack, as FreeBSD's is, or its top -
- * is the open question `031-stackattr` exists to settle, and nothing here assumes it. */
+ * What the address *means* - the lowest byte of the stack, as FreeBSD's is, or its top
+ * - is the open question `031-stackattr` exists to settle, and nothing here assumes it.
+ */
 OBS_WEAK int scePthreadAttrGetstackaddr(const ScePthreadAttr *attr, void **address);
 OBS_WEAK int scePthreadAttrGetstacksize(const ScePthreadAttr *attr, size_t *size);
 
@@ -236,9 +237,9 @@ OBS_WEAK int scePthreadAttrGetstacksize(const ScePthreadAttr *attr, size_t *size
  * rather than as it was asked for. The argument order is read off three retail titles:
  * the first register holds the handle `scePthreadSelf` answered a moment earlier.
  *
- * This is the call the sibling emulator left unimplemented while three titles used it to
- * find the bottom of the stack their garbage collector scans; each then scanned off the
- * top of the real stack (its D575). What it reports is worth measuring rather than
+ * This is the call the sibling emulator left unimplemented while three titles used it
+ * to find the bottom of the stack their garbage collector scans; each then scanned off
+ * the top of the real stack (its D575). What it reports is worth measuring rather than
  * inferring. */
 OBS_WEAK int scePthreadAttrGet(ScePthread thread, ScePthreadAttr *attr);
 
@@ -246,20 +247,21 @@ OBS_WEAK int scePthreadAttrGet(ScePthread thread, ScePthreadAttr *attr);
  *
  * The platform's futex is NOT declared here as a linked import, and that is the whole
  * point. Its export library `libkernel_sync_on_address` is a namespace inside
- * `libkernel.sprx`, not a loadable module of its own - so a linked import made the title
- * module declare a `needed_module` for a `.sprx` that does not exist, and the title died
- * on load. `032-syncaddr` resolves `sceKernelSyncOnAddressWait`/`Wake` by name through
- * `libkernel` at run time, the way `017-posix` and `019-posixerr` resolve theirs, so the
- * module carries no dependency on a phantom library. (Reverts D322's linked import.)
+ * `libkernel.sprx`, not a loadable module of its own - so a linked import made the
+ * title module declare a `needed_module` for a `.sprx` that does not exist, and the
+ * title died on load. `032-syncaddr` resolves `sceKernelSyncOnAddressWait`/`Wake` by
+ * name through `libkernel` at run time, the way `017-posix` and `019-posixerr` resolve
+ * theirs, so the module carries no dependency on a phantom library. (Reverts D322's
+ * linked import.)
  *
  * # The shape, for the host declaration below and the runtime cast in the section
  *
  * FreeBSD `_umtx_op(2)` is the citable analogue: the wait is `UMTX_OP_WAIT`, the wake
- * `UMTX_OP_WAKE`. Two arguments each - an address and a value to compare, an address and
- * a count to wake - which is what three retail titles pass, every observed call leaving
- * the third register zero. A timeout is deliberately not modelled (its unit is
- * unestablished; `docs/backlog/024`), and both values are 64-bit so the whole register is
- * defined whichever width `032-syncaddr` finds the comparison reads. */
+ * `UMTX_OP_WAKE`. Two arguments each - an address and a value to compare, an address
+ * and a count to wake - which is what three retail titles pass, every observed call
+ * leaving the third register zero. A timeout is deliberately not modelled (its unit is
+ * unestablished; `docs/backlog/024`), and both values are 64-bit so the whole register
+ * is defined whichever width `032-syncaddr` finds the comparison reads. */
 OBS_WEAK uint64_t sceKernelGetProcessTimeCounterFrequency(void);
 
 /* ---- libkernel: descriptors ------------------------------------------------ */
@@ -332,18 +334,21 @@ OBS_WEAK int sceKernelReleaseDirectMemory(sce_off_t start, size_t len);
 OBS_WEAK int sceKernelMapDirectMemory(void **addr, size_t len, int prot, int flags,
                                       sce_off_t direct_memory_start,
                                       size_t max_page_size);
-/* The sanctioned way past W^X for a recompiler: create a shared object, then map it writable
- * and executable separately. Signatures are documented (ps4libdoc / OpenOrbis). Used by
- * 155-jit, the go/no-go for native emulation. */
+/* The sanctioned way past W^X for a recompiler: create a shared object, then map it
+ * writable and executable separately. Signatures are documented (ps4libdoc /
+ * OpenOrbis). Used by 155-jit, the go/no-go for native emulation. */
 OBS_WEAK int sceKernelJitCreateSharedMemory(const char *name, size_t len, int max_prot,
                                             int *handle_out);
 OBS_WEAK int sceKernelJitMapSharedMemory(int handle, int prot, void **addr_out);
-OBS_WEAK int sceKernelJitCreateAliasOfSharedMemory(int handle, int prot, void **addr_out);
+OBS_WEAK int sceKernelJitCreateAliasOfSharedMemory(int handle, int prot,
+                                                   void **addr_out);
 OBS_WEAK int sceKernelVirtualQuery(const void *addr, int flags, void *info,
                                    size_t info_size);
 OBS_WEAK int sceKernelMunmap(void *addr, size_t len);
-OBS_WEAK int sceKernelProtectDirectMemory(sce_off_t paddr, size_t len, unsigned int flags);
-OBS_WEAK int sceKernelProtectDirectMemoryForPID(sce_off_t paddr, size_t len, int prot, int pid);
+OBS_WEAK int sceKernelProtectDirectMemory(sce_off_t paddr, size_t len,
+                                          unsigned int flags);
+OBS_WEAK int sceKernelProtectDirectMemoryForPID(sce_off_t paddr, size_t len, int prot,
+                                                int pid);
 OBS_WEAK int sceKernelBatchMap(const void *entries, int count, int *completed);
 
 /* ---- libkernel: scheduling ------------------------------------------------- */
@@ -364,14 +369,16 @@ OBS_WEAK void scePthreadExit(void *value);
 
 /* ---- libkernel: fault recovery --------------------------------------------
  *
- * The signal primitives the fault guard installs its handler with (fault.c, D325/D326). They
- * are declared imports, not resolved by dlsym alone, because a native title's dlsym resolves
- * only the symbols the process already imports - so the guard went unarmed on the eboot until
- * these were bound like every other call. All are real libkernel exports
- * (data/hardware/libkernel-vaddrs.txt: _sigaction 0xd100, _sigprocmask 0xcf70; scePthreadExit
- * above, in data/hardware/ps5-full.txt). `struct sigaction` and `sigset_t` cross as raw bytes
+ * The signal primitives the fault guard installs its handler with (fault.c, D325/D326).
+ * They are declared imports, not resolved by dlsym alone, because a native title's
+ * dlsym resolves only the symbols the process already imports - so the guard went
+ * unarmed on the eboot until these were bound like every other call. All are real
+ * libkernel exports (data/hardware/libkernel-vaddrs.txt: _sigaction 0xd100,
+ * _sigprocmask 0xcf70; scePthreadExit above, in data/hardware/ps5-full.txt). `struct
+ * sigaction` and `sigset_t` cross as raw bytes
  * - the guard builds the FreeBSD amd64 layout itself rather than borrow a vendor header
- * (Principle 6). setjmp/longjmp are not imported: the guard carries its own (fault.c). */
+ * (Principle 6). setjmp/longjmp are not imported: the guard carries its own (fault.c).
+ */
 OBS_WEAK int _sigaction(int sig, const void *act, void *oact);
 OBS_WEAK int _sigprocmask(int how, const void *set, void *oset);
 
@@ -538,8 +545,8 @@ OBS_WEAK int posix_sigismember(const void *set, int signal);
 OBS_WEAK int posix_getpagesize(void);
 OBS_WEAK int posix_usleep(unsigned int microseconds);
 
-/* The futex, host side only. On the target `032-syncaddr` resolves these by name; on the
- * host it takes their address directly, and the stubs live in host_stubs.c. */
+/* The futex, host side only. On the target `032-syncaddr` resolves these by name; on
+ * the host it takes their address directly, and the stubs live in host_stubs.c. */
 OBS_WEAK int sceKernelSyncOnAddressWait(void *address, uint64_t value);
 OBS_WEAK int sceKernelSyncOnAddressWake(void *address, uint64_t count);
 #endif
@@ -939,10 +946,11 @@ OBS_WEAK int sceAudioOutClose(int handle);
 /* The behavioural half of the audio surface, called rather than censused so the SDK can
  * settle what a header states without evidence: whether a selector of 0 opens stereo or
  * mono (the port-state record carries the channel count), which chunk sizes an open
- * accepts, whether output blocks, and what the volume flags mean. `sceAudioOutOutput` takes
- * a `const void *` sample buffer; `sceAudioOutGetPortState` writes a state record read as
- * bytes (its layout is what the probe is measuring, so none is declared); `sceAudioOutSetVolume`
- * takes a flag and a volume array. Arities from the OpenOrbis toolchain, a permitted source. */
+ * accepts, whether output blocks, and what the volume flags mean. `sceAudioOutOutput`
+ * takes a `const void *` sample buffer; `sceAudioOutGetPortState` writes a state record
+ * read as bytes (its layout is what the probe is measuring, so none is declared);
+ * `sceAudioOutSetVolume` takes a flag and a volume array. Arities from the OpenOrbis
+ * toolchain, a permitted source. */
 OBS_WEAK int sceAudioOutOutput(int handle, const void *ptr);
 OBS_WEAK int sceAudioOutGetPortState(int handle, void *state);
 OBS_WEAK int sceAudioOutSetVolume(int handle, int flag, int *vol);
@@ -962,11 +970,12 @@ OBS_WEAK int scePadClose(int handle);
  * button offset and masks come from the OpenOrbis SDK, an open-source toolchain, which
  * is a permitted provenance source. */
 OBS_WEAK int scePadReadState(int handle, void *data);
-/* The batched read, called rather than censused so the SDK can confirm the record stride:
- * `scePadRead` returns how many records it filled and writes that many into the buffer, so
- * the write extent divided by the count is the stride a batched reader must use. Same `void *`
- * reasoning as `scePadReadState` - only the extent and the button word are read. (num is the
- * count requested.) Arity from the OpenOrbis toolchain, a permitted source. */
+/* The batched read, called rather than censused so the SDK can confirm the record
+ * stride: `scePadRead` returns how many records it filled and writes that many into the
+ * buffer, so the write extent divided by the count is the stride a batched reader must
+ * use. Same `void *` reasoning as `scePadReadState` - only the extent and the button
+ * word are read. (num is the count requested.) Arity from the OpenOrbis toolchain, a
+ * permitted source. */
 OBS_WEAK int scePadRead(int handle, void *data, int num);
 
 /* ---- libSceKeyboard -------------------------------------------------------- */
@@ -1079,8 +1088,8 @@ OBS_WEAK int scePadGetControllerInformation(int handle, void *info);
 #define OBS_VIDEO_BUS_MAIN 0
 
 /* The main audio-out port type. 0 is `SCE_AUDIO_OUT_PORT_TYPE_MAIN` in the OpenOrbis
- * toolchain, an open-source and so permitted source; a named constant rather than a bare 0
- * in the audio probes. */
+ * toolchain, an open-source and so permitted source; a named constant rather than a
+ * bare 0 in the audio probes. */
 #define OBS_AUDIO_OUT_PORT_TYPE_MAIN 0
 
 #define OBS_SEEK_SET 0
@@ -1161,17 +1170,19 @@ OBS_WEAK int sceNetAccept(int s, void *addr, uint32_t *paddrlen);
 OBS_WEAK int sceNetRecv(int s, void *buf, uint64_t len, int flags);
 OBS_WEAK int sceNetSend(int s, const void *buf, uint64_t len, int flags);
 OBS_WEAK int sceNetSocketClose(int s);
-/* The socket-option and connect calls Porthole's accept loop depends on, called rather than
- * censused so the probe can settle what two public sources disagree on: the non-blocking
- * option value (0x1200 in the OpenOrbis/CTurt headers, 0x1100 in vitasdk) and the would-block
- * code a non-blocking recv returns. `sceNetConnect` is here for the accept-inherits probe's
- * loopback self-connect. Arities from the OpenOrbis toolchain, a permitted source. */
+/* The socket-option and connect calls Porthole's accept loop depends on, called rather
+ * than censused so the probe can settle what two public sources disagree on: the
+ * non-blocking option value (0x1200 in the OpenOrbis/CTurt headers, 0x1100 in vitasdk)
+ * and the would-block code a non-blocking recv returns. `sceNetConnect` is here for the
+ * accept-inherits probe's loopback self-connect. Arities from the OpenOrbis toolchain,
+ * a permitted source. */
 OBS_WEAK int sceNetSetsockopt(int s, int level, int optname, const void *optval,
                               uint32_t optlen);
 OBS_WEAK int sceNetConnect(int s, const void *addr, uint32_t addrlen);
 
-/* Socket-option and flag constants the net probes name rather than pass as bare numbers. The
- * two SO_NBIO values are the disagreeing public sources (D329); the probe tries 0x1200 first. */
+/* Socket-option and flag constants the net probes name rather than pass as bare
+ * numbers. The two SO_NBIO values are the disagreeing public sources (D329); the probe
+ * tries 0x1200 first. */
 #define OBS_NET_SOL_SOCKET 0xFFFF
 #define OBS_NET_SO_NBIO_OPENORBIS 0x1200
 #define OBS_NET_SO_NBIO_VITASDK 0x1100
@@ -1204,8 +1215,8 @@ OBS_WEAK int32_t sceGnmDispatchDirect(uint32_t *cmdbuf, uint32_t size,
  * In System V AMD64, passing up to 6 register arguments avoids stack corruption
  * for any arity <= 6.
  */
-OBS_WEAK uint64_t sceAgcCbNop(void *arg0, uint64_t arg1, uint64_t arg2,
-                              uint64_t arg3, uint64_t arg4, uint64_t arg5);
+OBS_WEAK uint64_t sceAgcCbNop(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
+                              uint64_t arg4, uint64_t arg5);
 OBS_WEAK uint64_t sceAgcCbReleaseMem(void *arg0, uint64_t arg1, uint64_t arg2,
                                      uint64_t arg3, uint64_t arg4, uint64_t arg5);
 OBS_WEAK uint64_t sceAgcDcbDmaData(void *arg0, uint64_t arg1, uint64_t arg2,
@@ -1214,16 +1225,14 @@ OBS_WEAK uint64_t sceAgcDcbWaitRegMem(void *arg0, uint64_t arg1, uint64_t arg2,
                                       uint64_t arg3, uint64_t arg4, uint64_t arg5);
 OBS_WEAK uint64_t sceAgcDcbResetQueue(void *arg0, uint64_t arg1, uint64_t arg2,
                                       uint64_t arg3, uint64_t arg4, uint64_t arg5);
-OBS_WEAK int sceAgcInit(void *state, uint32_t version)
-    __asm__("$23LRUSvYu1M");
-OBS_WEAK int sceAgcGetIsTrinityMode(uint8_t *out_is_trinity)
-    __asm__("$BfBDZGbti7A");
+OBS_WEAK int sceAgcInit(void *state, uint32_t version) __asm__("$23LRUSvYu1M");
+OBS_WEAK int sceAgcGetIsTrinityMode(uint8_t *out_is_trinity) __asm__("$BfBDZGbti7A");
 OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
-                                               uint64_t arg3, uint64_t arg4, uint64_t arg5)
-    __asm__("$fYZQG4CU71c");
+                                              uint64_t arg3, uint64_t arg4,
+                                              uint64_t arg5) __asm__("$fYZQG4CU71c");
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
-                                     const void *payload, uint64_t arg3)
-    __asm__("$f3dg2CSgRKY");
+                                     const void *payload,
+                                     uint64_t arg3) __asm__("$f3dg2CSgRKY");
 
 /* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
 OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);

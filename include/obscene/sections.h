@@ -58,8 +58,9 @@ extern const obs_section obs_section_shellui;
  * is meaningful even when every other section has failed. */
 extern const obs_section obs_section_responsive;
 extern const obs_section obs_section_sync;
-/* The bounds of the primitives 015-sync proves work: what a poll's count argument means,
- * what a bad handle returns, which wait-mode bits are understood. Never waits. */
+/* The bounds of the primitives 015-sync proves work: what a poll's count argument
+ * means, what a bad handle returns, which wait-mode bits are understood. Never waits.
+ */
 extern const obs_section obs_section_syncbounds;
 extern const obs_section obs_section_posix;
 /* The failure convention of the POSIX-named exports, held against the vendor encoding
@@ -113,9 +114,10 @@ extern const obs_section obs_section_imports;
 extern const obs_section obs_section_record;
 extern const obs_section obs_section_encoder;
 
-/* The decode counterparts to the encoder, resolved the same way: whether the media-decode
- * libraries load and export the entry points a stream client or player needs. Resolution
- * only - the decode calls' structure layouts are unconfirmed, so none is called. */
+/* The decode counterparts to the encoder, resolved the same way: whether the
+ * media-decode libraries load and export the entry points a stream client or player
+ * needs. Resolution only - the decode calls' structure layouts are unconfirmed, so none
+ * is called. */
 extern const obs_section obs_section_videodec;
 extern const obs_section obs_section_audiodec;
 

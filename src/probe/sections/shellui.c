@@ -5,7 +5,8 @@
  * 1. Process identity (PID, name, title ID, path, authid).
  * 2. Mapped modules walk via kernel dispatch list (kproc + 0x3E8).
  * 3. Export reachability across 3 routes (import, dlsym, kexport).
- * 4. JavaScript evaluation route inspection (exported entry, message port, inspector sockets).
+ * 4. JavaScript evaluation route inspection (exported entry, message port, inspector
+ * sockets).
  * 5. Process takeover via ptrace attach with immediate detach.
  */
 
@@ -115,9 +116,11 @@ static void discover_shellui(void) {
 
     if (s_shellui_kproc != 0) {
         /* Read p_comm */
-        krw_copyout(s_shellui_kproc + 0x61E, s_shellui_name, sizeof(s_shellui_name) - 1);
+        krw_copyout(s_shellui_kproc + 0x61E, s_shellui_name,
+                    sizeof(s_shellui_name) - 1);
         if (s_shellui_name[0] == '\0') {
-            krw_copyout(s_shellui_kproc + 0x274, s_shellui_name, sizeof(s_shellui_name) - 1);
+            krw_copyout(s_shellui_kproc + 0x274, s_shellui_name,
+                        sizeof(s_shellui_name) - 1);
         }
 
         /* Read authid from ucred */
@@ -132,15 +135,18 @@ static void discover_shellui(void) {
                                 : (fw >= 0x07000000u) ? 0x49Au
                                 : (fw >= 0x06000000u) ? 0x498u
                                                       : 0x470u;
-        krw_copyout(s_shellui_kproc + titleid_off, s_shellui_titleid, sizeof(s_shellui_titleid) - 1);
+        krw_copyout(s_shellui_kproc + titleid_off, s_shellui_titleid,
+                    sizeof(s_shellui_titleid) - 1);
 
         /* Read executable path from first dynlib_obj at kproc + 0x3E8 */
         uintptr_t kaddr = 0;
-        if (krw_copyout(s_shellui_kproc + 0x3E8, &kaddr, sizeof(kaddr)) == 0 && kaddr != 0) {
+        if (krw_copyout(s_shellui_kproc + 0x3E8, &kaddr, sizeof(kaddr)) == 0 &&
+            kaddr != 0) {
             uintptr_t cur = 0;
             if (krw_copyout(kaddr, &cur, sizeof(cur)) == 0 && cur != 0) {
                 uintptr_t path_ptr = 0;
-                if (krw_copyout(cur + 0x08, &path_ptr, sizeof(path_ptr)) == 0 && path_ptr != 0) {
+                if (krw_copyout(cur + 0x08, &path_ptr, sizeof(path_ptr)) == 0 &&
+                    path_ptr != 0) {
                     krw_copyout(path_ptr, s_shellui_path, sizeof(s_shellui_path) - 1);
                 }
             }
@@ -154,7 +160,8 @@ static void discover_shellui(void) {
         obs_strncpy(s_shellui_titleid, "NPXS40087", sizeof(s_shellui_titleid) - 1);
     }
     if (s_shellui_path[0] == '\0') {
-        obs_strncpy(s_shellui_path, "/system/vsh/app/NPXS40087/eboot.bin", sizeof(s_shellui_path) - 1);
+        obs_strncpy(s_shellui_path, "/system/vsh/app/NPXS40087/eboot.bin",
+                    sizeof(s_shellui_path) - 1);
     }
 
     s_shellui_discovered = 1;
@@ -163,7 +170,8 @@ static void discover_shellui(void) {
 /* 1. Process identity: does payload observe SceShellUI and by what identity */
 static obs_result check_shellui_identity(void) {
     if (!krw_is_ready()) {
-        return obs_skip("kernel read/write unavailable in this leg; cannot enumerate processes");
+        return obs_skip(
+            "kernel read/write unavailable in this leg; cannot enumerate processes");
     }
 
     discover_shellui();
@@ -176,18 +184,20 @@ static obs_result check_shellui_identity(void) {
                        (uint64_t)s_shellui_pid, "pid");
     obs_report_measure("104-shellui/process-identity", "title-id", s_shellui_titleid,
                        (uint64_t)s_shellui_pid, "pid");
-    obs_report_measure("104-shellui/process-identity", "executable-path", s_shellui_path,
-                       (uint64_t)(uintptr_t)s_shellui_kproc, "kproc");
+    obs_report_measure("104-shellui/process-identity", "executable-path",
+                       s_shellui_path, (uint64_t)(uintptr_t)s_shellui_kproc, "kproc");
     obs_report_measure("104-shellui/process-identity", "authid", "sceauthid",
                        s_shellui_authid, "authid");
 
     return obs_pass_value((uint64_t)s_shellui_pid);
 }
 
-/* 2. Mapped modules: walk kproc + 0x3E8 for SceShellUI, record verbatim, check WebKit/JSC */
+/* 2. Mapped modules: walk kproc + 0x3E8 for SceShellUI, record verbatim, check
+ * WebKit/JSC */
 static obs_result check_shellui_modules(void) {
     if (!krw_is_ready()) {
-        return obs_skip("kernel read/write unavailable in this leg; cannot inspect remote modules");
+        return obs_skip(
+            "kernel read/write unavailable in this leg; cannot inspect remote modules");
     }
 
     discover_shellui();
@@ -197,7 +207,8 @@ static obs_result check_shellui_modules(void) {
     }
 
     uintptr_t kaddr = 0;
-    if (krw_copyout(s_shellui_kproc + 0x3E8, &kaddr, sizeof(kaddr)) != 0 || kaddr == 0) {
+    if (krw_copyout(s_shellui_kproc + 0x3E8, &kaddr, sizeof(kaddr)) != 0 ||
+        kaddr == 0) {
         return obs_fail("could not read p_dynlib (kproc + 0x3E8) for SceShellUI");
     }
 
@@ -222,8 +233,8 @@ static obs_result check_shellui_modules(void) {
 
         const char *bname = local_basename(full_path);
         obs_report_measure("104-shellui/mapped-modules", bname,
-                           full_path[0] != '\0' ? full_path : "(no-path)",
-                           module_base, "base-vaddr");
+                           full_path[0] != '\0' ? full_path : "(no-path)", module_base,
+                           "base-vaddr");
 
         if (str_contains_case_insensitive(full_path, "webkit") ||
             str_contains_case_insensitive(full_path, "jsc") ||
@@ -244,18 +255,16 @@ static obs_result check_shellui_modules(void) {
     obs_report_measure("104-shellui/mapped-modules", "total-modules", "count",
                        (uint64_t)mod_count, "modules");
     obs_report_measure("104-shellui/mapped-modules", "js-engine-modules",
-                       js_mod_count > 0 ? "present" : "none",
-                       (uint64_t)js_mod_count, "count");
+                       js_mod_count > 0 ? "present" : "none", (uint64_t)js_mod_count,
+                       "count");
 
     return obs_pass_value((uint64_t)mod_count);
 }
 
 /* 3. Export reachability across 3 routes: import, dlsym, kexport */
 static const char *const s_shellui_probe_symbols[] = {
-    "JSEvaluateScript",
-    "JSGlobalContextCreate",
-    "JSContextGetGlobalObject",
-    "JSStringCreateWithUTF8CString",
+    "JSEvaluateScript",         "JSGlobalContextCreate",
+    "JSContextGetGlobalObject", "JSStringCreateWithUTF8CString",
     "sceShellUIUtilGetAppUrl",
 };
 
@@ -279,20 +288,24 @@ static obs_result check_shellui_exports(void) {
         /* Route 1: direct import (weak ref) */
         void *import_addr = NULL;
         obs_report_measure("104-shellui/export-reachability", name,
-                           obs_address_is_callable(import_addr) ? "import" : "import-null",
+                           obs_address_is_callable(import_addr) ? "import"
+                                                                : "import-null",
                            (uint64_t)(uintptr_t)import_addr, "vaddr");
 
         /* Route 2: dlsym */
         void *dlsym_addr = NULL;
         if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
             for (size_t h = 0; h < hcount && h < 64; h++) {
-                if (handles[h] <= 0) continue;
+                if (handles[h] <= 0)
+                    continue;
                 void *a = NULL;
-                if (sceKernelDlsym(handles[h], nid, &a) == 0 && obs_address_is_callable(a)) {
+                if (sceKernelDlsym(handles[h], nid, &a) == 0 &&
+                    obs_address_is_callable(a)) {
                     dlsym_addr = a;
                     break;
                 }
-                if (sceKernelDlsym(handles[h], name, &a) == 0 && obs_address_is_callable(a)) {
+                if (sceKernelDlsym(handles[h], name, &a) == 0 &&
+                    obs_address_is_callable(a)) {
                     dlsym_addr = a;
                     break;
                 }
@@ -301,7 +314,8 @@ static obs_result check_shellui_exports(void) {
                 void *a = NULL;
                 if (sceKernelDlsym(1, name, &a) == 0 && obs_address_is_callable(a)) {
                     dlsym_addr = a;
-                } else if (sceKernelDlsym(0x2001, name, &a) == 0 && obs_address_is_callable(a)) {
+                } else if (sceKernelDlsym(0x2001, name, &a) == 0 &&
+                           obs_address_is_callable(a)) {
                     dlsym_addr = a;
                 }
             }
@@ -313,13 +327,15 @@ static obs_result check_shellui_exports(void) {
         /* Route 3: kexport table */
         void *kexport_addr = NULL;
         if (pargs != NULL && pargs->kexport_table != NULL) {
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 kexport_addr = (void *)ka;
             }
         }
         obs_report_measure("104-shellui/export-reachability", name,
-                           obs_address_is_callable(kexport_addr) ? "kexport" : "kexport-null",
+                           obs_address_is_callable(kexport_addr) ? "kexport"
+                                                                 : "kexport-null",
                            (uint64_t)(uintptr_t)kexport_addr, "vaddr");
 
         /* Route 4: remote dynlib resolve in SceShellUI */
@@ -328,10 +344,11 @@ static obs_result check_shellui_exports(void) {
             dyn_addr = krw_dynlib_resolve_any(s_shellui_pid, name);
         }
         obs_report_measure("104-shellui/export-reachability", name,
-                           dyn_addr != 0 ? "dynlib" : "dynlib-null",
-                           (uint64_t)dyn_addr, "vaddr");
+                           dyn_addr != 0 ? "dynlib" : "dynlib-null", (uint64_t)dyn_addr,
+                           "vaddr");
 
-        if (import_addr != NULL || dlsym_addr != NULL || kexport_addr != NULL || dyn_addr != 0) {
+        if (import_addr != NULL || dlsym_addr != NULL || kexport_addr != NULL ||
+            dyn_addr != 0) {
             resolved_count++;
         }
     }
@@ -342,13 +359,14 @@ static obs_result check_shellui_exports(void) {
     return obs_pass_value(0);
 }
 
-/* 4. JavaScript evaluation route: exported entry, message port, listening inspector sockets */
+/* 4. JavaScript evaluation route: exported entry, message port, listening inspector
+ * sockets */
 struct sockaddr_in_local {
-    uint8_t  sin_len;
-    uint8_t  sin_family;
+    uint8_t sin_len;
+    uint8_t sin_family;
     uint16_t sin_port;
     uint32_t sin_addr;
-    char     sin_zero[8];
+    char sin_zero[8];
 };
 
 static int probe_localhost_port(uint16_t port) {
@@ -363,7 +381,8 @@ static int probe_localhost_port(uint16_t port) {
     /* Set non-blocking via SYS_fcntl = 92 */
     long flags = obs_invoke_syscall(92, s, 3 /* F_GETFL */, 0, 0, 0, 0);
     if (flags >= 0) {
-        obs_invoke_syscall(92, s, 4 /* F_SETFL */, flags | 0x0004 /* O_NONBLOCK */, 0, 0, 0);
+        obs_invoke_syscall(92, s, 4 /* F_SETFL */, flags | 0x0004 /* O_NONBLOCK */, 0,
+                           0, 0);
     }
     struct sockaddr_in_local sa;
     memset(&sa, 0, sizeof(sa));
@@ -373,7 +392,8 @@ static int probe_localhost_port(uint16_t port) {
     sa.sin_addr = 0x0100007f; /* 127.0.0.1 */
 
     /* Syscall 98 = SYS_connect */
-    long rc = obs_invoke_syscall(98, s, (long)(uintptr_t)&sa, (long)sizeof(sa), 0, 0, 0);
+    long rc =
+        obs_invoke_syscall(98, s, (long)(uintptr_t)&sa, (long)sizeof(sa), 0, 0, 0);
     /* Syscall 6 = SYS_close */
     obs_invoke_syscall(6, s, 0, 0, 0, 0, 0);
     return (int)rc;
@@ -388,8 +408,8 @@ static obs_result check_shellui_js_route(void) {
         eval_remote = krw_dynlib_resolve_any(s_shellui_pid, "JSEvaluateScript");
     }
     obs_report_measure("104-shellui/js-evaluation-route", "exported-entry",
-                       eval_remote != 0 ? "reachable" : "absent",
-                       (uint64_t)eval_remote, "vaddr");
+                       eval_remote != 0 ? "reachable" : "absent", (uint64_t)eval_remote,
+                       "vaddr");
 
     /* 4b. Message port / IPMI IPC */
     obs_report_measure("104-shellui/js-evaluation-route", "message-port",
@@ -422,18 +442,23 @@ static obs_result check_shellui_js_route(void) {
     obs_report_measure("104-shellui/js-evaluation-route", "process-takeover-route",
                        "probed-in-check-5", 0, "status");
 
-    int open_sockets = (rc_9222 == 0) + (rc_9229 == 0) + (rc_8080 == 0) + (rc_8081 == 0) + (rc_2999 == 0);
+    int open_sockets = (rc_9222 == 0) + (rc_9229 == 0) + (rc_8080 == 0) +
+                       (rc_8081 == 0) + (rc_2999 == 0);
     if (eval_remote != 0 || open_sockets > 0) {
         return obs_pass_value((uint64_t)(eval_remote != 0 ? 1 : open_sockets));
     }
 
-    return obs_partial_value("no active JS evaluation route found (exported entry absent, inspector sockets 9222/9229/8080/8081/2999 refused)", 0);
+    return obs_partial_value(
+        "no active JS evaluation route found (exported entry absent, inspector sockets "
+        "9222/9229/8080/8081/2999 refused)",
+        0);
 }
 
 /* 5. Process takeover: ptrace attach on SceShellUI with immediate detach */
 static obs_result check_shellui_takeover(void) {
     if (!krw_is_ready()) {
-        return obs_skip("kernel read/write unavailable in this leg; cannot perform process takeover");
+        return obs_skip("kernel read/write unavailable in this leg; cannot perform "
+                        "process takeover");
     }
 
     discover_shellui();
@@ -451,8 +476,8 @@ static obs_result check_shellui_takeover(void) {
     /* Step 2: Elevate target process */
     int rc_tgt = krw_elevate_process(s_shellui_pid);
     obs_report_measure("104-shellui/process-takeover", "elevate-target",
-                       rc_tgt == 0 ? "success" : "refused",
-                       (uint64_t)(uint32_t)rc_tgt, "rc");
+                       rc_tgt == 0 ? "success" : "refused", (uint64_t)(uint32_t)rc_tgt,
+                       "rc");
 
     /* Step 3: Swap ucred */
     int rc_swap = krw_swap_ucred(s_shellui_pid);
@@ -487,28 +512,35 @@ static obs_result check_shellui_takeover(void) {
     if (rc_attach == 0) {
         return obs_pass_value(0);
     }
-    return obs_fail_code("process takeover refused at PT_ATTACH", (uint64_t)(uint32_t)err_attach);
+    return obs_fail_code("process takeover refused at PT_ATTACH",
+                         (uint64_t)(uint32_t)err_attach);
 }
 
 #endif /* !defined(OBSCENE_HOST_BUILD) */
 
 static const obs_check shellui_checks[] = {
-    {"104-shellui/process-identity", "SceShellUI", "process-identity", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&check_shellui_identity, check_shellui_identity, OBS_FROM_ASSUMED},
-    {"104-shellui/mapped-modules", "SceShellUI", "mapped-modules", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&check_shellui_modules, check_shellui_modules, OBS_FROM_ASSUMED},
-    {"104-shellui/export-reachability", "SceShellUI", "export-reachability", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&check_shellui_exports, check_shellui_exports, OBS_FROM_ASSUMED},
-    {"104-shellui/js-evaluation-route", "SceShellUI", "js-evaluation-route", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&check_shellui_js_route, check_shellui_js_route, OBS_FROM_ASSUMED},
-    {"104-shellui/process-takeover", "SceShellUI", "process-takeover", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)&check_shellui_takeover, check_shellui_takeover, OBS_FROM_ASSUMED},
+    {"104-shellui/process-identity", "SceShellUI", "process-identity", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&check_shellui_identity, check_shellui_identity,
+     OBS_FROM_ASSUMED},
+    {"104-shellui/mapped-modules", "SceShellUI", "mapped-modules", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&check_shellui_modules, check_shellui_modules,
+     OBS_FROM_ASSUMED},
+    {"104-shellui/export-reachability", "SceShellUI", "export-reachability",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&check_shellui_exports,
+     check_shellui_exports, OBS_FROM_ASSUMED},
+    {"104-shellui/js-evaluation-route", "SceShellUI", "js-evaluation-route",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&check_shellui_js_route,
+     check_shellui_js_route, OBS_FROM_ASSUMED},
+    {"104-shellui/process-takeover", "SceShellUI", "process-takeover", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&check_shellui_takeover, check_shellui_takeover,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_shellui = {
     "104-shellui",
     "Shell UI reachability",
-    "State of SceShellUI, mapped WebKit/JavaScript modules, export reachability across 3 routes, JS evaluation entry points, and process takeover.",
+    "State of SceShellUI, mapped WebKit/JavaScript modules, export reachability across "
+    "3 routes, JS evaluation entry points, and process takeover.",
     shellui_checks,
     OBS_COUNT(shellui_checks),
 };

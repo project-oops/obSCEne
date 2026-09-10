@@ -196,12 +196,12 @@ void obs_screen_show_pltauth_error(void) {
                          "NATIVE PROSPERO (CATEGORY 0) HOMEBREW REQUIRES PLTAUTH-PATCH",
                          OBS_COLOUR_DIM, 2);
 
-        obs_display_text(x0 + 36, card_y + 176,
-                         "ACTION: LOAD PLTAUTH-PATCH.ELF VIA PROSPEROUS PAYLOAD MANAGER",
-                         OBS_COLOUR_ACCENT, 2);
+        obs_display_text(
+            x0 + 36, card_y + 176,
+            "ACTION: LOAD PLTAUTH-PATCH.ELF VIA PROSPEROUS PAYLOAD MANAGER",
+            OBS_COLOUR_ACCENT, 2);
 
-        obs_display_text(x0 + 36, card_y + 216,
-                         "THEN RELAUNCH THIS APPLICATION",
+        obs_display_text(x0 + 36, card_y + 216, "THEN RELAUNCH THIS APPLICATION",
                          OBS_COLOUR_INK, 2);
 
         obs_display_flip();
@@ -224,13 +224,15 @@ void obs_screen_begin(unsigned int sections, unsigned int checks) {
      * That is exactly the failure announce-before-attempting exists to prevent, in the
      * one place the harness's own `try` records do not reach. */
 #if defined(OBS_NO_UI)
-    /* A headless build - the payload - reports over the socket and the system log and has no
-     * screen. Opening video-out here is pointless, and on the unsandboxed payload it faults
-     * (a reserve/map/register that the elfldr shape does not survive), taking the run down
-     * before a single check. Skip it, reported as headless so an "opening" is never left
-     * dangling. This is why the payload leg of the sweep produced only seven records. (D325) */
+    /* A headless build - the payload - reports over the socket and the system log and
+     * has no screen. Opening video-out here is pointless, and on the unsandboxed
+     * payload it faults (a reserve/map/register that the elfldr shape does not
+     * survive), taking the run down before a single check. Skip it, reported as
+     * headless so an "opening" is never left dangling. This is why the payload leg of
+     * the sweep produced only seven records. (D325) */
     obs_live = 0;
-    obs_report_display("headless", "no display on this build; reporting without a screen", 0);
+    obs_report_display("headless",
+                       "no display on this build; reporting without a screen", 0);
     return;
 #endif
     obs_report_display("opening", "the display is being opened", 0);
@@ -249,9 +251,12 @@ void obs_screen_begin(unsigned int sections, unsigned int checks) {
     if (obs_pltauth_check() == 0) {
         s_obs_pltauth_failed = 1;
         obs_boot_note("obscene: FATAL: /dev/pltauth bypass is not active!\n");
-        obs_boot_note("obscene: PFAuthClient will reject native Prospero execution (0x80de0051)\n");
-        obs_boot_note("obscene: Load pltauth-patch.elf via Prosperous payload manager to enable native execution\n");
-        obs_report_display("failed", "pltauth bypass missing (PFAuthClient 0x80de0051)", 0x80de0051);
+        obs_boot_note("obscene: PFAuthClient will reject native Prospero execution "
+                      "(0x80de0051)\n");
+        obs_boot_note("obscene: Load pltauth-patch.elf via Prosperous payload manager "
+                      "to enable native execution\n");
+        obs_report_display("failed", "pltauth bypass missing (PFAuthClient 0x80de0051)",
+                           0x80de0051);
         if (obs_live) {
             obs_screen_show_pltauth_error();
         }
@@ -421,9 +426,12 @@ void obs_screen_hud(void) {
     if (obs_pltauth_check() == 0) {
         s_obs_pltauth_failed = 1;
         obs_boot_note("obscene: FATAL: /dev/pltauth bypass is not active!\n");
-        obs_boot_note("obscene: PFAuthClient will reject native Prospero execution (0x80de0051)\n");
-        obs_boot_note("obscene: Load pltauth-patch.elf via Prosperous payload manager to enable native execution\n");
-        obs_report_display("failed", "pltauth bypass missing (PFAuthClient 0x80de0051)", 0x80de0051);
+        obs_boot_note("obscene: PFAuthClient will reject native Prospero execution "
+                      "(0x80de0051)\n");
+        obs_boot_note("obscene: Load pltauth-patch.elf via Prosperous payload manager "
+                      "to enable native execution\n");
+        obs_report_display("failed", "pltauth bypass missing (PFAuthClient 0x80de0051)",
+                           0x80de0051);
         obs_screen_show_pltauth_error();
         return;
     }
@@ -946,7 +954,8 @@ void obs_screen_present(void) {
     obs_kb_open();
 
     if (s_obs_pltauth_failed) {
-        /* Hold the pltauth error on screen and wait for user exit / controller intervention */
+        /* Hold the pltauth error on screen and wait for user exit / controller
+         * intervention */
         for (;;) {
             obs_screen_wait(OBS_PAD_POLL_MICROSECONDS);
             uint32_t now = obs_nav_input();

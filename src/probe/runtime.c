@@ -77,15 +77,9 @@ unsigned long obs_libkernel_base(void) {
 }
 
 static obs_loader_weak_entry_t s_loader_weak_entries[OBS_LOADER_WEAK_COUNT] = {
-    {"__sys_socketex", 0, 0},
-    {"bind", 0, 0},
-    {"_sendto", 0, 0},
-    {"_setsockopt", 0, 0},
-    {"recv", 0, 0},
-    {"accept", 0, 0},
-    {"listen", 0, 0},
-    {"connect", 0, 0},
-    {"close", 0, 0},
+    {"__sys_socketex", 0, 0}, {"bind", 0, 0},    {"_sendto", 0, 0},
+    {"_setsockopt", 0, 0},    {"recv", 0, 0},    {"accept", 0, 0},
+    {"listen", 0, 0},         {"connect", 0, 0}, {"close", 0, 0},
     {"__error", 0, 0},
 };
 
@@ -276,22 +270,23 @@ void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
 
 /* Resolve the output functions by name for a native title.
  *
- * A payload bootstraps these from its dlsym gadget above; a title has no payload args, so
- * it resolves them the way every section resolves a platform call - by name through the
- * loader's own sceKernelDlsym (obs_module_symbol). Without it the title's sink falls
- * through to a raw import, and the sink's imports split across two relocations: the guard
- * reads `&fn` (a GLOB_DAT slot) while the call goes through a separate JUMP_SLOT, so a
- * loader that binds the data slot but leaves the linkage slot at its unresolved sentinel
- * (0x2) passes the guard and jumps to 0x2 on the call. The first boot note - written
- * before obs_bind_dynamic_symbols could touch the tables - is where that lands. Resolving
- * a plain data pointer here and calling through it (s_fn_write / s_fn_debug_out) sidesteps
- * the split entirely: it is null-checkable and never a raw linkage slot.
+ * A payload bootstraps these from its dlsym gadget above; a title has no payload args,
+ * so it resolves them the way every section resolves a platform call - by name through
+ * the loader's own sceKernelDlsym (obs_module_symbol). Without it the title's sink
+ * falls through to a raw import, and the sink's imports split across two relocations:
+ * the guard reads `&fn` (a GLOB_DAT slot) while the call goes through a separate
+ * JUMP_SLOT, so a loader that binds the data slot but leaves the linkage slot at its
+ * unresolved sentinel (0x2) passes the guard and jumps to 0x2 on the call. The first
+ * boot note - written before obs_bind_dynamic_symbols could touch the tables - is where
+ * that lands. Resolving a plain data pointer here and calling through it (s_fn_write /
+ * s_fn_debug_out) sidesteps the split entirely: it is null-checkable and never a raw
+ * linkage slot.
  *
- * Idempotent and guarded: a no-op once the payload path has bootstrapped, it fills only a
- * pointer still null, rejects anything obs_address_is_callable refuses (the 0x2 sentinel
- * among them), and does nothing at all where module resolution is unavailable - an
- * emulator that stubs dlsym - leaving the raw-import channels to carry that case as
- * before. */
+ * Idempotent and guarded: a no-op once the payload path has bootstrapped, it fills only
+ * a pointer still null, rejects anything obs_address_is_callable refuses (the 0x2
+ * sentinel among them), and does nothing at all where module resolution is unavailable
+ * - an emulator that stubs dlsym - leaving the raw-import channels to carry that case
+ * as before. */
 void obs_bootstrap_title_output(void) {
     if (obs_payload_output_bootstrapped) {
         return;
@@ -324,15 +319,15 @@ void obs_bootstrap_title_output(void) {
 /* Whether the raw-import output channels (direct sceKernelWrite/write/puts/putchar) may
  * be attempted at all.
  *
- * A module (emulator) keeps them: a loader that stubs dlsym but binds direct imports has
- * no other way out, so they run whenever module resolution is unavailable. A native eboot
- * never does. Its imports split GLOB_DAT (what `&fn`, and so the guard, reads) from
- * JUMP_SLOT (what the call goes through), and the loader can bind the data slot while
- * leaving the linkage slot at its unresolved sentinel (0x2) - so a guard that passed still
- * faults on the call. That is the fault this fix exists for. The eboot's output is the
- * dlsym-resolved s_fn_* pointers alone (obs_bootstrap_title_output fills them before the
- * first write); where those cannot be resolved it emits nothing rather than jumping to
- * 0x2, which is the honest failure. (D323) */
+ * A module (emulator) keeps them: a loader that stubs dlsym but binds direct imports
+ * has no other way out, so they run whenever module resolution is unavailable. A native
+ * eboot never does. Its imports split GLOB_DAT (what `&fn`, and so the guard, reads)
+ * from JUMP_SLOT (what the call goes through), and the loader can bind the data slot
+ * while leaving the linkage slot at its unresolved sentinel (0x2) - so a guard that
+ * passed still faults on the call. That is the fault this fix exists for. The eboot's
+ * output is the dlsym-resolved s_fn_* pointers alone (obs_bootstrap_title_output fills
+ * them before the first write); where those cannot be resolved it emits nothing rather
+ * than jumping to 0x2, which is the honest failure. (D323) */
 #if defined(OBSCENE_TARGET_EBOOT)
 #define OBS_RAW_IMPORT_CHANNELS_OK() 0
 #else
@@ -365,15 +360,15 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
         }
         /* The raw import is a last resort, and only where the loader binds it. Where
          * module resolution works - every console, any emulator with a real dlsym - the
-         * resolved s_fn_write above carries this channel, and the raw call is skipped: its
-         * JUMP_SLOT is what a native title leaves at 0x2, and `&sceKernelWrite` (a GLOB_DAT
-         * read) does not see that. Confined to a dlsym-less emulator, where the slot is
-         * genuinely bound. (D323) */
+         * resolved s_fn_write above carries this channel, and the raw call is skipped:
+         * its JUMP_SLOT is what a native title leaves at 0x2, and `&sceKernelWrite` (a
+         * GLOB_DAT read) does not see that. Confined to a dlsym-less emulator, where
+         * the slot is genuinely bound. (D323) */
         /* The raw import is a last resort, and only where the loader binds it - a
          * dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK). On a console the resolved
          * s_fn_write above carries this channel and this is skipped: the raw call goes
-         * through the JUMP_SLOT a native title leaves at 0x2, which `&sceKernelWrite` (a
-         * GLOB_DAT read) cannot see. (D323) */
+         * through the JUMP_SLOT a native title leaves at 0x2, which `&sceKernelWrite`
+         * (a GLOB_DAT read) cannot see. (D323) */
         if (OBS_RAW_IMPORT_CHANNELS_OK() &&
             obs_address_is_callable((const void *)&sceKernelWrite)) {
             long n = (long)sceKernelWrite(OBS_FD_STDOUT, bytes, len);
@@ -383,17 +378,18 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
     }
     case OBS_CHANNEL_PUTS: {
         /* Confined to a dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK); `puts` splits
-         * GLOB_DAT (the guard reads it via `&puts`) from JUMP_SLOT (the call goes through
-         * it), so a title that leaves the linkage slot unbound would fault on the call the
-         * guard just approved. `obs_address_is_callable`, not `!= 0`: a loader that
-         * resolves an unrecognised import to a small non-null value passes a null check and
-         * faults on the call - how a title died at rip 0x2 with the report unwritten. */
+         * GLOB_DAT (the guard reads it via `&puts`) from JUMP_SLOT (the call goes
+         * through it), so a title that leaves the linkage slot unbound would fault on
+         * the call the guard just approved. `obs_address_is_callable`, not `!= 0`: a
+         * loader that resolves an unrecognised import to a small non-null value passes
+         * a null check and faults on the call - how a title died at rip 0x2 with the
+         * report unwritten. */
         if (OBS_RAW_IMPORT_CHANNELS_OK() &&
             obs_address_is_callable((const void *)&puts)) {
-            /* Only a whole record. `puts` supplies a newline, so handing it a partial line
-             * would break the record in two - something that parses and is wrong, which is
-             * worse than no output. Every caller writes one complete line, so refusing
-             * anything else costs nothing and cannot be got wrong later. */
+            /* Only a whole record. `puts` supplies a newline, so handing it a partial
+             * line would break the record in two - something that parses and is wrong,
+             * which is worse than no output. Every caller writes one complete line, so
+             * refusing anything else costs nothing and cannot be got wrong later. */
             if (len == 0 || len > sizeof(scratch) || bytes[len - 1] != '\n') {
                 return 0;
             }
@@ -402,7 +398,8 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
             }
             scratch[len - 1] = '\0';
             /* Non-negative on success, EOF on failure. A stub returning zero counts as
-             * success, which is why this is tried after the channels that report a count. */
+             * success, which is why this is tried after the channels that report a
+             * count. */
             if (puts(scratch) < 0) {
                 return 0;
             }
@@ -411,10 +408,10 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
         return 0;
     }
     case OBS_CHANNEL_POSIX_WRITE: {
-        /* Confined to a dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK). On a console the
-         * resolved s_fn_write carries the report and this raw `write` import stays off; it
-         * faulted here as `write(1, ...)` through a `0x2` slot. Callable, not merely
-         * non-null - see the note on the puts channel. */
+        /* Confined to a dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK). On a console
+         * the resolved s_fn_write carries the report and this raw `write` import stays
+         * off; it faulted here as `write(1, ...)` through a `0x2` slot. Callable, not
+         * merely non-null - see the note on the puts channel. */
         if (OBS_RAW_IMPORT_CHANNELS_OK() &&
             obs_address_is_callable((const void *)&write)) {
             long n = (long)write(OBS_FD_STDOUT, bytes, len);
@@ -424,9 +421,9 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
     }
     case OBS_CHANNEL_PUTCHAR: {
         /* Confined to a dlsym-less emulator (OBS_RAW_IMPORT_CHANNELS_OK). Returns the
-         * character written; anything else is a failure, and checking for it is what stops
-         * a stub that returns zero reading as success - how the first version lost the
-         * whole report. */
+         * character written; anything else is a failure, and checking for it is what
+         * stops a stub that returns zero reading as success - how the first version
+         * lost the whole report. */
         if (OBS_RAW_IMPORT_CHANNELS_OK() &&
             obs_address_is_callable((const void *)&putchar)) {
             int c = (int)(unsigned char)bytes[0];
@@ -630,7 +627,8 @@ int obs_linkmap_readable(uintptr_t p) {
 #if defined(OBSCENE_HOST_BUILD)
     return 0;
 #else
-    /* Never attempt to read from eboot text segment (xotext), which is execute-only on PS5 */
+    /* Never attempt to read from eboot text segment (xotext), which is execute-only on
+     * PS5 */
     if (p >= 0x400000UL && p < 0x440000UL) {
         return 0;
     }
@@ -666,7 +664,8 @@ static const unsigned char *obs_linkmap_own_dynamic(const char **reason) {
     }
 
 #if !defined(OBSCENE_TARGET_MODULE)
-    /* 2. Check main eboot text / data segments by querying virtual memory (payload only) */
+    /* 2. Check main eboot text / data segments by querying virtual memory (payload
+     * only) */
     uintptr_t addr = 0x400000UL;
     for (int step = 0; step < 32 && addr < 0x80000000UL;) {
         char vq_buf[96];
@@ -911,9 +910,10 @@ void obs_run_context(char *name, size_t name_cap, char *basis, size_t basis_cap)
     delivery = "host";
     delivery_detail = "host build";
 #else
-    /* Delivery discriminator: an explicit check for payload bootstrap / payload args rather
-     * than inferring from libkernel base != 0. A title running in an environment where dlsym
-     * resolves getpid may still have a known libkernel base without being a payload (REQ-20260910T0410Z-e5d9). */
+    /* Delivery discriminator: an explicit check for payload bootstrap / payload args
+     * rather than inferring from libkernel base != 0. A title running in an environment
+     * where dlsym resolves getpid may still have a known libkernel base without being a
+     * payload (REQ-20260910T0410Z-e5d9). */
     if (obs_payload_output_bootstrapped || obs_get_payload_args() != NULL) {
         delivery = "payload";
         delivery_detail = "elfldr payload";
@@ -993,8 +993,10 @@ static uintptr_t obs_find_own_base(void) {
 #if !defined(OBSCENE_HOST_BUILD)
 OBS_WEAK int __sys_socketex(const char *name, int domain, int type, int protocol);
 OBS_WEAK int bind(int s, const void *addr, uint32_t addrlen);
-OBS_WEAK long _sendto(int s, const void *msg, size_t len, int flags, const void *to, uint32_t tolen);
-OBS_WEAK int _setsockopt(int s, int level, int optname, const void *optval, uint32_t optlen);
+OBS_WEAK long _sendto(int s, const void *msg, size_t len, int flags, const void *to,
+                      uint32_t tolen);
+OBS_WEAK int _setsockopt(int s, int level, int optname, const void *optval,
+                         uint32_t optlen);
 OBS_WEAK long recv(int s, void *buf, size_t len, int flags);
 OBS_WEAK int accept(int s, void *addr, uint32_t *addrlen);
 OBS_WEAK int listen(int s, int backlog);
@@ -1003,15 +1005,9 @@ OBS_WEAK int close(int fd);
 OBS_WEAK int *__error(void);
 
 static const void *const s_weak_posix_refs[] = {
-    (const void *)&__sys_socketex,
-    (const void *)&bind,
-    (const void *)&_sendto,
-    (const void *)&_setsockopt,
-    (const void *)&recv,
-    (const void *)&accept,
-    (const void *)&listen,
-    (const void *)&connect,
-    (const void *)&close,
+    (const void *)&__sys_socketex, (const void *)&bind,    (const void *)&_sendto,
+    (const void *)&_setsockopt,    (const void *)&recv,    (const void *)&accept,
+    (const void *)&listen,         (const void *)&connect, (const void *)&close,
     (const void *)&__error,
 };
 #endif
@@ -1088,7 +1084,8 @@ static void obs_relocate_payload_got(void) {
         uint32_t r_type = (uint32_t)(r[i].r_info & 0xffffffff);
         if (r_type == 7 || r_type == 6) { /* R_X86_64_JUMP_SLOT or GLOB_DAT */
             const obs_elf64_sym *sym =
-                (const obs_elf64_sym *)(symtab + (size_t)sym_idx * sizeof(obs_elf64_sym));
+                (const obs_elf64_sym *)(symtab +
+                                        (size_t)sym_idx * sizeof(obs_elf64_sym));
             const char *sym_name = (const char *)(strtab + sym->st_name);
             uint64_t *got_slot = (uint64_t *)(base + r[i].r_offset);
 
@@ -1098,7 +1095,8 @@ static void obs_relocate_payload_got(void) {
                 if (obs_strcmp(sym_name, s_loader_weak_entries[w].name) == 0) {
                     s_loader_weak_entries[w].initial_got = initial_val;
                     if (initial_val != 0 &&
-                        (plt_start == 0 || initial_val < plt_start || initial_val >= plt_end) &&
+                        (plt_start == 0 || initial_val < plt_start ||
+                         initial_val >= plt_end) &&
                         (initial_val < base || initial_val >= (base + 0x2000000UL))) {
                         s_loader_weak_entries[w].is_bound = 1;
                     } else {
@@ -1128,7 +1126,8 @@ static void obs_relocate_payload_got(void) {
                         continue;
                     for (unsigned int c = 0; c < sec->check_count; c++) {
                         const obs_check *chk = &sec->checks[c];
-                        if (chk->symbol != NULL && obs_strcmp(chk->symbol, sym_name) == 0 &&
+                        if (chk->symbol != NULL &&
+                            obs_strcmp(chk->symbol, sym_name) == 0 &&
                             chk->library != NULL &&
                             obs_strcmp(chk->library, "libkernel") != 0 &&
                             obs_strcmp(chk->library, "obscene") != 0) {
@@ -1261,14 +1260,16 @@ sce_ssize_t sceKernelRead(int fd, void *buf, size_t count) {
     if (s_fn_read != NULL) {
         return s_fn_read(fd, buf, count);
     }
-    return (sce_ssize_t)obs_invoke_syscall(3, (long)fd, (long)buf, (long)count, 0, 0, 0);
+    return (sce_ssize_t)obs_invoke_syscall(3, (long)fd, (long)buf, (long)count, 0, 0,
+                                           0);
 }
 
 sce_ssize_t sceKernelWrite(int fd, const void *buf, size_t count) {
     if (s_fn_write != NULL) {
         return s_fn_write(fd, buf, count);
     }
-    return (sce_ssize_t)obs_invoke_syscall(4, (long)fd, (long)buf, (long)count, 0, 0, 0);
+    return (sce_ssize_t)obs_invoke_syscall(4, (long)fd, (long)buf, (long)count, 0, 0,
+                                           0);
 }
 
 sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes) {

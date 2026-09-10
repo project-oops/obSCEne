@@ -159,9 +159,10 @@ void obs_report_sink(const char *path) {
 }
 
 void obs_report_guard(int available, const char *detail) {
-    /* Whether the fault guard is active this run, and what init resolved. A run that is not
-     * guarded (the primitives did not resolve on this loader) says so here, so a crash that
-     * ends it is read as "not caught" rather than "the guard is broken". (D325) */
+    /* Whether the fault guard is active this run, and what init resolved. A run that is
+     * not guarded (the primitives did not resolve on this loader) says so here, so a
+     * crash that ends it is read as "not caught" rather than "the guard is broken".
+     * (D325) */
     line l;
     line_start(&l, "guard");
     line_field(&l, available ? "on" : "off");
@@ -170,11 +171,12 @@ void obs_report_guard(int available, const char *detail) {
 }
 
 void obs_report_resolution(int works, const char *detail) {
-    /* Whether module enumeration and dlsym work here at all. In payload mode they do not - the
-     * loader hands the payload no module list and no dlsym handle - so every `module|...|0x0`
-     * and every "symbol unresolvable" below is "the enumeration could not see it", not "the
-     * library is absent". Without this line the two are identical, which is the distinction the
-     * honest-failure principle exists to keep. Emitted once, near the top. (D329) */
+    /* Whether module enumeration and dlsym work here at all. In payload mode they do
+     * not - the loader hands the payload no module list and no dlsym handle - so every
+     * `module|...|0x0` and every "symbol unresolvable" below is "the enumeration could
+     * not see it", not "the library is absent". Without this line the two are
+     * identical, which is the distinction the honest-failure principle exists to keep.
+     * Emitted once, near the top. (D329) */
     line l;
     line_start(&l, "resolution");
     line_field(&l, works ? "works" : "unavailable");
@@ -183,10 +185,11 @@ void obs_report_resolution(int works, const char *detail) {
 }
 
 void obs_report_peripherals(int pad, int keyboard, int mouse, int audio) {
-    /* What was attached when the run started, one field per device, so a peripheral probe's
-     * extent of zero reads as "nothing plugged in" rather than "the call wrote nothing" - the
-     * difference between a PENDING waiting for you and a real finding. Detected by opening and
-     * closing each once at run start; a device that would not open reads 0. (D328) */
+    /* What was attached when the run started, one field per device, so a peripheral
+     * probe's extent of zero reads as "nothing plugged in" rather than "the call wrote
+     * nothing" - the difference between a PENDING waiting for you and a real finding.
+     * Detected by opening and closing each once at run start; a device that would not
+     * open reads 0. (D328) */
     line l;
     line_start(&l, "peripherals");
     line_field(&l, pad ? "pad" : "-");
@@ -410,8 +413,8 @@ void obs_report_section_tally(const obs_section *section, obs_tally tally) {
     line_field_u64(&l, tally.fail);
     line_field_u64(&l, tally.skip);
     /* Appended, not inserted: a crash count is a new trailing field, which OUTPUT.md's
-     * contract allows without a version bump. A pre-guard parser reads the first four and
-     * ignores this; a current one sees the crashes. (D325) */
+     * contract allows without a version bump. A pre-guard parser reads the first four
+     * and ignores this; a current one sees the crashes. (D325) */
     line_field_u64(&l, tally.crash);
     /* Pending appended after crash, same trailing-field contract. (D328) */
     line_field_u64(&l, tally.pending);
@@ -572,7 +575,8 @@ void obs_report_tally(obs_tally tally) {
     line_field_u64(&l, tally.partial);
     line_field_u64(&l, tally.fail);
     line_field_u64(&l, tally.skip);
-    /* Trailing crash count; appended for the same contract reason as the section tally. */
+    /* Trailing crash count; appended for the same contract reason as the section tally.
+     */
     line_field_u64(&l, tally.crash);
     /* Trailing pending count, appended after crash. (D328) */
     line_field_u64(&l, tally.pending);

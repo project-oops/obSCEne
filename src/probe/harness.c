@@ -298,16 +298,15 @@ typedef struct {
 } obs_sysmodule_id_map;
 
 static const obs_sysmodule_id_map obs_sysmodules[] = {
-    {"libSceNet", 0x0001},      {"libSceHttp", 0x0002},
-    {"libSceSsl", 0x0003},      {"libSceUserService", 0x0004},
-    {"libSceSaveData", 0x0006}, {"libSceAudioOut", 0x000c},
-    {"libSceVoice", 0x000e},    {"libSceAppInstUtil", 0x0014},
-    {"libSceIme", 0x0017},      {"libSceCamera", 0x001d},
-    {"libScePad", 0x0027},      {"libSceVideoOut", 0x0028},
-    {"libSceVideodec2", 0x008e},{"libSceAudiodec", 0x0088},
-    {"libSceKeyboard", 0x00a8}, {"libSceMouse", 0x00a9},
-    {"libSceAppContent", 0x00b4},
-    {"libSceCommonDialog", 0x00a4},
+    {"libSceNet", 0x0001},          {"libSceHttp", 0x0002},
+    {"libSceSsl", 0x0003},          {"libSceUserService", 0x0004},
+    {"libSceSaveData", 0x0006},     {"libSceAudioOut", 0x000c},
+    {"libSceVoice", 0x000e},        {"libSceAppInstUtil", 0x0014},
+    {"libSceIme", 0x0017},          {"libSceCamera", 0x001d},
+    {"libScePad", 0x0027},          {"libSceVideoOut", 0x0028},
+    {"libSceVideodec2", 0x008e},    {"libSceAudiodec", 0x0088},
+    {"libSceKeyboard", 0x00a8},     {"libSceMouse", 0x00a9},
+    {"libSceAppContent", 0x00b4},   {"libSceCommonDialog", 0x00a4},
     {"libSceCommonDialog", 0x0096},
 };
 
@@ -411,7 +410,8 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
     }
 
     /* 3. Try loading via sceSysmoduleLoadModule / sceSysmoduleLoadModuleInternal */
-    /* Sysmodule loading is disallowed in unsigned payload mode and trips signo 0xa0020101 */
+    /* Sysmodule loading is disallowed in unsigned payload mode and trips signo
+     * 0xa0020101 */
     /* clang-format off */
     int (*fn_sysmodule_load)(uint16_t) = NULL;
     if (obs_get_payload_args() == NULL) {
@@ -468,7 +468,8 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
         }
     }
 
-    /* 4. Try kernel-extracted export table: verify if any known symbol of this library is present */
+    /* 4. Try kernel-extracted export table: verify if any known symbol of this library
+     * is present */
     const payload_args_t *pargs = obs_get_payload_args();
     if (pargs != NULL && pargs->kexport_table != NULL) {
         for (unsigned int s = 0; s < obs_section_count; s++) {
@@ -571,7 +572,8 @@ const void *obs_module_symbol(int handle, const char *name) {
     }
     /* 5. Iterate all loaded module IDs */
     int mod_list[128];
-    for (size_t k = 0; k < 128; k++) mod_list[k] = 0;
+    for (size_t k = 0; k < 128; k++)
+        mod_list[k] = 0;
     size_t mod_count = 0;
     int got_list = 0;
     if (obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
@@ -581,7 +583,9 @@ const void *obs_module_symbol(int handle, const char *name) {
     }
 #if !defined(OBSCENE_HOST_BUILD)
     if (!got_list) {
-        if (obs_invoke_syscall(592, (long)mod_list, 128, (long)&mod_count, 0, 0, 0) == 0 && mod_count > 0) {
+        if (obs_invoke_syscall(592, (long)mod_list, 128, (long)&mod_count, 0, 0, 0) ==
+                0 &&
+            mod_count > 0) {
             got_list = 1;
         }
     }
@@ -621,9 +625,10 @@ int obs_module_resolution_works(void) {
 /* Storage behind OBS_NO_SYMBOL. Its address is all that matters. */
 const char obs_no_symbol_marker = 0;
 
-/* Whether a peripheral is attached, by opening and closing it once. Run-level facts, reported
- * so a peripheral probe's PENDING reads against what was plugged in. Each is fully guarded: a
- * loader without the symbol resolves it weak-null and the device reads absent. (D328) */
+/* Whether a peripheral is attached, by opening and closing it once. Run-level facts,
+ * reported so a peripheral probe's PENDING reads against what was plugged in. Each is
+ * fully guarded: a loader without the symbol resolves it weak-null and the device reads
+ * absent. (D328) */
 static int32_t obs_peripheral_user(void) {
     int32_t user = 0;
     if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser) &&
@@ -741,9 +746,9 @@ static void tally_add(obs_tally *tally, obs_status status) {
 }
 
 obs_tally obs_run_all(void) {
-    /* Arm the fault guard before any check runs, so a call that would end the process is
-     * caught and recorded instead. A no-op where the primitives cannot be resolved, in
-     * which case a faulting check ends the run exactly as it did before. (D325) */
+    /* Arm the fault guard before any check runs, so a call that would end the process
+     * is caught and recorded instead. A no-op where the primitives cannot be resolved,
+     * in which case a faulting check ends the run exactly as it did before. (D325) */
     obs_fault_init();
 
     obs_tally total = {0, 0, 0, 0, 0, 0};
@@ -784,13 +789,15 @@ obs_tally obs_run_all(void) {
     /* What is plugged in, so the peripheral probes' PENDING reads against it. (D328) */
     obs_report_peripherals(obs_peripheral_pad(), obs_peripheral_keyboard(),
                            obs_peripheral_mouse(), obs_peripheral_audio());
-    /* Whether the enumeration could look at all, so a module handle of 0x0 below reads as "not
-     * seen" rather than "absent" - the distinction payload mode could not make. (D329) */
-    obs_report_resolution(obs_module_resolution_works(),
-                          obs_module_resolution_works()
-                              ? "module list and dlsym resolve here"
-                              : "no module list and no dlsym here (payload mode): a module "
-                                "handle of 0x0 below means not seen, not absent");
+    /* Whether the enumeration could look at all, so a module handle of 0x0 below reads
+     * as "not seen" rather than "absent" - the distinction payload mode could not make.
+     * (D329) */
+    obs_report_resolution(
+        obs_module_resolution_works(),
+        obs_module_resolution_works()
+            ? "module list and dlsym resolve here"
+            : "no module list and no dlsym here (payload mode): a module "
+              "handle of 0x0 below means not seen, not absent");
     obs_report_resume(obs_resume_skipped_count(), obs_resume_overflowed());
     /* The status readout the HUD draws, mirrored into the report so a reader that never
      * sees the screen gets the same facts (memory, VRAM, generation, gaps and all).
@@ -898,12 +905,12 @@ obs_tally obs_run_all(void) {
                  * is made before the risk. (D174) */
                 /* Recorded without a redraw: see obs_screen_attempt. */
                 obs_screen_attempt(check->id);
-                /* The fault guard. A check that faults - the futex did, inside libkernel -
-                 * lands back here as a crash rather than ending the run, so the sections
-                 * behind it still run and the crash is a record instead of a silent stop.
-                 * The try is already on the wire (obs_report_attempt above), so a crash
-                 * caught here turns that try into a `crash` res rather than leaving it
-                 * dangling. (D325) */
+                /* The fault guard. A check that faults - the futex did, inside
+                 * libkernel - lands back here as a crash rather than ending the run, so
+                 * the sections behind it still run and the crash is a record instead of
+                 * a silent stop. The try is already on the wire (obs_report_attempt
+                 * above), so a crash caught here turns that try into a `crash` res
+                 * rather than leaving it dangling. (D325) */
                 obs_jmp_buf guard;
                 int faulted = OBS_FAULT_ARM(&guard);
                 if (faulted == 0) {

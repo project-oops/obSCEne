@@ -74,16 +74,18 @@ void obs_capture_payload_args(unsigned long args) {
         s_local_payload_args.kdata_base_addr = src->kdata_base_addr;
         s_local_payload_args.payloadout = src->payloadout;
         s_local_payload_args.kexport_table = src->kexport_table;
-        /* Accept these as a genuine payload_args only when the dlsym gadget is a callable
-         * address. A title is entered with rdi pointing at the loader's own handoff
-         * struct, not ours; read as a payload_args its first word (sys_dynlib_dlsym) is a
-         * small non-pointer - 0x2 was measured on hardware - and a consumer that calls
-         * through it faults at 0x2 before the suite starts. The shape check above
-         * (aligned, canonical, readable) does not catch that, because the struct is real
-         * memory; a callable-address check on the one field anything dereferences does.
-         * This keeps this file's stated invariant true for its callers: no primitive is
-         * issued against a struct that is not a payload_args. (D324) */
-        if (obs_address_is_callable((const void *)s_local_payload_args.sys_dynlib_dlsym)) {
+        /* Accept these as a genuine payload_args only when the dlsym gadget is a
+         * callable address. A title is entered with rdi pointing at the loader's own
+         * handoff struct, not ours; read as a payload_args its first word
+         * (sys_dynlib_dlsym) is a small non-pointer - 0x2 was measured on hardware -
+         * and a consumer that calls through it faults at 0x2 before the suite starts.
+         * The shape check above (aligned, canonical, readable) does not catch that,
+         * because the struct is real memory; a callable-address check on the one field
+         * anything dereferences does. This keeps this file's stated invariant true for
+         * its callers: no primitive is issued against a struct that is not a
+         * payload_args. (D324) */
+        if (obs_address_is_callable(
+                (const void *)s_local_payload_args.sys_dynlib_dlsym)) {
             s_have_payload_args = 1;
         }
     }
@@ -99,10 +101,10 @@ const payload_args_t *obs_get_payload_args(void) {
         return &s_local_payload_args;
     }
     /* No raw-pointer fallback. A pointer that passed the shape check but not the
-     * dlsym-callable check in the capture above is a title's loader handoff struct, not a
-     * payload_args - returning it hands every payload-gated path (sys_call_init, the
-     * kexport walk, the census's kexport shortcut) a struct whose primitives are garbage,
-     * which is the 0x2 fault this pair now exists to prevent. (D324) */
+     * dlsym-callable check in the capture above is a title's loader handoff struct, not
+     * a payload_args - returning it hands every payload-gated path (sys_call_init, the
+     * kexport walk, the census's kexport shortcut) a struct whose primitives are
+     * garbage, which is the 0x2 fault this pair now exists to prevent. (D324) */
     return NULL;
 }
 
@@ -187,29 +189,40 @@ static obs_result check_handoff_words(void) {
     const payload_args_t *pargs = obs_get_payload_args();
     if (pargs != NULL) {
         if (pargs->rwpipe != NULL) {
-            obs_report_measure("136-kernel/handoff", "rwpipe_0", "val", (uint64_t)(int64_t)pargs->rwpipe[0], "fd");
-            obs_report_measure("136-kernel/handoff", "rwpipe_1", "val", (uint64_t)(int64_t)pargs->rwpipe[1], "fd");
+            obs_report_measure("136-kernel/handoff", "rwpipe_0", "val",
+                               (uint64_t)(int64_t)pargs->rwpipe[0], "fd");
+            obs_report_measure("136-kernel/handoff", "rwpipe_1", "val",
+                               (uint64_t)(int64_t)pargs->rwpipe[1], "fd");
         }
         if (pargs->rwpair != NULL) {
-            obs_report_measure("136-kernel/handoff", "rwpair_0", "val", (uint64_t)(int64_t)pargs->rwpair[0], "fd");
-            obs_report_measure("136-kernel/handoff", "rwpair_1", "val", (uint64_t)(int64_t)pargs->rwpair[1], "fd");
+            obs_report_measure("136-kernel/handoff", "rwpair_0", "val",
+                               (uint64_t)(int64_t)pargs->rwpair[0], "fd");
+            obs_report_measure("136-kernel/handoff", "rwpair_1", "val",
+                               (uint64_t)(int64_t)pargs->rwpair[1], "fd");
         }
-        obs_report_measure("136-kernel/handoff", "kexport_table", pargs->kexport_table != NULL ? "present" : "null",
+        obs_report_measure("136-kernel/handoff", "kexport_table",
+                           pargs->kexport_table != NULL ? "present" : "null",
                            (uint64_t)(uintptr_t)pargs->kexport_table, "addr");
 #if !defined(OBSCENE_HOST_BUILD)
         pid_t my_pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
         uintptr_t my_kproc = krw_get_proc(my_pid);
-        obs_report_measure("136-kernel/handoff", "my_pid", "val", (uint64_t)my_pid, "pid");
-        obs_report_measure("136-kernel/handoff", "allproc_addr", "val", (uint64_t)krw_allproc_addr(), "addr");
-        obs_report_measure("136-kernel/handoff", "my_kproc", my_kproc != 0 ? "found" : "zero", (uint64_t)my_kproc, "addr");
+        obs_report_measure("136-kernel/handoff", "my_pid", "val", (uint64_t)my_pid,
+                           "pid");
+        obs_report_measure("136-kernel/handoff", "allproc_addr", "val",
+                           (uint64_t)krw_allproc_addr(), "addr");
+        obs_report_measure("136-kernel/handoff", "my_kproc",
+                           my_kproc != 0 ? "found" : "zero", (uint64_t)my_kproc,
+                           "addr");
         if (my_kproc != 0) {
             uintptr_t kaddr = 0;
             krw_copyout(my_kproc + 0x3E8, &kaddr, sizeof(kaddr));
-            obs_report_measure("136-kernel/handoff", "kproc_3e8", "val", (uint64_t)kaddr, "addr");
+            obs_report_measure("136-kernel/handoff", "kproc_3e8", "val",
+                               (uint64_t)kaddr, "addr");
             if (kaddr != 0) {
                 uintptr_t cur = 0;
                 krw_copyout(kaddr, &cur, sizeof(cur));
-                obs_report_measure("136-kernel/handoff", "kproc_cur", "val", (uint64_t)cur, "addr");
+                obs_report_measure("136-kernel/handoff", "kproc_cur", "val",
+                                   (uint64_t)cur, "addr");
             }
         }
 #endif

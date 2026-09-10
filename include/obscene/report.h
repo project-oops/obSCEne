@@ -120,19 +120,20 @@ void obs_report_sysinfo(const char *field, const char *state, const char *value)
  * See src/sink.c. */
 void obs_report_sink(const char *path);
 
-/* Whether the fault guard installed this run, and a short account of what resolved. Emitted
- * once, near the top of the report, so a reader can tell a run that could catch a crash from
- * one that could not. See src/probe/fault.c. */
+/* Whether the fault guard installed this run, and a short account of what resolved.
+ * Emitted once, near the top of the report, so a reader can tell a run that could catch
+ * a crash from one that could not. See src/probe/fault.c. */
 void obs_report_guard(int available, const char *detail);
 
 /* Which peripherals were attached at run start - pad, keyboard, mouse, audio - so a
- * peripheral probe's PENDING (or a zero extent) is read against what was plugged in rather
- * than as a defect. Emitted once, near the top of the report. (D328) */
+ * peripheral probe's PENDING (or a zero extent) is read against what was plugged in
+ * rather than as a defect. Emitted once, near the top of the report. (D328) */
 void obs_report_peripherals(int pad, int keyboard, int mouse, int audio);
 
-/* Whether module enumeration and dlsym work in this environment. When they do not (payload
- * mode), a `module|...|0x0` and an unresolvable symbol mean "not seen", not "absent" - this
- * says which, so the two are not read as the same thing. Emitted once, near the top. (D329) */
+/* Whether module enumeration and dlsym work in this environment. When they do not
+ * (payload mode), a `module|...|0x0` and an unresolvable symbol mean "not seen", not
+ * "absent" - this says which, so the two are not read as the same thing. Emitted once,
+ * near the top. (D329) */
 void obs_report_resolution(int works, const char *detail);
 
 /* How many checks this run is skipping because a previous run of the same build

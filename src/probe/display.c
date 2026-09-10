@@ -447,7 +447,8 @@ obs_display_state obs_display_open(void) {
 
 #if defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5)
     /* Prospero native title: use AGC backend via oops-sdk */
-    s_oops_disp = oops_display_open(OOPS_DISPLAY_BACKEND_AUTO, OBS_FB_WIDTH, OBS_FB_HEIGHT);
+    s_oops_disp =
+        oops_display_open(OOPS_DISPLAY_BACKEND_AUTO, OBS_FB_WIDTH, OBS_FB_HEIGHT);
     if (s_oops_disp && oops_display_is_ready(s_oops_disp)) {
         obs_fb = oops_display_get_framebuffer(s_oops_disp);
         obs_state = OBS_DISPLAY_READY;

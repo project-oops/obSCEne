@@ -1,8 +1,9 @@
 /*
  * obSCEne Injector Entry Point.
  *
- * Thin payload launcher that resolves the target process, embeds obscene-probe-<target>.elf,
- * and delegates process control, remote ELF mapping, and thread hijacking to oops-sdk.
+ * Thin payload launcher that resolves the target process, embeds
+ * obscene-probe-<target>.elf, and delegates process control, remote ELF mapping, and
+ * thread hijacking to oops-sdk.
  */
 
 #include "oops/inject.h"
@@ -19,7 +20,8 @@ typedef struct {
     int64_t r_addend;
 } injector_elf64_rela;
 
-extern const injector_elf64_rela __rela_dyn_start[] __attribute__((visibility("hidden")));
+extern const injector_elf64_rela __rela_dyn_start[]
+    __attribute__((visibility("hidden")));
 extern const injector_elf64_rela __rela_dyn_end[] __attribute__((visibility("hidden")));
 
 int injector_start(payload_args_t *args);

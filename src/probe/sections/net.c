@@ -1,17 +1,19 @@
 /*
  * Network reachability, for Porthole.
  *
- * Porthole (oops-apps/porthole) is an elfldr payload that serves video and controller sockets,
- * and it resolves libSceNet itself because imports do not auto-bind in unsigned payload mode.
- * Nothing had confirmed the network is reachable that way, and three constants in its socket
- * layer were taken from public headers that disagree rather than measured. This section answers
- * that: it resolves the socket calls the way a payload must, reports each address so a null one
- * is told from a failed call, opens a listener on a scratch port, and measures the two things
- * Porthole's accept loop turns on - the non-blocking option value and the would-block code.
+ * Porthole (oops-apps/porthole) is an elfldr payload that serves video and controller
+ * sockets, and it resolves libSceNet itself because imports do not auto-bind in
+ * unsigned payload mode. Nothing had confirmed the network is reachable that way, and
+ * three constants in its socket layer were taken from public headers that disagree
+ * rather than measured. This section answers that: it resolves the socket calls the way
+ * a payload must, reports each address so a null one is told from a failed call, opens
+ * a listener on a scratch port, and measures the two things Porthole's accept loop
+ * turns on - the non-blocking option value and the would-block code.
  *
- * Every call is through a resolved pointer, never a raw import: in payload mode `&sceNetSocket`
- * is unbound, and the point is to reach the function the way Porthole has to. A leg where
- * nothing resolves is the honest finding that the delivery route needs rethinking. (D329)
+ * Every call is through a resolved pointer, never a raw import: in payload mode
+ * `&sceNetSocket` is unbound, and the point is to reach the function the way Porthole
+ * has to. A leg where nothing resolves is the honest finding that the delivery route
+ * needs rethinking. (D329)
  */
 
 #include "oops/freestd.h"
@@ -22,13 +24,14 @@
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 
-/* Clear of everything in use (9021/9022/2121/3232/2323/8084/6967 and Porthole's 9805/9806).
- * Dedicated scratch ports per check avoid EADDRINUSE (0x80410130) collisions from TIME_WAIT states. */
-#define OBS_NET_PORT_LISTENER       9891
-#define OBS_NET_PORT_RECV           9892
-#define OBS_NET_PORT_ACCEPT         9893
+/* Clear of everything in use (9021/9022/2121/3232/2323/8084/6967 and Porthole's
+ * 9805/9806). Dedicated scratch ports per check avoid EADDRINUSE (0x80410130)
+ * collisions from TIME_WAIT states. */
+#define OBS_NET_PORT_LISTENER 9891
+#define OBS_NET_PORT_RECV 9892
+#define OBS_NET_PORT_ACCEPT 9893
 #define OBS_NET_PORT_SOCKADDR_LEN16 9894
-#define OBS_NET_PORT_SOCKADDR_LEN0  9895
+#define OBS_NET_PORT_SOCKADDR_LEN0 9895
 /* 127.0.0.1 in network byte order, stored little-endian: bytes 7F 00 00 01. */
 #define OBS_NET_LOOPBACK 0x0100007Fu
 
@@ -48,16 +51,24 @@ static int net_krw_is_ready(void) {
 #endif
 }
 
-static long net_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+static long net_syscall(long num, long a1, long a2, long a3, long a4, long a5,
+                        long a6) {
 #if !defined(OBSCENE_HOST_BUILD)
     return obs_invoke_syscall(num, a1, a2, a3, a4, a5, a6);
 #else
-    (void)num; (void)a1; (void)a2; (void)a3; (void)a4; (void)a5; (void)a6;
+    (void)num;
+    (void)a1;
+    (void)a2;
+    (void)a3;
+    (void)a4;
+    (void)a5;
+    (void)a6;
     return -1;
 #endif
 }
 
-/* Walk the kernel export table / live dispatch table (D277/D300) for libSceNet symbols. */
+/* Walk the kernel export table / live dispatch table (D277/D300) for libSceNet symbols.
+ */
 static const void *net_walk_symbol(const char *name) {
     if (name == NULL) {
         return NULL;
@@ -110,7 +121,8 @@ static const void *net_sym(const char *name, const void *direct) {
 }
 
 /* Resolve a POSIX / libkernel candidate from candidate spellings in payload mode. */
-static const void *net_resolve_posix_candidate(const char *const *candidates, size_t count) {
+static const void *net_resolve_posix_candidate(const char *const *candidates,
+                                               size_t count) {
     const payload_args_t *pargs = obs_get_payload_args();
     for (size_t i = 0; i < count; i++) {
         const char *name = candidates[i];
@@ -120,8 +132,8 @@ static const void *net_resolve_posix_candidate(const char *const *candidates, si
         char nid[12];
         obs_compute_nid(name, nid);
         if (pargs != NULL && pargs->kexport_table != NULL) {
-            const void *kaddr =
-                obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *kaddr = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (kaddr != NULL && obs_address_is_callable(kaddr)) {
                 return kaddr;
             }
@@ -230,35 +242,42 @@ static int net_resolve_all(net_fns *f) {
     if (obs_address_is_callable((const void *)&sceNetInit)) {
         (void)sceNetInit();
     }
-    return f->sce_socket != NULL && f->sce_bind != NULL && f->sce_listen != NULL && f->sce_close != NULL;
+    return f->sce_socket != NULL && f->sce_bind != NULL && f->sce_listen != NULL &&
+           f->sce_close != NULL;
 }
 
 static int net_open_socket(const net_fns *f, const char *name) {
     if (f->is_payload) {
         if (f->socketex != NULL) {
-            int s = f->socketex(name, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM, OBS_NET_IPPROTO_TCP);
+            int s = f->socketex(name, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM,
+                                OBS_NET_IPPROTO_TCP);
             if (s >= 0) {
                 return s;
             }
-            s = f->socketex(NULL, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM, OBS_NET_IPPROTO_TCP);
+            s = f->socketex(NULL, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM,
+                            OBS_NET_IPPROTO_TCP);
             if (s >= 0) {
                 return s;
             }
         }
         if (f->posix_socket != NULL) {
-            int s = f->posix_socket(OBS_NET_AF_INET, OBS_NET_SOCK_STREAM, OBS_NET_IPPROTO_TCP);
+            int s = f->posix_socket(OBS_NET_AF_INET, OBS_NET_SOCK_STREAM,
+                                    OBS_NET_IPPROTO_TCP);
             if (s >= 0) {
                 return s;
             }
         }
         /* FreeBSD syscall 97: SYS_socket(domain, type, protocol) */
-        long s = net_syscall(97, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM, OBS_NET_IPPROTO_TCP, 0, 0, 0);
+        long s = net_syscall(97, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM,
+                             OBS_NET_IPPROTO_TCP, 0, 0, 0);
         return (int)s;
     }
     if (f->sce_socket != NULL) {
-        int s = f->sce_socket(name, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM, OBS_NET_IPPROTO_TCP);
+        int s = f->sce_socket(name, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM,
+                              OBS_NET_IPPROTO_TCP);
         if (s < 0 && name != NULL) {
-            s = f->sce_socket(NULL, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM, OBS_NET_IPPROTO_TCP);
+            s = f->sce_socket(NULL, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM,
+                              OBS_NET_IPPROTO_TCP);
         }
         return s;
     }
@@ -293,7 +312,8 @@ static int net_recv_wrapper(const net_fns *f, int s, void *buf, size_t len, int 
     return f->sce_recv ? f->sce_recv(s, buf, len, flags) : -1;
 }
 
-static int net_send_wrapper(const net_fns *f, int s, const void *buf, size_t len, int flags) {
+static int net_send_wrapper(const net_fns *f, int s, const void *buf, size_t len,
+                            int flags) {
     if (f->is_payload) {
         if (f->posix_send != NULL) {
             return (int)f->posix_send(s, buf, len, flags);
@@ -322,12 +342,16 @@ static int net_close_wrapper(const net_fns *f, int s) {
 static int net_setsockopt_wrapper(const net_fns *f, int s, int level, int optname,
                                   const void *optval, uint32_t optlen) {
     if (f->is_payload) {
-        return f->posix_setsockopt ? f->posix_setsockopt(s, level, optname, optval, optlen) : -1;
+        return f->posix_setsockopt
+                   ? f->posix_setsockopt(s, level, optname, optval, optlen)
+                   : -1;
     }
-    return f->sce_setsockopt ? f->sce_setsockopt(s, level, optname, optval, optlen) : -1;
+    return f->sce_setsockopt ? f->sce_setsockopt(s, level, optname, optval, optlen)
+                             : -1;
 }
 
-static int net_connect_wrapper(const net_fns *f, int s, const void *addr, uint32_t len) {
+static int net_connect_wrapper(const net_fns *f, int s, const void *addr,
+                               uint32_t len) {
     if (f->is_payload) {
         return f->posix_connect ? f->posix_connect(s, addr, len) : -1;
     }
@@ -336,8 +360,8 @@ static int net_connect_wrapper(const net_fns *f, int s, const void *addr, uint32
 
 static int net_set_nonblocking(const net_fns *f, int s) {
     int one = 1;
-    int rc = net_setsockopt_wrapper(f, s, OBS_NET_SOL_SOCKET, OBS_NET_SO_NBIO_OPENORBIS, &one,
-                                    (uint32_t)sizeof(one));
+    int rc = net_setsockopt_wrapper(f, s, OBS_NET_SOL_SOCKET, OBS_NET_SO_NBIO_OPENORBIS,
+                                    &one, (uint32_t)sizeof(one));
     if (f->is_payload && f->fcntl != NULL) {
         long flags = f->fcntl(s, 3 /* F_GETFL */, 0);
         if (flags >= 0) {
@@ -363,9 +387,10 @@ static int net_last_errno(const net_fns *f, int rc) {
     return 0;
 }
 
-/* Fill an obs_net_sockaddr_in for the specified port. addr is host-order (INADDR_ANY = 0, or
- * loopback); sin_len is the struct size unless told otherwise. */
-static void net_fill_addr(obs_net_sockaddr_in *a, uint16_t port, uint32_t sin_addr, uint8_t sin_len) {
+/* Fill an obs_net_sockaddr_in for the specified port. addr is host-order (INADDR_ANY =
+ * 0, or loopback); sin_len is the struct size unless told otherwise. */
+static void net_fill_addr(obs_net_sockaddr_in *a, uint16_t port, uint32_t sin_addr,
+                          uint8_t sin_len) {
     for (unsigned int i = 0; i < sizeof(*a); i++) {
         ((volatile unsigned char *)a)[i] = 0;
     }
@@ -376,17 +401,21 @@ static void net_fill_addr(obs_net_sockaddr_in *a, uint16_t port, uint32_t sin_ad
     a->sin_vport = 0;
 }
 
-/* ---- Ask 1: resolve the eight (and connect), report each address ------------------------- */
+/* ---- Ask 1: resolve the eight (and connect), report each address
+ * ------------------------- */
 
 static const char *const net_symbol_names[] = {
-    "sceNetSocket", "sceNetBind",    "sceNetListen",     "sceNetAccept",  "sceNetRecv",
-    "sceNetSend",   "sceNetSocketClose", "sceNetSetsockopt", "sceNetConnect",
+    "sceNetSocket",      "sceNetBind",       "sceNetListen",
+    "sceNetAccept",      "sceNetRecv",       "sceNetSend",
+    "sceNetSocketClose", "sceNetSetsockopt", "sceNetConnect",
 };
 
 static const void *const net_symbol_direct[] = {
-    (const void *)&sceNetSocket, (const void *)&sceNetBind,    (const void *)&sceNetListen,
-    (const void *)&sceNetAccept, (const void *)&sceNetRecv,    (const void *)&sceNetSend,
-    (const void *)&sceNetSocketClose, (const void *)&sceNetSetsockopt, (const void *)&sceNetConnect,
+    (const void *)&sceNetSocket,      (const void *)&sceNetBind,
+    (const void *)&sceNetListen,      (const void *)&sceNetAccept,
+    (const void *)&sceNetRecv,        (const void *)&sceNetSend,
+    (const void *)&sceNetSocketClose, (const void *)&sceNetSetsockopt,
+    (const void *)&sceNetConnect,
 };
 
 static obs_result check_net_resolve(void) {
@@ -396,7 +425,9 @@ static obs_result check_net_resolve(void) {
             const char *const candidates[4];
             size_t count;
         } posix_syms[] = {
-            {"__sys_socketex", {"__sys_socketex", "socket", "_socket", "__sys_socket"}, 4},
+            {"__sys_socketex",
+             {"__sys_socketex", "socket", "_socket", "__sys_socket"},
+             4},
             {"bind", {"bind", "_bind", NULL, NULL}, 2},
             {"listen", {"listen", "_listen", NULL, NULL}, 2},
             {"accept", {"accept", "_accept", NULL, NULL}, 2},
@@ -410,16 +441,17 @@ static obs_result check_net_resolve(void) {
         };
         unsigned int resolved = 0;
         for (unsigned int i = 0; i < OBS_COUNT(posix_syms); i++) {
-            const void *addr =
-                net_resolve_posix_candidate(posix_syms[i].candidates, posix_syms[i].count);
+            const void *addr = net_resolve_posix_candidate(posix_syms[i].candidates,
+                                                           posix_syms[i].count);
             obs_report_measure("102-net/resolve", posix_syms[i].primary,
                                addr != NULL ? "kexport" : "kexport-null",
                                (uint64_t)(uintptr_t)addr, "vaddr");
             obs_report_measure("102-net/posix-symbols", posix_syms[i].primary,
-                               obs_address_is_callable(addr) ? "callable" : "not-callable",
+                               obs_address_is_callable(addr) ? "callable"
+                                                             : "not-callable",
                                obs_address_is_callable(addr) ? 1 : 0, "flag");
-            obs_report_measure("102-net/posix-symbols", posix_syms[i].primary,
-                               "vaddr", (uint64_t)(uintptr_t)addr, "address");
+            obs_report_measure("102-net/posix-symbols", posix_syms[i].primary, "vaddr",
+                               (uint64_t)(uintptr_t)addr, "address");
             if (addr != NULL) {
                 resolved++;
             }
@@ -440,10 +472,12 @@ static obs_result check_net_resolve(void) {
         }
 
         if (resolved == 0 && s_test < 0) {
-            return obs_skip("no POSIX socket symbols or syscall 97 resolved in payload mode");
+            return obs_skip(
+                "no POSIX socket symbols or syscall 97 resolved in payload mode");
         }
         if (resolved < OBS_COUNT(posix_syms)) {
-            return obs_partial_value("some POSIX socket symbols did not resolve", (uint64_t)resolved);
+            return obs_partial_value("some POSIX socket symbols did not resolve",
+                                     (uint64_t)resolved);
         }
         return obs_pass_value((uint64_t)resolved);
     }
@@ -463,7 +497,8 @@ static obs_result check_net_resolve(void) {
                            obs_address_is_callable(viadlsym) ? "dlsym" : "dlsym-null",
                            (uint64_t)(uintptr_t)viadlsym, "vaddr");
         /* Only report walk if kernel dispatch walk capability is available.
-         * In unprivileged title mode (eboot), omitting this avoids failing positive control. */
+         * In unprivileged title mode (eboot), omitting this avoids failing positive
+         * control. */
         if (net_krw_is_ready()) {
             obs_report_measure("102-net/resolve", net_symbol_names[i],
                                obs_address_is_callable(viawalk) ? "walk" : "walk-null",
@@ -475,15 +510,18 @@ static obs_result check_net_resolve(void) {
         }
     }
     if (resolved == 0) {
-        return obs_skip("libSceNet resolved by neither import, dlsym nor walk in this leg");
+        return obs_skip(
+            "libSceNet resolved by neither import, dlsym nor walk in this leg");
     }
     if (resolved < OBS_COUNT(net_symbol_names)) {
-        return obs_partial_value("some libSceNet symbols did not resolve", (uint64_t)resolved);
+        return obs_partial_value("some libSceNet symbols did not resolve",
+                                 (uint64_t)resolved);
     }
     return obs_pass_value((uint64_t)resolved);
 }
 
-/* ---- Ask 2.1: a listener can be opened at all -------------------------------------------- */
+/* ---- Ask 2.1: a listener can be opened at all
+ * -------------------------------------------- */
 
 static obs_result check_net_listener(void) {
     net_fns f;
@@ -492,7 +530,8 @@ static obs_result check_net_listener(void) {
     }
 
     if (f.is_payload) {
-        /* Settle how payload obtains a descriptor: measure syscall 97 and __sys_socketex */
+        /* Settle how payload obtains a descriptor: measure syscall 97 and
+         * __sys_socketex */
         long sys_fd = net_syscall(97, OBS_NET_AF_INET, OBS_NET_SOCK_STREAM,
                                   OBS_NET_IPPROTO_TCP, 0, 0, 0);
         obs_report_measure("102-net/listener", "SYS_socket",
@@ -572,13 +611,17 @@ static obs_result check_net_listener(void) {
     int brc = net_bind_wrapper(&f, s, &addr, (uint32_t)sizeof(addr));
     int lrc = net_listen_wrapper(&f, s, 1);
     obs_report_measure("102-net/listener", f.is_payload ? "bind" : "sceNetBind",
-                       brc == 0 ? "bound" : "refused", (uint64_t)(uint32_t)brc, "return");
+                       brc == 0 ? "bound" : "refused", (uint64_t)(uint32_t)brc,
+                       "return");
     obs_report_measure("102-net/socket-bind", f.is_payload ? "bind" : "sceNetBind",
-                       brc == 0 ? "bound" : "refused", (uint64_t)(uint32_t)brc, "return");
+                       brc == 0 ? "bound" : "refused", (uint64_t)(uint32_t)brc,
+                       "return");
     obs_report_measure("102-net/listener", f.is_payload ? "listen" : "sceNetListen",
-                       lrc == 0 ? "listening" : "refused", (uint64_t)(uint32_t)lrc, "return");
-    obs_report_measure("102-net/socket-listen", f.is_payload ? "listen" : "sceNetListen",
-                       lrc == 0 ? "listening" : "refused", (uint64_t)(uint32_t)lrc, "return");
+                       lrc == 0 ? "listening" : "refused", (uint64_t)(uint32_t)lrc,
+                       "return");
+    obs_report_measure(
+        "102-net/socket-listen", f.is_payload ? "listen" : "sceNetListen",
+        lrc == 0 ? "listening" : "refused", (uint64_t)(uint32_t)lrc, "return");
     net_close_wrapper(&f, s);
     if (brc != 0 || lrc != 0) {
         return obs_partial_value("socket opened but bind or listen refused",
@@ -587,7 +630,8 @@ static obs_result check_net_listener(void) {
     return obs_pass_value((uint64_t)(uint32_t)s);
 }
 
-/* ---- Ask 2.2: the non-blocking option ---------------------------------------------------- */
+/* ---- Ask 2.2: the non-blocking option
+ * ---------------------------------------------------- */
 
 static obs_result check_net_nonblocking_option(void) {
     net_fns f;
@@ -599,17 +643,20 @@ static obs_result check_net_nonblocking_option(void) {
         return obs_fail_code("no socket to set the option on", (uint64_t)(uint32_t)s);
     }
     int one = 1;
-    int rc_a = net_setsockopt_wrapper(&f, s, OBS_NET_SOL_SOCKET, OBS_NET_SO_NBIO_OPENORBIS, &one,
-                                      (uint32_t)sizeof one);
-    obs_report_measure("102-net/nonblocking-option", f.is_payload ? "_setsockopt" : "sceNetSetsockopt",
-                       rc_a == 0 ? "0x1200-accepted" : "0x1200-return", (uint64_t)(uint32_t)rc_a,
-                       "return");
+    int rc_a =
+        net_setsockopt_wrapper(&f, s, OBS_NET_SOL_SOCKET, OBS_NET_SO_NBIO_OPENORBIS,
+                               &one, (uint32_t)sizeof one);
+    obs_report_measure("102-net/nonblocking-option",
+                       f.is_payload ? "_setsockopt" : "sceNetSetsockopt",
+                       rc_a == 0 ? "0x1200-accepted" : "0x1200-return",
+                       (uint64_t)(uint32_t)rc_a, "return");
     int rc_b = 0;
     int tried_b = 0;
     if (rc_a != 0 && !f.is_payload) {
         tried_b = 1;
-        rc_b = net_setsockopt_wrapper(&f, s, OBS_NET_SOL_SOCKET, OBS_NET_SO_NBIO_VITASDK, &one,
-                                      (uint32_t)sizeof one);
+        rc_b =
+            net_setsockopt_wrapper(&f, s, OBS_NET_SOL_SOCKET, OBS_NET_SO_NBIO_VITASDK,
+                                   &one, (uint32_t)sizeof one);
         obs_report_measure("102-net/nonblocking-option", "sceNetSetsockopt",
                            rc_b == 0 ? "0x1100-accepted" : "0x1100-return",
                            (uint64_t)(uint32_t)rc_b, "return");
@@ -620,7 +667,8 @@ static obs_result check_net_nonblocking_option(void) {
         if (flags >= 0) {
             fcntl_rc = f.fcntl(s, 4 /* F_SETFL */, flags | 0x0004 /* O_NONBLOCK */);
             obs_report_measure("102-net/nonblocking-option", "fcntl",
-                               fcntl_rc == 0 ? "O_NONBLOCK-accepted" : "O_NONBLOCK-return",
+                               fcntl_rc == 0 ? "O_NONBLOCK-accepted"
+                                             : "O_NONBLOCK-return",
                                (uint64_t)(uint32_t)fcntl_rc, "return");
             obs_report_measure("102-net/posix-fcntl", "fcntl", "F_SETFL",
                                (uint64_t)(uint32_t)fcntl_rc, "return");
@@ -634,12 +682,15 @@ static obs_result check_net_nonblocking_option(void) {
         return obs_pass_value(0x0004 /* O_NONBLOCK */);
     }
     if (tried_b && rc_b == 0) {
-        return obs_partial_value("0x1200 refused; 0x1100 accepted", OBS_NET_SO_NBIO_VITASDK);
+        return obs_partial_value("0x1200 refused; 0x1100 accepted",
+                                 OBS_NET_SO_NBIO_VITASDK);
     }
-    return obs_fail_code("neither non-blocking option value was accepted", (uint64_t)(uint32_t)rc_a);
+    return obs_fail_code("neither non-blocking option value was accepted",
+                         (uint64_t)(uint32_t)rc_a);
 }
 
-/* ---- Ask 2.3: the do-not-wait flag and the would-block code ------------------------------ */
+/* ---- Ask 2.3: the do-not-wait flag and the would-block code
+ * ------------------------------ */
 
 static uint64_t net_get_process_time(void) {
     if (obs_address_is_callable((const void *)&sceKernelGetProcessTime)) {
@@ -649,7 +700,8 @@ static uint64_t net_get_process_time(void) {
     if (pargs != NULL && pargs->kexport_table != NULL) {
         char nid[12];
         obs_compute_nid("sceKernelGetProcessTime", nid);
-        const void *fn = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+        const void *fn =
+            obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
         if (fn != NULL && obs_address_is_callable(fn)) {
             return ((uint64_t (*)(void))fn)();
         }
@@ -665,7 +717,8 @@ static int net_has_clock(void) {
     if (pargs != NULL && pargs->kexport_table != NULL) {
         char nid[12];
         obs_compute_nid("sceKernelGetProcessTime", nid);
-        const void *fn = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+        const void *fn =
+            obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
         if (fn != NULL && obs_address_is_callable(fn)) {
             return 1;
         }
@@ -682,7 +735,8 @@ static void net_usleep(unsigned int usec) {
     if (pargs != NULL && pargs->kexport_table != NULL) {
         char nid[12];
         obs_compute_nid("sceKernelUsleep", nid);
-        const void *fn = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+        const void *fn =
+            obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
         if (fn != NULL && obs_address_is_callable(fn)) {
             ((int (*)(unsigned int))fn)(usec);
             return;
@@ -703,7 +757,8 @@ static obs_result check_net_recv_would_block(void) {
     static unsigned char buf[64];
     int lst = net_open_socket(&f, "obscene");
     if (lst < 0) {
-        return obs_fail_code("no socket for the would-block read", (uint64_t)(uint32_t)lst);
+        return obs_fail_code("no socket for the would-block read",
+                             (uint64_t)(uint32_t)lst);
     }
     obs_net_sockaddr_in addr;
     net_fill_addr(&addr, OBS_NET_PORT_RECV, 0u, (uint8_t)sizeof(addr));
@@ -717,7 +772,8 @@ static obs_result check_net_recv_would_block(void) {
     obs_report_measure("102-net/recv-would-block", f.is_payload ? "recv" : "sceNetRecv",
                        "listener-return", (uint64_t)(uint32_t)lrc, "raw-code");
     obs_report_measure("102-net/recv-would-block", f.is_payload ? "recv" : "sceNetRecv",
-                       lel < 10000u ? "listener-prompt" : "listener-blocked", lel, "microseconds");
+                       lel < 10000u ? "listener-prompt" : "listener-blocked", lel,
+                       "microseconds");
     if (f.is_payload) {
         int lerr = net_last_errno(&f, lrc);
         obs_report_measure("102-net/recv-would-block", "errno", "listener-errno",
@@ -742,18 +798,22 @@ static obs_result check_net_recv_would_block(void) {
         }
         if (acc >= 0) {
             uint64_t t1 = net_get_process_time();
-            connected_rc = net_recv_wrapper(&f, acc, buf, sizeof buf, OBS_NET_MSG_DONTWAIT);
+            connected_rc =
+                net_recv_wrapper(&f, acc, buf, sizeof buf, OBS_NET_MSG_DONTWAIT);
             uint64_t cel = net_get_process_time() - t1;
             have_connected = 1;
-            obs_report_measure("102-net/recv-would-block", f.is_payload ? "recv" : "sceNetRecv",
-                               "connected-return", (uint64_t)(uint32_t)connected_rc, "raw-code");
-            obs_report_measure("102-net/recv-would-block", f.is_payload ? "recv" : "sceNetRecv",
-                               cel < 10000u ? "connected-prompt" : "connected-blocked", cel,
-                               "microseconds");
+            obs_report_measure("102-net/recv-would-block",
+                               f.is_payload ? "recv" : "sceNetRecv", "connected-return",
+                               (uint64_t)(uint32_t)connected_rc, "raw-code");
+            obs_report_measure("102-net/recv-would-block",
+                               f.is_payload ? "recv" : "sceNetRecv",
+                               cel < 10000u ? "connected-prompt" : "connected-blocked",
+                               cel, "microseconds");
             if (f.is_payload) {
                 connected_err = net_last_errno(&f, connected_rc);
-                obs_report_measure("102-net/recv-would-block", "errno", "connected-errno",
-                                   (uint64_t)(uint32_t)connected_err, "errno");
+                obs_report_measure("102-net/recv-would-block", "errno",
+                                   "connected-errno", (uint64_t)(uint32_t)connected_err,
+                                   "errno");
                 obs_report_measure("102-net/posix-would-block", "__error", "errno",
                                    (uint64_t)(uint32_t)connected_err, "errno");
             }
@@ -765,8 +825,9 @@ static obs_result check_net_recv_would_block(void) {
 
     if (have_connected) {
         if (connected_rc >= 0) {
-            return obs_partial_value("connected recv returned data or zero, not would-block",
-                                     (uint64_t)(uint32_t)connected_rc);
+            return obs_partial_value(
+                "connected recv returned data or zero, not would-block",
+                (uint64_t)(uint32_t)connected_rc);
         }
         if (f.is_payload && connected_err == 35 /* EAGAIN */) {
             return obs_pass_value((uint64_t)(uint32_t)connected_err);
@@ -774,12 +835,14 @@ static obs_result check_net_recv_would_block(void) {
         return obs_pass_value((uint64_t)(uint32_t)connected_rc);
     }
     if (lrc >= 0) {
-        return obs_partial_value("listener recv returned data or zero", (uint64_t)(uint32_t)lrc);
+        return obs_partial_value("listener recv returned data or zero",
+                                 (uint64_t)(uint32_t)lrc);
     }
     return obs_pass_value((uint64_t)(uint32_t)lrc);
 }
 
-/* ---- Ask 2.4: does an accepted socket inherit the listener's non-blocking mode? ---------- */
+/* ---- Ask 2.4: does an accepted socket inherit the listener's non-blocking mode?
+ * ---------- */
 
 static obs_result check_net_accept_inherits(void) {
     net_fns f;
@@ -819,7 +882,8 @@ static obs_result check_net_accept_inherits(void) {
     if (accepted < 0) {
         net_close_wrapper(&f, client);
         net_close_wrapper(&f, listener);
-        return obs_pending("the self-connect did not complete; loopback may be closed here");
+        return obs_pending(
+            "the self-connect did not complete; loopback may be closed here");
     }
 
     if (f.is_payload && f.fcntl != NULL) {
@@ -828,7 +892,8 @@ static obs_result check_net_accept_inherits(void) {
                            (uint64_t)(uint32_t)aflags, "flags");
     }
 
-    /* Guard against indefinite blocking if accepted socket did not inherit non-blocking mode */
+    /* Guard against indefinite blocking if accepted socket did not inherit non-blocking
+     * mode */
     struct {
         uint32_t tv_sec;
         uint32_t tv_usec;
@@ -836,7 +901,8 @@ static obs_result check_net_accept_inherits(void) {
     net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET, 0x1005 /* SO_SNDTIMEO */,
                            &sndtimeo, (uint32_t)sizeof(sndtimeo));
 
-    /* Send until write buffer saturation to definitively test non-blocking inheritance vs blocking */
+    /* Send until write buffer saturation to definitively test non-blocking inheritance
+     * vs blocking */
     static unsigned char big[65536];
     int total_sent = 0;
     int last_rc = 0;
@@ -883,10 +949,12 @@ static obs_result check_net_accept_inherits(void) {
     if (last_rc < 0) {
         return obs_pass_value((uint64_t)(uint32_t)last_rc);
     }
-    return obs_partial_value("buffer saturated without would-block", (uint64_t)total_sent);
+    return obs_partial_value("buffer saturated without would-block",
+                             (uint64_t)total_sent);
 }
 
-/* ---- Ask 3: the sockaddr layout ---------------------------------------------------------- */
+/* ---- Ask 3: the sockaddr layout
+ * ---------------------------------------------------------- */
 
 static obs_result check_net_sockaddr_bind(void) {
     net_fns f;
@@ -916,7 +984,8 @@ static obs_result check_net_sockaddr_bind(void) {
                        without_len == 0 ? "sin_len-0-bound" : "sin_len-0-refused",
                        (uint64_t)(uint32_t)without_len, "return");
     if (with_len != 0 && without_len != 0) {
-        return obs_fail_code("bind refused both sockaddr lengths", (uint64_t)(uint32_t)with_len);
+        return obs_fail_code("bind refused both sockaddr lengths",
+                             (uint64_t)(uint32_t)with_len);
     }
     if (with_len != 0) {
         return obs_partial_value("bind refused sin_len=16 but accepted sin_len=0",
@@ -928,11 +997,13 @@ static obs_result check_net_sockaddr_bind(void) {
     return obs_pass_value(0);
 }
 
-/* ---- Ask 4: weak POSIX socket symbols binding at load (REQ-20260909T1315Z-ed26) --------- */
+/* ---- Ask 4: weak POSIX socket symbols binding at load (REQ-20260909T1315Z-ed26)
+ * --------- */
 
 static obs_result check_net_weak_bind(void) {
     if (!net_is_payload_mode()) {
-        return obs_skip("payload leg only: measures elfldr dynamic relocation of weak references");
+        return obs_skip(
+            "payload leg only: measures elfldr dynamic relocation of weak references");
     }
 
     size_t count = 0;
@@ -945,10 +1016,10 @@ static obs_result check_net_weak_bind(void) {
     for (size_t i = 0; i < count; i++) {
         const obs_loader_weak_entry_t *e = &entries[i];
         obs_report_measure("102-net/weak-bind", e->name,
-                           e->is_bound ? "bound" : "unresolved",
-                           e->is_bound ? 1 : 0, "flag");
-        obs_report_measure("102-net/weak-bind", e->name, "loader-got",
-                           e->initial_got, "vaddr");
+                           e->is_bound ? "bound" : "unresolved", e->is_bound ? 1 : 0,
+                           "flag");
+        obs_report_measure("102-net/weak-bind", e->name, "loader-got", e->initial_got,
+                           "vaddr");
         if (e->is_bound) {
             bound_count++;
         }
@@ -957,20 +1028,25 @@ static obs_result check_net_weak_bind(void) {
     if (bound_count == count) {
         return obs_pass_value((uint64_t)bound_count);
     }
-    return obs_partial_value("some weak undefined libkernel symbols remained unresolved at load",
-                             (uint64_t)bound_count);
+    return obs_partial_value(
+        "some weak undefined libkernel symbols remained unresolved at load",
+        (uint64_t)bound_count);
 }
 
-/* ---- Ask 5: payload socket serving end-to-end on port 9899 (REQ-20260909T1315Z-04b6) ----- */
+/* ---- Ask 5: payload socket serving end-to-end on port 9899 (REQ-20260909T1315Z-04b6)
+ * ----- */
 
 static obs_result check_net_payload_serve(void) {
     if (!net_is_payload_mode()) {
-        return obs_skip("payload leg only: tests unsigned payload socket serve on port 9899");
+        return obs_skip(
+            "payload leg only: tests unsigned payload socket serve on port 9899");
     }
 
-    /* 1. Report resolution route for each socket symbol: loader-bound weak ref vs export-table */
+    /* 1. Report resolution route for each socket symbol: loader-bound weak ref vs
+     * export-table */
     size_t weak_count = 0;
-    const obs_loader_weak_entry_t *weak_entries = obs_get_loader_weak_entries(&weak_count);
+    const obs_loader_weak_entry_t *weak_entries =
+        obs_get_loader_weak_entries(&weak_count);
     const payload_args_t *pargs = obs_get_payload_args();
 
     for (size_t i = 0; i < weak_count; i++) {
@@ -983,7 +1059,8 @@ static obs_result check_net_payload_serve(void) {
         } else if (pargs != NULL && pargs->kexport_table != NULL) {
             char nid[12];
             obs_compute_nid(name, nid);
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 route = "export-table";
                 route_addr = (uint64_t)(uintptr_t)ka;
@@ -1000,23 +1077,22 @@ static obs_result check_net_payload_serve(void) {
 
     int lst = net_open_socket(&f, "obscene-9899");
     obs_report_measure("102-net/payload-serve", "socket",
-                       lst >= 0 ? "opened" : "refused",
-                       (uint64_t)(uint32_t)lst, "fd");
+                       lst >= 0 ? "opened" : "refused", (uint64_t)(uint32_t)lst, "fd");
     if (lst < 0) {
-        return obs_fail_code("could not open socket for port 9899", (uint64_t)(uint32_t)lst);
+        return obs_fail_code("could not open socket for port 9899",
+                             (uint64_t)(uint32_t)lst);
     }
 
     obs_net_sockaddr_in a;
     net_fill_addr(&a, 9899, 0u, (uint8_t)sizeof(a));
     int brc = net_bind_wrapper(&f, lst, &a, (uint32_t)sizeof(a));
-    obs_report_measure("102-net/payload-serve", "bind",
-                       brc == 0 ? "bound" : "refused",
+    obs_report_measure("102-net/payload-serve", "bind", brc == 0 ? "bound" : "refused",
                        (uint64_t)(uint32_t)brc, "rc");
 
     int lrc = net_listen_wrapper(&f, lst, 5);
     obs_report_measure("102-net/payload-serve", "listen",
-                       lrc == 0 ? "listening" : "refused",
-                       (uint64_t)(uint32_t)lrc, "rc");
+                       lrc == 0 ? "listening" : "refused", (uint64_t)(uint32_t)lrc,
+                       "rc");
 
     if (brc != 0 || lrc != 0) {
         net_close_wrapper(&f, lst);
@@ -1034,8 +1110,8 @@ static obs_result check_net_payload_serve(void) {
         }
     }
     obs_report_measure("102-net/payload-serve", "accept",
-                       acc >= 0 ? "accepted" : "refused",
-                       (uint64_t)(uint32_t)acc, "rc");
+                       acc >= 0 ? "accepted" : "refused", (uint64_t)(uint32_t)acc,
+                       "rc");
 
     long nrecv = -1;
     long nsent = -1;
@@ -1075,20 +1151,24 @@ static obs_result check_net_payload_serve(void) {
                              (uint64_t)(uint32_t)acc);
 }
 
-/* The address is the check function, not a libSceNet symbol, so the harness runs each check
- * even where the direct import is unbound - which in payload mode is every one of them. The
- * check then resolves through direct import, dlsym gadget, or kernel export table. */
+/* The address is the check function, not a libSceNet symbol, so the harness runs each
+ * check even where the direct import is unbound - which in payload mode is every one of
+ * them. The check then resolves through direct import, dlsym gadget, or kernel export
+ * table. */
 static const obs_check net_checks[] = {
     {"102-net/resolve", "libSceNet", "sceNetSocket", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_net_resolve, check_net_resolve, OBS_FROM_ASSUMED},
     {"102-net/listener", "libSceNet", "sceNetListen", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_net_listener, check_net_listener, OBS_FROM_ASSUMED},
-    {"102-net/nonblocking-option", "libSceNet", "sceNetSetsockopt", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_net_nonblocking_option, check_net_nonblocking_option, OBS_FROM_ASSUMED},
+    {"102-net/nonblocking-option", "libSceNet", "sceNetSetsockopt", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_net_nonblocking_option,
+     check_net_nonblocking_option, OBS_FROM_ASSUMED},
     {"102-net/recv-would-block", "libSceNet", "sceNetRecv", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_net_recv_would_block, check_net_recv_would_block, OBS_FROM_ASSUMED},
+     (const void *)check_net_recv_would_block, check_net_recv_would_block,
+     OBS_FROM_ASSUMED},
     {"102-net/accept-inherits", "libSceNet", "sceNetAccept", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_net_accept_inherits, check_net_accept_inherits, OBS_FROM_ASSUMED},
+     (const void *)check_net_accept_inherits, check_net_accept_inherits,
+     OBS_FROM_ASSUMED},
     {"102-net/sockaddr-bind", "libSceNet", "sceNetBind", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_net_sockaddr_bind, check_net_sockaddr_bind, OBS_FROM_ASSUMED},
     {"102-net/weak-bind", "libkernel", "bind", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -1100,8 +1180,10 @@ static const obs_check net_checks[] = {
 const obs_section obs_section_net = {
     "102-net",
     "Network reachability",
-    "Resolves libSceNet for title mode and POSIX socket calls for payload mode, reports each "
-    "address, measures socket creation (__sys_socketex and syscall 97), the non-blocking option, "
+    "Resolves libSceNet for title mode and POSIX socket calls for payload mode, "
+    "reports each "
+    "address, measures socket creation (__sys_socketex and syscall 97), the "
+    "non-blocking option, "
     "the would-block code, and accept inheritance for Porthole.",
     net_checks,
     OBS_COUNT(net_checks),

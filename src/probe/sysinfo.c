@@ -262,18 +262,23 @@ obs_sys_state obs_sysinfo_value(obs_sys_field field, char *buf, size_t n) {
 
     case OBS_SYS_GPU: {
         /* The graphics driver present, qualified with target codename.
-         * `obs_gpu_drivers` asks which driver resolves. NULL means neither driver resolved. */
+         * `obs_gpu_drivers` asks which driver resolves. NULL means neither driver
+         * resolved. */
         const char *driver = obs_gpu_drivers();
         if (driver == (const char *)0) {
             return OBS_SYS_ABSENT;
         }
-        if (driver[0] == 'g' && driver[1] == 'n' && driver[2] == 'm' && driver[3] == '+') {
+        if (driver[0] == 'g' && driver[1] == 'n' && driver[2] == 'm' &&
+            driver[3] == '+') {
             obs_put(buf, n, driver);
         } else {
 #if OOPS_TARGET_IS_PS5
-            obs_put(buf, n, (OOPS_TARGET == OOPS_TARGET_TRINITY) ? "agc (trinity)" : "agc (prospero)");
+            obs_put(buf, n,
+                    (OOPS_TARGET == OOPS_TARGET_TRINITY) ? "agc (trinity)"
+                                                         : "agc (prospero)");
 #else
-            obs_put(buf, n, (OOPS_TARGET == OOPS_TARGET_NEO) ? "gnm (neo)" : "gnm (orbis)");
+            obs_put(buf, n,
+                    (OOPS_TARGET == OOPS_TARGET_NEO) ? "gnm (neo)" : "gnm (orbis)");
 #endif
         }
         return OBS_SYS_KNOWN;

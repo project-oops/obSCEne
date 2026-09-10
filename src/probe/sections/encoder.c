@@ -80,7 +80,8 @@ static int (*encoder_get_sysmodule_loader(void))(uint16_t) {
     if (sym != NULL && obs_address_is_callable(sym)) {
         return (int (*)(uint16_t))sym;
     }
-    if (pargs == NULL && obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+    if (pargs == NULL &&
+        obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
         return &sceSysmoduleLoadModule;
     }
     const void *msym = obs_module_symbol(1, "sceSysmoduleLoadModule");
@@ -91,12 +92,8 @@ static int (*encoder_get_sysmodule_loader(void))(uint16_t) {
 }
 
 static const char *const encoder_req_symbols[] = {
-    "sceVencCoreQueryMemorySize",
-    "sceVencCoreCreateEncoder",
-    "sceVencCoreGetAuData",
-    "sceVencCoreSetInputFrame",
-    "sceVencCoreStartSequence",
-    "sceVencCoreStopSequence",
+    "sceVencCoreQueryMemorySize", "sceVencCoreCreateEncoder", "sceVencCoreGetAuData",
+    "sceVencCoreSetInputFrame",   "sceVencCoreStartSequence", "sceVencCoreStopSequence",
     "sceVencCoreDeleteEncoder",
 };
 
@@ -106,27 +103,28 @@ static obs_result check_encoder_sysmodules(void) {
     void *sym_unload = obs_find_symbol_in_handle(1, "sceSysmoduleUnloadModule");
 
     int (*fn_load_module)(uint16_t) = encoder_get_sysmodule_loader();
-    if (fn_load_module == NULL && sym_load != NULL && obs_address_is_callable(sym_load)) {
+    if (fn_load_module == NULL && sym_load != NULL &&
+        obs_address_is_callable(sym_load)) {
         fn_load_module = (int (*)(uint16_t))sym_load;
     }
 
-    obs_report_measure("106-encoder/sysmodule-callable", "sceSysmoduleLoadModule", "callable",
-                       fn_load_module != NULL ? 1 : 0, "flag");
+    obs_report_measure("106-encoder/sysmodule-callable", "sceSysmoduleLoadModule",
+                       "callable", fn_load_module != NULL ? 1 : 0, "flag");
     if (fn_load_module != NULL) {
-        obs_report_measure("106-encoder/sysmodule-callable", "sceSysmoduleLoadModule", "vaddr",
-                           (uint64_t)(uintptr_t)fn_load_module, "vaddr");
+        obs_report_measure("106-encoder/sysmodule-callable", "sceSysmoduleLoadModule",
+                           "vaddr", (uint64_t)(uintptr_t)fn_load_module, "vaddr");
     }
     if (sym_load != NULL) {
-        obs_report_measure("106-encoder/sysmodules", "sceSysmoduleLoadModule", "table-vaddr",
-                           (uint64_t)(uintptr_t)sym_load, "vaddr");
+        obs_report_measure("106-encoder/sysmodules", "sceSysmoduleLoadModule",
+                           "table-vaddr", (uint64_t)(uintptr_t)sym_load, "vaddr");
     }
     if (sym_is_loaded != NULL) {
-        obs_report_measure("106-encoder/sysmodules", "sceSysmoduleIsLoaded", "table-vaddr",
-                           (uint64_t)(uintptr_t)sym_is_loaded, "vaddr");
+        obs_report_measure("106-encoder/sysmodules", "sceSysmoduleIsLoaded",
+                           "table-vaddr", (uint64_t)(uintptr_t)sym_is_loaded, "vaddr");
     }
     if (sym_unload != NULL) {
-        obs_report_measure("106-encoder/sysmodules", "sceSysmoduleUnloadModule", "table-vaddr",
-                           (uint64_t)(uintptr_t)sym_unload, "vaddr");
+        obs_report_measure("106-encoder/sysmodules", "sceSysmoduleUnloadModule",
+                           "table-vaddr", (uint64_t)(uintptr_t)sym_unload, "vaddr");
     }
 
     if (fn_load_module == NULL) {
@@ -176,20 +174,26 @@ static obs_result check_encoder_sysmodules(void) {
         void *dlsym_addr = NULL;
         if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
             for (size_t h = 0; h < count && h < 128; h++) {
-                if (handles[h] <= 0) continue;
+                if (handles[h] <= 0)
+                    continue;
                 void *a = NULL;
-                if (sceKernelDlsym(handles[h], nid, &a) == 0 && obs_address_is_callable(a)) {
-                    dlsym_addr = a; break;
+                if (sceKernelDlsym(handles[h], nid, &a) == 0 &&
+                    obs_address_is_callable(a)) {
+                    dlsym_addr = a;
+                    break;
                 }
-                if (sceKernelDlsym(handles[h], name, &a) == 0 && obs_address_is_callable(a)) {
-                    dlsym_addr = a; break;
+                if (sceKernelDlsym(handles[h], name, &a) == 0 &&
+                    obs_address_is_callable(a)) {
+                    dlsym_addr = a;
+                    break;
                 }
             }
             if (dlsym_addr == NULL) {
                 void *a = NULL;
                 if (sceKernelDlsym(1, name, &a) == 0 && obs_address_is_callable(a)) {
                     dlsym_addr = a;
-                } else if (sceKernelDlsym(0x2001, name, &a) == 0 && obs_address_is_callable(a)) {
+                } else if (sceKernelDlsym(0x2001, name, &a) == 0 &&
+                           obs_address_is_callable(a)) {
                     dlsym_addr = a;
                 }
             }
@@ -198,7 +202,8 @@ static obs_result check_encoder_sysmodules(void) {
         /* Route 2: kexport table re-read */
         void *kexport_addr = NULL;
         if (pargs != NULL && pargs->kexport_table != NULL) {
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 kexport_addr = (void *)ka;
             }
@@ -209,15 +214,19 @@ static obs_result check_encoder_sysmodules(void) {
 #if !defined(OBSCENE_HOST_BUILD)
         if (pid > 0 && krw_is_ready()) {
             dyn_addr = krw_dynlib_resolve_any(pid, name);
-            if (dyn_addr < 0x10000UL || !obs_address_is_callable((const void *)dyn_addr)) {
+            if (dyn_addr < 0x10000UL ||
+                !obs_address_is_callable((const void *)dyn_addr)) {
                 dyn_addr = 0;
             }
         }
 #endif
 
-        obs_report_measure("106-encoder/resolve", name, "dlsym", (uint64_t)(uintptr_t)dlsym_addr, "address");
-        obs_report_measure("106-encoder/resolve", name, "kexport", (uint64_t)(uintptr_t)kexport_addr, "address");
-        obs_report_measure("106-encoder/resolve", name, "dynlib", (uint64_t)dyn_addr, "address");
+        obs_report_measure("106-encoder/resolve", name, "dlsym",
+                           (uint64_t)(uintptr_t)dlsym_addr, "address");
+        obs_report_measure("106-encoder/resolve", name, "kexport",
+                           (uint64_t)(uintptr_t)kexport_addr, "address");
+        obs_report_measure("106-encoder/resolve", name, "dynlib", (uint64_t)dyn_addr,
+                           "address");
 
         if (dlsym_addr != NULL || kexport_addr != NULL || dyn_addr != 0) {
             resolved++;
@@ -228,7 +237,8 @@ static obs_result check_encoder_sysmodules(void) {
         if (rc_venc == 0 || rc_venc == (int)0x80540001) {
             return obs_pass_value((uint64_t)resolved);
         }
-        return obs_partial_value("sceSysmoduleLoadModule returned error", (uint64_t)(uint32_t)rc_venc);
+        return obs_partial_value("sceSysmoduleLoadModule returned error",
+                                 (uint64_t)(uint32_t)rc_venc);
     }
 
     /* Title mode: load remaining modules */
@@ -236,9 +246,9 @@ static obs_result check_encoder_sysmodules(void) {
         const char *name;
         uint16_t id;
     } venc_modules[] = {
-        {"VIDEOREC", 0x0081}, {"AVC_DEC", 0x000F},
-        {"AVC_ENC", 0x0010},  {"HEVC_DEC", 0x005E}, {"HEVC_ENC", 0x005F},
-        {"VIDEODEC", 0x0080}, {"CAMERA", 0x0016},   {"SCREEN_SHOT", 0x0073},
+        {"VIDEOREC", 0x0081}, {"AVC_DEC", 0x000F},     {"AVC_ENC", 0x0010},
+        {"HEVC_DEC", 0x005E}, {"HEVC_ENC", 0x005F},    {"VIDEODEC", 0x0080},
+        {"CAMERA", 0x0016},   {"SCREEN_SHOT", 0x0073},
     };
 
     unsigned int loaded_count = (rc_venc == 0 || rc_venc == (int)0x80540001) ? 1 : 0;
@@ -287,16 +297,17 @@ static obs_result check_encoder_module_load(void) {
     int loaded_handle = -1;
     for (size_t i = 0; i < OBS_COUNT(search_paths); i++) {
         if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-            /* **Poisoned, not zeroed.** A zero here cannot be told apart from a platform
-             * that never writes the out-parameter at all - both report 0, so the measurement
-             * separates nothing, and orbistoun had to mark all twenty-four of them opaque
-             * (orbistoun D497). Poisoning makes "untouched" a visible answer, which is the
-             * same argument `obs_report_written` already makes for buffers.
+            /* **Poisoned, not zeroed.** A zero here cannot be told apart from a
+             * platform that never writes the out-parameter at all - both report 0, so
+             * the measurement separates nothing, and orbistoun had to mark all
+             * twenty-four of them opaque (orbistoun D497). Poisoning makes "untouched"
+             * a visible answer, which is the same argument `obs_report_written` already
+             * makes for buffers.
              *
-             * `0xC7` is this project's own pattern byte, from `obs_layout_patterns`; a word
-             * of it is a value no error code or handle would be. A platform that happened to
-             * write exactly this reads as untouched, which is the residual that decision
-             * names and no single pattern avoids. */
+             * `0xC7` is this project's own pattern byte, from `obs_layout_patterns`; a
+             * word of it is a value no error code or handle would be. A platform that
+             * happened to write exactly this reads as untouched, which is the residual
+             * that decision names and no single pattern avoids. */
             int res = (int)0xC7C7C7C7u;
             int h = sceKernelLoadStartModule(search_paths[i], 0, (void *)0, 0,
                                              (void *)0, &res);
@@ -337,7 +348,8 @@ static obs_result check_encoder_module_load(void) {
 }
 
 static obs_result check_encoder_symbol_census(void) {
-    /* Ensure sysmodules are loaded (title mode only; calling in unsigned payload faults) */
+    /* Ensure sysmodules are loaded (title mode only; calling in unsigned payload
+     * faults) */
     if (obs_get_payload_args() == NULL) {
         int (*fn_load_module)(uint16_t) = encoder_get_sysmodule_loader();
         if (fn_load_module != NULL) {
@@ -610,7 +622,8 @@ static obs_result check_compression_blocks(void) {
 
         /* Route 1: kexport lookup */
         if (pargs != NULL && pargs->kexport_table != NULL) {
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 addr = (void *)ka;
             }
@@ -619,20 +632,26 @@ static obs_result check_compression_blocks(void) {
         /* Route 2: dlsym against loaded modules */
         if (addr == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
             for (size_t h = 0; h < count && h < 128; h++) {
-                if (handles[h] <= 0) continue;
+                if (handles[h] <= 0)
+                    continue;
                 void *a = NULL;
-                if (sceKernelDlsym(handles[h], nid, &a) == 0 && obs_address_is_callable(a)) {
-                    addr = a; break;
+                if (sceKernelDlsym(handles[h], nid, &a) == 0 &&
+                    obs_address_is_callable(a)) {
+                    addr = a;
+                    break;
                 }
-                if (sceKernelDlsym(handles[h], name, &a) == 0 && obs_address_is_callable(a)) {
-                    addr = a; break;
+                if (sceKernelDlsym(handles[h], name, &a) == 0 &&
+                    obs_address_is_callable(a)) {
+                    addr = a;
+                    break;
                 }
             }
             if (addr == NULL) {
                 void *a = NULL;
                 if (sceKernelDlsym(1, name, &a) == 0 && obs_address_is_callable(a)) {
                     addr = a;
-                } else if (sceKernelDlsym(0x2001, name, &a) == 0 && obs_address_is_callable(a)) {
+                } else if (sceKernelDlsym(0x2001, name, &a) == 0 &&
+                           obs_address_is_callable(a)) {
                     addr = a;
                 }
             }
@@ -650,7 +669,8 @@ static obs_result check_compression_blocks(void) {
 #if !defined(OBSCENE_HOST_BUILD)
         if (addr == NULL && pid > 0 && krw_is_ready()) {
             uintptr_t dyn_addr = krw_dynlib_resolve_any(pid, name);
-            if (dyn_addr >= 0x10000UL && obs_address_is_callable((const void *)dyn_addr)) {
+            if (dyn_addr >= 0x10000UL &&
+                obs_address_is_callable((const void *)dyn_addr)) {
                 addr = (void *)dyn_addr;
             }
         }
@@ -661,7 +681,8 @@ static obs_result check_compression_blocks(void) {
         obs_report_measure("106-encoder/compression", name, "resolved",
                            addr != NULL ? 1 : 0, "bool");
         obs_report_measure("106-encoder/compression", name, "callable",
-                           (addr != NULL && obs_address_is_callable(addr)) ? 1 : 0, "bool");
+                           (addr != NULL && obs_address_is_callable(addr)) ? 1 : 0,
+                           "bool");
 
         if (addr != NULL) {
             resolved++;
@@ -673,30 +694,26 @@ static obs_result check_compression_blocks(void) {
         const char *name;
         uint16_t id;
     } comp_sysmodules[] = {
-        {"JPEG_ENC", 0x008B},
-        {"JPEG_DEC", 0x008A},
-        {"PNG_ENC", 0x008D},
-        {"PNG_DEC", 0x008C},
-        {"VENC", 0x00A0},
-        {"VIDEOREC", 0x0081},
-        {"AVC_ENC", 0x0010},
-        {"HEVC_ENC", 0x005F},
-        {"VIDEODEC", 0x008E},
+        {"JPEG_ENC", 0x008B}, {"JPEG_DEC", 0x008A}, {"PNG_ENC", 0x008D},
+        {"PNG_DEC", 0x008C},  {"VENC", 0x00A0},     {"VIDEOREC", 0x0081},
+        {"AVC_ENC", 0x0010},  {"HEVC_ENC", 0x005F}, {"VIDEODEC", 0x008E},
         {"ZLIB", 0x00C5},
     };
 
     for (size_t i = 0; i < OBS_COUNT(comp_sysmodules); i++) {
         int load_rc = (pargs != NULL) ? (int)0xa0020101 : -1;
-        obs_report_measure("106-encoder/compression-sysmodules", comp_sysmodules[i].name, "id",
+        obs_report_measure("106-encoder/compression-sysmodules",
+                           comp_sysmodules[i].name, "id",
                            (uint64_t)comp_sysmodules[i].id, "id");
-        obs_report_measure("106-encoder/compression-sysmodules", comp_sysmodules[i].name, "rc",
-                           (uint64_t)(uint32_t)load_rc, "code");
+        obs_report_measure("106-encoder/compression-sysmodules",
+                           comp_sysmodules[i].name, "rc", (uint64_t)(uint32_t)load_rc,
+                           "code");
     }
 
-    obs_report_measure("106-encoder/compression", "compression-blocks-accessible", "count",
-                       (uint64_t)resolved, "count");
-    obs_report_measure("106-encoder/compression", "payload-reduction-verdict", "none-exists",
-                       resolved == 0 ? 1 : 0, "bool");
+    obs_report_measure("106-encoder/compression", "compression-blocks-accessible",
+                       "count", (uint64_t)resolved, "count");
+    obs_report_measure("106-encoder/compression", "payload-reduction-verdict",
+                       "none-exists", resolved == 0 ? 1 : 0, "bool");
 
     return obs_pass_value((uint64_t)resolved);
 }

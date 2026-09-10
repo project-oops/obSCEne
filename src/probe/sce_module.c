@@ -38,8 +38,8 @@ struct sce_module_param {
     uint64_t flags;
 };
 
-__attribute__((section(".data.sce_module_param"), used))
-static const struct sce_module_param s_mod_param = {
+__attribute__((section(".data.sce_module_param"),
+               used)) static const struct sce_module_param s_mod_param = {
     .size = 0x20,
     .magic = 0x3c13f4bf,
     .version = 0x3,

@@ -240,9 +240,10 @@ static const obs_import obs_platform_imports[] = {
     /* The futex pair (`sceKernelSyncOnAddressWait`/`Wake`) is deliberately NOT a linked
      * import. Its export library `libkernel_sync_on_address` is a namespace inside
      * `libkernel.sprx`, not a loadable module - so declaring it here made the title
-     * module demand a `needed_module` for a `.sprx` the loader cannot find, and the title
-     * died on load while the payload ran. `032-syncaddr` resolves the pair by name through
-     * `libkernel` at run time instead. (D321-adjacent; reverts D322's linked import.) */
+     * module demand a `needed_module` for a `.sprx` the loader cannot find, and the
+     * title died on load while the payload ran. `032-syncaddr` resolves the pair by
+     * name through `libkernel` at run time instead. (D321-adjacent; reverts D322's
+     * linked import.) */
 
     /* Flexible memory. See src/sections/memory.c. */
     {"libkernel", "sceKernelAvailableFlexibleMemorySize"},

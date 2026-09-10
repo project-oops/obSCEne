@@ -109,23 +109,24 @@ void obs_boot_note(const char *text) {
 #if defined(OBS_ZERO_BSS)
 /* Zero this image's .bss before any zero-initialised static is read.
  *
- * The homebrew ELF loader that maps the payload (elfldr) loads its segments and applies its
- * relocations correctly, but does NOT zero the .bss - the p_memsz-beyond-p_filesz tail of the
- * writable PT_LOAD. Every `static` with no initialiser therefore starts as whatever was in that
- * page, and the program assumes zero everywhere: `s_inited` in fault.c reads non-zero so
- * `obs_fault_init` early-returns and the guard never installs (`guard|on|not initialised`),
- * `obs_sink_tried` reads non-zero so `obs_sink_open` returns its uninitialised path buffer (the
- * garbled, run-varying `OBS|sink`), and the first check faults on the same class of corruption.
- * The .data (initialised) loads fine and relocations are applied - a hardware diagnostic showed
- * .data reads/writes correct while .bss came up as garbage - so .bss is the whole of it. The
- * system loader zeroes .bss for the eboot, so this is the payload's problem alone: the Makefile
+ * The homebrew ELF loader that maps the payload (elfldr) loads its segments and applies
+ * its relocations correctly, but does NOT zero the .bss - the p_memsz-beyond-p_filesz
+ * tail of the writable PT_LOAD. Every `static` with no initialiser therefore starts as
+ * whatever was in that page, and the program assumes zero everywhere: `s_inited` in
+ * fault.c reads non-zero so `obs_fault_init` early-returns and the guard never installs
+ * (`guard|on|not initialised`), `obs_sink_tried` reads non-zero so `obs_sink_open`
+ * returns its uninitialised path buffer (the garbled, run-varying `OBS|sink`), and the
+ * first check faults on the same class of corruption. The .data (initialised) loads
+ * fine and relocations are applied - a hardware diagnostic showed .data reads/writes
+ * correct while .bss came up as garbage - so .bss is the whole of it. The system loader
+ * zeroes .bss for the eboot, so this is the payload's problem alone: the Makefile
  * defines OBS_ZERO_BSS only there.
  *
- * It reads the program headers from the ELF header (`__ehdr_start` is at link-time vaddr 0, so
- * its runtime address via PC-relative `lea` is the load base - no GOT, no relocated global) and
- * zeroes, for each PT_LOAD, the range [p_vaddr + p_filesz, p_vaddr + p_memsz). Touches no global
- * before it runs, only the mapped image and the stack, and is a harmless no-op where the loader
- * already zeroed. (D327) */
+ * It reads the program headers from the ELF header (`__ehdr_start` is at link-time
+ * vaddr 0, so its runtime address via PC-relative `lea` is the load base - no GOT, no
+ * relocated global) and zeroes, for each PT_LOAD, the range [p_vaddr + p_filesz,
+ * p_vaddr + p_memsz). Touches no global before it runs, only the mapped image and the
+ * stack, and is a harmless no-op where the loader already zeroed. (D327) */
 static void obs_zero_bss(void) {
     unsigned long base = 0;
     __asm__ volatile("lea __ehdr_start(%%rip), %0" : "=r"(base));
@@ -169,26 +170,30 @@ void obscene_start(void) {
     unsigned long obs_pargs_at_entry;
     __asm__ volatile("mov %%rdi, %0" : "=r"(obs_pargs_at_entry));
 #if defined(OBS_ZERO_BSS)
-    /* Before any zero-initialised static is read: zero the .bss the loader left uninitialised.
-     * Reads rdi first (above) so this call cannot clobber the payload args. (D327) */
+    /* Before any zero-initialised static is read: zero the .bss the loader left
+     * uninitialised. Reads rdi first (above) so this call cannot clobber the payload
+     * args. (D327) */
     obs_zero_bss();
 #endif
     obs_capture_payload_args(obs_pargs_at_entry);
     /* Bootstrap the output channel from getpid before anything tries to write. Guarded:
-     * only attempt when libkernel is not dynamically linked and payload_args is a plausible, aligned pointer. */
+     * only attempt when libkernel is not dynamically linked and payload_args is a
+     * plausible, aligned pointer. */
     if (obs_pargs_at_entry >= 0x10000UL && obs_pargs_at_entry < 0x0000800000000000UL &&
         (obs_pargs_at_entry & 0x7UL) == 0) {
         obs_bootstrap_payload_output(((unsigned long *)obs_pargs_at_entry)[0]);
     }
 
     /* If payload arguments provide kernel R/W, initialize KRW. If no staged
-     * kexport table was provided, dump exports so payload symbol resolution succeeds. */
+     * kexport table was provided, dump exports so payload symbol resolution succeeds.
+     */
     static obs_kexport_table_t s_payload_kexport_table;
     const payload_args_t *pargs_init = obs_get_payload_args();
     if (pargs_init != NULL) {
         sys_call_init(pargs_init);
     }
-    if (pargs_init != NULL && (pargs_init->rwpipe != NULL || pargs_init->rwpair != NULL)) {
+    if (pargs_init != NULL &&
+        (pargs_init->rwpipe != NULL || pargs_init->rwpair != NULL)) {
         if (krw_init(pargs_init) == 0) {
             if (pargs_init->kexport_table == NULL) {
                 pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
@@ -199,20 +204,21 @@ void obscene_start(void) {
             }
         }
     }
-    /* Resolve the output functions by name before the first write. A payload bootstrapped
-     * its output above; a title has no payload args, so without this its sink falls
-     * through to a raw import whose linkage slot the loader leaves unresolved (0x2) - and
-     * the boot note below is the call that faults. This uses the same sceKernelDlsym path
-     * every section relies on, so it is as safe as the probe's own resolution, and it must
-     * precede the first write for the write to have a channel that is not a poisoned slot.
-     * No-op for a payload and where dlsym is unavailable. (D323) */
+    /* Resolve the output functions by name before the first write. A payload
+     * bootstrapped its output above; a title has no payload args, so without this its
+     * sink falls through to a raw import whose linkage slot the loader leaves
+     * unresolved (0x2) - and the boot note below is the call that faults. This uses the
+     * same sceKernelDlsym path every section relies on, so it is as safe as the probe's
+     * own resolution, and it must precede the first write for the write to have a
+     * channel that is not a poisoned slot. No-op for a payload and where dlsym is
+     * unavailable. (D323) */
     obs_bootstrap_title_output();
 
-    /* The first thing after output is resolvable, before any check that could fault: proof
-     * the container mounted, the loader transferred control, and the crt reached here. On
-     * a foreground-app launch this is the difference between "the package is wrong" and
-     * "a check took the system down", and those are looked at in entirely different
-     * places. */
+    /* The first thing after output is resolvable, before any check that could fault:
+     * proof the container mounted, the loader transferred control, and the crt reached
+     * here. On a foreground-app launch this is the difference between "the package is
+     * wrong" and "a check took the system down", and those are looked at in entirely
+     * different places. */
     obs_boot_note("obscene: eboot entry reached\n");
 #if defined(OBS_SERVE_ON_START)
     obs_boot_note("obscene: checking net backend\n");

@@ -42,8 +42,8 @@ static int32_t initial_user(void) {
     return user;
 }
 
-/* One shared pattern buffer pair for the behavioural probes below (D328); checks run one at a
- * time, so sharing it is safe and saves .bss over a buffer per check. */
+/* One shared pattern buffer pair for the behavioural probes below (D328); checks run
+ * one at a time, so sharing it is safe and saves .bss over a buffer per check. */
 static uint8_t s_probe_buf[4096];
 static uint8_t s_probe_before[4096];
 
@@ -65,7 +65,8 @@ static unsigned int obs_probe_extent(void) {
     return extent;
 }
 
-/* The 32-bit word at an offset, assembled from bytes so no alignment or aliasing is assumed. */
+/* The 32-bit word at an offset, assembled from bytes so no alignment or aliasing is
+ * assumed. */
 static uint32_t obs_probe_word(size_t offset) {
     return (uint32_t)s_probe_buf[offset] | ((uint32_t)s_probe_buf[offset + 1] << 8) |
            ((uint32_t)s_probe_buf[offset + 2] << 16) |
@@ -127,39 +128,43 @@ static obs_result check_video_flip_rate_rejects_bad_handle(void) {
     return obs_pass_value((uint64_t)(uint32_t)rc);
 }
 
-/* ---- display behavioural probes (D328) --------------------------------------------------- */
+/* ---- display behavioural probes (D328)
+ * --------------------------------------------------- */
 
-/* The attribute block: dump the 256 bytes sceVideoOutSetBufferAttribute2 writes with tiling
- * mode 0 and again with 1. The two dumps show where the tiling field lands and confirm which
- * value is the tiled mode - which the SDK currently asserts only on the strength of the picture
- * appearing. No handle and no display needed: the call only fills a caller struct. */
+/* The attribute block: dump the 256 bytes sceVideoOutSetBufferAttribute2 writes with
+ * tiling mode 0 and again with 1. The two dumps show where the tiling field lands and
+ * confirm which value is the tiled mode - which the SDK currently asserts only on the
+ * strength of the picture appearing. No handle and no display needed: the call only
+ * fills a caller struct. */
 static obs_result check_video_attribute_block(void) {
     if (!obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute2)) {
         return obs_skip("sceVideoOutSetBufferAttribute2 is not callable");
     }
-    /* 0x80000000 is B8G8R8A8_SRGB in the OpenOrbis toolchain; the exact value does not affect
-     * where the tiling field lands, which is what the two dumps are for. */
+    /* 0x80000000 is B8G8R8A8_SRGB in the OpenOrbis toolchain; the exact value does not
+     * affect where the tiling field lands, which is what the two dumps are for. */
     for (uint32_t tiling = 0; tiling <= 1; tiling++) {
         obs_probe_fill();
-        sceVideoOutSetBufferAttribute2(s_probe_buf, 0x80000000ULL, tiling, 1920u, 1080u, 0ULL, 0u,
-                                       0ULL);
-        obs_report_measure("080-video/attribute-block", "sceVideoOutSetBufferAttribute2",
-                           "tiling-mode", (uint64_t)tiling, "index");
+        sceVideoOutSetBufferAttribute2(s_probe_buf, 0x80000000ULL, tiling, 1920u, 1080u,
+                                       0ULL, 0u, 0ULL);
+        obs_report_measure("080-video/attribute-block",
+                           "sceVideoOutSetBufferAttribute2", "tiling-mode",
+                           (uint64_t)tiling, "index");
         obs_report_buffer("080-video/attribute-block", "sceVideoOutSetBufferAttribute2",
                           tiling == 0 ? "tiling0" : "tiling1", s_probe_buf, 256);
     }
     return obs_pass_value(256);
 }
 
-/* Flip status and pending: dump the flip-status record and read the pending query. Needs a
- * video output; when the probe is drawing its own report on the only output, or none can be
- * opened, that is PENDING rather than a risk to the display. */
+/* Flip status and pending: dump the flip-status record and read the pending query.
+ * Needs a video output; when the probe is drawing its own report on the only output, or
+ * none can be opened, that is PENDING rather than a risk to the display. */
 static obs_result check_video_flip_status(void) {
     if (!obs_address_is_callable((const void *)&sceVideoOutGetFlipStatus)) {
         return obs_skip("sceVideoOutGetFlipStatus is not callable");
     }
     if (obs_display_holds_output()) {
-        return obs_pending("the probe is drawing its report on the only output; run headless");
+        return obs_pending(
+            "the probe is drawing its report on the only output; run headless");
     }
     int32_t user = initial_user();
     int handle = -1;
@@ -179,12 +184,14 @@ static obs_result check_video_flip_status(void) {
                        extent > 0 ? "status" : "untouched", s_probe_before, s_probe_buf,
                        sizeof s_probe_buf);
     if (extent == 0) {
-        return obs_partial_value("the flip-status read wrote nothing", (uint64_t)(uint32_t)rc);
+        return obs_partial_value("the flip-status read wrote nothing",
+                                 (uint64_t)(uint32_t)rc);
     }
     return obs_pass_value((uint64_t)extent);
 }
 
-/* The visual flip probe: burst submits and pacing measurement on the display's own output. */
+/* The visual flip probe: burst submits and pacing measurement on the display's own
+ * output. */
 static obs_result check_video_visual_flip(void) {
     if (!obs_address_is_callable((const void *)&sceVideoOutSubmitFlip)) {
         return obs_skip("sceVideoOutSubmitFlip is not callable");
@@ -197,7 +204,8 @@ static obs_result check_video_visual_flip(void) {
         }
     }
     if (handle < 0) {
-        return obs_pending("needs the display's own output and buffers; run in the eboot leg with the display handed over");
+        return obs_pending("needs the display's own output and buffers; run in the "
+                           "eboot leg with the display handed over");
     }
 
     /* Submit 32 flips back-to-back with flipMode 1 alternating the two buffers */
@@ -214,7 +222,9 @@ static obs_result check_video_visual_flip(void) {
             t1 = (uint64_t)sceKernelGetProcessTime();
         }
         char rc_name[16];
-        rc_name[0] = 'r'; rc_name[1] = 'c'; rc_name[2] = '-';
+        rc_name[0] = 'r';
+        rc_name[1] = 'c';
+        rc_name[2] = '-';
         if (i + 1 < 10) {
             rc_name[3] = (char)('0' + (i + 1));
             rc_name[4] = '\0';
@@ -226,8 +236,14 @@ static obs_result check_video_visual_flip(void) {
         obs_report_measure("080-video/visual-flip", "sceVideoOutSubmitFlip", rc_name,
                            (uint64_t)(uint32_t)rc, "code");
         char el_name[24];
-        el_name[0] = 'e'; el_name[1] = 'l'; el_name[2] = 'a'; el_name[3] = 'p';
-        el_name[4] = 's'; el_name[5] = 'e'; el_name[6] = 'd'; el_name[7] = '-';
+        el_name[0] = 'e';
+        el_name[1] = 'l';
+        el_name[2] = 'a';
+        el_name[3] = 'p';
+        el_name[4] = 's';
+        el_name[5] = 'e';
+        el_name[6] = 'd';
+        el_name[7] = '-';
         if (i + 1 < 10) {
             el_name[8] = (char)('0' + (i + 1));
             el_name[9] = '\0';
@@ -243,43 +259,45 @@ static obs_result check_video_visual_flip(void) {
             break;
         }
     }
-    obs_report_measure("080-video/visual-flip", "sceVideoOutSubmitFlip", "first-refused",
-                       (uint64_t)first_refused, "index");
+    obs_report_measure("080-video/visual-flip", "sceVideoOutSubmitFlip",
+                       "first-refused", (uint64_t)first_refused, "index");
 
     /* Read flip status immediately after the burst */
     if (obs_address_is_callable((const void *)&sceVideoOutGetFlipStatus)) {
         obs_probe_fill();
         sceVideoOutGetFlipStatus(handle, (void *)s_probe_buf);
-        obs_report_buffer("080-video/visual-flip", "sceVideoOutGetFlipStatus", "after-burst",
-                          s_probe_buf, 64);
+        obs_report_buffer("080-video/visual-flip", "sceVideoOutGetFlipStatus",
+                          "after-burst", s_probe_buf, 64);
 
         /* 600 ms later */
         if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
             sceKernelUsleep(600000);
         } else {
-            uint64_t start = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                                 ? (uint64_t)sceKernelGetProcessTime()
-                                 : 0;
+            uint64_t start =
+                obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                    ? (uint64_t)sceKernelGetProcessTime()
+                    : 0;
             while (obs_address_is_callable((const void *)&sceKernelGetProcessTime) &&
                    ((uint64_t)sceKernelGetProcessTime() - start) < 600000) {
             }
         }
         obs_probe_fill();
         sceVideoOutGetFlipStatus(handle, (void *)s_probe_buf);
-        obs_report_buffer("080-video/visual-flip", "sceVideoOutGetFlipStatus", "after-600ms",
-                          s_probe_buf, 64);
+        obs_report_buffer("080-video/visual-flip", "sceVideoOutGetFlipStatus",
+                          "after-600ms", s_probe_buf, 64);
     }
 
     /* Event queue wait probe if symbols resolve */
     typedef int sce_equeue_t;
-    int (*fn_create_eq)(sce_equeue_t *, const char *) =
-        (int (*)(sce_equeue_t *, const char *))obs_module_symbol(1, "sceKernelCreateEqueue");
+    int (*fn_create_eq)(sce_equeue_t *, const char *) = (int (*)(
+        sce_equeue_t *, const char *))obs_module_symbol(1, "sceKernelCreateEqueue");
     int (*fn_delete_eq)(sce_equeue_t) =
         (int (*)(sce_equeue_t))obs_module_symbol(1, "sceKernelDeleteEqueue");
     int (*fn_wait_eq)(sce_equeue_t, void *, int, int *, void *) =
-        (int (*)(sce_equeue_t, void *, int, int *, void *))obs_module_symbol(1, "sceKernelWaitEqueue");
-    int (*fn_add_flip_ev)(sce_equeue_t, int, void *) =
-        (int (*)(sce_equeue_t, int, void *))obs_module_symbol(1, "sceVideoOutAddFlipEvent");
+        (int (*)(sce_equeue_t, void *, int, int *, void *))obs_module_symbol(
+            1, "sceKernelWaitEqueue");
+    int (*fn_add_flip_ev)(sce_equeue_t, int, void *) = (int (*)(
+        sce_equeue_t, int, void *))obs_module_symbol(1, "sceVideoOutAddFlipEvent");
     int (*fn_del_flip_ev)(sce_equeue_t, int) =
         (int (*)(sce_equeue_t, int))obs_module_symbol(1, "sceVideoOutDeleteFlipEvent");
 
@@ -290,21 +308,24 @@ static obs_result check_video_visual_flip(void) {
             (void)fn_add_flip_ev(eq, handle, (void *)0x1234);
             int out_events = 0;
             uint8_t ev_buf[256];
-            for (size_t j = 0; j < sizeof(ev_buf); j++) ev_buf[j] = 0xC7;
+            for (size_t j = 0; j < sizeof(ev_buf); j++)
+                ev_buf[j] = 0xC7;
 
             /* 32-bit timeout = 50000 us */
             uint32_t to32 = 50000;
-            uint64_t t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                              ? (uint64_t)sceKernelGetProcessTime()
-                              : 0;
+            uint64_t t0 =
+                obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                    ? (uint64_t)sceKernelGetProcessTime()
+                    : 0;
             int w_rc32 = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to32);
-            uint64_t t1 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                              ? (uint64_t)sceKernelGetProcessTime()
-                              : 0;
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "timeout-32",
-                               (uint64_t)(uint32_t)w_rc32, "rc");
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "elapsed-32",
-                               t1 >= t0 ? (t1 - t0) : 0, "us");
+            uint64_t t1 =
+                obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                    ? (uint64_t)sceKernelGetProcessTime()
+                    : 0;
+            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
+                               "timeout-32", (uint64_t)(uint32_t)w_rc32, "rc");
+            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
+                               "elapsed-32", t1 >= t0 ? (t1 - t0) : 0, "us");
 
             /* 64-bit timeout = 50000 us */
             uint64_t to64 = 50000;
@@ -315,10 +336,10 @@ static obs_result check_video_visual_flip(void) {
             t1 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
                      ? (uint64_t)sceKernelGetProcessTime()
                      : 0;
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "timeout-64",
-                               (uint64_t)(uint32_t)w_rc64, "rc");
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "elapsed-64",
-                               t1 >= t0 ? (t1 - t0) : 0, "us");
+            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
+                               "timeout-64", (uint64_t)(uint32_t)w_rc64, "rc");
+            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
+                               "elapsed-64", t1 >= t0 ? (t1 - t0) : 0, "us");
 
             if (fn_del_flip_ev != NULL) {
                 fn_del_flip_ev(eq, handle);
@@ -345,9 +366,9 @@ static const obs_check video_checks[] = {
     {"080-video/attribute-block", "libSceVideoOut", "sceVideoOutSetBufferAttribute2",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutSetBufferAttribute2,
      check_video_attribute_block, OBS_FROM_ASSUMED},
-    {"080-video/flip-status", "libSceVideoOut", "sceVideoOutGetFlipStatus", OBS_CAP_VIDEO,
-     OBS_CAP_NONE, (const void *)&sceVideoOutGetFlipStatus, check_video_flip_status,
-     OBS_FROM_ASSUMED},
+    {"080-video/flip-status", "libSceVideoOut", "sceVideoOutGetFlipStatus",
+     OBS_CAP_VIDEO, OBS_CAP_NONE, (const void *)&sceVideoOutGetFlipStatus,
+     check_video_flip_status, OBS_FROM_ASSUMED},
     {"080-video/visual-flip", "libSceVideoOut", "sceVideoOutSubmitFlip", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceVideoOutSubmitFlip, check_video_visual_flip,
      OBS_FROM_ASSUMED},
@@ -394,7 +415,8 @@ static obs_result check_oops_audio(void) {
     }
     /* Generate a tiny burst of silence (512 frames of stereo PCM) */
     int16_t silence[512 * 2];
-    for (int i = 0; i < 512 * 2; i++) silence[i] = 0;
+    for (int i = 0; i < 512 * 2; i++)
+        silence[i] = 0;
 
     int v_rc = oops_audio_set_volume(port, 1.0f, 1.0f);
     int w_rc = oops_audio_write(port, silence, 512);
@@ -407,12 +429,13 @@ static obs_result check_oops_audio(void) {
 }
 #endif
 
-/* ---- audio behavioural probes, called directly (D328) -----------------------------------
+/* ---- audio behavioural probes, called directly (D328)
+ * -----------------------------------
  *
- * Audio needs no peripheral, so these do not go PENDING: they open a port and measure what a
- * header states without evidence - the channel count a selector opens, the chunk sizes an open
- * accepts, whether output blocks, and the volume flags. A port that will not open is a FAIL or
- * SKIP with the code, not a PENDING. */
+ * Audio needs no peripheral, so these do not go PENDING: they open a port and measure
+ * what a header states without evidence - the channel count a selector opens, the chunk
+ * sizes an open accepts, whether output blocks, and the volume flags. A port that will
+ * not open is a FAIL or SKIP with the code, not a PENDING. */
 
 /* Open an audio port, returning handle (>= 0) or the negative return code (< 0).
  * length is frames per chunk, param the format selector. */
@@ -440,8 +463,9 @@ static void obs_audio_close(int handle) {
     }
 }
 
-/* Format selector: open at selector 0, 1 and 2 and dump the port-state record after each. The
- * state carries the channel count, which decides whether 0 is stereo or mono objectively. */
+/* Format selector: open at selector 0, 1 and 2 and dump the port-state record after
+ * each. The state carries the channel count, which decides whether 0 is stereo or mono
+ * objectively. */
 static obs_result check_audio_format_selector(void) {
     if (!obs_address_is_callable((const void *)&sceAudioOutGetPortState)) {
         return obs_skip("sceAudioOutGetPortState is not callable");
@@ -451,8 +475,8 @@ static obs_result check_audio_format_selector(void) {
     for (uint32_t sel = 0; sel <= 2; sel++) {
         int handle = obs_audio_open(512, 48000, sel);
         if (handle < 0) {
-            obs_report_measure("090-audio/format-selector", "sceAudioOutOpen", "would-not-open",
-                               (uint64_t)(uint32_t)handle, "return");
+            obs_report_measure("090-audio/format-selector", "sceAudioOutOpen",
+                               "would-not-open", (uint64_t)(uint32_t)handle, "return");
             continue;
         }
         opened++;
@@ -460,16 +484,16 @@ static obs_result check_audio_format_selector(void) {
         int rc = sceAudioOutGetPortState(handle, s_probe_buf);
         unsigned int extent = obs_probe_extent();
         obs_audio_close(handle);
-        obs_report_measure("090-audio/format-selector", "sceAudioOutGetPortState", "selector",
-                           (uint64_t)sel, "index");
+        obs_report_measure("090-audio/format-selector", "sceAudioOutGetPortState",
+                           "selector", (uint64_t)sel, "index");
         if (extent >= 3) {
-            obs_report_measure("090-audio/format-selector", "sceAudioOutGetPortState", "channels",
-                               (uint64_t)s_probe_buf[2], "count");
+            obs_report_measure("090-audio/format-selector", "sceAudioOutGetPortState",
+                               "channels", (uint64_t)s_probe_buf[2], "count");
         }
         const char *label = (sel < 3) ? sel_labels[sel] : "state";
         obs_report_written("090-audio/format-selector", "sceAudioOutGetPortState",
-                           extent > 0 ? label : "untouched", s_probe_before, s_probe_buf,
-                           sizeof s_probe_buf);
+                           extent > 0 ? label : "untouched", s_probe_before,
+                           s_probe_buf, sizeof s_probe_buf);
         (void)rc;
     }
     if (opened == 0) {
@@ -478,8 +502,9 @@ static obs_result check_audio_format_selector(void) {
     return obs_pass_value((uint64_t)opened);
 }
 
-/* Accepted open shapes: chunk sizes 256..2048 at 48000 and 44100, each return code reported.
- * The SDK's rounding to multiples of 256 in that range is an assumption this settles. */
+/* Accepted open shapes: chunk sizes 256..2048 at 48000 and 44100, each return code
+ * reported. The SDK's rounding to multiples of 256 in that range is an assumption this
+ * settles. */
 static obs_result check_audio_open_shapes(void) {
     if (!obs_address_is_callable((const void *)&sceAudioOutOpen)) {
         return obs_skip("sceAudioOutOpen is not callable");
@@ -490,7 +515,8 @@ static obs_result check_audio_open_shapes(void) {
     for (size_t f = 0; f < OBS_COUNT(freqs); f++) {
         for (size_t c = 0; c < OBS_COUNT(chunks); c++) {
             int handle = obs_audio_open(chunks[c], freqs[f], 0);
-            /* value packs freq and chunk so a reader sees which shape each code belongs to. */
+            /* value packs freq and chunk so a reader sees which shape each code belongs
+             * to. */
             uint64_t shape = ((uint64_t)freqs[f] << 16) | (uint64_t)chunks[c];
             if (handle >= 0) {
                 accepted++;
@@ -511,8 +537,9 @@ static obs_result check_audio_open_shapes(void) {
     return obs_pass_value((uint64_t)accepted);
 }
 
-/* Blocking behaviour: time eight consecutive 512-frame outputs. At 48 kHz a blocking call takes
- * about 85 ms for the set; a non-blocking one returns at once. The header promises blocking. */
+/* Blocking behaviour: time eight consecutive 512-frame outputs. At 48 kHz a blocking
+ * call takes about 85 ms for the set; a non-blocking one returns at once. The header
+ * promises blocking. */
 static obs_result check_audio_blocking(void) {
     if (!obs_address_is_callable((const void *)&sceAudioOutOutput) ||
         !obs_address_is_callable((const void *)&sceKernelGetProcessTime)) {
@@ -522,7 +549,8 @@ static obs_result check_audio_blocking(void) {
     if (handle < 0) {
         obs_report_measure("090-audio/blocking", "sceAudioOutOpen", "rejected-rc",
                            (uint64_t)(uint32_t)handle, "return");
-        return obs_fail_code("a port would not open for the timing run", (uint64_t)(uint32_t)handle);
+        return obs_fail_code("a port would not open for the timing run",
+                             (uint64_t)(uint32_t)handle);
     }
     static int16_t silence[512 * 2]; /* 512 frames, stereo, zero-filled (.bss) */
     uint64_t start = sceKernelGetProcessTime();
@@ -531,12 +559,14 @@ static obs_result check_audio_blocking(void) {
     }
     uint64_t elapsed = sceKernelGetProcessTime() - start;
     obs_audio_close(handle);
-    obs_report_measure("090-audio/blocking", "sceAudioOutOutput", "eight-outputs-512", elapsed,
-                       "microseconds");
-    /* ~85 ms means it blocked; near zero means it did not. Either is a pass - the number is the
-     * finding - but a near-instant set is amber, because the header promises blocking. */
+    obs_report_measure("090-audio/blocking", "sceAudioOutOutput", "eight-outputs-512",
+                       elapsed, "microseconds");
+    /* ~85 ms means it blocked; near zero means it did not. Either is a pass - the
+     * number is the finding - but a near-instant set is amber, because the header
+     * promises blocking. */
     if (elapsed < 40000u) {
-        return obs_partial_value("eight outputs returned far faster than real time", elapsed);
+        return obs_partial_value("eight outputs returned far faster than real time",
+                                 elapsed);
     }
     return obs_pass_value(elapsed);
 }
@@ -550,7 +580,8 @@ static obs_result check_audio_volume_flag(void) {
     if (handle < 0) {
         obs_report_measure("090-audio/volume-flag", "sceAudioOutOpen", "rejected-rc",
                            (uint64_t)(uint32_t)handle, "return");
-        return obs_fail_code("a port would not open for the volume run", (uint64_t)(uint32_t)handle);
+        return obs_fail_code("a port would not open for the volume run",
+                             (uint64_t)(uint32_t)handle);
     }
     int vol[8];
     for (size_t i = 0; i < 8; i++) {
@@ -560,7 +591,8 @@ static obs_result check_audio_volume_flag(void) {
     for (int flag = 1; flag <= 3; flag++) {
         int rc = sceAudioOutSetVolume(handle, flag, vol);
         obs_report_measure("090-audio/volume-flag", "sceAudioOutSetVolume",
-                           rc == 0 ? "accepted" : "code", (uint64_t)(uint32_t)rc, "flag-return");
+                           rc == 0 ? "accepted" : "code", (uint64_t)(uint32_t)rc,
+                           "flag-return");
         if (rc == 0) {
             ok++;
         }
@@ -602,8 +634,8 @@ static obs_result check_audio_drain(void) {
     uint64_t el_null = t1 >= t0 ? (t1 - t0) : 0;
     obs_report_measure("090-audio/drain", "sceAudioOutOutput", "null-rc",
                        (uint64_t)(uint32_t)rc_null, "code");
-    obs_report_measure("090-audio/drain", "sceAudioOutOutput", "null-elapsed",
-                       el_null, "us");
+    obs_report_measure("090-audio/drain", "sceAudioOutOutput", "null-elapsed", el_null,
+                       "us");
 
     /* Call once more on the now-empty queue */
     t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
@@ -639,8 +671,8 @@ static obs_result check_audio_drain(void) {
         uint64_t el_close = t1 >= t0 ? (t1 - t0) : 0;
         obs_report_measure("090-audio/drain", "sceAudioOutClose", "queued-close-rc",
                            (uint64_t)(uint32_t)rc_close, "code");
-        obs_report_measure("090-audio/drain", "sceAudioOutClose", "queued-close-elapsed",
-                           el_close, "us");
+        obs_report_measure("090-audio/drain", "sceAudioOutClose",
+                           "queued-close-elapsed", el_close, "us");
     }
 
     return obs_pass();
@@ -650,9 +682,11 @@ static obs_result check_audio_sysmodules(void) {
     typedef int (*fn_load_t)(uint16_t id);
     fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
     if (fn_load == NULL) {
-        fn_load = (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
+        fn_load =
+            (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
     }
-    if (fn_load == NULL && obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+    if (fn_load == NULL &&
+        obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
         fn_load = &sceSysmoduleLoadModule;
     }
 
@@ -669,17 +703,19 @@ static obs_result check_audio_sysmodules(void) {
     int rc_3d = -1;
     if (sig == 0) {
         rc_dec = fn_load(0x0088); /* OOPS_SYSMODULE_AUDIO_DEC */
-        rc_3d  = fn_load(0x00A7); /* OOPS_SYSMODULE_AUDIO_3D */
+        rc_3d = fn_load(0x00A7);  /* OOPS_SYSMODULE_AUDIO_3D */
         obs_fault_unregister();
     } else {
         obs_fault_unregister();
         return obs_fail_code("sceSysmoduleLoadModule faulted", (uint64_t)(uint32_t)sig);
     }
 
-    obs_report_measure("090-audio/sysmodules", "libSceAudioDec", "module_id", 0x0088, "id");
+    obs_report_measure("090-audio/sysmodules", "libSceAudioDec", "module_id", 0x0088,
+                       "id");
     obs_report_measure("090-audio/sysmodules", "libSceAudioDec", "rc",
                        (uint64_t)(uint32_t)rc_dec, "code");
-    obs_report_measure("090-audio/sysmodules", "libSceAudio3d", "module_id", 0x00A7, "id");
+    obs_report_measure("090-audio/sysmodules", "libSceAudio3d", "module_id", 0x00A7,
+                       "id");
     obs_report_measure("090-audio/sysmodules", "libSceAudio3d", "rc",
                        (uint64_t)(uint32_t)rc_3d, "code");
 
@@ -688,10 +724,8 @@ static obs_result check_audio_sysmodules(void) {
 
 static obs_result check_audio_audioout2_ports(void) {
     static const char *const syms[] = {
-        "sceAudioOut2Initialize",
-        "sceAudioOut2PortCreate",
-        "sceAudioOut2PortDestroy",
-        "sceAudioOut2PortGetState",
+        "sceAudioOut2Initialize",        "sceAudioOut2PortCreate",
+        "sceAudioOut2PortDestroy",       "sceAudioOut2PortGetState",
         "sceAudioOut2PortSetAttributes",
     };
 
@@ -750,8 +784,8 @@ static obs_result check_audio_audioout2_ports(void) {
     if (fn_destroy != NULL && obs_address_is_callable(fn_destroy)) {
         int (*destroy_func)(int) = (int (*)(int))fn_destroy;
         int rc_destroy = destroy_func(OBS_HANDLE_INVALID);
-        obs_report_measure("090-audio/audioout2-ports", "sceAudioOut2PortDestroy", "bad-handle-rc",
-                           (uint64_t)(uint32_t)rc_destroy, "code");
+        obs_report_measure("090-audio/audioout2-ports", "sceAudioOut2PortDestroy",
+                           "bad-handle-rc", (uint64_t)(uint32_t)rc_destroy, "code");
     }
 
     obs_fault_unregister();
@@ -764,19 +798,21 @@ static const obs_check audio_checks[] = {
     {"090-audio/sysmodules", "libSceSysmodule", "sceSysmoduleLoadModule", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_audio_sysmodules, check_audio_sysmodules,
      OBS_FROM_ASSUMED},
-    {"090-audio/audioout2-ports", "libSceAudioOut2", "sceAudioOut2PortCreate", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_audio_audioout2_ports, check_audio_audioout2_ports,
-     OBS_FROM_ASSUMED},
+    {"090-audio/audioout2-ports", "libSceAudioOut2", "sceAudioOut2PortCreate",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_audio_audioout2_ports,
+     check_audio_audioout2_ports, OBS_FROM_ASSUMED},
     {"090-audio/drain", "libSceAudioOut", "sceAudioOutOutput", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAudioOutOutput, check_audio_drain,
      OBS_FROM_ASSUMED},
-    {"090-audio/format-selector", "libSceAudioOut", "sceAudioOutGetPortState", OBS_CAP_AUDIO,
-     OBS_CAP_NONE, (const void *)&sceAudioOutGetPortState, check_audio_format_selector,
+    {"090-audio/format-selector", "libSceAudioOut", "sceAudioOutGetPortState",
+     OBS_CAP_AUDIO, OBS_CAP_NONE, (const void *)&sceAudioOutGetPortState,
+     check_audio_format_selector, OBS_FROM_ASSUMED},
+    {"090-audio/open-shapes", "libSceAudioOut", "sceAudioOutOpen", OBS_CAP_AUDIO,
+     OBS_CAP_NONE, (const void *)&sceAudioOutOpen, check_audio_open_shapes,
      OBS_FROM_ASSUMED},
-    {"090-audio/open-shapes", "libSceAudioOut", "sceAudioOutOpen", OBS_CAP_AUDIO, OBS_CAP_NONE,
-     (const void *)&sceAudioOutOpen, check_audio_open_shapes, OBS_FROM_ASSUMED},
-    {"090-audio/blocking", "libSceAudioOut", "sceAudioOutOutput", OBS_CAP_AUDIO, OBS_CAP_NONE,
-     (const void *)&sceAudioOutOutput, check_audio_blocking, OBS_FROM_ASSUMED},
+    {"090-audio/blocking", "libSceAudioOut", "sceAudioOutOutput", OBS_CAP_AUDIO,
+     OBS_CAP_NONE, (const void *)&sceAudioOutOutput, check_audio_blocking,
+     OBS_FROM_ASSUMED},
     {"090-audio/volume-flag", "libSceAudioOut", "sceAudioOutSetVolume", OBS_CAP_AUDIO,
      OBS_CAP_NONE, (const void *)&sceAudioOutSetVolume, check_audio_volume_flag,
      OBS_FROM_ASSUMED},
@@ -846,10 +882,12 @@ static obs_result check_oops_input(void) {
     int rc = oops_input_poll(0, &pad);
     oops_input_close();
     if (rc != 0) {
-        return obs_fail_code("oops_input_poll returned non-zero", (uint64_t)(uint32_t)rc);
+        return obs_fail_code("oops_input_poll returned non-zero",
+                             (uint64_t)(uint32_t)rc);
     }
-    /* The raw record, not only the button word: a pass here should carry the bytes a later
-     * layout question will need, rather than reducing the poll to one field. (D328) */
+    /* The raw record, not only the button word: a pass here should carry the bytes a
+     * later layout question will need, rather than reducing the poll to one field.
+     * (D328) */
     obs_report_buffer("100-input/oops-sdk-poll", "scePadReadState", "raw",
                       (const unsigned char *)&pad, sizeof pad);
     return obs_pass_value((uint64_t)pad.buttons);
@@ -857,12 +895,9 @@ static obs_result check_oops_input(void) {
 #endif
 
 static const char *const pad_dualsense_symbols[] = {
-    "scePadSetTriggerEffect",
-    "scePadGetTriggerEffectState",
-    "scePadSetVibrationMode",
-    "scePadSetVibrationForce",
-    "scePadGetControllerInformation",
-    "scePadDeviceClassGetExtendedInformation",
+    "scePadSetTriggerEffect",         "scePadGetTriggerEffectState",
+    "scePadSetVibrationMode",         "scePadSetVibrationForce",
+    "scePadGetControllerInformation", "scePadDeviceClassGetExtendedInformation",
     "scePadDeviceClassParseData",
 };
 
@@ -883,18 +918,20 @@ static obs_result check_pad_dualsense_symbols(void) {
             resolved++;
             obs_report_measure("100-input/dualsense-symbols", name, "vaddr",
                                (uint64_t)(uintptr_t)addr, "offset");
-            /* The prologue is dumped only where the text is readable. A library's text is
-             * execute-only on the console (xotext) - callable but not readable - so the old
-             * `obs_address_is_callable` guard passed and the read faulted inside libScePad.
-             * `obs_linkmap_readable` refuses xotext, so this dumps on a loader that maps text
-             * readable (emulators) and skips it on hardware rather than crashing. (D325) */
+            /* The prologue is dumped only where the text is readable. A library's text
+             * is execute-only on the console (xotext) - callable but not readable - so
+             * the old `obs_address_is_callable` guard passed and the read faulted
+             * inside libScePad. `obs_linkmap_readable` refuses xotext, so this dumps on
+             * a loader that maps text readable (emulators) and skips it on hardware
+             * rather than crashing. (D325) */
             if (obs_strcmp(name, "scePadSetTriggerEffect") == 0 &&
                 obs_linkmap_readable((uintptr_t)addr)) {
                 obs_report_buffer("100-input/trigger-prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }
         } else {
-            obs_report_measure("100-input/dualsense-symbols", name, "unresolved", 0, "status");
+            obs_report_measure("100-input/dualsense-symbols", name, "unresolved", 0,
+                               "status");
         }
     }
 
@@ -946,15 +983,16 @@ static obs_result check_pad_trigger_state_outparam(void) {
     }
 
     if (written > 0) {
-        obs_report_written("100-input/trigger-state", "scePadGetTriggerEffectState", "out-param",
-                           before, buf, OBS_PAD_BUF_SIZE);
+        obs_report_written("100-input/trigger-state", "scePadGetTriggerEffectState",
+                           "out-param", before, buf, OBS_PAD_BUF_SIZE);
         return obs_pass_value((uint64_t)written);
     }
 
-    obs_report_written("100-input/trigger-state", "scePadGetTriggerEffectState", "untouched",
-                       before, buf, OBS_PAD_BUF_SIZE);
+    obs_report_written("100-input/trigger-state", "scePadGetTriggerEffectState",
+                       "untouched", before, buf, OBS_PAD_BUF_SIZE);
     if (rc != 0) {
-        return obs_partial_value("call returned error code and wrote nothing", (uint64_t)(uint32_t)rc);
+        return obs_partial_value("call returned error code and wrote nothing",
+                                 (uint64_t)(uint32_t)rc);
     }
     return obs_pass();
 #undef OBS_PAD_BUF_SIZE
@@ -968,8 +1006,8 @@ static obs_result check_pad_controller_info_outparam(void) {
     if (handle < 0) {
         return obs_skip("libScePad did not load");
     }
-    int (*fn_info)(int, void *) =
-        (int (*)(int, void *))obs_module_symbol(handle, "scePadGetControllerInformation");
+    int (*fn_info)(int, void *) = (int (*)(int, void *))obs_module_symbol(
+        handle, "scePadGetControllerInformation");
     if (fn_info == NULL || !obs_address_is_callable((const void *)fn_info)) {
         return obs_skip("scePadGetControllerInformation is not resolved");
     }
@@ -1002,27 +1040,31 @@ static obs_result check_pad_controller_info_outparam(void) {
     }
 
     if (written > 0) {
-        obs_report_written("100-input/controller-info", "scePadGetControllerInformation", "out-param",
-                           before, buf, OBS_PAD_INFO_SIZE);
+        obs_report_written("100-input/controller-info",
+                           "scePadGetControllerInformation", "out-param", before, buf,
+                           OBS_PAD_INFO_SIZE);
         return obs_pass_value((uint64_t)written);
     }
 
-    obs_report_written("100-input/controller-info", "scePadGetControllerInformation", "untouched",
-                       before, buf, OBS_PAD_INFO_SIZE);
+    obs_report_written("100-input/controller-info", "scePadGetControllerInformation",
+                       "untouched", before, buf, OBS_PAD_INFO_SIZE);
     if (rc != 0) {
-        return obs_partial_value("call returned error code and wrote nothing", (uint64_t)(uint32_t)rc);
+        return obs_partial_value("call returned error code and wrote nothing",
+                                 (uint64_t)(uint32_t)rc);
     }
     return obs_pass();
 #undef OBS_PAD_INFO_SIZE
 }
 
-/* ---- controller behavioural probes, called directly so they run in every leg (D328) ----
+/* ---- controller behavioural probes, called directly so they run in every leg (D328)
+ * ----
  *
- * The out-param probes above resolve through dlsym and skip on a native eboot, whose dlsym
- * sees only imported symbols. These call the pad functions as the imports they now are, so a
- * pad-attached run reports in all three legs. Where no controller is attached - or none of the
- * inputs a probe is watching for arrive in its window - the result is PENDING, not a fault and
- * not a skip: plug in / press, re-run, and the same probe answers. */
+ * The out-param probes above resolve through dlsym and skip on a native eboot, whose
+ * dlsym sees only imported symbols. These call the pad functions as the imports they
+ * now are, so a pad-attached run reports in all three legs. Where no controller is
+ * attached - or none of the inputs a probe is watching for arrive in its window - the
+ * result is PENDING, not a fault and not a skip: plug in / press, re-run, and the same
+ * probe answers. */
 
 /* Open a pad for the initial user, or -1. Caller closes with scePadClose. */
 static int obs_pad_open(void) {
@@ -1064,24 +1106,23 @@ static obs_result check_pad_read_extent(void) {
         rc = scePadReadState(0, s_probe_buf);
     }
     unsigned int extent = obs_probe_extent();
-    obs_report_written("100-input/read-extent", "scePadReadState",
-                       "extent", s_probe_before, s_probe_buf,
-                       sizeof s_probe_buf);
-    obs_report_written("100-input/read-extent", "scePadReadState",
-                       "out-param", s_probe_before, s_probe_buf,
-                       sizeof s_probe_buf);
+    obs_report_written("100-input/read-extent", "scePadReadState", "extent",
+                       s_probe_before, s_probe_buf, sizeof s_probe_buf);
+    obs_report_written("100-input/read-extent", "scePadReadState", "out-param",
+                       s_probe_before, s_probe_buf, sizeof s_probe_buf);
     obs_report_measure("100-input/read-extent", "scePadReadState", "extent",
                        (uint64_t)extent, "bytes");
     obs_report_measure("100-input/read-extent", "scePadReadState", "rc",
                        (uint64_t)(uint32_t)rc, "code");
     if (extent == 0) {
-        return obs_partial_value("disconnected: read completed", (uint64_t)(uint32_t)rc);
+        return obs_partial_value("disconnected: read completed",
+                                 (uint64_t)(uint32_t)rc);
     }
     return obs_pass_value((uint64_t)extent);
 }
 
-/* The batched read: ask for four records, report the return value and the extent. Extent over
- * count is the stride; the return value confirms it is a count. */
+/* The batched read: ask for four records, report the return value and the extent.
+ * Extent over count is the stride; the return value confirms it is a count. */
 static obs_result check_pad_batched_read(void) {
     if (!obs_address_is_callable((const void *)&scePadRead)) {
         return obs_skip("scePadRead is not callable");
@@ -1096,25 +1137,24 @@ static obs_result check_pad_batched_read(void) {
         rc = scePadRead(0, s_probe_buf, 4);
     }
     unsigned int extent = obs_probe_extent();
-    obs_report_written("100-input/batched-read", "scePadRead",
-                       "extent", s_probe_before, s_probe_buf,
-                       sizeof s_probe_buf);
-    obs_report_written("100-input/batched-read", "scePadRead",
-                       "out-param", s_probe_before, s_probe_buf,
-                       sizeof s_probe_buf);
+    obs_report_written("100-input/batched-read", "scePadRead", "extent", s_probe_before,
+                       s_probe_buf, sizeof s_probe_buf);
+    obs_report_written("100-input/batched-read", "scePadRead", "out-param",
+                       s_probe_before, s_probe_buf, sizeof s_probe_buf);
     obs_report_measure("100-input/batched-read", "scePadRead", "returned",
                        (uint64_t)(uint32_t)rc, "count");
     obs_report_measure("100-input/batched-read", "scePadRead", "extent",
                        (uint64_t)extent, "bytes");
     if (extent == 0) {
-        return obs_partial_value("disconnected: batched read completed", (uint64_t)(uint32_t)rc);
+        return obs_partial_value("disconnected: batched read completed",
+                                 (uint64_t)(uint32_t)rc);
     }
     return obs_pass_value((uint64_t)extent);
 }
 
-/* Button bits: sample for a few seconds while Create, PS, touchpad-click and mic are pressed in
- * turn, and report the OR of every button word (offset 0) seen. Settles whether Create is bit 16
- * and whether the others arrive at all. */
+/* Button bits: sample for a few seconds while Create, PS, touchpad-click and mic are
+ * pressed in turn, and report the OR of every button word (offset 0) seen. Settles
+ * whether Create is bit 16 and whether the others arrive at all. */
 static obs_result check_pad_button_bits(void) {
     if (!obs_address_is_callable((const void *)&scePadReadState)) {
         return obs_skip("scePadReadState is not callable");
@@ -1126,7 +1166,8 @@ static obs_result check_pad_button_bits(void) {
     obs_report_measure("100-input/button-bits", "scePadReadState",
                        "press-create-ps-touchpad-mic-now", 4, "prompt-seconds");
     uint32_t seen = 0;
-    /* ~4s at 50ms: bounded, non-blocking, and long enough to press four buttons in turn. */
+    /* ~4s at 50ms: bounded, non-blocking, and long enough to press four buttons in
+     * turn. */
     for (int i = 0; i < 80; i++) {
         obs_probe_fill();
         if (scePadReadState(handle, s_probe_buf) == 0 || obs_probe_extent() >= 4u) {
@@ -1140,15 +1181,16 @@ static obs_result check_pad_button_bits(void) {
     if (seen == 0u) {
         return obs_pending("controller attached, but no button was seen in the window");
     }
-    obs_report_measure("100-input/button-bits", "scePadReadState", "button-or", (uint64_t)seen,
-                       "bits");
+    obs_report_measure("100-input/button-bits", "scePadReadState", "button-or",
+                       (uint64_t)seen, "bits");
     return obs_pass_value((uint64_t)seen);
 }
 
-/* Stick and trigger raw range: sample while the sticks are swept and the triggers pulled, and
- * report the per-byte minimum and maximum over the first sixteen bytes of the record. The
- * mapper assumes sticks at bytes 4-7 and triggers at 8-9, 0..255 with 128 at centre (OpenOrbis);
- * the min/max pair shows the real rest-and-deflection range without this asserting the offsets. */
+/* Stick and trigger raw range: sample while the sticks are swept and the triggers
+ * pulled, and report the per-byte minimum and maximum over the first sixteen bytes of
+ * the record. The mapper assumes sticks at bytes 4-7 and triggers at 8-9, 0..255 with
+ * 128 at centre (OpenOrbis); the min/max pair shows the real rest-and-deflection range
+ * without this asserting the offsets. */
 static obs_result check_pad_stick_trigger_range(void) {
     if (!obs_address_is_callable((const void *)&scePadReadState)) {
         return obs_skip("scePadReadState is not callable");
@@ -1186,9 +1228,12 @@ static obs_result check_pad_stick_trigger_range(void) {
     if (samples == 0) {
         return obs_pending("controller attached, but no state was read in the window");
     }
-    obs_report_buffer("100-input/stick-trigger-range", "scePadReadState", "min", lo, 16);
-    obs_report_buffer("100-input/stick-trigger-range", "scePadReadState", "max", hi, 16);
-    /* Any byte whose range opened up means something moved; a flat window is still waiting. */
+    obs_report_buffer("100-input/stick-trigger-range", "scePadReadState", "min", lo,
+                      16);
+    obs_report_buffer("100-input/stick-trigger-range", "scePadReadState", "max", hi,
+                      16);
+    /* Any byte whose range opened up means something moved; a flat window is still
+     * waiting. */
     unsigned int moved = 0;
     for (size_t b = 0; b < 16; b++) {
         if (hi[b] > lo[b]) {
@@ -1196,7 +1241,8 @@ static obs_result check_pad_stick_trigger_range(void) {
         }
     }
     if (moved == 0) {
-        return obs_pending("controller read, but nothing moved: sweep the sticks and re-run");
+        return obs_pending(
+            "controller read, but nothing moved: sweep the sticks and re-run");
     }
     return obs_pass_value((uint64_t)moved);
 }
@@ -1219,7 +1265,8 @@ static obs_result check_input_payload_injection(void) {
     int sig = OBS_FAULT_ARM(&buf);
     if (sig != 0) {
         obs_fault_unregister();
-        return obs_partial_value("input payload injection lookup faulted", (uint64_t)(uint32_t)sig);
+        return obs_partial_value("input payload injection lookup faulted",
+                                 (uint64_t)(uint32_t)sig);
     }
 
     /* 1. Resolve sceSysmoduleLoadModule */
@@ -1228,12 +1275,14 @@ static obs_result check_input_payload_injection(void) {
     if (pargs != NULL && pargs->kexport_table != NULL) {
         char nid[12];
         obs_compute_nid("sceSysmoduleLoadModule", nid);
-        const void *kaddr = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+        const void *kaddr =
+            obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
         if (kaddr != NULL && obs_address_is_callable(kaddr)) {
             fn_load_module = (int (*)(uint16_t))kaddr;
         }
     }
-    if (fn_load_module == NULL && pargs == NULL && obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+    if (fn_load_module == NULL && pargs == NULL &&
+        obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
         fn_load_module = &sceSysmoduleLoadModule;
     }
     if (fn_load_module == NULL) {
@@ -1243,18 +1292,19 @@ static obs_result check_input_payload_injection(void) {
         }
     }
 
-    obs_report_measure("100-input/sysmodule-callable", "sceSysmoduleLoadModule", "callable",
-                       fn_load_module != NULL ? 1 : 0, "flag");
+    obs_report_measure("100-input/sysmodule-callable", "sceSysmoduleLoadModule",
+                       "callable", fn_load_module != NULL ? 1 : 0, "flag");
     if (fn_load_module != NULL) {
-        obs_report_measure("100-input/sysmodule-callable", "sceSysmoduleLoadModule", "vaddr",
-                           (uint64_t)(uintptr_t)fn_load_module, "vaddr");
+        obs_report_measure("100-input/sysmodule-callable", "sceSysmoduleLoadModule",
+                           "vaddr", (uint64_t)(uintptr_t)fn_load_module, "vaddr");
     }
 
     int load_rc = -1;
     if (fn_load_module != NULL) {
         load_rc = fn_load_module(0x0027); /* libScePad sysmodule ID */
     }
-    obs_report_measure("100-input/sysmodule-load", "libScePad", "module_id", 0x0027, "id");
+    obs_report_measure("100-input/sysmodule-load", "libScePad", "module_id", 0x0027,
+                       "id");
     obs_report_measure("100-input/sysmodule-load", "sceSysmoduleLoadModule", "rc",
                        (uint64_t)(uint32_t)load_rc, "code");
 
@@ -1282,13 +1332,16 @@ static obs_result check_input_payload_injection(void) {
         void *dlsym_addr = NULL;
         if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
             for (size_t h = 0; h < handle_count && h < 128; h++) {
-                if (handles[h] <= 0) continue;
+                if (handles[h] <= 0)
+                    continue;
                 void *a = NULL;
-                if (sceKernelDlsym(handles[h], nid, &a) == 0 && obs_address_is_callable(a)) {
+                if (sceKernelDlsym(handles[h], nid, &a) == 0 &&
+                    obs_address_is_callable(a)) {
                     dlsym_addr = a;
                     break;
                 }
-                if (sceKernelDlsym(handles[h], name, &a) == 0 && obs_address_is_callable(a)) {
+                if (sceKernelDlsym(handles[h], name, &a) == 0 &&
+                    obs_address_is_callable(a)) {
                     dlsym_addr = a;
                     break;
                 }
@@ -1297,7 +1350,8 @@ static obs_result check_input_payload_injection(void) {
                 void *a = NULL;
                 if (sceKernelDlsym(1, name, &a) == 0 && obs_address_is_callable(a)) {
                     dlsym_addr = a;
-                } else if (sceKernelDlsym(0x2001, name, &a) == 0 && obs_address_is_callable(a)) {
+                } else if (sceKernelDlsym(0x2001, name, &a) == 0 &&
+                           obs_address_is_callable(a)) {
                     dlsym_addr = a;
                 } else {
                     const void *sym_self = obs_module_symbol(OBS_HANDLE_SELF, name);
@@ -1311,7 +1365,8 @@ static obs_result check_input_payload_injection(void) {
         /* Route 2: kexport */
         void *kexport_addr = NULL;
         if (pargs != NULL && pargs->kexport_table != NULL) {
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 kexport_addr = (void *)ka;
             }
@@ -1322,28 +1377,36 @@ static obs_result check_input_payload_injection(void) {
 #if !defined(OBSCENE_HOST_BUILD)
         if (pid > 0 && krw_is_ready()) {
             dyn_addr = krw_dynlib_resolve_any(pid, name);
-            if (dyn_addr < 0x10000UL || !obs_address_is_callable((const void *)dyn_addr)) {
+            if (dyn_addr < 0x10000UL ||
+                !obs_address_is_callable((const void *)dyn_addr)) {
                 dyn_addr = 0;
             }
         }
 #endif
 
-        obs_report_measure("100-input/resolve", name, "dlsym", (uint64_t)(uintptr_t)dlsym_addr, "address");
-        obs_report_measure("100-input/resolve", name, "kexport", (uint64_t)(uintptr_t)kexport_addr, "address");
-        obs_report_measure("100-input/resolve", name, "dynlib", (uint64_t)dyn_addr, "address");
+        obs_report_measure("100-input/resolve", name, "dlsym",
+                           (uint64_t)(uintptr_t)dlsym_addr, "address");
+        obs_report_measure("100-input/resolve", name, "kexport",
+                           (uint64_t)(uintptr_t)kexport_addr, "address");
+        obs_report_measure("100-input/resolve", name, "dynlib", (uint64_t)dyn_addr,
+                           "address");
 
-        void *best_addr = dlsym_addr != NULL ? dlsym_addr : (kexport_addr != NULL ? kexport_addr : (void *)dyn_addr);
+        void *best_addr =
+            dlsym_addr != NULL
+                ? dlsym_addr
+                : (kexport_addr != NULL ? kexport_addr : (void *)dyn_addr);
         if (best_addr != NULL) {
             any_resolved++;
         }
         if (strncmp(name, "scePadVirtualDevice", 19) == 0) {
             obs_report_measure("100-input/virtual-device", name, "address",
                                (uint64_t)(uintptr_t)best_addr, "address");
-            if (strcmp(name, "scePadVirtualDeviceAddDevice") == 0 && best_addr != NULL &&
-                obs_address_is_callable(best_addr)) {
+            if (strcmp(name, "scePadVirtualDeviceAddDevice") == 0 &&
+                best_addr != NULL && obs_address_is_callable(best_addr)) {
                 int (*fn_add_dev)(void *) = (int (*)(void *))best_addr;
                 uint8_t dev_param[256];
-                for (size_t b = 0; b < sizeof(dev_param); b++) dev_param[b] = 0;
+                for (size_t b = 0; b < sizeof(dev_param); b++)
+                    dev_param[b] = 0;
                 obs_jmp_buf vbuf;
                 int vsig = OBS_FAULT_ARM(&vbuf);
                 int add_rc = -1;
@@ -1353,18 +1416,25 @@ static obs_result check_input_payload_injection(void) {
                 } else {
                     obs_fault_unregister();
                 }
-                obs_report_measure("100-input/virtual-device", "scePadVirtualDeviceAddDevice", "rc",
+                obs_report_measure("100-input/virtual-device",
+                                   "scePadVirtualDeviceAddDevice", "rc",
                                    (uint64_t)(uint32_t)add_rc, "code");
                 if (add_rc >= 0) {
                     int dev_handle = add_rc;
-                    obs_report_measure("100-input/virtual-device", "scePadVirtualDeviceAddDevice", "handle",
+                    obs_report_measure("100-input/virtual-device",
+                                       "scePadVirtualDeviceAddDevice", "handle",
                                        (uint64_t)(uint32_t)dev_handle, "handle");
-                    const void *ins_addr = obs_module_symbol(OBS_HANDLE_SELF, "scePadVirtualDeviceInsertData");
-                    if (ins_addr == NULL) ins_addr = obs_module_symbol(1, "scePadVirtualDeviceInsertData");
+                    const void *ins_addr = obs_module_symbol(
+                        OBS_HANDLE_SELF, "scePadVirtualDeviceInsertData");
+                    if (ins_addr == NULL)
+                        ins_addr =
+                            obs_module_symbol(1, "scePadVirtualDeviceInsertData");
                     if (ins_addr != NULL && obs_address_is_callable(ins_addr)) {
                         uint8_t zero_buf[16];
-                        for (size_t b = 0; b < sizeof(zero_buf); b++) zero_buf[b] = 0;
-                        int (*fn_insert)(int, const void *, size_t) = (int (*)(int, const void *, size_t))ins_addr;
+                        for (size_t b = 0; b < sizeof(zero_buf); b++)
+                            zero_buf[b] = 0;
+                        int (*fn_insert)(int, const void *, size_t) =
+                            (int (*)(int, const void *, size_t))ins_addr;
                         int ins_rc = -1;
                         vsig = OBS_FAULT_ARM(&vbuf);
                         if (vsig == 0) {
@@ -1373,7 +1443,8 @@ static obs_result check_input_payload_injection(void) {
                         } else {
                             obs_fault_unregister();
                         }
-                        obs_report_measure("100-input/virtual-device", "scePadVirtualDeviceInsertData", "rc",
+                        obs_report_measure("100-input/virtual-device",
+                                           "scePadVirtualDeviceInsertData", "rc",
                                            (uint64_t)(uint32_t)ins_rc, "code");
                     }
                 }
@@ -1385,24 +1456,25 @@ static obs_result check_input_payload_injection(void) {
     if (any_resolved > 0) {
         return obs_pass_value((uint64_t)any_resolved);
     }
-    return obs_partial_value("libScePad sysmodule loaded; injection symbols not reached",
-                             (uint64_t)(uint32_t)load_rc);
+    return obs_partial_value(
+        "libScePad sysmodule loaded; injection symbols not reached",
+        (uint64_t)(uint32_t)load_rc);
 }
 
 /* Mock Pad Data structure representing DualSense controller state */
 typedef struct {
-    uint32_t buttons;       /* Digital buttons bitmask */
-    int8_t   left_stick_x;  /* -128 .. 127 */
-    int8_t   left_stick_y;  /* -128 .. 127 */
-    int8_t   right_stick_x; /* -128 .. 127 */
-    int8_t   right_stick_y; /* -128 .. 127 */
-    uint8_t  trigger_l2;    /* 0 .. 255 */
-    uint8_t  trigger_r2;    /* 0 .. 255 */
-    uint8_t  padding[2];
+    uint32_t buttons;     /* Digital buttons bitmask */
+    int8_t left_stick_x;  /* -128 .. 127 */
+    int8_t left_stick_y;  /* -128 .. 127 */
+    int8_t right_stick_x; /* -128 .. 127 */
+    int8_t right_stick_y; /* -128 .. 127 */
+    uint8_t trigger_l2;   /* 0 .. 255 */
+    uint8_t trigger_r2;   /* 0 .. 255 */
+    uint8_t padding[2];
     uint32_t touch_id;
     uint16_t touch_x;
     uint16_t touch_y;
-    uint8_t  reserved[32];
+    uint8_t reserved[32];
 } obs_mock_pad_state_t;
 
 static volatile int s_enable_input_mocking = 0;
@@ -1417,7 +1489,8 @@ static obs_result check_input_mocking_harness(void) {
             ((uint8_t *)&mock_pad)[i] = 0;
         }
 
-        /* Populate synthetic controller state: Cross + R1, sticks deflected, R2 half-trigger */
+        /* Populate synthetic controller state: Cross + R1, sticks deflected, R2
+         * half-trigger */
         mock_pad.buttons = (1u << 0) | (1u << 9);
         mock_pad.left_stick_x = 64;
         mock_pad.left_stick_y = -64;
@@ -1439,14 +1512,17 @@ static obs_result check_input_mocking_harness(void) {
             return obs_fail_code("input mocking faulted", (uint64_t)(uint32_t)sig);
         }
 
-        const void *fn_insert_sym = obs_module_symbol(OBS_HANDLE_SELF, "scePadVirtualDeviceInsertData");
+        const void *fn_insert_sym =
+            obs_module_symbol(OBS_HANDLE_SELF, "scePadVirtualDeviceInsertData");
         if (fn_insert_sym == NULL) {
             fn_insert_sym = obs_module_symbol(1, "scePadVirtualDeviceInsertData");
         }
         if (fn_insert_sym != NULL && obs_address_is_callable(fn_insert_sym)) {
-            int (*fn_insert)(int, const void *, size_t) = (int (*)(int, const void *, size_t))fn_insert_sym;
+            int (*fn_insert)(int, const void *, size_t) =
+                (int (*)(int, const void *, size_t))fn_insert_sym;
             int rc = fn_insert(0, &mock_pad, sizeof(mock_pad));
-            obs_report_measure("100-input/mocking-harness", "scePadVirtualDeviceInsertData", "rc",
+            obs_report_measure("100-input/mocking-harness",
+                               "scePadVirtualDeviceInsertData", "rc",
                                (uint64_t)(uint32_t)rc, "code");
         }
 
@@ -1469,21 +1545,23 @@ static const obs_check input_checks[] = {
     {"100-input/oops-sdk-poll", "libScePad", "scePadReadState", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&scePadReadState, check_oops_input, OBS_FROM_ASSUMED},
 #endif
-    {"100-input/dualsense-symbols", "libScePad", "scePadSetTriggerEffect", OBS_CAP_INPUT,
-     OBS_CAP_NONE, (const void *)&scePadSetTriggerEffect, check_pad_dualsense_symbols,
+    {"100-input/dualsense-symbols", "libScePad", "scePadSetTriggerEffect",
+     OBS_CAP_INPUT, OBS_CAP_NONE, (const void *)&scePadSetTriggerEffect,
+     check_pad_dualsense_symbols, OBS_FROM_ASSUMED},
+    {"100-input/trigger-state", "libScePad", "scePadGetTriggerEffectState",
+     OBS_CAP_INPUT, OBS_CAP_NONE, (const void *)&scePadGetTriggerEffectState,
+     check_pad_trigger_state_outparam, OBS_FROM_ASSUMED},
+    {"100-input/controller-info", "libScePad", "scePadGetControllerInformation",
+     OBS_CAP_INPUT, OBS_CAP_NONE, (const void *)&scePadGetControllerInformation,
+     check_pad_controller_info_outparam, OBS_FROM_ASSUMED},
+    {"100-input/read-extent", "libScePad", "scePadReadState", OBS_CAP_INPUT,
+     OBS_CAP_NONE, (const void *)&scePadReadState, check_pad_read_extent,
      OBS_FROM_ASSUMED},
-    {"100-input/trigger-state", "libScePad", "scePadGetTriggerEffectState", OBS_CAP_INPUT,
-     OBS_CAP_NONE, (const void *)&scePadGetTriggerEffectState, check_pad_trigger_state_outparam,
-     OBS_FROM_ASSUMED},
-    {"100-input/controller-info", "libScePad", "scePadGetControllerInformation", OBS_CAP_INPUT,
-     OBS_CAP_NONE, (const void *)&scePadGetControllerInformation, check_pad_controller_info_outparam,
-     OBS_FROM_ASSUMED},
-    {"100-input/read-extent", "libScePad", "scePadReadState", OBS_CAP_INPUT, OBS_CAP_NONE,
-     (const void *)&scePadReadState, check_pad_read_extent, OBS_FROM_ASSUMED},
     {"100-input/batched-read", "libScePad", "scePadRead", OBS_CAP_INPUT, OBS_CAP_NONE,
      (const void *)&scePadRead, check_pad_batched_read, OBS_FROM_ASSUMED},
-    {"100-input/button-bits", "libScePad", "scePadReadState", OBS_CAP_INPUT, OBS_CAP_NONE,
-     (const void *)&scePadReadState, check_pad_button_bits, OBS_FROM_ASSUMED},
+    {"100-input/button-bits", "libScePad", "scePadReadState", OBS_CAP_INPUT,
+     OBS_CAP_NONE, (const void *)&scePadReadState, check_pad_button_bits,
+     OBS_FROM_ASSUMED},
     {"100-input/stick-trigger-range", "libScePad", "scePadReadState", OBS_CAP_INPUT,
      OBS_CAP_NONE, (const void *)&scePadReadState, check_pad_stick_trigger_range,
      OBS_FROM_ASSUMED},

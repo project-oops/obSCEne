@@ -124,14 +124,16 @@ static obs_result check_stack_alignment(void) {
 }
 
 #if defined(OBS_FAULT_SELFTEST)
-/* Proves the fault guard, on any build. It dereferences a deliberately bad pointer; if the
- * guard works the harness records this as a crash and the suite runs on, and if it does not
- * the run ends here - which is itself the answer. Off by default: it is a test of the
- * harness, not a measurement of the platform. Build with `make host FAULT_SELFTEST=1`. */
+/* Proves the fault guard, on any build. It dereferences a deliberately bad pointer; if
+ * the guard works the harness records this as a crash and the suite runs on, and if it
+ * does not the run ends here - which is itself the answer. Off by default: it is a test
+ * of the harness, not a measurement of the platform. Build with `make host
+ * FAULT_SELFTEST=1`. */
 static obs_result check_fault_guard_selftest(void) {
     volatile int *p = (volatile int *)0x8; /* below OBS_LOWEST_CALLABLE, never mapped */
     int v = *p;                            /* faults; the guard should catch it */
-    return obs_pass_value((uint64_t)(unsigned int)v); /* only reached if it did not fault */
+    return obs_pass_value(
+        (uint64_t)(unsigned int)v); /* only reached if it did not fault */
 }
 #endif
 

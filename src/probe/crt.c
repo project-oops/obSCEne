@@ -169,7 +169,8 @@ __attribute__((used, section(".sce_process_param"))) static const struct {
     .sdk_version_second = OBS_PROC_PARAM_SDK_PPR,
     .unknown = {0},
     /* Required by libkernel's initialization, which unconditionally writes to
-     * *(libc_param + 0x28). Leaving this null produces SIGSEGV at address 0x28. (D219) */
+     * *(libc_param + 0x28). Leaving this null produces SIGSEGV at address 0x28. (D219)
+     */
     .libc_param = &obs_libc_param,
     .mem_param = &obs_mem_param,
     .third_param = &obs_third_param,

@@ -2755,9 +2755,17 @@ fn run_hw_close_app(
             process.pid, process.state
         );
         if process.state == "SLEEP" || process.state == "STOP" {
-            let _ = pros_link::shell::run(&link, &format!("kill -s CONT {}", process.pid.trim()), Duration::from_secs(5));
+            let _ = pros_link::shell::run(
+                &link,
+                &format!("kill -s CONT {}", process.pid.trim()),
+                Duration::from_secs(5),
+            );
         }
-        let _ = pros_link::shell::run(&link, &format!("kill -s KILL {}", process.pid.trim()), Duration::from_secs(5));
+        let _ = pros_link::shell::run(
+            &link,
+            &format!("kill -s KILL {}", process.pid.trim()),
+            Duration::from_secs(5),
+        );
         for command in pros_core::system::end(process) {
             let _ = pros_link::shell::run(&link, &command, Duration::from_secs(5));
         }

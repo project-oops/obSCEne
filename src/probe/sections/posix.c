@@ -96,18 +96,30 @@ static int obs_posix_handle(void) {
 
 static void *obs_posix_symbol(const char *name) {
 #if defined(OBSCENE_HOST_BUILD)
-    if (obs_strcmp(name, "posix_getpagesize") == 0) return (void *)&posix_getpagesize;
-    if (obs_strcmp(name, "posix_sigemptyset") == 0) return (void *)&posix_sigemptyset;
-    if (obs_strcmp(name, "posix_sigfillset") == 0) return (void *)&posix_sigfillset;
-    if (obs_strcmp(name, "posix_sigaddset") == 0) return (void *)&posix_sigaddset;
-    if (obs_strcmp(name, "posix_sigdelset") == 0) return (void *)&posix_sigdelset;
-    if (obs_strcmp(name, "posix_sigismember") == 0) return (void *)&posix_sigismember;
-    if (obs_strcmp(name, "posix_usleep") == 0) return (void *)&posix_usleep;
-    if (obs_strcmp(name, "posix_pthread_rwlock_init") == 0) return (void *)&posix_pthread_rwlock_init;
-    if (obs_strcmp(name, "posix_pthread_rwlock_destroy") == 0) return (void *)&posix_pthread_rwlock_destroy;
-    if (obs_strcmp(name, "posix_pthread_rwlock_tryrdlock") == 0) return (void *)&posix_pthread_rwlock_tryrdlock;
-    if (obs_strcmp(name, "posix_pthread_rwlock_trywrlock") == 0) return (void *)&posix_pthread_rwlock_trywrlock;
-    if (obs_strcmp(name, "posix_pthread_rwlock_unlock") == 0) return (void *)&posix_pthread_rwlock_unlock;
+    if (obs_strcmp(name, "posix_getpagesize") == 0)
+        return (void *)&posix_getpagesize;
+    if (obs_strcmp(name, "posix_sigemptyset") == 0)
+        return (void *)&posix_sigemptyset;
+    if (obs_strcmp(name, "posix_sigfillset") == 0)
+        return (void *)&posix_sigfillset;
+    if (obs_strcmp(name, "posix_sigaddset") == 0)
+        return (void *)&posix_sigaddset;
+    if (obs_strcmp(name, "posix_sigdelset") == 0)
+        return (void *)&posix_sigdelset;
+    if (obs_strcmp(name, "posix_sigismember") == 0)
+        return (void *)&posix_sigismember;
+    if (obs_strcmp(name, "posix_usleep") == 0)
+        return (void *)&posix_usleep;
+    if (obs_strcmp(name, "posix_pthread_rwlock_init") == 0)
+        return (void *)&posix_pthread_rwlock_init;
+    if (obs_strcmp(name, "posix_pthread_rwlock_destroy") == 0)
+        return (void *)&posix_pthread_rwlock_destroy;
+    if (obs_strcmp(name, "posix_pthread_rwlock_tryrdlock") == 0)
+        return (void *)&posix_pthread_rwlock_tryrdlock;
+    if (obs_strcmp(name, "posix_pthread_rwlock_trywrlock") == 0)
+        return (void *)&posix_pthread_rwlock_trywrlock;
+    if (obs_strcmp(name, "posix_pthread_rwlock_unlock") == 0)
+        return (void *)&posix_pthread_rwlock_unlock;
     return NULL;
 #else
     int h = obs_posix_handle();
@@ -119,12 +131,18 @@ static void *obs_posix_symbol(const char *name) {
 }
 
 static obs_result check_signal_sets(void) {
-    fn_posix_sigemptyset_t fn_empty = (fn_posix_sigemptyset_t)obs_posix_symbol("posix_sigemptyset");
-    fn_posix_sigfillset_t fn_fill = (fn_posix_sigfillset_t)obs_posix_symbol("posix_sigfillset");
-    fn_posix_sigaddset_t fn_add = (fn_posix_sigaddset_t)obs_posix_symbol("posix_sigaddset");
-    fn_posix_sigdelset_t fn_del = (fn_posix_sigdelset_t)obs_posix_symbol("posix_sigdelset");
-    fn_posix_sigismember_t fn_member = (fn_posix_sigismember_t)obs_posix_symbol("posix_sigismember");
-    if (fn_empty == NULL || fn_fill == NULL || fn_add == NULL || fn_del == NULL || fn_member == NULL) {
+    fn_posix_sigemptyset_t fn_empty =
+        (fn_posix_sigemptyset_t)obs_posix_symbol("posix_sigemptyset");
+    fn_posix_sigfillset_t fn_fill =
+        (fn_posix_sigfillset_t)obs_posix_symbol("posix_sigfillset");
+    fn_posix_sigaddset_t fn_add =
+        (fn_posix_sigaddset_t)obs_posix_symbol("posix_sigaddset");
+    fn_posix_sigdelset_t fn_del =
+        (fn_posix_sigdelset_t)obs_posix_symbol("posix_sigdelset");
+    fn_posix_sigismember_t fn_member =
+        (fn_posix_sigismember_t)obs_posix_symbol("posix_sigismember");
+    if (fn_empty == NULL || fn_fill == NULL || fn_add == NULL || fn_del == NULL ||
+        fn_member == NULL) {
         return obs_skip("libScePosix is not available in this sandbox");
     }
     obs_sigset set;
@@ -164,8 +182,7 @@ static obs_result check_signal_sets(void) {
     if (fn_fill(&set) != 0) {
         return obs_fail("a full signal set could not be made");
     }
-    if (fn_member(&set, OBS_SIGNAL_A) != 1 ||
-        fn_member(&set, OBS_SIGNAL_B) != 1) {
+    if (fn_member(&set, OBS_SIGNAL_A) != 1 || fn_member(&set, OBS_SIGNAL_B) != 1) {
         return obs_fail("a set said to be full is missing a signal");
     }
     /* Empty after full, so the last call cannot be the one that happens to work on a
@@ -180,7 +197,8 @@ static obs_result check_signal_sets(void) {
 }
 
 static obs_result check_page_size(void) {
-    fn_posix_getpagesize_t fn = (fn_posix_getpagesize_t)obs_posix_symbol("posix_getpagesize");
+    fn_posix_getpagesize_t fn =
+        (fn_posix_getpagesize_t)obs_posix_symbol("posix_getpagesize");
     if (fn == NULL) {
         return obs_skip("libScePosix is not available in this sandbox");
     }
@@ -213,12 +231,18 @@ static obs_result check_short_sleep(void) {
 }
 
 static obs_result check_rwlock(void) {
-    fn_posix_rwlock_init_t fn_init = (fn_posix_rwlock_init_t)obs_posix_symbol("posix_pthread_rwlock_init");
-    fn_posix_rwlock_destroy_t fn_destroy = (fn_posix_rwlock_destroy_t)obs_posix_symbol("posix_pthread_rwlock_destroy");
-    fn_posix_rwlock_tryrdlock_t fn_tryrd = (fn_posix_rwlock_tryrdlock_t)obs_posix_symbol("posix_pthread_rwlock_tryrdlock");
-    fn_posix_rwlock_trywrlock_t fn_trywr = (fn_posix_rwlock_trywrlock_t)obs_posix_symbol("posix_pthread_rwlock_trywrlock");
-    fn_posix_rwlock_unlock_t fn_unlock = (fn_posix_rwlock_unlock_t)obs_posix_symbol("posix_pthread_rwlock_unlock");
-    if (fn_init == NULL || fn_destroy == NULL || fn_tryrd == NULL || fn_trywr == NULL || fn_unlock == NULL) {
+    fn_posix_rwlock_init_t fn_init =
+        (fn_posix_rwlock_init_t)obs_posix_symbol("posix_pthread_rwlock_init");
+    fn_posix_rwlock_destroy_t fn_destroy =
+        (fn_posix_rwlock_destroy_t)obs_posix_symbol("posix_pthread_rwlock_destroy");
+    fn_posix_rwlock_tryrdlock_t fn_tryrd =
+        (fn_posix_rwlock_tryrdlock_t)obs_posix_symbol("posix_pthread_rwlock_tryrdlock");
+    fn_posix_rwlock_trywrlock_t fn_trywr =
+        (fn_posix_rwlock_trywrlock_t)obs_posix_symbol("posix_pthread_rwlock_trywrlock");
+    fn_posix_rwlock_unlock_t fn_unlock =
+        (fn_posix_rwlock_unlock_t)obs_posix_symbol("posix_pthread_rwlock_unlock");
+    if (fn_init == NULL || fn_destroy == NULL || fn_tryrd == NULL || fn_trywr == NULL ||
+        fn_unlock == NULL) {
         return obs_skip("libScePosix is not available in this sandbox");
     }
     ObsPosixRwlock lock = 0;
@@ -267,12 +291,18 @@ static obs_result check_spellings_agree(void) {
         return obs_skip(
             "the vendor spelling is absent, so there is nothing to compare");
     }
-    fn_posix_rwlock_init_t fn_posix_init = (fn_posix_rwlock_init_t)obs_posix_symbol("posix_pthread_rwlock_init");
-    fn_posix_rwlock_destroy_t fn_posix_destroy = (fn_posix_rwlock_destroy_t)obs_posix_symbol("posix_pthread_rwlock_destroy");
-    fn_posix_rwlock_tryrdlock_t fn_posix_tryrd = (fn_posix_rwlock_tryrdlock_t)obs_posix_symbol("posix_pthread_rwlock_tryrdlock");
-    fn_posix_rwlock_trywrlock_t fn_posix_trywr = (fn_posix_rwlock_trywrlock_t)obs_posix_symbol("posix_pthread_rwlock_trywrlock");
-    fn_posix_rwlock_unlock_t fn_posix_unlock = (fn_posix_rwlock_unlock_t)obs_posix_symbol("posix_pthread_rwlock_unlock");
-    if (fn_posix_init == NULL || fn_posix_destroy == NULL || fn_posix_tryrd == NULL || fn_posix_trywr == NULL || fn_posix_unlock == NULL) {
+    fn_posix_rwlock_init_t fn_posix_init =
+        (fn_posix_rwlock_init_t)obs_posix_symbol("posix_pthread_rwlock_init");
+    fn_posix_rwlock_destroy_t fn_posix_destroy =
+        (fn_posix_rwlock_destroy_t)obs_posix_symbol("posix_pthread_rwlock_destroy");
+    fn_posix_rwlock_tryrdlock_t fn_posix_tryrd =
+        (fn_posix_rwlock_tryrdlock_t)obs_posix_symbol("posix_pthread_rwlock_tryrdlock");
+    fn_posix_rwlock_trywrlock_t fn_posix_trywr =
+        (fn_posix_rwlock_trywrlock_t)obs_posix_symbol("posix_pthread_rwlock_trywrlock");
+    fn_posix_rwlock_unlock_t fn_posix_unlock =
+        (fn_posix_rwlock_unlock_t)obs_posix_symbol("posix_pthread_rwlock_unlock");
+    if (fn_posix_init == NULL || fn_posix_destroy == NULL || fn_posix_tryrd == NULL ||
+        fn_posix_trywr == NULL || fn_posix_unlock == NULL) {
         return obs_skip("libScePosix is not available in this sandbox");
     }
 
@@ -341,8 +371,7 @@ static const obs_check posix_checks[] = {
     {"017-posix/short-sleep", "libScePosix", "posix_usleep", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_short_sleep, check_short_sleep, OBS_FROM_SPEC},
     {"017-posix/rwlock", "libScePosix", "posix_pthread_rwlock_init", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_rwlock, check_rwlock,
-     OBS_FROM_SPEC},
+     OBS_CAP_NONE, (const void *)check_rwlock, check_rwlock, OBS_FROM_SPEC},
     /* Assumed, not spec: no document says the two libraries must be one
      * implementation. It is a strong expectation and it is still this project's. */
     {"017-posix/spellings-agree", "libScePosix", "posix_pthread_rwlock_tryrdlock",

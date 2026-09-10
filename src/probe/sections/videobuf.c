@@ -410,10 +410,8 @@ static obs_result check_flip_alternates(void) {
 }
 
 static const char *const video_out_symbols[] = {
-    "sceVideoOutOpen",
-    "sceVideoOutGetBufferLabelAddress",
-    "sceVideoOutSubmitFlip",
-    "sceVideoOutRegisterBuffers",
+    "sceVideoOutOpen",          "sceVideoOutGetBufferLabelAddress",
+    "sceVideoOutSubmitFlip",    "sceVideoOutRegisterBuffers",
     "sceVideoOutGetFlipStatus",
 };
 
@@ -442,13 +440,16 @@ static obs_result check_payload_screen_reading(void) {
         void *dlsym_addr = NULL;
         if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
             for (size_t h = 0; h < handle_count && h < 128; h++) {
-                if (handles[h] <= 0) continue;
+                if (handles[h] <= 0)
+                    continue;
                 void *a = NULL;
-                if (sceKernelDlsym(handles[h], nid, &a) == 0 && obs_address_is_callable(a)) {
+                if (sceKernelDlsym(handles[h], nid, &a) == 0 &&
+                    obs_address_is_callable(a)) {
                     dlsym_addr = a;
                     break;
                 }
-                if (sceKernelDlsym(handles[h], name, &a) == 0 && obs_address_is_callable(a)) {
+                if (sceKernelDlsym(handles[h], name, &a) == 0 &&
+                    obs_address_is_callable(a)) {
                     dlsym_addr = a;
                     break;
                 }
@@ -457,7 +458,8 @@ static obs_result check_payload_screen_reading(void) {
                 void *a = NULL;
                 if (sceKernelDlsym(1, name, &a) == 0 && obs_address_is_callable(a)) {
                     dlsym_addr = a;
-                } else if (sceKernelDlsym(0x2001, name, &a) == 0 && obs_address_is_callable(a)) {
+                } else if (sceKernelDlsym(0x2001, name, &a) == 0 &&
+                           obs_address_is_callable(a)) {
                     dlsym_addr = a;
                 }
             }
@@ -472,7 +474,8 @@ static obs_result check_payload_screen_reading(void) {
         /* Route 2: kexport */
         void *kexport_addr = NULL;
         if (pargs != NULL && pargs->kexport_table != NULL) {
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 kexport_addr = (void *)ka;
             }
@@ -483,7 +486,8 @@ static obs_result check_payload_screen_reading(void) {
 #if !defined(OBSCENE_HOST_BUILD)
         if (pid > 0 && krw_is_ready()) {
             dyn_addr = krw_dynlib_resolve_any(pid, name);
-            if (dyn_addr < 0x10000UL || !obs_address_is_callable((const void *)dyn_addr)) {
+            if (dyn_addr < 0x10000UL ||
+                !obs_address_is_callable((const void *)dyn_addr)) {
                 dyn_addr = 0;
             }
         }
@@ -497,7 +501,8 @@ static obs_result check_payload_screen_reading(void) {
                            (uint64_t)dyn_addr, "address");
     }
 
-    /* Sysmodule test: try loading video sysmodule if sceSysmoduleLoadModule available */
+    /* Sysmodule test: try loading video sysmodule if sceSysmoduleLoadModule available
+     */
     int sys_load_rc = -1;
     if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
         sys_load_rc = sceSysmoduleLoadModule(0x000c);
@@ -506,13 +511,19 @@ static obs_result check_payload_screen_reading(void) {
                        (uint64_t)(uint32_t)sys_load_rc, "code");
 
     /* Architecture assessment:
-     * - composited screen reading route in unprivileged payload: 0 (no route without kernel RW)
-     * - oops_display in payload: 0 (title-only: no GPU library libSceAgc/libSceGnmDriver loaded)
-     * - direct memory mapping scanout: requires kernel RW to query display controller hardware registers
+     * - composited screen reading route in unprivileged payload: 0 (no route without
+     * kernel RW)
+     * - oops_display in payload: 0 (title-only: no GPU library
+     * libSceAgc/libSceGnmDriver loaded)
+     * - direct memory mapping scanout: requires kernel RW to query display controller
+     * hardware registers
      */
-    obs_report_measure("085-videobuf/payload-screen-reading", "composited-route", "accessible", 0, "status");
-    obs_report_measure("085-videobuf/payload-screen-reading", "oops-display-in-payload", "supported", 0, "bool");
-    obs_report_measure("085-videobuf/payload-screen-reading", "direct-memory-scanout", "needs-kernel-rw", 1, "bool");
+    obs_report_measure("085-videobuf/payload-screen-reading", "composited-route",
+                       "accessible", 0, "status");
+    obs_report_measure("085-videobuf/payload-screen-reading", "oops-display-in-payload",
+                       "supported", 0, "bool");
+    obs_report_measure("085-videobuf/payload-screen-reading", "direct-memory-scanout",
+                       "needs-kernel-rw", 1, "bool");
 
     return obs_pass();
 }
@@ -582,7 +593,8 @@ static uintptr_t find_proc_by_comm(const char *name) {
 }
 
 static long invoke_ioctl(int fd, unsigned long cmd, void *arg, int *err_out) {
-    long ret = obs_invoke_syscall(54 /*SYS_ioctl*/, (long)fd, (long)cmd, (long)arg, 0, 0, 0);
+    long ret =
+        obs_invoke_syscall(54 /*SYS_ioctl*/, (long)fd, (long)cmd, (long)arg, 0, 0, 0);
     if (err_out != NULL) {
         *err_out = (ret < 0) ? (int)(-ret) : 0;
     }
@@ -590,14 +602,11 @@ static long invoke_ioctl(int fd, unsigned long cmd, void *arg, int *err_out) {
 }
 
 static const uint32_t candidate_ioctls[] = {
-    0x00000000u, 0x00000001u, 0x00000002u, 0x00000003u, 0x00000004u,
-    0x20006400u, 0x20006401u, 0x20006402u, 0x20006403u,
-    0xc0206400u, 0xc0206401u, 0xc0206402u, 0xc0206403u,
-    0xc0206440u, 0xc0206441u, 0xc0206442u,
-    0x20004400u, 0x20004401u, 0x20004402u, 0x20004403u,
-    0xc0204400u, 0xc0204401u, 0xc0204402u, 0xc0204403u,
-    0x20007600u, 0x20007601u, 0xc0207600u, 0xc0207601u,
-    0x20004300u, 0xc0204300u,
+    0x00000000u, 0x00000001u, 0x00000002u, 0x00000003u, 0x00000004u, 0x20006400u,
+    0x20006401u, 0x20006402u, 0x20006403u, 0xc0206400u, 0xc0206401u, 0xc0206402u,
+    0xc0206403u, 0xc0206440u, 0xc0206441u, 0xc0206442u, 0x20004400u, 0x20004401u,
+    0x20004402u, 0x20004403u, 0xc0204400u, 0xc0204401u, 0xc0204402u, 0xc0204403u,
+    0x20007600u, 0x20007601u, 0xc0207600u, 0xc0207601u, 0x20004300u, 0xc0204300u,
     0x80000001u, 0xc0000001u,
 };
 #endif
@@ -651,17 +660,19 @@ static obs_result check_videobuf_scanout(void) {
                 uintptr_t start = 0, end = 0;
                 krw_copyout(entry + 0x20, &start, sizeof(start));
                 krw_copyout(entry + 0x28, &end, sizeof(end));
-                if (end > start && (end - start) >= 0x1FA0000ULL && (end - start) <= 0x3000000ULL) {
-                    obs_report_measure("085-videobuf/scanout", "comp-surface-start", "vaddr",
-                                       (uint64_t)start, "vaddr");
-                    obs_report_measure("085-videobuf/scanout", "comp-surface-end", "vaddr",
-                                       (uint64_t)end, "vaddr");
-                    obs_report_measure("085-videobuf/scanout", "comp-surface-size", "bytes",
-                                       (uint64_t)(end - start), "bytes");
+                if (end > start && (end - start) >= 0x1FA0000ULL &&
+                    (end - start) <= 0x3000000ULL) {
+                    obs_report_measure("085-videobuf/scanout", "comp-surface-start",
+                                       "vaddr", (uint64_t)start, "vaddr");
+                    obs_report_measure("085-videobuf/scanout", "comp-surface-end",
+                                       "vaddr", (uint64_t)end, "vaddr");
+                    obs_report_measure("085-videobuf/scanout", "comp-surface-size",
+                                       "bytes", (uint64_t)(end - start), "bytes");
                     found_map++;
                 }
                 uintptr_t next = 0;
-                if (krw_copyout(entry + 0x10, &next, sizeof(next)) != 0 || next == comp_root) {
+                if (krw_copyout(entry + 0x10, &next, sizeof(next)) != 0 ||
+                    next == comp_root) {
                     break;
                 }
                 entry = next;
@@ -690,31 +701,42 @@ static obs_result check_videobuf_scanout(void) {
                 const size_t strides[4] = {8, 16, 24, 32};
                 for (size_t s = 0; s < 4; s++) {
                     uintptr_t cand_fp = 0;
-                    if (krw_copyout(ofiles + (size_t)dce_fd * strides[s], &cand_fp, sizeof(cand_fp)) == 0) {
+                    if (krw_copyout(ofiles + (size_t)dce_fd * strides[s], &cand_fp,
+                                    sizeof(cand_fp)) == 0) {
                         if (cand_fp >= 0xffff800000000000ULL) {
                             uintptr_t cand_data = 0;
                             krw_copyout(cand_fp + 0x00, &cand_data, sizeof(cand_data));
                             if (cand_data >= 0xffff800000000000ULL) {
                                 for (size_t voff = 0x20; voff <= 0x80; voff += 8) {
                                     uintptr_t cand_cdev = 0;
-                                    krw_copyout(cand_data + voff, &cand_cdev, sizeof(cand_cdev));
+                                    krw_copyout(cand_data + voff, &cand_cdev,
+                                                sizeof(cand_cdev));
                                     if (cand_cdev >= 0xffff800000000000ULL) {
                                         uintptr_t cand_sw = 0;
-                                        krw_copyout(cand_cdev + 0x30, &cand_sw, sizeof(cand_sw));
+                                        krw_copyout(cand_cdev + 0x30, &cand_sw,
+                                                    sizeof(cand_sw));
                                         if (cand_sw < 0xffff800000000000ULL) {
-                                            krw_copyout(cand_cdev + 0x28, &cand_sw, sizeof(cand_sw));
+                                            krw_copyout(cand_cdev + 0x28, &cand_sw,
+                                                        sizeof(cand_sw));
                                         }
                                         if (cand_sw >= 0xffff800000000000ULL) {
                                             uintptr_t cand_name = 0;
-                                            krw_copyout(cand_sw + 0x08, &cand_name, sizeof(cand_name));
+                                            krw_copyout(cand_sw + 0x08, &cand_name,
+                                                        sizeof(cand_name));
                                             char nbuf[16];
                                             memset(nbuf, 0, sizeof(nbuf));
                                             if (cand_name >= 0xffff800000000000ULL &&
-                                                krw_copyout(cand_name, nbuf, sizeof(nbuf) - 1) == 0) {
+                                                krw_copyout(cand_name, nbuf,
+                                                            sizeof(nbuf) - 1) == 0) {
                                                 if (obs_strcmp(nbuf, "dce") == 0) {
-                                                    memcpy(d_name_str, nbuf, sizeof(d_name_str));
-                                                    krw_copyout(cand_sw + 0x38, &d_ioctl_addr, sizeof(d_ioctl_addr));
-                                                    krw_copyout(cand_sw + 0x48, &d_mmap_addr, sizeof(d_mmap_addr));
+                                                    memcpy(d_name_str, nbuf,
+                                                           sizeof(d_name_str));
+                                                    krw_copyout(cand_sw + 0x38,
+                                                                &d_ioctl_addr,
+                                                                sizeof(d_ioctl_addr));
+                                                    krw_copyout(cand_sw + 0x48,
+                                                                &d_mmap_addr,
+                                                                sizeof(d_mmap_addr));
                                                     break;
                                                 }
                                             }
@@ -722,7 +744,8 @@ static obs_result check_videobuf_scanout(void) {
                                     }
                                 }
                             }
-                            if (d_ioctl_addr != 0) break;
+                            if (d_ioctl_addr != 0)
+                                break;
                         }
                     }
                 }
@@ -730,7 +753,8 @@ static obs_result check_videobuf_scanout(void) {
         }
 
         if (d_name_str[0] != '\0') {
-            obs_report_measure("085-videobuf/scanout", "dce-devsw", "d_name", 1, "found");
+            obs_report_measure("085-videobuf/scanout", "dce-devsw", "d_name", 1,
+                               "found");
         }
         obs_report_measure("085-videobuf/scanout", "dce-devsw", "d_ioctl",
                            (uint64_t)d_ioctl_addr, "vaddr");
@@ -747,8 +771,12 @@ static obs_result check_videobuf_scanout(void) {
 
             char cmd_tag[32];
             memset(cmd_tag, 0, sizeof(cmd_tag));
-            cmd_tag[0] = 'i'; cmd_tag[1] = 'o'; cmd_tag[2] = 'c'; cmd_tag[3] = 't';
-            cmd_tag[4] = 'l'; cmd_tag[5] = '-';
+            cmd_tag[0] = 'i';
+            cmd_tag[1] = 'o';
+            cmd_tag[2] = 'c';
+            cmd_tag[3] = 't';
+            cmd_tag[4] = 'l';
+            cmd_tag[5] = '-';
             size_t hlen = obs_format_hex(cmd_tag + 6, cmd);
             cmd_tag[6 + hlen] = '\0';
 
@@ -759,11 +787,14 @@ static obs_result check_videobuf_scanout(void) {
         }
 
         /* Test mmap on /dev/dce */
-        void *mmap_res = (void *)obs_invoke_syscall(477 /*SYS_mmap*/, 0, 0x1000, 3 /*PROT_RW*/, 1 /*MAP_SHARED*/, (long)dce_fd, 0);
+        void *mmap_res =
+            (void *)obs_invoke_syscall(477 /*SYS_mmap*/, 0, 0x1000, 3 /*PROT_RW*/,
+                                       1 /*MAP_SHARED*/, (long)dce_fd, 0);
         obs_report_measure("085-videobuf/scanout", "mmap-dce", "rc",
                            (uint64_t)(uintptr_t)mmap_res, "address");
         if ((uintptr_t)mmap_res < 0x800000000000ULL && (uintptr_t)mmap_res > 0x1000UL) {
-            (void)obs_invoke_syscall(73 /*SYS_munmap*/, (long)mmap_res, 0x1000, 0, 0, 0, 0);
+            (void)obs_invoke_syscall(73 /*SYS_munmap*/, (long)mmap_res, 0x1000, 0, 0, 0,
+                                     0);
         }
 
         if (obs_address_is_callable((const void *)&sceKernelClose)) {
@@ -776,31 +807,34 @@ static obs_result check_videobuf_scanout(void) {
     uint64_t scanout_phys1 = 0x4042400000ULL;
     uint64_t width = 3840;
     uint64_t height = 2160;
-    uint64_t stride = 15360; /* 3840 * 4 */
+    uint64_t stride = 15360;         /* 3840 * 4 */
     uint64_t format = 0x80000000ULL; /* SDR B8G8R8A8_UNORM */
 
     obs_report_measure("085-videobuf/scanout", "scanout-buffer-0", "physical-address",
                        scanout_phys0, "address");
     obs_report_measure("085-videobuf/scanout", "scanout-buffer-1", "physical-address",
                        scanout_phys1, "address");
-    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "width",
-                       width, "pixels");
-    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "height",
-                       height, "pixels");
-    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "stride",
-                       stride, "bytes");
-    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "format",
-                       format, "raw");
+    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "width", width,
+                       "pixels");
+    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "height", height,
+                       "pixels");
+    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "stride", stride,
+                       "bytes");
+    obs_report_measure("085-videobuf/scanout", "scanout-geometry", "format", format,
+                       "raw");
 
     /* 4. Page Table Mapping & first 64 bytes read */
-    void *target_vaddr = (void *)obs_invoke_syscall(477 /*SYS_mmap*/, 0, 0x200000, 3 /*PROT_RW*/, 0x1002 /*MAP_ANON|MAP_PRIVATE*/, -1, 0);
+    void *target_vaddr =
+        (void *)obs_invoke_syscall(477 /*SYS_mmap*/, 0, 0x200000, 3 /*PROT_RW*/,
+                                   0x1002 /*MAP_ANON|MAP_PRIVATE*/, -1, 0);
     int pte_written = 0;
     uintptr_t target_pte_addr = 0;
     uint64_t orig_pte_val = 0;
     uint64_t new_pte_val = 0;
     uint64_t pte_level = 0;
 
-    if ((uintptr_t)target_vaddr > 0x1000UL && (uintptr_t)target_vaddr < 0x800000000000ULL && kproc != 0) {
+    if ((uintptr_t)target_vaddr > 0x1000UL &&
+        (uintptr_t)target_vaddr < 0x800000000000ULL && kproc != 0) {
         *(volatile unsigned char *)target_vaddr = 0x55; /* fault in page table */
 
         uintptr_t vmspace = 0;
@@ -808,21 +842,25 @@ static obs_result check_videobuf_scanout(void) {
         uintptr_t pm_pml4 = 0;
 
         if (vmspace != 0) {
-            const uintptr_t pmap_offsets[] = {0x2e8, 0x2e0, 0x2c0, 0x240, 0x250, 0x260, 0x270, 0x280};
+            const uintptr_t pmap_offsets[] = {0x2e8, 0x2e0, 0x2c0, 0x240,
+                                              0x250, 0x260, 0x270, 0x280};
             for (size_t p = 0; p < OBS_COUNT(pmap_offsets); p++) {
                 uintptr_t pmap = vmspace + pmap_offsets[p];
                 for (size_t poff = 0x00; poff <= 0x80; poff += 8) {
                     uintptr_t cand = 0;
                     if (krw_copyout(pmap + poff, &cand, sizeof(cand)) == 0) {
                         uintptr_t cand_va = 0;
-                        if (cand >= 0xffff800000000000ULL && cand < 0xffffff8000000000ULL) {
+                        if (cand >= 0xffff800000000000ULL &&
+                            cand < 0xffffff8000000000ULL) {
                             cand_va = cand;
-                        } else if (cand > 0x1000UL && cand < 0x4000000000ULL && (cand & 0xfff) == 0) {
+                        } else if (cand > 0x1000UL && cand < 0x4000000000ULL &&
+                                   (cand & 0xfff) == 0) {
                             cand_va = 0xffff800000000000ULL + cand;
                         }
                         if (cand_va != 0) {
                             uint64_t entry511 = 0;
-                            if (krw_copyout(cand_va + 511 * 8, &entry511, sizeof(entry511)) == 0) {
+                            if (krw_copyout(cand_va + 511 * 8, &entry511,
+                                            sizeof(entry511)) == 0) {
                                 if ((entry511 & 1) != 0) {
                                     pm_pml4 = cand_va;
                                     break;
@@ -863,16 +901,19 @@ static obs_result check_videobuf_scanout(void) {
                             pte_level = 2;
                             target_pte_addr = pd_ent_addr;
                             orig_pte_val = pd_ent;
-                            new_pte_val = scanout_phys0 | (orig_pte_val & 0x1FFFFF) | 0x87ULL;
+                            new_pte_val =
+                                scanout_phys0 | (orig_pte_val & 0x1FFFFF) | 0x87ULL;
                         } else {
                             uint64_t pt_pa = pd_ent & 0x000FFFFFFFFFF000ULL;
                             uintptr_t pt_va = 0xffff800000000000ULL + pt_pa;
                             uintptr_t pt_idx = (va >> 12) & 0x1FF;
                             target_pte_addr = pt_va + pt_idx * 8;
                             orig_pte_val = 0;
-                            krw_copyout(target_pte_addr, &orig_pte_val, sizeof(orig_pte_val));
+                            krw_copyout(target_pte_addr, &orig_pte_val,
+                                        sizeof(orig_pte_val));
                             pte_level = 1;
-                            new_pte_val = scanout_phys0 | (orig_pte_val & 0xFFF) | 0x07ULL;
+                            new_pte_val =
+                                scanout_phys0 | (orig_pte_val & 0xFFF) | 0x07ULL;
                         }
 
                         if (target_pte_addr != 0) {
@@ -886,12 +927,12 @@ static obs_result check_videobuf_scanout(void) {
         }
     }
 
-    obs_report_measure("085-videobuf/scanout", "page-table-entry", "level",
-                       pte_level, "raw");
+    obs_report_measure("085-videobuf/scanout", "page-table-entry", "level", pte_level,
+                       "raw");
     obs_report_measure("085-videobuf/scanout", "page-table-entry", "address",
                        (uint64_t)target_pte_addr, "vaddr");
-    obs_report_measure("085-videobuf/scanout", "page-table-entry", "value",
-                       new_pte_val, "raw");
+    obs_report_measure("085-videobuf/scanout", "page-table-entry", "value", new_pte_val,
+                       "raw");
     obs_report_measure("085-videobuf/scanout", "page-table-entry", "vaddr",
                        (uint64_t)(uintptr_t)target_vaddr, "vaddr");
 
@@ -903,7 +944,8 @@ static obs_result check_videobuf_scanout(void) {
         obs_jmp_buf jb;
         int sig = OBS_FAULT_ARM(&jb);
         if (sig == 0) {
-            volatile const unsigned char *src = (volatile const unsigned char *)target_vaddr;
+            volatile const unsigned char *src =
+                (volatile const unsigned char *)target_vaddr;
             for (size_t i = 0; i < sizeof(buf64); i++) {
                 buf64[i] = src[i];
             }
@@ -919,7 +961,8 @@ static obs_result check_videobuf_scanout(void) {
             krw_write64(target_pte_addr, orig_pte_val);
             obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
         }
-        (void)obs_invoke_syscall(73 /*SYS_munmap*/, (long)target_vaddr, 0x200000, 0, 0, 0, 0);
+        (void)obs_invoke_syscall(73 /*SYS_munmap*/, (long)target_vaddr, 0x200000, 0, 0,
+                                 0, 0);
     } else {
         uintptr_t dmap_vaddr = 0xffff800000000000ULL + (uintptr_t)scanout_phys0;
         int read_rc = krw_copyout(dmap_vaddr, buf64, sizeof(buf64));
@@ -937,8 +980,8 @@ static obs_result check_videobuf_scanout(void) {
 
     if (read_success) {
         for (unsigned int off = 0; off < 64u; off += 16u) {
-            obs_report_bytes("085-videobuf/scanout", "scanout", "first-64-bytes",
-                             off, &buf64[off], 16u);
+            obs_report_bytes("085-videobuf/scanout", "scanout", "first-64-bytes", off,
+                             &buf64[off], 16u);
         }
         int non_zero = 0;
         for (size_t i = 0; i < sizeof(buf64); i++) {
@@ -954,10 +997,10 @@ static obs_result check_videobuf_scanout(void) {
     /* 5. Flip counter sampling (1 second apart) */
     uint64_t flip_cnt1 = 0;
     uint64_t flip_idx1 = 0;
-    obs_report_measure("085-videobuf/scanout", "flip-sample-1", "count",
-                       flip_cnt1, "count");
-    obs_report_measure("085-videobuf/scanout", "flip-sample-1", "index",
-                       flip_idx1, "index");
+    obs_report_measure("085-videobuf/scanout", "flip-sample-1", "count", flip_cnt1,
+                       "count");
+    obs_report_measure("085-videobuf/scanout", "flip-sample-1", "index", flip_idx1,
+                       "index");
 
     if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
         (void)sceKernelUsleep(1000000u);
@@ -965,10 +1008,10 @@ static obs_result check_videobuf_scanout(void) {
 
     uint64_t flip_cnt2 = 0;
     uint64_t flip_idx2 = 0;
-    obs_report_measure("085-videobuf/scanout", "flip-sample-2", "count",
-                       flip_cnt2, "count");
-    obs_report_measure("085-videobuf/scanout", "flip-sample-2", "index",
-                       flip_idx2, "index");
+    obs_report_measure("085-videobuf/scanout", "flip-sample-2", "count", flip_cnt2,
+                       "count");
+    obs_report_measure("085-videobuf/scanout", "flip-sample-2", "index", flip_idx2,
+                       "index");
     obs_report_measure("085-videobuf/scanout", "flip-counter-delta", "delta",
                        (uint64_t)(flip_cnt2 - flip_cnt1), "count");
 
@@ -988,36 +1031,35 @@ static obs_result check_videobuf_reduction(void) {
     /* Primary scanout planes already identified */
     obs_report_measure("085-videobuf/reduction", "primary-scanout-0", "address",
                        0x4040200000ULL, "address");
-    obs_report_measure("085-videobuf/reduction", "primary-scanout-0", "width",
-                       3840, "pixels");
-    obs_report_measure("085-videobuf/reduction", "primary-scanout-0", "height",
-                       2160, "pixels");
-    obs_report_measure("085-videobuf/reduction", "primary-scanout-0", "stride",
-                       15360, "bytes");
+    obs_report_measure("085-videobuf/reduction", "primary-scanout-0", "width", 3840,
+                       "pixels");
+    obs_report_measure("085-videobuf/reduction", "primary-scanout-0", "height", 2160,
+                       "pixels");
+    obs_report_measure("085-videobuf/reduction", "primary-scanout-0", "stride", 15360,
+                       "bytes");
 
     obs_report_measure("085-videobuf/reduction", "primary-scanout-1", "address",
                        0x4042400000ULL, "address");
-    obs_report_measure("085-videobuf/reduction", "primary-scanout-1", "width",
-                       3840, "pixels");
-    obs_report_measure("085-videobuf/reduction", "primary-scanout-1", "height",
-                       2160, "pixels");
-    obs_report_measure("085-videobuf/reduction", "primary-scanout-1", "stride",
-                       15360, "bytes");
+    obs_report_measure("085-videobuf/reduction", "primary-scanout-1", "width", 3840,
+                       "pixels");
+    obs_report_measure("085-videobuf/reduction", "primary-scanout-1", "height", 2160,
+                       "pixels");
+    obs_report_measure("085-videobuf/reduction", "primary-scanout-1", "stride", 15360,
+                       "bytes");
 
     /* Secondary / preview / thumbnail planes */
-    obs_report_measure("085-videobuf/reduction", "secondary-plane", "exists",
-                       0, "bool");
-    obs_report_measure("085-videobuf/reduction", "preview-plane", "exists",
-                       0, "bool");
-    obs_report_measure("085-videobuf/reduction", "thumbnail-plane", "exists",
-                       0, "bool");
+    obs_report_measure("085-videobuf/reduction", "secondary-plane", "exists", 0,
+                       "bool");
+    obs_report_measure("085-videobuf/reduction", "preview-plane", "exists", 0, "bool");
+    obs_report_measure("085-videobuf/reduction", "thumbnail-plane", "exists", 0,
+                       "bool");
 
     /* Probe other potential display device nodes */
-    static const char *const disp_devs[] = {
-        "/dev/dce0", "/dev/dce1", "/dev/fb0", "/dev/fb1", "/dev/video0", "/dev/drm"
-    };
+    static const char *const disp_devs[] = {"/dev/dce0", "/dev/dce1",   "/dev/fb0",
+                                            "/dev/fb1",  "/dev/video0", "/dev/drm"};
     for (size_t i = 0; i < OBS_COUNT(disp_devs); i++) {
-        int fd = (int)obs_invoke_syscall(5 /*SYS_open*/, (long)disp_devs[i], 0 /*O_RDONLY*/, 0, 0, 0, 0);
+        int fd = (int)obs_invoke_syscall(5 /*SYS_open*/, (long)disp_devs[i],
+                                         0 /*O_RDONLY*/, 0, 0, 0, 0);
         int exists = (fd > 0);
         obs_report_measure("085-videobuf/reduction", disp_devs[i], "exists",
                            (uint64_t)exists, "bool");
@@ -1027,7 +1069,8 @@ static obs_result check_videobuf_reduction(void) {
     }
 
     /* (b) Scaled or partial read via controller ioctl or sub-rectangle */
-    int dce_fd = (int)obs_invoke_syscall(5 /*SYS_open*/, (long)"/dev/dce", 0 /*O_RDONLY*/, 0, 0, 0, 0);
+    int dce_fd = (int)obs_invoke_syscall(5 /*SYS_open*/, (long)"/dev/dce",
+                                         0 /*O_RDONLY*/, 0, 0, 0, 0);
     int downscale_rc = -1;
     int downscale_errno = 1;
     int subrect_rc = -1;
@@ -1036,17 +1079,21 @@ static obs_result check_videobuf_reduction(void) {
     if (dce_fd > 0) {
         uint64_t ioctl_arg[8] = {0};
         /* Downscale readback command probe */
-        downscale_rc = (int)obs_invoke_syscall(54 /*SYS_ioctl*/, (long)dce_fd, (long)0xc0186420, (long)ioctl_arg, 0, 0, 0);
+        downscale_rc = (int)obs_invoke_syscall(
+            54 /*SYS_ioctl*/, (long)dce_fd, (long)0xc0186420, (long)ioctl_arg, 0, 0, 0);
         if (downscale_rc < 0) {
-            downscale_errno = (obs_address_is_callable((const void *)&__error)) ? *__error() : 1;
+            downscale_errno =
+                (obs_address_is_callable((const void *)&__error)) ? *__error() : 1;
         } else {
             downscale_errno = 0;
         }
 
         /* Sub-rectangle readback command probe */
-        subrect_rc = (int)obs_invoke_syscall(54 /*SYS_ioctl*/, (long)dce_fd, (long)0xc0206430, (long)ioctl_arg, 0, 0, 0);
+        subrect_rc = (int)obs_invoke_syscall(
+            54 /*SYS_ioctl*/, (long)dce_fd, (long)0xc0206430, (long)ioctl_arg, 0, 0, 0);
         if (subrect_rc < 0) {
-            subrect_errno = (obs_address_is_callable((const void *)&__error)) ? *__error() : 1;
+            subrect_errno =
+                (obs_address_is_callable((const void *)&__error)) ? *__error() : 1;
         } else {
             subrect_errno = 0;
         }
@@ -1066,10 +1113,10 @@ static obs_result check_videobuf_reduction(void) {
                        (uint64_t)(uint32_t)subrect_errno, "errno");
 
     /* VideoOut scaler symbols */
-    obs_report_measure("085-videobuf/reduction", "sceVideoOutSysUpdateScalerParameters", "resolved",
-                       0, "bool");
-    obs_report_measure("085-videobuf/reduction", "sceVideoOutSysSetZoomBuffers", "resolved",
-                       0, "bool");
+    obs_report_measure("085-videobuf/reduction", "sceVideoOutSysUpdateScalerParameters",
+                       "resolved", 0, "bool");
+    obs_report_measure("085-videobuf/reduction", "sceVideoOutSysSetZoomBuffers",
+                       "resolved", 0, "bool");
 
     /* Strided partial read capability by payload CPU */
     obs_report_measure("085-videobuf/reduction", "strided-cpu-readback", "accessible",
@@ -1094,9 +1141,9 @@ static const obs_check videobuf_checks[] = {
     {"085-videobuf/payload-screen-reading", "libSceVideoOut", "sceVideoOutOpen",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_payload_screen_reading,
      check_payload_screen_reading, OBS_FROM_DERIVED},
-    {"085-videobuf/scanout", "libSceVideoOut", "krw_copyout",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_videobuf_scanout,
-     check_videobuf_scanout, OBS_FROM_DERIVED},
+    {"085-videobuf/scanout", "libSceVideoOut", "krw_copyout", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_videobuf_scanout, check_videobuf_scanout,
+     OBS_FROM_DERIVED},
     {"085-videobuf/reduction", "libSceVideoOut", "sceVideoOutSysUpdateScalerParameters",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_videobuf_reduction,
      check_videobuf_reduction, OBS_FROM_DERIVED},

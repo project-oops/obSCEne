@@ -146,7 +146,8 @@ static obs_result check_direct_memory_query(void) {
         if (pargs != NULL && pargs->kexport_table != NULL) {
             char nid[12];
             obs_compute_nid("sceKernelDirectMemoryQuery", nid);
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 fn_query = (int (*)(sce_off_t, int, void *, size_t))ka;
             }
@@ -154,14 +155,17 @@ static obs_result check_direct_memory_query(void) {
     }
     if (fn_query == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
         void *a = NULL;
-        if (sceKernelDlsym(0x2001, "sceKernelDirectMemoryQuery", &a) == 0 && obs_address_is_callable(a)) {
+        if (sceKernelDlsym(0x2001, "sceKernelDirectMemoryQuery", &a) == 0 &&
+            obs_address_is_callable(a)) {
             fn_query = (int (*)(sce_off_t, int, void *, size_t))a;
-        } else if (sceKernelDlsym(0x2001, "BHouLQzh0X0", &a) == 0 && obs_address_is_callable(a)) {
+        } else if (sceKernelDlsym(0x2001, "BHouLQzh0X0", &a) == 0 &&
+                   obs_address_is_callable(a)) {
             fn_query = (int (*)(sce_off_t, int, void *, size_t))a;
         }
     }
     if (fn_query == NULL) {
-        const void *sym_self = obs_module_symbol(OBS_HANDLE_SELF, "sceKernelDirectMemoryQuery");
+        const void *sym_self =
+            obs_module_symbol(OBS_HANDLE_SELF, "sceKernelDirectMemoryQuery");
         if (sym_self != NULL && obs_address_is_callable(sym_self)) {
             fn_query = (int (*)(sce_off_t, int, void *, size_t))sym_self;
         }
@@ -175,15 +179,16 @@ static obs_result check_direct_memory_query(void) {
 
     unsigned char buf[64];
 
-    /* (1) Query offset 0x0 with flags = 0, passing a 64-byte buffer pre-filled with 0xAA */
+    /* (1) Query offset 0x0 with flags = 0, passing a 64-byte buffer pre-filled with
+     * 0xAA */
     memset(buf, 0xAA, sizeof(buf));
     for (unsigned int off = 0; off < 64u; off += 16u) {
         obs_report_bytes("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
                          "before-flags-0", off, &buf[off], 16u);
     }
     int rc0 = fn_query(0, 0, buf, sizeof(buf));
-    obs_report_measure("130-layout/direct-memory-query", "offset-0-flags-0",
-                       "rc", (uint64_t)(uint32_t)rc0, "code");
+    obs_report_measure("130-layout/direct-memory-query", "offset-0-flags-0", "rc",
+                       (uint64_t)(uint32_t)rc0, "code");
     for (unsigned int off = 0; off < 64u; off += 16u) {
         obs_report_bytes("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
                          "after-flags-0", off, &buf[off], 16u);
@@ -196,8 +201,8 @@ static obs_result check_direct_memory_query(void) {
         memcpy(&f0_flags, &buf[16], 8);
         obs_report_measure("130-layout/direct-memory-query", "flags-0-field-0-start",
                            "raw", f0_start, "address");
-        obs_report_measure("130-layout/direct-memory-query", "flags-0-field-1-extent-or-end",
-                           "raw", f0_field1, "raw");
+        obs_report_measure("130-layout/direct-memory-query",
+                           "flags-0-field-1-extent-or-end", "raw", f0_field1, "raw");
         obs_report_measure("130-layout/direct-memory-query", "flags-0-field-2-flags",
                            "raw", f0_flags, "raw");
     }
@@ -209,8 +214,8 @@ static obs_result check_direct_memory_query(void) {
                          "before-flags-1", off, &buf[off], 16u);
     }
     int rc1 = fn_query(0, 1, buf, sizeof(buf));
-    obs_report_measure("130-layout/direct-memory-query", "offset-0-flags-1",
-                       "rc", (uint64_t)(uint32_t)rc1, "code");
+    obs_report_measure("130-layout/direct-memory-query", "offset-0-flags-1", "rc",
+                       (uint64_t)(uint32_t)rc1, "code");
     for (unsigned int off = 0; off < 64u; off += 16u) {
         obs_report_bytes("130-layout/direct-memory-query", "sceKernelDirectMemoryQuery",
                          "after-flags-1", off, &buf[off], 16u);
@@ -222,26 +227,29 @@ static obs_result check_direct_memory_query(void) {
         memcpy(&f1_field1, &buf[8], 8);
         obs_report_measure("130-layout/direct-memory-query", "flags-1-field-0-start",
                            "raw", f1_start, "address");
-        obs_report_measure("130-layout/direct-memory-query", "flags-1-field-1-extent-or-end",
-                           "raw", f1_field1, "raw");
+        obs_report_measure("130-layout/direct-memory-query",
+                           "flags-1-field-1-extent-or-end", "raw", f1_field1, "raw");
 
         /* Query subsequent region to clarify field 2: region_end vs region_size */
-        uint64_t next_probe_off = (f0_field1 > f0_start) ? f0_field1 : (f0_start + f0_field1);
+        uint64_t next_probe_off =
+            (f0_field1 > f0_start) ? f0_field1 : (f0_start + f0_field1);
         memset(buf, 0xAA, sizeof(buf));
         int rc_subseq = fn_query((sce_off_t)next_probe_off, 1, buf, sizeof(buf));
-        obs_report_measure("130-layout/direct-memory-query", "subsequent-query",
-                           "rc", (uint64_t)(uint32_t)rc_subseq, "code");
+        obs_report_measure("130-layout/direct-memory-query", "subsequent-query", "rc",
+                           (uint64_t)(uint32_t)rc_subseq, "code");
         if (rc_subseq == 0) {
             uint64_t sub_start = 0, sub_field1 = 0;
             memcpy(&sub_start, &buf[0], 8);
             memcpy(&sub_field1, &buf[8], 8);
             obs_report_measure("130-layout/direct-memory-query", "subseq-field-0-start",
                                "raw", sub_start, "address");
-            obs_report_measure("130-layout/direct-memory-query", "subseq-field-1-extent-or-end",
-                               "raw", sub_field1, "raw");
+            obs_report_measure("130-layout/direct-memory-query",
+                               "subseq-field-1-extent-or-end", "raw", sub_field1,
+                               "raw");
             int is_absolute_end = (sub_field1 > sub_start && sub_start > 0);
-            obs_report_measure("130-layout/direct-memory-query", "field-1-is-absolute-end",
-                               "verdict", (uint64_t)is_absolute_end, "bool");
+            obs_report_measure("130-layout/direct-memory-query",
+                               "field-1-is-absolute-end", "verdict",
+                               (uint64_t)is_absolute_end, "bool");
         }
     }
 
@@ -1121,18 +1129,16 @@ static const obs_check layout_checks[] = {
     {"130-layout/network-interfaces", "libSceNet", "getifaddrs", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_network_interface_layout,
      check_network_interface_layout, OBS_FROM_ASSUMED},
-    {"130-layout/app-content-layout", "libSceAppContent",
-     "sceAppContentInitialize", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_app_content_layout, check_app_content_layout,
-     OBS_FROM_ASSUMED},
+    {"130-layout/app-content-layout", "libSceAppContent", "sceAppContentInitialize",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_app_content_layout,
+     check_app_content_layout, OBS_FROM_ASSUMED},
     {"130-layout/common-dialog-layout", "libSceCommonDialog",
      "sceCommonDialogInitialize", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_common_dialog_layout, check_common_dialog_layout,
      OBS_FROM_ASSUMED},
-    {"130-layout/savedata-layout", "libSceSaveData",
-     "sceSaveDataInitialize3", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_savedata_layout, check_savedata_layout,
-     OBS_FROM_ASSUMED},
+    {"130-layout/savedata-layout", "libSceSaveData", "sceSaveDataInitialize3",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_savedata_layout,
+     check_savedata_layout, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_layout = {

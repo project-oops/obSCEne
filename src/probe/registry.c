@@ -29,8 +29,8 @@ const obs_section *const obs_sections[] = {
      * emulator said it had just fixed - see src/sections/sync.c. */
     &obs_section_sync,
     /* The bounds of what sync just established, before the section that reads the same
-     * primitives under their POSIX names. It calls only the non-blocking `Poll` forms of
-     * the very symbols above, so a reader has the "does it work" verdicts before the
+     * primitives under their POSIX names. It calls only the non-blocking `Poll` forms
+     * of the very symbols above, so a reader has the "does it work" verdicts before the
      * "what do its edges do" measurements. */
     &obs_section_syncbounds,
     /* POSIX under its own names, after the vendor spelling of the same locks: the
@@ -43,17 +43,17 @@ const obs_section *const obs_sections[] = {
     &obs_section_relational,
     /* The failure convention of the POSIX-named exports, after the relations that
      * exercise the vendor spelling of the same calls. It resolves the posix_ names from
-     * libScePosix, falling back to libkernel - which exports them and always loads, where
-     * libScePosix does not in the app sandbox - and needs nothing the sections below it
-     * establish, so it sits with the other POSIX-facing work rather than among the
-     * resources. */
+     * libScePosix, falling back to libkernel - which exports them and always loads,
+     * where libScePosix does not in the app sandbox - and needs nothing the sections
+     * below it establish, so it sits with the other POSIX-facing work rather than among
+     * the resources. */
     &obs_section_posixerr,
     /* Resources everything else is built from. */
     &obs_section_memory,
     &obs_section_thread,
-    /* The stack a thread stands on, immediately after the section that proves one can be
-     * made: it asks the platform to describe the calling thread, which is the sequence
-     * three retail titles run before their collector scans. */
+    /* The stack a thread stands on, immediately after the section that proves one can
+     * be made: it asks the platform to describe the calling thread, which is the
+     * sequence three retail titles run before their collector scans. */
     &obs_section_stackattr,
     /* The futex, after the thread section whose capability its waiter needs. It cannot
      * sit with the other synchronisation sections above, because those run before
@@ -87,9 +87,9 @@ const obs_section *const obs_sections[] = {
     &obs_section_input_ext,
     /* Network reachability, for Porthole (D329). */
     &obs_section_net,
-    /* System UI reachability (REQ-20260909T2157Z-5b1e): probes SceShellUI process identity,
-     * mapped WebKit/JavaScript modules, export reachability across 3 routes, JS evaluation
-     * entry points, and process takeover refusal. */
+    /* System UI reachability (REQ-20260909T2157Z-5b1e): probes SceShellUI process
+     * identity, mapped WebKit/JavaScript modules, export reachability across 3 routes,
+     * JS evaluation entry points, and process takeover refusal. */
     &obs_section_shellui,
     /* Recording, last of the presentation layer: it drives the encoder behind the same
      * output the video section acquires, so a reader wants to know whether that output
@@ -100,11 +100,11 @@ const obs_section *const obs_sections[] = {
      * Putting it after the census read fine in the registry and failed the gate. */
     &obs_section_record,
     &obs_section_encoder,
-    /* The decode side of the media stack, right after the encoder census it mirrors: same
-     * resolve-and-record shape, the other direction (turning a stream into frames and PCM
-     * rather than the reverse). These name the libraries an `oops/videodec.h` and
-     * `oops/audiodec.h` would be built on, and a hardware run is what confirms the names.
-     * Neither calls a decoder - the structure layouts are unconfirmed. */
+    /* The decode side of the media stack, right after the encoder census it mirrors:
+     * same resolve-and-record shape, the other direction (turning a stream into frames
+     * and PCM rather than the reverse). These name the libraries an `oops/videodec.h`
+     * and `oops/audiodec.h` would be built on, and a hardware run is what confirms the
+     * names. Neither calls a decoder - the structure layouts are unconfirmed. */
     &obs_section_videodec,
     &obs_section_audiodec,
     /* What the platform actually has, before the census that tests a list we wrote.

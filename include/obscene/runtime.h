@@ -23,13 +23,13 @@ void obs_write(const char *bytes, size_t len);
  * is shaped like a libkernel export. Call once at entry. See src/runtime.c. */
 void obs_bootstrap_payload_output(unsigned long payload_args_word0);
 
-/* Bootstrap the output channel for a native title, which has no payload args to bootstrap
- * from. Resolves the klog and write entry points by name through the loader's own
- * sceKernelDlsym (obs_module_symbol) into the same function pointers the payload path
- * uses, so the sink calls a data pointer it can null-check rather than a raw import whose
- * slot a title may leave at the unresolved sentinel. A no-op for a payload (already
- * bootstrapped) and where module resolution is unavailable. Call once at entry, before
- * the first write. See src/runtime.c. */
+/* Bootstrap the output channel for a native title, which has no payload args to
+ * bootstrap from. Resolves the klog and write entry points by name through the loader's
+ * own sceKernelDlsym (obs_module_symbol) into the same function pointers the payload
+ * path uses, so the sink calls a data pointer it can null-check rather than a raw
+ * import whose slot a title may leave at the unresolved sentinel. A no-op for a payload
+ * (already bootstrapped) and where module resolution is unavailable. Call once at
+ * entry, before the first write. See src/runtime.c. */
 void obs_bootstrap_title_output(void);
 
 /* libkernel's runtime base a payload entry established (payload_args[0] - getpid's
@@ -89,10 +89,10 @@ unsigned int obs_linkmap_walk(int (*cb)(const char *name, unsigned long base,
 
 /* Whether an address can be *read* - distinct from obs_address_is_callable, which asks
  * whether it can be *called*. On the console a library's text is execute-only (xotext):
- * callable but not readable, so a check that dumps a resolved function's code bytes faults.
- * This queries the mapping (kernel virtual query) and refuses anything without the read
- * bit, and the eboot's own execute-only text outright. Zero on the host, where there is
- * nothing to query. See src/runtime.c and D325. */
+ * callable but not readable, so a check that dumps a resolved function's code bytes
+ * faults. This queries the mapping (kernel virtual query) and refuses anything without
+ * the read bit, and the eboot's own execute-only text outright. Zero on the host, where
+ * there is nothing to query. See src/runtime.c and D325. */
 int obs_linkmap_readable(uintptr_t p);
 
 /* Name the execution context this run measures in - "<delivery>/<generation>", e.g.
@@ -109,7 +109,8 @@ void obs_run_context(char *name, size_t name_cap, char *basis, size_t basis_cap)
  * native PS5 execution. */
 void obs_bind_dynamic_symbols(void);
 
-/* Whether a syscall route exists (payload args captured or s_libkernel_syscall_gadget found). */
+/* Whether a syscall route exists (payload args captured or s_libkernel_syscall_gadget
+ * found). */
 int obs_has_syscall_route(void);
 uintptr_t obs_syscall_gadget_address(void);
 

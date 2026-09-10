@@ -188,7 +188,8 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
                 }
             }
             if (!dup) {
-                obs_append(out[count].origin, 0, sizeof(out[count].origin), obs_audit_candidates[c].origin);
+                obs_append(out[count].origin, 0, sizeof(out[count].origin),
+                           obs_audit_candidates[c].origin);
                 obs_append(out[count].path, 0, sizeof(out[count].path), p);
                 count++;
             }
@@ -199,17 +200,20 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
     for (size_t r = 0; r < OBS_COUNT(obs_app_roots) && count < max_count; r++) {
         const char *root = obs_app_roots[r];
         int dir = sceKernelOpen(root, OBS_O_RDONLY, 0);
-        if (dir < 0) continue;
+        if (dir < 0)
+            continue;
 
         char dents[4096];
         for (;;) {
             sce_ssize_t n = sceKernelGetdents(dir, dents, (int)sizeof dents);
-            if (n <= 0) break;
+            if (n <= 0)
+                break;
             long pos = 0;
             while (pos + OBS_DIRENT_NAME < n && count < max_count) {
                 unsigned int reclen = (unsigned int)obs_le(
                     (const unsigned char *)dents + pos, OBS_DIRENT_RECLEN, 2);
-                if (reclen == 0) break;
+                if (reclen == 0)
+                    break;
                 unsigned char type = (unsigned char)dents[pos + OBS_DIRENT_TYPE];
                 unsigned int namlen = (unsigned char)dents[pos + OBS_DIRENT_NAMLEN];
                 const char *name = dents + pos + OBS_DIRENT_NAME;
@@ -221,7 +225,8 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
                     k = obs_append(candidate, k, sizeof(candidate), "/");
                     k = obs_append_n(candidate, k, sizeof(candidate), name, namlen);
                     obs_append(candidate, k, sizeof(candidate), "/eboot.bin");
-                    if (obs_read_header(candidate, test_buf, sizeof(test_buf)) >= (long)sizeof(test_buf) &&
+                    if (obs_read_header(candidate, test_buf, sizeof(test_buf)) >=
+                            (long)sizeof(test_buf) &&
                         obs_is_self(test_buf)) {
                         int dup = 0;
                         for (int j = 0; j < count; j++) {
@@ -231,8 +236,10 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
                             }
                         }
                         if (!dup) {
-                            obs_append(out[count].origin, 0, sizeof(out[count].origin), "vendor");
-                            obs_append(out[count].path, 0, sizeof(out[count].path), candidate);
+                            obs_append(out[count].origin, 0, sizeof(out[count].origin),
+                                       "vendor");
+                            obs_append(out[count].path, 0, sizeof(out[count].path),
+                                       candidate);
                             count++;
                         }
                     }
@@ -247,7 +254,8 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
     if (count == 0) {
         char app0[64];
         obs_append(app0, 0, sizeof(app0), OBS_APP0_EBOOT);
-        if (obs_read_header(app0, test_buf, sizeof(test_buf)) >= (long)sizeof(test_buf) &&
+        if (obs_read_header(app0, test_buf, sizeof(test_buf)) >=
+                (long)sizeof(test_buf) &&
             obs_is_self(test_buf)) {
             obs_append(out[count].origin, 0, sizeof(out[count].origin), "own app");
             obs_append(out[count].path, 0, sizeof(out[count].path), app0);
@@ -299,7 +307,8 @@ static obs_result check_confirm_format_table(void) {
     }
 
     static unsigned char buf[OBS_SELF_STRUCT_LEN];
-    unsigned int rows = (unsigned int)(sizeof(obs_self_fields) / sizeof(obs_self_fields[0]));
+    unsigned int rows =
+        (unsigned int)(sizeof(obs_self_fields) / sizeof(obs_self_fields[0]));
     unsigned int total_matched = 0;
     unsigned int total_diverged = 0;
     unsigned int total_nonfake = 0;
@@ -363,7 +372,8 @@ static obs_result check_confirm_format_table(void) {
             size_t pf = obs_append(ptype_field, 0, sizeof ptype_field, "selfaudit/");
             pf = obs_append(ptype_field, pf, sizeof ptype_field, title_id);
             obs_append(ptype_field, pf, sizeof ptype_field, "/ex_info/ptype");
-            obs_report_sysinfo(ptype_field, "not located", "header truncated or < 0x70");
+            obs_report_sysinfo(ptype_field, "not located",
+                               "header truncated or < 0x70");
         }
 
         unsigned int matched = 0;
@@ -415,20 +425,25 @@ static obs_result check_confirm_format_table(void) {
             vd = obs_append(verdict_detail, vd, sizeof verdict_detail, ptype_str);
             if (matched == rows) {
                 total_matched++;
-                obs_append(verdict_detail, vd, sizeof verdict_detail, "; all fixed header rows match selfish table");
+                obs_append(verdict_detail, vd, sizeof verdict_detail,
+                           "; all fixed header rows match selfish table");
                 obs_report_sysinfo(verdict_field, "confirmed", verdict_detail);
             } else {
                 total_diverged++;
-                obs_append(verdict_detail, vd, sizeof verdict_detail, "; some fixed rows differ");
+                obs_append(verdict_detail, vd, sizeof verdict_detail,
+                           "; some fixed rows differ");
                 obs_report_sysinfo(verdict_field, "diverged", verdict_detail);
             }
         } else {
             if (matched == rows) {
                 total_matched++;
-                obs_report_sysinfo(verdict_field, "confirmed", "ptype=unknown; all fixed header rows match selfish table");
+                obs_report_sysinfo(
+                    verdict_field, "confirmed",
+                    "ptype=unknown; all fixed header rows match selfish table");
             } else {
                 total_diverged++;
-                obs_report_sysinfo(verdict_field, "diverged", "ptype=unknown; some fixed rows differ");
+                obs_report_sysinfo(verdict_field, "diverged",
+                                   "ptype=unknown; some fixed rows differ");
             }
         }
     }
@@ -437,8 +452,9 @@ static obs_result check_confirm_format_table(void) {
     size_t nb = obs_format_u64(nonfake_buf, total_nonfake);
     nonfake_buf[nb] = '\0';
     obs_report_sysinfo("selfaudit/nonfake_census", nonfake_buf,
-                       total_nonfake > 0 ? "containers with ptype != 0x1 audited"
-                                         : "no container with ptype != 0x1 found on console");
+                       total_nonfake > 0
+                           ? "containers with ptype != 0x1 audited"
+                           : "no container with ptype != 0x1 found on console");
 
     char cbuf[32];
     size_t cl = obs_format_u64(cbuf, ptype0_gen5);
@@ -464,7 +480,8 @@ static obs_result check_confirm_format_table(void) {
     if (total_diverged == 0 && total_matched > 0) {
         return obs_pass_value(total_matched);
     }
-    return obs_partial_value("audit completed on multiple containers; divergences noted", (uint64_t)count);
+    return obs_partial_value(
+        "audit completed on multiple containers; divergences noted", (uint64_t)count);
 }
 
 static obs_result check_metadata_differential(void) {
@@ -723,7 +740,8 @@ static obs_result check_container_structure(void) {
             k = obs_append(field, k, sizeof field, "segment/");
             k = obs_append(field, k, sizeof field, idx);
             obs_append(field, k, sizeof field, "/flags");
-            obs_report_u64(field, obs_le(buf, (unsigned int)off, 8), "self_segment 0x00");
+            obs_report_u64(field, obs_le(buf, (unsigned int)off, 8),
+                           "self_segment 0x00");
 
             k = obs_append(field, 0, sizeof field, key_prefix);
             k = obs_append(field, k, sizeof field, "segment/");
@@ -753,8 +771,7 @@ static obs_result check_container_structure(void) {
 
             k = obs_append(field, 0, sizeof field, key_prefix);
             obs_append(field, k, sizeof field, "ex_info/paid");
-            obs_report_u64(field, obs_le(buf, (unsigned int)ex, 8),
-                           "ex_info 0x00");
+            obs_report_u64(field, obs_le(buf, (unsigned int)ex, 8), "ex_info 0x00");
 
             k = obs_append(field, 0, sizeof field, key_prefix);
             obs_append(field, k, sizeof field, "ex_info/ptype");
@@ -762,13 +779,13 @@ static obs_result check_container_structure(void) {
 
             k = obs_append(field, 0, sizeof field, key_prefix);
             obs_append(field, k, sizeof field, "ex_info/app_version");
-            obs_report_u64(field,
-                           obs_le(buf, (unsigned int)ex + 16, 8), "ex_info 0x10");
+            obs_report_u64(field, obs_le(buf, (unsigned int)ex + 16, 8),
+                           "ex_info 0x10");
 
             k = obs_append(field, 0, sizeof field, key_prefix);
             obs_append(field, k, sizeof field, "ex_info/fw_version");
-            obs_report_u64(field,
-                           obs_le(buf, (unsigned int)ex + 24, 8), "ex_info 0x18");
+            obs_report_u64(field, obs_le(buf, (unsigned int)ex + 24, 8),
+                           "ex_info 0x18");
 
             unsigned long long np = header_size - 0x30;
             if (np + 0x30ull <= (unsigned long long)got) {
@@ -779,8 +796,7 @@ static obs_result check_container_structure(void) {
 
                 k = obs_append(field, 0, sizeof field, key_prefix);
                 obs_append(field, k, sizeof field, "npdrm/content_id");
-                obs_report_sysinfo(field, "present",
-                                   "19 bytes, value not reported");
+                obs_report_sysinfo(field, "present", "19 bytes, value not reported");
             }
         } else {
             k = obs_append(field, 0, sizeof field, key_prefix);

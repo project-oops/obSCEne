@@ -20,10 +20,11 @@ typedef struct SceFiber {
 } SceFiber;
 
 typedef int (*fn_fiber_init_t)(SceFiber *fiber, const char *name, SceFiberEntry entry,
-                               uint64_t argOnInitialize, void *addrContext, size_t sizeContext,
-                               const void *optParam);
+                               uint64_t argOnInitialize, void *addrContext,
+                               size_t sizeContext, const void *optParam);
 typedef int (*fn_fiber_run_t)(SceFiber *fiber, uint64_t argOnRun, uint64_t *argToFiber);
-typedef int (*fn_fiber_switch_t)(SceFiber *fiber, uint64_t argOnSwitch, uint64_t *argToFiber);
+typedef int (*fn_fiber_switch_t)(SceFiber *fiber, uint64_t argOnSwitch,
+                                 uint64_t *argToFiber);
 typedef int (*fn_fiber_return_t)(uint64_t argOnReturn, uint64_t *argToThread);
 typedef int (*fn_fiber_finalize_t)(SceFiber *fiber);
 typedef int (*fn_fiber_self_t)(SceFiber **fiber);
@@ -52,7 +53,8 @@ static obs_result check_fiber_sysmodule(void) {
     typedef int (*fn_load_t)(uint16_t id);
     fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
     if (fn_load == NULL) {
-        fn_load = (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
+        fn_load =
+            (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
     }
 
     obs_report_measure("033-fiber/sysmodule", "sceSysmoduleLoadModule", "callable",
@@ -82,14 +84,9 @@ static obs_result check_fiber_sysmodule(void) {
 
 static obs_result check_fiber_symbols(void) {
     static const char *const syms[] = {
-        "sceFiberInitialize",
-        "_sceFiberInitializeImpl",
-        "sceFiberRun",
-        "sceFiberSwitch",
-        "sceFiberReturnToThread",
-        "sceFiberFinalize",
-        "sceFiberGetSelf",
-        "sceFiberGetInfo",
+        "sceFiberInitialize", "_sceFiberInitializeImpl", "sceFiberRun",
+        "sceFiberSwitch",     "sceFiberReturnToThread",  "sceFiberFinalize",
+        "sceFiberGetSelf",    "sceFiberGetInfo",
     };
 
     unsigned int resolved_count = 0;
@@ -98,8 +95,8 @@ static obs_result check_fiber_symbols(void) {
         const void *addr = fiber_resolve_sym(name);
         obs_report_measure("033-fiber/symbols", name, "vaddr",
                            (uint64_t)(uintptr_t)addr, "vaddr");
-        obs_report_measure("033-fiber/symbols", name, "resolved",
-                           addr != NULL ? 1 : 0, "bool");
+        obs_report_measure("033-fiber/symbols", name, "resolved", addr != NULL ? 1 : 0,
+                           "bool");
         if (addr != NULL) {
             resolved_count++;
         }
@@ -135,9 +132,11 @@ static obs_result check_fiber_lifecycle(void) {
     }
     fn_fiber_run_t fn_run = (fn_fiber_run_t)fiber_resolve_sym("sceFiberRun");
     s_fn_return = (fn_fiber_return_t)fiber_resolve_sym("sceFiberReturnToThread");
-    fn_fiber_finalize_t fn_finalize = (fn_fiber_finalize_t)fiber_resolve_sym("sceFiberFinalize");
+    fn_fiber_finalize_t fn_finalize =
+        (fn_fiber_finalize_t)fiber_resolve_sym("sceFiberFinalize");
 
-    if (fn_init == NULL || fn_run == NULL || s_fn_return == NULL || fn_finalize == NULL) {
+    if (fn_init == NULL || fn_run == NULL || s_fn_return == NULL ||
+        fn_finalize == NULL) {
         return obs_skip("required fiber lifecycle symbols not resolved");
     }
 
@@ -159,8 +158,8 @@ static obs_result check_fiber_lifecycle(void) {
         return obs_fail_code("fiber lifecycle faulted", (uint64_t)(uint32_t)sig);
     }
 
-    int rc_init = fn_init(&fiber, "obs-fiber", fiber_test_entry, 0x1122u,
-                          s_fiber_stack, sizeof(s_fiber_stack), NULL);
+    int rc_init = fn_init(&fiber, "obs-fiber", fiber_test_entry, 0x1122u, s_fiber_stack,
+                          sizeof(s_fiber_stack), NULL);
     obs_report_measure("033-fiber/lifecycle", "sceFiberInitialize", "rc",
                        (uint64_t)(uint32_t)rc_init, "code");
 
@@ -205,16 +204,19 @@ static obs_result check_fiber_invalid_args(void) {
     int sig = OBS_FAULT_ARM(&buf);
     if (sig != 0) {
         obs_fault_unregister();
-        return obs_fail_code("sceFiberInitialize invalid args faulted", (uint64_t)(uint32_t)sig);
+        return obs_fail_code("sceFiberInitialize invalid args faulted",
+                             (uint64_t)(uint32_t)sig);
     }
 
     /* 1. NULL fiber pointer */
-    int rc_null_fiber = fn_init(NULL, "bad", fiber_test_entry, 0, s_fiber_stack, 4096, NULL);
+    int rc_null_fiber =
+        fn_init(NULL, "bad", fiber_test_entry, 0, s_fiber_stack, 4096, NULL);
     obs_report_measure("033-fiber/invalid-args", "null-fiber", "rc",
                        (uint64_t)(uint32_t)rc_null_fiber, "code");
 
     /* 2. Zero stack size */
-    int rc_zero_stack = fn_init(&fiber, "bad", fiber_test_entry, 0, s_fiber_stack, 0, NULL);
+    int rc_zero_stack =
+        fn_init(&fiber, "bad", fiber_test_entry, 0, s_fiber_stack, 0, NULL);
     obs_report_measure("033-fiber/invalid-args", "zero-stack", "rc",
                        (uint64_t)(uint32_t)rc_zero_stack, "code");
 
@@ -234,9 +236,8 @@ static const obs_check fiber_checks[] = {
     {"033-fiber/symbols", "libSceFiber", "sceFiberInitialize", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_fiber_symbols, check_fiber_symbols,
      OBS_FROM_ASSUMED},
-    {"033-fiber/lifecycle", "libSceFiber", "sceFiberRun", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_fiber_lifecycle, check_fiber_lifecycle,
-     OBS_FROM_ASSUMED},
+    {"033-fiber/lifecycle", "libSceFiber", "sceFiberRun", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_fiber_lifecycle, check_fiber_lifecycle, OBS_FROM_ASSUMED},
     {"033-fiber/invalid-args", "libSceFiber", "sceFiberInitialize", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_fiber_invalid_args, check_fiber_invalid_args,
      OBS_FROM_ASSUMED},
@@ -249,4 +250,3 @@ const obs_section obs_section_fiber = {
     fiber_checks,
     OBS_COUNT(fiber_checks),
 };
-

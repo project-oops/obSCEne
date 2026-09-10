@@ -1248,9 +1248,9 @@ const void *_Getwctoupper(void) {
 /* ---- thread attributes, and the stack they describe --------------------------
  *
  * None of the `scePthreadAttr*` family had a host implementation, so every check that
- * touches one skipped on the host build - `010-kernel/thread-attributes` among them, which
- * has therefore never passed a known-good implementation. These make that check run and
- * give `031-stackattr` something to be validated against.
+ * touches one skipped on the host build - `010-kernel/thread-attributes` among them,
+ * which has therefore never passed a known-good implementation. These make that check
+ * run and give `031-stackattr` something to be validated against.
  *
  * A small pool with real per-object state, for the reason the event-flag table gives: a
  * round-trip check and a stub that stores nothing would be testing each other.
@@ -1272,8 +1272,8 @@ int scePthreadAttrInit(ScePthreadAttr *attr) {
         if (!s_host_attr[i].in_use) {
             s_host_attr[i].in_use = 1;
             s_host_attr[i].detach = 0;
-            /* A fresh set names no stack, which is what FreeBSD's own getters report for
-             * one nothing has configured. `031-stackattr/fresh-attr-names-no-stack`
+            /* A fresh set names no stack, which is what FreeBSD's own getters report
+             * for one nothing has configured. `031-stackattr/fresh-attr-names-no-stack`
              * records what the platform does here; the host answers the POSIX shape. */
             s_host_attr[i].stack_addr = NULL;
             s_host_attr[i].stack_size = 0;
@@ -1313,18 +1313,19 @@ int scePthreadAttrGetdetachstate(const ScePthreadAttr *attr, int *state) {
  * # What this can and cannot validate
  *
  * It reports a region that **contains the calling frame, with the address as its lowest
- * byte** - FreeBSD's convention, and one of the two answers `031-stackattr/address-is-the-base`
- * exists to tell apart. So the host proves the check's arithmetic classifies base
- * semantics correctly, and proves the plumbing from Get through the two getters.
+ * byte** - FreeBSD's convention, and one of the two answers
+ * `031-stackattr/address-is-the-base` exists to tell apart. So the host proves the
+ * check's arithmetic classifies base semantics correctly, and proves the plumbing from
+ * Get through the two getters.
  *
  * It cannot prove the check would recognise the *other* convention, because a stub can
  * only implement one. That half is the platform's to answer, which is the point of the
  * check.
  *
- * The region is derived from the address of a local rounded down to a conventional 8 MiB,
- * rather than from `pthread_getattr_np`: that is glibc-only and needs `_GNU_SOURCE`, and a
- * portable arithmetic stub is the smaller thing to be wrong about in a file that has to
- * build wherever the host build runs.
+ * The region is derived from the address of a local rounded down to a conventional 8
+ * MiB, rather than from `pthread_getattr_np`: that is glibc-only and needs
+ * `_GNU_SOURCE`, and a portable arithmetic stub is the smaller thing to be wrong about
+ * in a file that has to build wherever the host build runs.
  */
 #define OBS_HOST_STACK_SPAN ((size_t)8 * 1024 * 1024)
 
@@ -1359,10 +1360,10 @@ int scePthreadAttrGetstacksize(const ScePthreadAttr *attr, size_t *size) {
 
 /* ---- waiting on a word -------------------------------------------------------
  *
- * A mutex and a condition variable behind a generation counter, so a waiter that reached
- * the wait is released by a wake from another thread. That makes the round trip in
- * `032-syncaddr/wake-releases-a-waiter` provable on the host, which is the half of the
- * section that could otherwise only ever be exercised on hardware.
+ * A mutex and a condition variable behind a generation counter, so a waiter that
+ * reached the wait is released by a wake from another thread. That makes the round trip
+ * in `032-syncaddr/wake-releases-a-waiter` provable on the host, which is the half of
+ * the section that could otherwise only ever be exercised on hardware.
  *
  * # It is deliberately coarser than a futex, and the checks are written knowing it
  *
@@ -1372,9 +1373,10 @@ int scePthreadAttrGetstacksize(const ScePthreadAttr *attr, size_t *size) {
  * discrimination. Those are measurements about the platform, and the checks that make
  * them record what they observe rather than asserting the host's answer.
  *
- * The comparison is 64-bit, which is one of the two answers `032-syncaddr/compare-width`
- * distinguishes, for the same reason the stack stub picks one convention: a stub can
- * implement one, and which one it implements is stated rather than assumed by a reader.
+ * The comparison is 64-bit, which is one of the two answers
+ * `032-syncaddr/compare-width` distinguishes, for the same reason the stack stub picks
+ * one convention: a stub can implement one, and which one it implements is stated
+ * rather than assumed by a reader.
  */
 static pthread_mutex_t s_host_sync_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_host_sync_cond = PTHREAD_COND_INITIALIZER;

@@ -893,13 +893,16 @@ static obs_result check_vtable_bytes(void) {
         if (addr == NULL) {
             addr = obs_module_symbol(1, sym);
         }
-        obs_report_measure("035-libc/vtable-bytes", sym, "resolved", addr != NULL ? 1 : 0, "status");
+        obs_report_measure("035-libc/vtable-bytes", sym, "resolved",
+                           addr != NULL ? 1 : 0, "status");
         if (addr != NULL) {
             resolved++;
-            obs_report_measure("035-libc/vtable-bytes", sym, "address", (uint64_t)(uintptr_t)addr, "address");
+            obs_report_measure("035-libc/vtable-bytes", sym, "address",
+                               (uint64_t)(uintptr_t)addr, "address");
             const unsigned char *raw = (const unsigned char *)addr;
             for (unsigned int off = 0; off < 64; off += 16) {
-                obs_report_bytes("035-libc/vtable-bytes", sym, "bytes", off, &raw[off], 16);
+                obs_report_bytes("035-libc/vtable-bytes", sym, "bytes", off, &raw[off],
+                                 16);
             }
         }
     }

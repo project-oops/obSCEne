@@ -47,7 +47,8 @@ static obs_result check_direct_memory_size(void) {
 
 static obs_result check_allocate(void) {
     if (!obs_has_syscall_route()) {
-        return obs_skip("no syscall route available (no payload args and no syscall gadget)");
+        return obs_skip(
+            "no syscall route available (no payload args and no syscall gadget)");
     }
     OBS_REQUIRE(&sceKernelGetDirectMemorySize);
     sce_off_t physical = 0;
@@ -381,7 +382,8 @@ static obs_result check_reserve_virtual_range(void) {
         if (pargs != NULL && pargs->kexport_table != NULL) {
             char nid[12];
             obs_compute_nid("sceKernelReserveVirtualRange", nid);
-            const void *ka = obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
+            const void *ka = obs_kexport_lookup(
+                (const obs_kexport_table_t *)pargs->kexport_table, nid);
             if (ka != NULL && obs_address_is_callable(ka)) {
                 fn_reserve = (int (*)(void **, size_t, int, size_t))ka;
             }
@@ -389,49 +391,57 @@ static obs_result check_reserve_virtual_range(void) {
     }
     if (fn_reserve == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
         void *a = NULL;
-        if (sceKernelDlsym(0x2001, "sceKernelReserveVirtualRange", &a) == 0 && obs_address_is_callable(a)) {
+        if (sceKernelDlsym(0x2001, "sceKernelReserveVirtualRange", &a) == 0 &&
+            obs_address_is_callable(a)) {
             fn_reserve = (int (*)(void **, size_t, int, size_t))a;
-        } else if (sceKernelDlsym(0x2001, "7oxv3PPCumo", &a) == 0 && obs_address_is_callable(a)) {
+        } else if (sceKernelDlsym(0x2001, "7oxv3PPCumo", &a) == 0 &&
+                   obs_address_is_callable(a)) {
             fn_reserve = (int (*)(void **, size_t, int, size_t))a;
         }
     }
     if (fn_reserve == NULL) {
-        const void *sym_self = obs_module_symbol(OBS_HANDLE_SELF, "sceKernelReserveVirtualRange");
+        const void *sym_self =
+            obs_module_symbol(OBS_HANDLE_SELF, "sceKernelReserveVirtualRange");
         if (sym_self != NULL && obs_address_is_callable(sym_self)) {
             fn_reserve = (int (*)(void **, size_t, int, size_t))sym_self;
         }
     }
 
-    obs_report_measure("020-memory/reserve-virtual-range", "sceKernelReserveVirtualRange",
-                       "resolved", fn_reserve != NULL ? 1 : 0, "bool");
+    obs_report_measure("020-memory/reserve-virtual-range",
+                       "sceKernelReserveVirtualRange", "resolved",
+                       fn_reserve != NULL ? 1 : 0, "bool");
     if (fn_reserve == NULL) {
         return obs_skip("sceKernelReserveVirtualRange is not available");
     }
 
     /* 1. Well-formed call:
-     * out_addr pointer to a 64-bit zeroed slot, len = 0x100000 (1 MiB), flags = 0, align = 0x40000 (256 KiB) */
+     * out_addr pointer to a 64-bit zeroed slot, len = 0x100000 (1 MiB), flags = 0,
+     * align = 0x40000 (256 KiB) */
     void *out_addr = NULL;
     int rc = fn_reserve(&out_addr, 0x100000, 0, 0x40000);
-    obs_report_measure("020-memory/reserve-virtual-range", "sceKernelReserveVirtualRange",
-                       "rc", (uint64_t)(uint32_t)rc, "code");
-    obs_report_measure("020-memory/reserve-virtual-range", "sceKernelReserveVirtualRange",
-                       "out_addr", (uint64_t)(uintptr_t)out_addr, "address");
-    obs_report_measure("020-memory/reserve-virtual-range", "sceKernelReserveVirtualRange",
-                       "aligned", (out_addr != NULL && ((uintptr_t)out_addr % 0x40000 == 0)) ? 1 : 0, "bool");
+    obs_report_measure("020-memory/reserve-virtual-range",
+                       "sceKernelReserveVirtualRange", "rc", (uint64_t)(uint32_t)rc,
+                       "code");
+    obs_report_measure("020-memory/reserve-virtual-range",
+                       "sceKernelReserveVirtualRange", "out_addr",
+                       (uint64_t)(uintptr_t)out_addr, "address");
+    obs_report_measure(
+        "020-memory/reserve-virtual-range", "sceKernelReserveVirtualRange", "aligned",
+        (out_addr != NULL && ((uintptr_t)out_addr % 0x40000 == 0)) ? 1 : 0, "bool");
 
     /* 2. Negative test: unaligned len (1 byte) */
     void *out_bad_len = NULL;
     int rc_bad_len = fn_reserve(&out_bad_len, 1, 0, 0x40000);
-    obs_report_measure("020-memory/reserve-virtual-range", "unaligned-len",
-                       "rc", (uint64_t)(uint32_t)rc_bad_len, "code");
-    obs_report_measure("020-memory/reserve-virtual-range", "unaligned-len",
-                       "out_addr", (uint64_t)(uintptr_t)out_bad_len, "address");
+    obs_report_measure("020-memory/reserve-virtual-range", "unaligned-len", "rc",
+                       (uint64_t)(uint32_t)rc_bad_len, "code");
+    obs_report_measure("020-memory/reserve-virtual-range", "unaligned-len", "out_addr",
+                       (uint64_t)(uintptr_t)out_bad_len, "address");
 
     /* 3. Negative test: unaligned align (3) */
     void *out_bad_align = NULL;
     int rc_bad_align = fn_reserve(&out_bad_align, 0x100000, 0, 3);
-    obs_report_measure("020-memory/reserve-virtual-range", "unaligned-align",
-                       "rc", (uint64_t)(uint32_t)rc_bad_align, "code");
+    obs_report_measure("020-memory/reserve-virtual-range", "unaligned-align", "rc",
+                       (uint64_t)(uint32_t)rc_bad_align, "code");
     obs_report_measure("020-memory/reserve-virtual-range", "unaligned-align",
                        "out_addr", (uint64_t)(uintptr_t)out_bad_align, "address");
 

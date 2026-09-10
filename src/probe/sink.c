@@ -55,10 +55,14 @@
  * None of these is asserted to exist. The list is a set of guesses and the `sink`
  * record says which one was right, which turns the guessing into a measurement. */
 static const char *const obs_sink_paths[] = {
-    "/mnt/usb0/obscene/report.txt",  "/mnt/usb0/obscene-report.txt",
-    "/mnt/usb1/obscene/report.txt",  "/mnt/usb1/obscene-report.txt",
-    "/data/obscene/report.txt",      "/data/obscene-report.txt",
-    "/download0/obscene-report.txt", "reports/obscene-report.txt",
+    "/mnt/usb0/obscene/report.txt",
+    "/mnt/usb0/obscene-report.txt",
+    "/mnt/usb1/obscene/report.txt",
+    "/mnt/usb1/obscene-report.txt",
+    "/data/obscene/report.txt",
+    "/data/obscene-report.txt",
+    "/download0/obscene-report.txt",
+    "reports/obscene-report.txt",
     "obscene-report.txt",
 };
 
@@ -106,8 +110,7 @@ const char *obs_sink_open(void) {
             "/mnt/usb0/obscene/report-", "/mnt/usb0/obscene-report-",
             "/mnt/usb1/obscene/report-", "/mnt/usb1/obscene-report-",
             "/data/obscene/report-",     "/data/obscene-report-",
-            "reports/report-",
-            "obscene-report-",
+            "reports/report-",           "obscene-report-",
         };
         char ts_candidate[128];
         for (unsigned int i = 0; i < OBS_COUNT(ts_prefixes); i++) {
