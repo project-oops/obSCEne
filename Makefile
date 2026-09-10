@@ -60,7 +60,7 @@ ifeq ($(filter 1 2,$(OOPS_TARGET_NUM)),)
     GEN ?= 5
     TABLE ?= current
     EBOOT_GEN ?= 5
-    EBOOT_TABLE ?= current
+    EBOOT_TABLE ?= legacy
     EBOOT_KIND ?= executable
     PRIVILEGE ?= root
     SDK ?= $(if $(filter trinity,$(TARGET)),ps5-trinity,ps5-native)

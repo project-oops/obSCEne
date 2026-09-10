@@ -10,22 +10,42 @@
 
 #include "obscene/fault.h"
 #include "obscene/harness.h"
+#include "obscene/display.h"
+#include "obscene/runtime.h"
 
 #if defined(OBSCENE_HOST_BUILD)
 #include <pthread.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <string.h>
+#include <stdlib.h>
 #else
 #include "oops/freestd.h"
 #include "obscene/platform.h"
 #endif
 
 /* The fault signals. Same numbers on the FreeBSD-derived console and on the host. */
+#define OBS_SIGHUP 1
+#define OBS_SIGINT 2
 #define OBS_SIGILL 4
 #define OBS_SIGFPE 8
 #define OBS_SIGBUS 10
 #define OBS_SIGSEGV 11
+#define OBS_SIGTERM 15
+
+static void obs_term_handler(int sig) {
+    (void)sig;
+    obs_display_close();
+#if defined(OBSCENE_HOST_BUILD)
+    exit(128 + sig);
+#else
+    obs_invoke_syscall(1 /* SYS_exit */, (long)(128 + sig), 0, 0, 0, 0, 0);
+    if (obs_address_is_callable((const void *)&exit)) {
+        exit(128 + sig);
+    }
+    for (;;) {}
+#endif
+}
 
 /* One landing pad per armed thread. Two is the most ever live at once (the suite's main
  * thread and one futex worker); the headroom is for a section that arms more. */
@@ -144,6 +164,16 @@ void obs_fault_init(void) {
     ok &= (sigaction(OBS_SIGBUS, &act, 0) == 0);
     ok &= (sigaction(OBS_SIGILL, &act, 0) == 0);
     ok &= (sigaction(OBS_SIGFPE, &act, 0) == 0);
+
+    struct sigaction act_term;
+    memset(&act_term, 0, sizeof act_term);
+    act_term.sa_handler = obs_term_handler;
+    sigemptyset(&act_term.sa_mask);
+    act_term.sa_flags = 0;
+    (void)sigaction(OBS_SIGTERM, &act_term, 0);
+    (void)sigaction(OBS_SIGINT, &act_term, 0);
+    (void)sigaction(OBS_SIGHUP, &act_term, 0);
+
     s_available = ok;
     obs_fault_set_detail(ok ? "installed (host libc)" : "host sigaction failed");
 }
@@ -390,6 +420,15 @@ void obs_fault_init(void) {
     ok &= (s_sigaction_fn(OBS_SIGBUS, act, 0) == 0);
     ok &= (s_sigaction_fn(OBS_SIGILL, act, 0) == 0);
     ok &= (s_sigaction_fn(OBS_SIGFPE, act, 0) == 0);
+
+    unsigned char act_term[32];
+    for (int i = 0; i < 32; i++) {
+        act_term[i] = 0;
+    }
+    *(void **)(void *)(act_term + 0) = (void *)(uintptr_t)&obs_term_handler;
+    (void)s_sigaction_fn(OBS_SIGTERM, act_term, 0);
+    (void)s_sigaction_fn(OBS_SIGINT, act_term, 0);
+    (void)s_sigaction_fn(OBS_SIGHUP, act_term, 0);
     s_available = ok;
     if (!ok) {
         obs_fault_set_detail("sigaction call failed");

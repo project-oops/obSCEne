@@ -223,6 +223,7 @@ leg_eboot() {
     poll_and_stop "$tmp" "$reader" "$runner" "$init_bytes"
     tr -d '\r' <"$trun"; rm -f "$trun"
     echo "=== DEVICE SYSTEM LOG (eboot) ==="
+    tail -c +$((init_bytes + 1)) "$tmp" 2>/dev/null | tr -d '\r'; rm -f "$tmp"
 }
 
 # Run one leg: tee the whole thing to the full log, then extract the OBS records (dedup with

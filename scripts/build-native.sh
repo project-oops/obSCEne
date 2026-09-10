@@ -104,7 +104,10 @@ selfish --input "$elf_abs" \
     --title "$TITLE" \
     --category "big-app" \
     --privilege "$PRIVILEGE" \
-    --sdk "$SDK"
+    --sdk "$SDK" \
+    "${icon_arg[@]}" \
+    "${deeplink_arg[@]}" \
+    --content-id "$CONTENT_ID"
 
 if [ -d "$BUILD/sce_module" ]; then
     cp -r "$BUILD/sce_module" "$out/$TITLE_ID/sce_module"

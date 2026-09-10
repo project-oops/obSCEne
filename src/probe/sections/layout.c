@@ -950,6 +950,20 @@ static obs_result check_common_dialog_layout(void) {
         int32_t rc2 = fn_init();
         obs_report_measure("130-layout/common-dialog", "sceCommonDialogInitialize",
                            "return_code_2", (uint64_t)(uint32_t)rc2, "code");
+
+        int32_t (*fn_msg_init)(void) =
+            (int32_t (*)(void))layout_resolve_sym("libSceCommonDialog", "sceMsgDialogInitialize");
+        if (fn_msg_init == NULL) {
+            fn_msg_init = (int32_t (*)(void))layout_resolve_sym("libSceMsgDialog", "sceMsgDialogInitialize");
+        }
+        obs_report_measure("130-layout/common-dialog", "sceMsgDialogInitialize",
+                           "resolved", (uint64_t)(fn_msg_init != NULL ? 1 : 0), "bool");
+        if (fn_msg_init != NULL && obs_address_is_callable((const void *)fn_msg_init)) {
+            int32_t mrc = fn_msg_init();
+            obs_report_measure("130-layout/common-dialog", "sceMsgDialogInitialize",
+                               "return_code", (uint64_t)(uint32_t)mrc, "code");
+        }
+
         return obs_pass_value((uint64_t)(uint32_t)rc1);
     }
 

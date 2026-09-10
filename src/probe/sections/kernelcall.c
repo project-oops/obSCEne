@@ -36,6 +36,7 @@
  * settles nothing (D008).
  */
 
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -144,12 +145,80 @@ static obs_result check_system_version(void) {
     return obs_pass_value((uint64_t)answer);
 }
 
+/* Asks the kernel for the mapper parameter structure (56 bytes, size-prefixed 0x38).
+ *
+ * Answers REQ-20260910T1332Z-b7e2 (Orbistoun):
+ * Resolves sceKernelMapperGetParam (NID 0x04df812afad225d7, base64 1yXS+iqB3wQ),
+ * calls with an in-out buffer whose first quadword is 0x38 (56),
+ * and emits the filled 56 bytes and return code.
+ */
+static obs_result check_mapper_param(void) {
+    const void *fn_ptr = NULL;
+    int h_kernel = obs_module_open("libkernel");
+    if (h_kernel >= 0) {
+        fn_ptr = obs_module_symbol(h_kernel, "sceKernelMapperGetParam");
+        if (fn_ptr == NULL) {
+            fn_ptr = obs_module_symbol(h_kernel, "$1yXS+iqB3wQ");
+        }
+    }
+    if (fn_ptr == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        void *addr = NULL;
+        if (sceKernelDlsym(1, "sceKernelMapperGetParam", &addr) == 0 && obs_address_is_callable(addr)) {
+            fn_ptr = addr;
+        } else if (sceKernelDlsym(0x2001, "sceKernelMapperGetParam", &addr) == 0 && obs_address_is_callable(addr)) {
+            fn_ptr = addr;
+        } else if (sceKernelDlsym(1, "1yXS+iqB3wQ", &addr) == 0 && obs_address_is_callable(addr)) {
+            fn_ptr = addr;
+        } else if (sceKernelDlsym(0x2001, "1yXS+iqB3wQ", &addr) == 0 && obs_address_is_callable(addr)) {
+            fn_ptr = addr;
+        }
+    }
+
+    if (fn_ptr == NULL) {
+        return obs_skip("sceKernelMapperGetParam could not be resolved from libkernel");
+    }
+
+    obs_report_measure("137-kernelcall/mapper-param", "sceKernelMapperGetParam", "address",
+                       (uint64_t)(uintptr_t)fn_ptr, "address");
+
+    uint8_t buf[56];
+    for (size_t i = 0; i < sizeof(buf); i++) {
+        buf[i] = 0;
+    }
+    *(uint64_t *)(void *)buf = 0x38;
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc = ((int (*)(void *))fn_ptr)(buf);
+        obs_fault_unregister();
+        obs_report_measure("137-kernelcall/mapper-param", "sceKernelMapperGetParam", "rc",
+                           (uint64_t)(uint32_t)rc, "rc");
+        obs_report_bytes("137-kernelcall/mapper-param", "param", "filled-bytes", 0,
+                         buf, (unsigned int)sizeof(buf));
+        if (rc == 0) {
+            uint64_t val = *(const uint64_t *)(const void *)(buf + 8);
+            return obs_pass_value(val);
+        } else {
+            return obs_partial_value("sceKernelMapperGetParam returned non-zero code",
+                                     (uint64_t)(uint32_t)rc);
+        }
+    } else {
+        obs_fault_unregister();
+        obs_report_measure("137-kernelcall/mapper-param", "sceKernelMapperGetParam", "fault",
+                           (uint64_t)(uint32_t)sig, "signal");
+        return obs_fail_code("sceKernelMapperGetParam faulted", (uint64_t)(uint32_t)sig);
+    }
+}
+
 static const obs_check kernelcall_checks[] = {
     {"137-kernelcall/gadget", "libkernel", "sceKernelDlsym", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&sceKernelDlsym, check_gadget_resolves, OBS_FROM_ASSUMED},
     {"137-kernelcall/system-version", "libkernel", "sceKernelDlsym", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelDlsym, check_system_version,
      OBS_FROM_ASSUMED},
+    {"137-kernelcall/mapper-param", "libkernel", "sceKernelMapperGetParam", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_mapper_param, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_kernelcall = {

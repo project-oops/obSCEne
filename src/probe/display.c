@@ -249,6 +249,12 @@ static void obs_release_output(void) {
 #endif
 }
 
+void obs_display_close(void) {
+    obs_release_output();
+    obs_fb = 0;
+    obs_state = OBS_DISPLAY_UNTRIED;
+}
+
 static obs_display_state obs_give_up(obs_display_state state, const char *why) {
     obs_release_output();
     obs_state = state;

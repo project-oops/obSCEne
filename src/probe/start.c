@@ -37,6 +37,7 @@
  */
 
 #include "obscene/harness.h"
+#include "obscene/display.h"
 #include "obscene/net.h"
 #include "obscene/report.h"
 #include "obscene/runtime.h"
@@ -296,6 +297,7 @@ void obscene_start(void) {
     }
 
     obs_boot_note("obscene: execution finished; exiting process\n");
+    obs_display_close();
     obs_invoke_syscall(1, 0, 0, 0, 0, 0, 0);
     if (obs_address_is_callable((const void *)&exit)) {
         exit(0);

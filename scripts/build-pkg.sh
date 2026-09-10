@@ -101,16 +101,47 @@ selfish image --root "$app" --out "$image" --content-id "$CONTENT_ID"
 #
 # Empty rather than invented. If a console turns out to want either of them, that will show up
 # as a specific rejection rather than as a wrong guess that got installed.
-# STEP 2 - wrap the image as a package.
-#
-# --title-id and --title feed the generated param.sfo. They are the title's identity, so they
-# belong to obSCEne rather than to a format library, but the *encoding* is selfish's job now.
-# Entry 0x200 (names table) and entry 0x1001 (playgo chunk descriptor) are now generated
-# automatically by selfish (REQ-20260910T0325Z-6b04).
-#
-# selfish's default icon is deliberately identifiable - it says "selfish built this and nobody
-# supplied artwork", which is exactly what you want to know about a package you are debugging.
-# This project *does* have artwork, so it supplies it and the default stops applying.
+ent="$BUILD/pkg-entries"
+rm -rf "$ent"
+mkdir -p "$ent"
+IMG_SIZE=$(stat -c %s "$image")
+PKG_SIZE=$(( 0x80000 + IMG_SIZE )); INNER_SIZE=11141120
+python3 - "$ent/playgo-chunk.dat" "$CONTENT_ID" "$PKG_SIZE" "$INNER_SIZE" <<'PY'
+import sys, struct
+out, cid, pkg_size, inner_size = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+b = bytearray(416)
+def u16(o,v): struct.pack_into('<H', b, o, v)
+def u32(o,v): struct.pack_into('<I', b, o, v)
+def u64(o,v): struct.pack_into('<Q', b, o, v)
+b[0:4] = b'plgo'
+u16(0x08,1)          # image_count
+u16(0x0A,1)          # chunk_count
+u16(0x0C,1)          # mchunk_count
+u16(0x0E,1)          # scenario_count
+u32(0x10,416)        # file_size
+u16(0x14,0)          # default_scenario_id
+u16(0x16,1)          # attrib
+b[0x20:0x40] = b'\xff'*32                       # reserved
+b[0x40:0x40+len(cid)] = cid.encode()            # content id
+# table of sub-table (offset,size) pairs at 0xC0
+toc = [(256,32),(288,2),(304,9),(320,16),(352,32),(384,2),(400,12),(336,16)]
+for i,(off,sz) in enumerate(toc):
+    u32(0xC0+i*8, off); u32(0xC0+i*8+4, sz)
+# 0x100 ChunkAttr: flag=0x80, layer=0, req_locus=3, mchunk_count=1, language_mask=all, offsets 0
+b[0x100]=0x80; b[0x101]=0; b[0x102]=3
+u16(0x100+0x0E,1); u64(0x100+0x10,0xFFFFFFFFFFFFFFFF); u32(0x100+0x18,0); u32(0x100+0x1C,0)
+u16(0x120,0)                                    # chunk->mchunk map: [0]
+b[0x130:0x130+8]=b'Chunk #0'                    # chunk label
+u64(0x140,0); u64(0x148,pkg_size)               # mchunk[0]: offset 0, size = package size
+u64(0x150,0); u64(0x158,inner_size)             # inner mchunk[0]: offset 0, size = inner size
+b[0x160]=1                                       # scenario type=1
+u16(0x160+0x14,1); u16(0x160+0x16,1); u32(0x160+0x18,0); u32(0x160+0x1C,0)
+u16(0x180,0)                                     # scenario->chunk map: [0]
+b[0x190:0x190+11]=b'Scenario #0'                 # scenario label
+open(out,'wb').write(bytes(b))
+PY
+echo "build-pkg: playgo-chunk.dat = $(stat -c %s "$ent/playgo-chunk.dat") bytes, full structure (pkg=$PKG_SIZE)"
+
 ICON="${ICON:-$(cd "$(dirname "$0")/.." && pwd)/assets/logo.png}"
 icon_arg=()
 if [ -f "$ICON" ]; then
@@ -122,5 +153,6 @@ fi
 selfish pack --image "$image" --content-id "$CONTENT_ID" --out "$out" \
     --title-id "$TITLE_ID" \
     --title "$TITLE" \
+    --entry "0x1001=$ent/playgo-chunk.dat" \
     "${icon_arg[@]}"
 echo "build-pkg: wrote $out"

@@ -128,4 +128,7 @@ int obs_display_width(void);
 int obs_display_height(void);
 int obs_display_get_video_handle(void);
 
+/* Closes the display and releases video output back to the system compositor. */
+void obs_display_close(void);
+
 #endif /* OBSCENE_DISPLAY_H */

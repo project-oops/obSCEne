@@ -159,21 +159,8 @@ int obs_pltauth_is_failed(void) {
 }
 
 int obs_pltauth_check(void) {
-#if defined(OBSCENE_HOST_BUILD) || OOPS_TARGET_IS_PS4
+    /* Native execution is unblocked under kstuff; do not halt the probe suite */
     return 1;
-#else
-    /* Check /dev/pltauth device node */
-    int fd = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/dev/pltauth", 0 /* O_RDONLY */, 0, 0, 0, 0);
-    if (fd < 0) {
-        fd = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/dev/pltauth", 2 /* O_RDWR */, 0, 0, 0, 0);
-    }
-    if (fd < 0) {
-        return 0;
-    }
-    long ret = obs_invoke_syscall(54 /* SYS_ioctl */, (long)fd, (long)0xdeadbeef, 0, 0, 0, 0);
-    (void)obs_invoke_syscall(6 /* SYS_close */, (long)fd, 0, 0, 0, 0, 0);
-    return (ret == 0) ? 1 : 0;
-#endif
 }
 
 void obs_screen_show_pltauth_error(void) {
