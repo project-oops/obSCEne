@@ -1214,13 +1214,20 @@ OBS_WEAK uint64_t sceAgcDcbWaitRegMem(void *arg0, uint64_t arg1, uint64_t arg2,
                                       uint64_t arg3, uint64_t arg4, uint64_t arg5);
 OBS_WEAK uint64_t sceAgcDcbResetQueue(void *arg0, uint64_t arg1, uint64_t arg2,
                                       uint64_t arg3, uint64_t arg4, uint64_t arg5);
+OBS_WEAK int sceAgcInit(void *state, uint32_t version)
+    __asm__("$23LRUSvYu1M");
+OBS_WEAK int sceAgcGetIsTrinityMode(uint8_t *out_is_trinity)
+    __asm__("$BfBDZGbti7A");
 OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
                                                uint64_t arg3, uint64_t arg4, uint64_t arg5)
     __asm__("$fYZQG4CU71c");
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
-                                     const void *payload, uint64_t arg3);
+                                     const void *payload, uint64_t arg3)
+    __asm__("$f3dg2CSgRKY");
 
 /* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
-OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb, uint64_t arg1, uint64_t arg2);
+OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);
+OBS_WEAK int sceAgcDriverDestroyQueue(void *queue);
+OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb);
 
 #endif /* OBSCENE_PLATFORM_H */

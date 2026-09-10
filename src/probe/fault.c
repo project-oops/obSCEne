@@ -28,6 +28,8 @@
 #define OBS_SIGHUP 1
 #define OBS_SIGINT 2
 #define OBS_SIGILL 4
+#define OBS_SIGTRAP 5
+#define OBS_SIGABRT 6
 #define OBS_SIGFPE 8
 #define OBS_SIGBUS 10
 #define OBS_SIGSEGV 11
@@ -163,6 +165,8 @@ void obs_fault_init(void) {
     ok &= (sigaction(OBS_SIGSEGV, &act, 0) == 0);
     ok &= (sigaction(OBS_SIGBUS, &act, 0) == 0);
     ok &= (sigaction(OBS_SIGILL, &act, 0) == 0);
+    ok &= (sigaction(OBS_SIGTRAP, &act, 0) == 0);
+    ok &= (sigaction(OBS_SIGABRT, &act, 0) == 0);
     ok &= (sigaction(OBS_SIGFPE, &act, 0) == 0);
 
     struct sigaction act_term;
@@ -419,6 +423,8 @@ void obs_fault_init(void) {
     ok &= (s_sigaction_fn(OBS_SIGSEGV, act, 0) == 0);
     ok &= (s_sigaction_fn(OBS_SIGBUS, act, 0) == 0);
     ok &= (s_sigaction_fn(OBS_SIGILL, act, 0) == 0);
+    ok &= (s_sigaction_fn(OBS_SIGTRAP, act, 0) == 0);
+    ok &= (s_sigaction_fn(OBS_SIGABRT, act, 0) == 0);
     ok &= (s_sigaction_fn(OBS_SIGFPE, act, 0) == 0);
 
     unsigned char act_term[32];

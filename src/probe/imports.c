@@ -290,14 +290,21 @@ static const obs_import obs_platform_imports[] = {
 
 #if !OOPS_TARGET_IS_PS4
     /* libSceAgc: current-generation GPU command builders and shaders */
+    {"libSceAgc", "$23LRUSvYu1M"},
+    {"libSceAgc", "sceAgcInit"},
+    {"libSceAgc", "$BfBDZGbti7A"},
+    {"libSceAgc", "sceAgcGetIsTrinityMode"},
     {"libSceAgc", "sceAgcCbNop"},
     {"libSceAgc", "sceAgcCbReleaseMem"},
     {"libSceAgc", "sceAgcDcbDmaData"},
     {"libSceAgc", "sceAgcDcbWaitRegMem"},
     {"libSceAgc", "sceAgcDcbResetQueue"},
+    {"libSceAgc", "$f3dg2CSgRKY"},
     {"libSceAgc", "$fYZQG4CU71c"},
     {"libSceAgc", "sceAgcCreateShader"},
     /* libSceAgcDriver: current-generation GPU driver submission */
+    {"libSceAgcDriver", "sceAgcDriverCreateQueue"},
+    {"libSceAgcDriver", "sceAgcDriverDestroyQueue"},
     {"libSceAgcDriver", "sceAgcDriverSubmitDcb"},
 #endif
 
