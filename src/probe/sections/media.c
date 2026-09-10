@@ -702,8 +702,10 @@ static obs_result check_audio_sysmodules(void) {
     int rc_dec = -1;
     int rc_3d = -1;
     if (sig == 0) {
-        rc_dec = fn_load(0x0088); /* OOPS_SYSMODULE_AUDIO_DEC */
-        rc_3d = fn_load(0x00A7);  /* OOPS_SYSMODULE_AUDIO_3D */
+        int h_dec = obs_module_open("libSceAudiodec");
+        rc_dec = (h_dec >= 0) ? 0 : fn_load(0x0088);
+        int h_3d = obs_module_open("libSceAudio3d");
+        rc_3d = (h_3d >= 0) ? 0 : fn_load(0x00A7);
         obs_fault_unregister();
     } else {
         obs_fault_unregister();

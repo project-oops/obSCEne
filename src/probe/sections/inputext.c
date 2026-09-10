@@ -87,14 +87,35 @@ static obs_result check_keyboard_presence(void) {
         return obs_skip("run-time module resolution is unavailable in this process");
     }
     int handle = obs_module_open("libSceKeyboard");
-    if (handle < 0) {
+    int has_direct = obs_address_is_callable((const void *)&sceKeyboardInit) ||
+                     obs_address_is_callable((const void *)&sceKeyboardOpen) ||
+                     obs_address_is_callable((const void *)&sceKeyboardClose) ||
+                     obs_address_is_callable((const void *)&sceKeyboardReadState);
+    if (handle < 0 && !has_direct) {
         return obs_fail("libSceKeyboard did not load in this context");
     }
 
     unsigned int resolved = 0;
     for (size_t i = 0; i < OBS_COUNT(keyboard_symbols); i++) {
         const char *name = keyboard_symbols[i];
-        const void *addr = obs_module_symbol(handle, name);
+        const void *direct = NULL;
+        if (obs_strcmp(name, "sceKeyboardInit") == 0) {
+            direct = (const void *)&sceKeyboardInit;
+        } else if (obs_strcmp(name, "sceKeyboardOpen") == 0) {
+            direct = (const void *)&sceKeyboardOpen;
+        } else if (obs_strcmp(name, "sceKeyboardClose") == 0) {
+            direct = (const void *)&sceKeyboardClose;
+        } else if (obs_strcmp(name, "sceKeyboardReadState") == 0) {
+            direct = (const void *)&sceKeyboardReadState;
+        }
+
+        const void *addr = NULL;
+        if (handle >= 0) {
+            addr = obs_module_symbol(handle, name);
+        }
+        if (addr == NULL && obs_address_is_callable(direct)) {
+            addr = direct;
+        }
 #if !defined(OBSCENE_HOST_BUILD)
         if (addr == NULL && krw_is_ready()) {
             pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
@@ -141,14 +162,35 @@ static obs_result check_mouse_presence(void) {
         return obs_skip("run-time module resolution is unavailable in this process");
     }
     int handle = obs_module_open("libSceMouse");
-    if (handle < 0) {
+    int has_direct = obs_address_is_callable((const void *)&sceMouseInit) ||
+                     obs_address_is_callable((const void *)&sceMouseOpen) ||
+                     obs_address_is_callable((const void *)&sceMouseClose) ||
+                     obs_address_is_callable((const void *)&sceMouseRead);
+    if (handle < 0 && !has_direct) {
         return obs_fail("libSceMouse did not load in this context");
     }
 
     unsigned int resolved = 0;
     for (size_t i = 0; i < OBS_COUNT(mouse_symbols); i++) {
         const char *name = mouse_symbols[i];
-        const void *addr = obs_module_symbol(handle, name);
+        const void *direct = NULL;
+        if (obs_strcmp(name, "sceMouseInit") == 0) {
+            direct = (const void *)&sceMouseInit;
+        } else if (obs_strcmp(name, "sceMouseOpen") == 0) {
+            direct = (const void *)&sceMouseOpen;
+        } else if (obs_strcmp(name, "sceMouseClose") == 0) {
+            direct = (const void *)&sceMouseClose;
+        } else if (obs_strcmp(name, "sceMouseRead") == 0) {
+            direct = (const void *)&sceMouseRead;
+        }
+
+        const void *addr = NULL;
+        if (handle >= 0) {
+            addr = obs_module_symbol(handle, name);
+        }
+        if (addr == NULL && obs_address_is_callable(direct)) {
+            addr = direct;
+        }
 #if !defined(OBSCENE_HOST_BUILD)
         if (addr == NULL && krw_is_ready()) {
             pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);

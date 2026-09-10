@@ -1145,6 +1145,11 @@ static void obs_relocate_payload_got(void) {
             }
             if (resolved != NULL && obs_address_is_callable(resolved)) {
                 *got_slot = (uint64_t)(uintptr_t)resolved;
+            } else if (initial_val != 0 &&
+                       (plt_start == 0 || initial_val < plt_start ||
+                        initial_val >= plt_end) &&
+                       (initial_val < base || initial_val >= (base + 0x2000000UL))) {
+                *got_slot = initial_val;
             } else {
                 *got_slot = 0;
             }

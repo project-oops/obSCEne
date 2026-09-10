@@ -837,7 +837,7 @@ payload-min: | $(BUILD)
 # `module` and `payload` are not gated. They run under a homebrew loader with different
 # privileges and under emulators that stub everything, where requiring the whole census is
 # exactly what is wanted.
-EBOOT_LIBS ?= 16
+EBOOT_LIBS ?= 18
 
 eboot-libs-guard: $(BUILD)/symbols-no-census.txt
 	@if [ "$(EBOOT_LIBS)" != "any" ]; then \

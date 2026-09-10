@@ -164,6 +164,27 @@ static const obs_import obs_platform_imports[] = {
     {"libSceMouse", "sceMouseOpen"},
     {"libSceMouse", "sceMouseClose"},
     {"libSceMouse", "sceMouseRead"},
+    {"libSceVideodec2", "sceVideodec2CreateDecoder"},
+    {"libSceVideodec2", "sceVideodec2DeleteDecoder"},
+    {"libSceVideodec2", "sceVideodec2Decode"},
+    {"libSceVideodec2", "sceVideodec2Flush"},
+    {"libSceVideodec2", "sceVideodec2Reset"},
+    {"libSceVideodec2", "sceVideodec2QueryComputeMemoryInfo"},
+    {"libSceVideodec2", "sceVideodec2QueryDecoderMemoryInfo"},
+    {"libSceVideodec2", "sceVideodec2AllocateComputeQueue"},
+    {"libSceVideodec2", "sceVideodec2ReleaseComputeQueue"},
+    {"libSceVideodec2", "sceVideodec2MapDirectMemory"},
+    {"libSceVideodec2", "sceVideodec2GetPictureInfo"},
+    {"libSceVideodec2", "sceVideodec2GetAvcPictureInfo"},
+    {"libSceAudiodec", "sceAudiodecInitLibrary"},
+    {"libSceAudiodec", "sceAudiodecTermLibrary"},
+    {"libSceAudiodec", "sceAudiodecCreateDecoder"},
+    {"libSceAudiodec", "sceAudiodecDeleteDecoder"},
+    {"libSceAudiodec", "sceAudiodecDecode"},
+    {"libSceAudiodec", "sceAudiodecDecode2"},
+    {"libSceAudiodec", "sceAudiodecDecodeWithPriority"},
+    {"libSceAudiodec", "sceAudiodecDecode2WithPriority"},
+    {"libSceAudiodec", "sceAudiodecClearContext"},
     /* The two extra output channels. See obs_write in runtime.c: an emulator that
      * stubs sceKernelWrite discards the whole report, so there is more than one way
      * out. */
@@ -307,6 +328,7 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgcDriver", "sceAgcDriverCreateQueue"},
     {"libSceAgcDriver", "sceAgcDriverDestroyQueue"},
     {"libSceAgcDriver", "sceAgcDriverSubmitDcb"},
+    {"libSceAgcDriver", "sceAgcDriverSubmitCommandBuffer"},
 #endif
 
     /* Address-probed by the HUD (src/sysinfo.c), never called - its struct layout is

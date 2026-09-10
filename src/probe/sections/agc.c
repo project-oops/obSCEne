@@ -52,6 +52,7 @@
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/sections.h"
+#include "obscene/runtime.h"
 #include "oops/target.h"
 #if !defined(OBSCENE_HOST_BUILD)
 #include "oops/memory.h"
@@ -101,13 +102,22 @@ static obs_result check_agc_driver_create_queue(void) {
 static obs_result check_agc_init(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
+static obs_result check_agc_driver_queue_types(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
 static obs_result check_agc_driver_submit_nop(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
 static obs_result check_agc_driver_submit_batch(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
+static obs_result check_agc_driver_submit_fence(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
 static obs_result check_agc_compute_dispatch(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_graphics_submit(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
 
@@ -137,14 +147,23 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-create-queue", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_create_queue,
      OBS_FROM_ASSUMED},
+    {"166-agc/driver-queue-types", "libSceAgcDriver", "sceAgcDriverCreateQueue",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_queue_types,
+     OBS_FROM_ASSUMED},
     {"166-agc/driver-submit-nop", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_nop,
      OBS_FROM_ASSUMED},
     {"166-agc/driver-submit-batch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_batch,
      OBS_FROM_ASSUMED},
+    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_fence,
+     OBS_FROM_ASSUMED},
     {"166-agc/compute-dispatch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_compute_dispatch,
+     OBS_FROM_ASSUMED},
+    {"166-agc/graphics-submit", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_graphics_submit,
      OBS_FROM_ASSUMED},
 };
 #else
@@ -896,6 +915,67 @@ static obs_result check_agc_driver_create_queue(void) {
                              (uint64_t)(uint32_t)rc_create);
 }
 
+static obs_result check_agc_driver_queue_types(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue)) {
+        return obs_skip("sceAgcDriverCreateQueue not resolved");
+    }
+
+    unsigned int created_count = 0;
+    for (uint32_t qtype = 0; qtype <= 4; qtype++) {
+        char qtype_str[16] = "type_";
+        obs_format_u64(qtype_str + 5, qtype);
+
+        void *queue = NULL;
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = sceAgcDriverCreateQueue(qtype, &queue, 0u);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure("166-agc/driver-queue-types", qtype_str, "fault",
+                               (uint64_t)sig, "sig");
+            continue;
+        }
+
+        obs_report_measure("166-agc/driver-queue-types", qtype_str, "rc-create",
+                           (uint64_t)(uint32_t)rc, "code");
+
+        if (rc == 0 && queue != NULL) {
+            created_count++;
+            obs_report_measure("166-agc/driver-queue-types", qtype_str, "valid", 1,
+                               "bool");
+
+            /* Read 32-byte queue header */
+            obs_report_bytes("166-agc/queue-header", qtype_str, "header", 0,
+                             (const unsigned char *)queue, 32u);
+
+            if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+                sig = OBS_FAULT_ARM(&guard);
+                int rc_dest = -1;
+                if (sig == 0) {
+                    rc_dest = sceAgcDriverDestroyQueue(queue);
+                    obs_fault_unregister();
+                    obs_report_measure("166-agc/driver-queue-types", qtype_str,
+                                       "rc-destroy", (uint64_t)(uint32_t)rc_dest,
+                                       "code");
+                } else {
+                    obs_fault_unregister();
+                }
+            }
+        } else {
+            obs_report_measure("166-agc/driver-queue-types", qtype_str, "valid", 0,
+                               "bool");
+        }
+    }
+
+    if (created_count > 0) {
+        return obs_pass_value((uint64_t)created_count);
+    }
+    return obs_fail("no queue types could be created");
+}
+
 static obs_result check_agc_driver_submit_nop(void) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
@@ -1438,6 +1518,149 @@ static obs_result check_agc_compute_dispatch(void) {
                              (uint64_t)(uint32_t)submit_rc);
 }
 
+static obs_result check_agc_graphics_submit(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before queue/fence creation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(64) uint32_t s_host_gfx_fence[16];
+    volatile uint32_t *fence = s_host_gfx_fence;
+#endif
+
+    obs_fault_unregister();
+    if (fence == NULL) {
+        return obs_skip("failed to allocate Onion memory for fence");
+    }
+    *fence = 0x11111111u;
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation");
+    }
+    /* Create Type 0 (Universal / Graphics) Queue */
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure("166-agc/graphics-submit", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip(
+            "type 0 graphics queue creation failed; skipping graphics submit");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x1000);
+
+    uint32_t *dw = (uint32_t *)probe->cur;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+
+    /* Emit RELEASE_MEM: EOP event write to fence address */
+    *dw++ = 0xc0064900u; /* DW0: PACKET3_RELEASE_MEM, count 6 */
+    *dw++ = 0x06603514u; /* DW1: GCR_SEQ | GCR_GL2_WB | GCR_GLM_INV | GCR_GLM_WB |
+                            CACHE_POLICY(3) | EVENT_TYPE(0x14) | EVENT_INDEX(5) */
+    *dw++ = 0x20000000u; /* DW2: DATA_SEL(1) = write 32-bit int low */
+    *dw++ = (uint32_t)fence_gpu;         /* DW3: address low */
+    *dw++ = (uint32_t)(fence_gpu >> 32); /* DW4: address high */
+    *dw++ = 0xbeefcafeu;                 /* DW5: fence value */
+    *dw++ = 0u;                          /* DW6: high 32 bits of value */
+    *dw++ = 0u;                          /* DW7: context_id / pad */
+
+    /* Pad trailing area with PM4 NOPs to ensure prefetch safety */
+    for (int p = 0; p < 16; p++) {
+        dw[p] = 0xffff1000u;
+    }
+    dw += 16;
+
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    uint32_t bytes_written = (uint32_t)(probe->cur - probe->begin);
+    obs_report_measure("166-agc/graphics-submit", "sceAgcDriverSubmitDcb",
+                       "bytes-written", (uint64_t)bytes_written, "size");
+
+    obs_agc_dcb_desc desc;
+    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc.size = bytes_written / 4u; /* PM4 size in DWORDs */
+    desc.flags = 0u;
+    desc.pad[0] = 0u;
+    desc.pad[1] = 0u;
+    desc.pad[2] = 0u;
+
+    int submit_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            submit_rc = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+        obs_report_measure("166-agc/graphics-submit", "sceAgcDriverSubmitDcb",
+                           "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure("166-agc/graphics-submit", "sceAgcDriverSubmitDcb",
+                           "rc-submit", (uint64_t)sig, "fault-sig");
+    }
+
+    uint32_t fence_val = *fence;
+    int fence_hit = 0;
+    if (submit_rc == 0) {
+        for (int iter = 0; iter < 1000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            fence_val = *fence;
+            if (fence_val == 0xbeefcafeu) {
+                fence_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+    obs_report_measure("166-agc/graphics-submit", "sceAgcDriverSubmitDcb", "fence-val",
+                       (uint64_t)fence_val, "val");
+    obs_report_measure("166-agc/graphics-submit", "sceAgcDriverSubmitDcb", "fence-hit",
+                       (uint64_t)fence_hit, "bool");
+
+    if (fence_hit == 1 &&
+        obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            sceAgcDriverDestroyQueue(queue);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (sig != 0) {
+        return obs_fail("fault during graphics submit or poll");
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        return obs_pass();
+    }
+    if (submit_rc == 0) {
+        return obs_partial_value("fence not hit after graphics submit",
+                                 (uint64_t)fence_val);
+    }
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
+}
+
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_agc_cb_nop, OBS_FROM_ASSUMED},
@@ -1465,6 +1688,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-create-queue", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverCreateQueue,
      check_agc_driver_create_queue, OBS_FROM_ASSUMED},
+    {"166-agc/driver-queue-types", "libSceAgcDriver", "sceAgcDriverCreateQueue",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverCreateQueue,
+     check_agc_driver_queue_types, OBS_FROM_ASSUMED},
     {"166-agc/driver-submit-nop", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_driver_submit_nop, OBS_FROM_ASSUMED},
@@ -1477,6 +1703,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/compute-dispatch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_compute_dispatch, OBS_FROM_ASSUMED},
+    {"166-agc/graphics-submit", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_graphics_submit, OBS_FROM_ASSUMED},
 };
 #endif
 

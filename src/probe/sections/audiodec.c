@@ -35,19 +35,25 @@
  */
 
 #include "oops/freestd.h"
+#include "obscene/fault.h"
 #include "obscene/harness.h"
+#include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 
-/* The decode surface libSceAudiodec is expected to export. Both the base and the `Ex`
- * forms of create/decode are listed because a caller reaches for whichever the firmware
- * provides, and which one is present is itself a finding. */
+/* The decode surface libSceAudiodec is expected to export. PS5 firmware exports
+ * InitLibrary/TermLibrary, Decode, Decode2, and Priority variants. */
 static const char *const audiodec_symbols[] = {
-    "sceAudiodecInitialize",    "sceAudiodecTerminate",
-    "sceAudiodecCreateDecoder", "sceAudiodecCreateDecoderEx",
-    "sceAudiodecDeleteDecoder", "sceAudiodecDecode",
-    "sceAudiodecDecodeEx",      "sceAudiodecClearContext",
+    "sceAudiodecInitLibrary",
+    "sceAudiodecTermLibrary",
+    "sceAudiodecCreateDecoder",
+    "sceAudiodecDeleteDecoder",
+    "sceAudiodecDecode",
+    "sceAudiodecDecode2",
+    "sceAudiodecDecodeWithPriority",
+    "sceAudiodecDecode2WithPriority",
+    "sceAudiodecClearContext",
 };
 
 /* The AJM offload engine underneath the codec front-end: a batch is built, started, and
@@ -59,12 +65,36 @@ static const char *const ajm_symbols[] = {
     "sceAjmBatchWait",
 };
 
-/* Codec and capture libraries whose mere presence is the finding: the Opus decoders,
- * and the microphone-input library a voice-carrying client would open. */
+/* Codec and capture libraries whose mere presence is the finding: CPU codecs,
+ * Opus decoders, and audio input. */
 static const char *const audiodec_related_libs[] = {
-    "libSceAudiodec",    "libSceAjm",     "libSceOpusDec",
-    "libSceOpusCeltDec", "libSceAudioIn",
+    "libSceAudiodec",         "libSceAjm",
+    "libSceAudiodecCpu",      "libSceAudiodecCpuM4aac",
+    "libSceAudiodecCpuHevag", "libSceAudioIn",
+    "libSceOpusDec",          "libSceOpusCeltDec",
 };
+
+static const void *audiodec_direct_sym(const char *name) {
+    if (obs_strcmp(name, "sceAudiodecInitLibrary") == 0)
+        return (const void *)&sceAudiodecInitLibrary;
+    if (obs_strcmp(name, "sceAudiodecTermLibrary") == 0)
+        return (const void *)&sceAudiodecTermLibrary;
+    if (obs_strcmp(name, "sceAudiodecCreateDecoder") == 0)
+        return (const void *)&sceAudiodecCreateDecoder;
+    if (obs_strcmp(name, "sceAudiodecDeleteDecoder") == 0)
+        return (const void *)&sceAudiodecDeleteDecoder;
+    if (obs_strcmp(name, "sceAudiodecDecode") == 0)
+        return (const void *)&sceAudiodecDecode;
+    if (obs_strcmp(name, "sceAudiodecDecode2") == 0)
+        return (const void *)&sceAudiodecDecode2;
+    if (obs_strcmp(name, "sceAudiodecDecodeWithPriority") == 0)
+        return (const void *)&sceAudiodecDecodeWithPriority;
+    if (obs_strcmp(name, "sceAudiodecDecode2WithPriority") == 0)
+        return (const void *)&sceAudiodecDecode2WithPriority;
+    if (obs_strcmp(name, "sceAudiodecClearContext") == 0)
+        return (const void *)&sceAudiodecClearContext;
+    return NULL;
+}
 
 /* Is the decode library there at all. */
 static obs_result check_audiodec_library(void) {
@@ -72,10 +102,10 @@ static obs_result check_audiodec_library(void) {
         return obs_skip("run-time module resolution is unavailable in this process");
     }
     int handle = obs_module_open("libSceAudiodec");
-    if (handle < 0) {
+    if (handle < 0 && !obs_address_is_callable((const void *)&sceAudiodecInitLibrary)) {
         return obs_fail("libSceAudiodec did not load in this context");
     }
-    return obs_pass_value((uint64_t)(uint32_t)handle);
+    return obs_pass_value((uint64_t)(uint32_t)(handle >= 0 ? handle : 1));
 }
 
 /* Which decode entry points resolve, each with its address and prologue recorded. */
@@ -84,14 +114,20 @@ static obs_result check_audiodec_symbols(void) {
         return obs_skip("run-time module resolution is unavailable in this process");
     }
     int handle = obs_module_open("libSceAudiodec");
-    if (handle < 0) {
+    if (handle < 0 && !obs_address_is_callable((const void *)&sceAudiodecInitLibrary)) {
         return obs_skip("libSceAudiodec did not load, so nothing resolves through it");
     }
 
     unsigned int resolved = 0;
     for (size_t i = 0; i < OBS_COUNT(audiodec_symbols); i++) {
         const char *name = audiodec_symbols[i];
-        const void *addr = obs_module_symbol(handle, name);
+        const void *addr = (handle >= 0) ? obs_module_symbol(handle, name) : NULL;
+        if (addr == NULL) {
+            const void *direct = audiodec_direct_sym(name);
+            if (obs_address_is_callable(direct)) {
+                addr = direct;
+            }
+        }
         if (addr != NULL) {
             resolved++;
             obs_report_measure("108-audiodec/symbols", name, "vaddr",
@@ -99,7 +135,11 @@ static obs_result check_audiodec_symbols(void) {
             /* Readable, not merely callable: library text is execute-only on hardware,
              * so dump the prologue only where it can be read (emulators), never
              * crashing on a console. (D325) */
-            if (obs_linkmap_readable((uintptr_t)addr)) {
+            int readable = obs_linkmap_readable((uintptr_t)addr);
+            obs_report_measure("108-audiodec/symbols", name,
+                               readable ? "readable-text" : "xotext",
+                               (uint64_t)readable, "flag");
+            if (readable) {
                 obs_report_buffer("108-audiodec/prologue", name, "prologue",
                                   (const unsigned char *)addr, 256);
             }
@@ -125,24 +165,69 @@ static obs_result check_audiodec_decode_present(void) {
         return obs_skip("run-time module resolution is unavailable in this process");
     }
     int handle = obs_module_open("libSceAudiodec");
-    if (handle < 0) {
+    if (handle < 0 && !obs_address_is_callable((const void *)&sceAudiodecDecode)) {
         return obs_skip("libSceAudiodec did not load");
     }
     /* Either spelling of the decode call is the capability; report the one that
      * resolves. */
-    const void *addr = obs_module_symbol(handle, "sceAudiodecDecode");
+    const void *addr =
+        (handle >= 0) ? obs_module_symbol(handle, "sceAudiodecDecode") : NULL;
     const char *which = "sceAudiodecDecode";
-    if (addr == NULL) {
+    if (addr == NULL && obs_address_is_callable((const void *)&sceAudiodecDecode)) {
+        addr = (const void *)&sceAudiodecDecode;
+        which = "sceAudiodecDecode";
+    }
+    if (addr == NULL && handle >= 0) {
+        addr = obs_module_symbol(handle, "sceAudiodecDecode2");
+        which = "sceAudiodecDecode2";
+    }
+    if (addr == NULL && obs_address_is_callable((const void *)&sceAudiodecDecode2)) {
+        addr = (const void *)&sceAudiodecDecode2;
+        which = "sceAudiodecDecode2";
+    }
+    if (addr == NULL && handle >= 0) {
         addr = obs_module_symbol(handle, "sceAudiodecDecodeEx");
         which = "sceAudiodecDecodeEx";
     }
     if (addr == NULL) {
-        return obs_skip(
-            "neither sceAudiodecDecode nor sceAudiodecDecodeEx is resolved");
+        return obs_skip("neither sceAudiodecDecode nor sceAudiodecDecode2 is resolved");
     }
     obs_report_measure("108-audiodec/decode-present", which, "vaddr",
                        (uint64_t)(uintptr_t)addr, "offset");
     return obs_pass();
+}
+
+/* Call sceAudiodecInitLibrary to verify library initialization on hardware */
+static obs_result check_audiodec_init_library(void) {
+    if (!obs_module_resolution_works()) {
+        return obs_skip("run-time module resolution is unavailable in this process");
+    }
+    int handle = obs_module_open("libSceAudiodec");
+    const void *addr =
+        (handle >= 0) ? obs_module_symbol(handle, "sceAudiodecInitLibrary") : NULL;
+    if (addr == NULL &&
+        obs_address_is_callable((const void *)&sceAudiodecInitLibrary)) {
+        addr = (const void *)&sceAudiodecInitLibrary;
+    }
+    if (addr == NULL || !obs_address_is_callable(addr)) {
+        return obs_skip("sceAudiodecInitLibrary is not resolved");
+    }
+    int (*fn_init)(uint32_t) = (int (*)(uint32_t))addr;
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault in sceAudiodecInitLibrary",
+                             (uint64_t)(uint32_t)sig);
+    }
+    /* Codec type 2 = MP3 (SCE_AUDIODEC_CODEC_TYPE_MP3), 3 = AAC */
+    int rc = fn_init(2u);
+    obs_fault_unregister();
+    obs_report_measure("108-audiodec/init-library", "sceAudiodecInitLibrary", "rc",
+                       (uint64_t)(uint32_t)rc, "code");
+    return (rc == 0 || rc == (int)0x807f0001 || rc == (int)0x807f0002)
+               ? obs_pass()
+               : obs_pass_value((uint64_t)(uint32_t)rc);
 }
 
 /* The offload engine beneath the codec: how many of its batch entry points resolve. A
@@ -207,12 +292,15 @@ static obs_result check_audiodec_related_libs(void) {
 }
 
 static const obs_check audiodec_checks[] = {
-    {"108-audiodec/library", "libSceAudiodec", "sceAudiodecInitialize", OBS_CAP_NONE,
+    {"108-audiodec/library", "libSceAudiodec", "sceAudiodecInitLibrary", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_audiodec_library, check_audiodec_library,
      OBS_FROM_ASSUMED},
     {"108-audiodec/symbols", "libSceAudiodec", "sceAudiodecDecode", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_audiodec_symbols, check_audiodec_symbols,
      OBS_FROM_ASSUMED},
+    {"108-audiodec/init-library", "libSceAudiodec", "sceAudiodecInitLibrary",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_audiodec_init_library,
+     check_audiodec_init_library, OBS_FROM_ASSUMED},
     {"108-audiodec/decode-present", "libSceAudiodec", "sceAudiodecDecode", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_audiodec_decode_present,
      check_audiodec_decode_present, OBS_FROM_ASSUMED},

@@ -1000,6 +1000,35 @@ OBS_WEAK int sceMouseOpen(int user_id, int type, int index, void *param);
 OBS_WEAK int sceMouseClose(int handle);
 OBS_WEAK int sceMouseRead(int handle, void *data, int num);
 
+/* ---- libSceVideodec2: video decode ----------------------------------------- */
+OBS_WEAK int sceVideodec2CreateDecoder(const void *config, void *queue,
+                                       void *decoder_out);
+OBS_WEAK int sceVideodec2DeleteDecoder(void *decoder);
+OBS_WEAK int sceVideodec2Decode(void *decoder, const void *input, void *frame_out,
+                                void *picture_out);
+OBS_WEAK int sceVideodec2Flush(void *decoder, void *frame_out, void *picture_out);
+OBS_WEAK int sceVideodec2Reset(void *decoder);
+OBS_WEAK int sceVideodec2QueryComputeMemoryInfo(void *info);
+OBS_WEAK int sceVideodec2QueryDecoderMemoryInfo(const void *config, void *info);
+OBS_WEAK int sceVideodec2AllocateComputeQueue(const void *queue_info, void *queue_out);
+OBS_WEAK int sceVideodec2ReleaseComputeQueue(void *queue);
+OBS_WEAK int sceVideodec2MapDirectMemory(void *addr, size_t size);
+OBS_WEAK int sceVideodec2GetPictureInfo(const void *picture_out, void *p1, void *p2);
+OBS_WEAK int sceVideodec2GetAvcPictureInfo(const void *picture_out, void *p1, void *p2);
+
+/* ---- libSceAudiodec: audio decode ------------------------------------------ */
+OBS_WEAK int sceAudiodecInitLibrary(uint32_t codec_type);
+OBS_WEAK int sceAudiodecTermLibrary(uint32_t codec_type);
+OBS_WEAK int sceAudiodecCreateDecoder(const void *ctrl, int codec_type);
+OBS_WEAK int sceAudiodecDeleteDecoder(int handle);
+OBS_WEAK int sceAudiodecDecode(int handle, void *au_info, void *pcm_item);
+OBS_WEAK int sceAudiodecDecode2(int handle, void *au_info, void *pcm_item);
+OBS_WEAK int sceAudiodecDecodeWithPriority(int handle, void *au_info, void *pcm_item,
+                                           int prio);
+OBS_WEAK int sceAudiodecDecode2WithPriority(int handle, void *au_info, void *pcm_item,
+                                            int prio);
+OBS_WEAK int sceAudiodecClearContext(int handle);
+
 /* ---- Extended DualSense (libScePad) ---------------------------------------- */
 OBS_WEAK int scePadSetTriggerEffect(int handle, const void *param);
 OBS_WEAK int scePadGetTriggerEffectState(int handle, void *param);
@@ -1238,5 +1267,6 @@ OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
 OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);
 OBS_WEAK int sceAgcDriverDestroyQueue(void *queue);
 OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb);
+OBS_WEAK int sceAgcDriverSubmitCommandBuffer(void *queue, const void *dcb);
 
 #endif /* OBSCENE_PLATFORM_H */

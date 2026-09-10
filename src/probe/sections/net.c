@@ -1,10 +1,10 @@
 /*
  * Network reachability, for Porthole.
  *
- * Porthole (oops-apps/porthole) is an elfldr payload that serves video and controller
- * sockets, and it resolves libSceNet itself because imports do not auto-bind in
- * unsigned payload mode. Nothing had confirmed the network is reachable that way, and
- * three constants in its socket layer were taken from public headers that disagree
+ * Porthole (oops-apps/src/porthole) is an elfldr payload that serves video and
+ * controller sockets, and it resolves libSceNet itself because imports do not auto-bind
+ * in unsigned payload mode. Nothing had confirmed the network is reachable that way,
+ * and three constants in its socket layer were taken from public headers that disagree
  * rather than measured. This section answers that: it resolves the socket calls the way
  * a payload must, reports each address so a null one is told from a failed call, opens
  * a listener on a scratch port, and measures the two things Porthole's accept loop

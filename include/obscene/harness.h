@@ -301,6 +301,11 @@ int obs_module_open(const char *library);
 /* Load a library by name and report which tier provided it. */
 int obs_module_open_tier(const char *library, obs_module_tier *tier_out);
 
+/* Cache a sysmodule handle when loaded externally (e.g. by 090-audio or direct load).
+ */
+void obs_sysmodule_cache_handle(const char *name, int handle);
+void obs_sysmodule_cache_handle_by_id(uint16_t id, int handle);
+
 /* Resolve one name through a handle from [`obs_module_open`], or null.
  *
  * Null both when the resolver refuses and when it returns an address that is not
