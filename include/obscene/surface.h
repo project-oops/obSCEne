@@ -40,12 +40,14 @@
 #ifndef OBSCENE_SURFACE_H
 #define OBSCENE_SURFACE_H
 
-/* clang-format off
- *
- * These lists are data, not code. clang-format reads `X(name) X(name)` as a chain of
+/* clang-format off */
+/* These lists are data, not code. clang-format reads `X(name) X(name)` as a chain of
  * calls and reflows it into a cascading indent that is unreadable and - worse -
  * unstable: running it twice does not converge. Fenced off, and written one symbol
- * per line so adding or removing one is a one-line diff. */
+ * per line so adding or removing one is a one-line diff. The marker above is its own
+ * comment on purpose: clang-format only honours `off` as a standalone comment, so
+ * folding it into this paragraph silently disabled the fence and CI reformatted the
+ * tables below. */
 
 /* The kernel: POSIX-shaped calls, then the vendor additions.
  *
