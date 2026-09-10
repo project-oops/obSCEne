@@ -382,7 +382,11 @@ jobs:
         with:
           path: OOPS/obscene
       - name: Install clang-format
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+        # Pinned to the version the tree is formatted with (oops-builder ships 21.x).
+        # apt's default clang-format is older and reflows comments to a different width,
+        # so it failed on headers that are correctly formatted with the dev toolchain.
+        # The PyPI package ships the exact binary and puts it on PATH via pipx.
+        run: pipx install clang-format==21.1.8
       - name: Siblings this build needs
         run: OOPS/bin/oops bootstrap obscene
         env:
