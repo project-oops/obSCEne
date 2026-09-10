@@ -150,6 +150,8 @@ static void probe_exc_handler_concurrent(uint64_t arg0, uint64_t arg1, uint64_t 
 }
 
 static obs_result check_exception_handler_ordering(void) {
+    OBS_REQUIRE(&scePthreadCreate, &scePthreadJoin, &scePthreadSelf);
+
     const void *addr_install = obs_module_symbol(1, "sceKernelInstallExceptionHandler");
     if (addr_install == NULL) {
         addr_install = obs_module_symbol(OBS_HANDLE_SELF, "sceKernelInstallExceptionHandler");
@@ -373,6 +375,8 @@ static obs_result check_exception_handler_ordering(void) {
 }
 
 static obs_result check_thread_affinity(void) {
+    OBS_REQUIRE(&scePthreadSelf);
+
     typedef int (*fn_getaffinity_t)(ScePthread, uint64_t *);
     typedef int (*fn_setaffinity_t)(ScePthread, uint64_t);
 
@@ -435,6 +439,8 @@ static obs_result check_thread_affinity(void) {
 }
 
 static obs_result check_thread_name(void) {
+    OBS_REQUIRE(&scePthreadSelf);
+
     typedef int (*fn_getname_t)(ScePthread, char *);
     typedef int (*fn_setname_t)(ScePthread, const char *);
 
@@ -505,6 +511,8 @@ static obs_result check_thread_name(void) {
 }
 
 static obs_result check_thread_priority(void) {
+    OBS_REQUIRE(&scePthreadSelf);
+
     typedef int (*fn_getprio_t)(ScePthread, int *);
     typedef int (*fn_setprio_t)(ScePthread, int);
 

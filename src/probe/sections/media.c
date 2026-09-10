@@ -1213,6 +1213,8 @@ static const char *const pad_injection_symbols[] = {
 };
 
 static obs_result check_input_payload_injection(void) {
+    OBS_REQUIRE(&strcmp, &strncmp);
+
     obs_jmp_buf buf;
     int sig = OBS_FAULT_ARM(&buf);
     if (sig != 0) {
