@@ -58,7 +58,7 @@ ones it recognises. Re-runnable, and it says what a *particular* loader supports
 than what the format defines - which is the more useful question when the goal is
 running on that loader.
 
-**21 vendor tag values are recognised**, swept one at a time:
+**The recognised vendor tag values**, swept one at a time:
 
 ```
 low group   0x61000009  0x6100000d  0x6100000f  0x61000011  0x61000013

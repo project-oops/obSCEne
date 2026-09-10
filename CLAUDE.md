@@ -87,7 +87,7 @@ something needs a helper, it goes in `runtime.c` and it stays short - every func
 added there is one more thing that can be wrong while diagnosing something else.
 
 **The checks are a different matter, and this used to read as though they were not.**
-`037-math` is thirteen floating-point checks and `035-libc/snprintf` calls a variadic,
+`037-math` is the floating-point checks and `035-libc/snprintf` calls a variadic,
 because calling those is the entire job - the platform provides them and the probe is
 here to find out whether they work. What the rule forbids is *this program* depending on
 them to do its own work: no float in the harness, no `printf` to build a report line, no

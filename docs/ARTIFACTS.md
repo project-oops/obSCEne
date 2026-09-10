@@ -17,15 +17,15 @@ one says nothing about the others.
 
 | file | shape | `e_type` | `EI_ABIVERSION` | who loads it |
 |---|---|---|---|---|
-| `obscene-payload.elf` | plain `ET_DYN` | `0x0003` | `0` | a homebrew ELF loader, which maps the segments itself |
+| `obscene-probe-prospero.elf` | plain `ET_DYN` | `0x0003` | `0` | a homebrew ELF loader, which maps the segments itself |
 | `obscene-injector.elf` | plain `ET_DYN` | `0x0003` | `0` | a homebrew ELF loader, injects probe into native foreground process |
 | `obscene-module.elf` | vendor ELF | `0xFE10` | `2` | emulators, through their "not a SELF" path |
-| `obscene-eboot.zip` / `eboot.bin` | fSELF | - | - | **the system loader**, from an app directory |
-| `obscene.pkg` | package | - | - | the installer, then the system loader (ps4-format, previous-generation) |
-| `native/<TITLE_ID>/` | title directory | - | - | **the system loader**, from `/user/app/<TITLE_ID>` - a ps5 native title: a gen-5 `eboot.bin` beside `sce_sys/{param.json,icon0.png}` |
+| `obscene-probe-prospero.zip` / `eboot.bin` | fSELF | - | - | **the system loader**, from an app directory |
+| `obscene-probe-orbis.pkg` | package | - | - | the installer, then the system loader (ps4-format, previous-generation) |
+| `build/prospero/<TITLE_ID>/` | title directory | - | - | **the system loader**, from `/user/app/<TITLE_ID>` - a ps5 native title: a prospero `eboot.bin` beside `sce_sys/{param.json,icon0.png}` |
 
 All of these build today. `eboot`, `pkg` and `native` go through `selfish`. The `eboot` container is
-gen-4 by default and gen-5 with `EBOOT_GEN=5`; the `native` title carries a gen-5 eboot and is
+orbis by default and prospero with `TARGET=prospero` (or `EBOOT_GEN=5`); the `native` title carries a prospero eboot and is
 deployed by `native --deploy` to a scan root an auto-mounter registers into `/user/app`.
 (D180, D278, D287, D289, D291)
 
@@ -44,7 +44,7 @@ without the hardware or an emulator.
 ## Building them
 
 ```sh
-make payload      HARDWARE=1     # obscene-payload.elf    → the hardware
+make payload      HARDWARE=1     # obscene-probe-prospero.elf → the hardware
 make injector     HARDWARE=1     # obscene-injector.elf   → the hardware (native process injector)
 make payload-min  HARDWARE=1     # obscene-min.elf        → the hardware, transport test first
 make module                      # obscene.module.elf     → emulators
@@ -85,8 +85,8 @@ than an unreachable server. From Windows the server binds the LAN address and th
 for it:
 
 ```sh
-cp \\wsl$\Ubuntu\home\<user>\obs-pkg\obscene.pkg .\obscene.pkg
-obscene-tool.exe hw install .\obscene.pkg --seconds 180
+cp \\wsl$\Ubuntu\home\<user>\obs-pkg\obscene-probe-orbis.pkg .\obscene-probe-orbis.pkg
+obscene-tool.exe hw install .\obscene-probe-orbis.pkg --seconds 180
 ```
 
 The Windows `obscene-tool.exe` is built once with
@@ -105,7 +105,7 @@ installs into one that does not. See selfish's worklog for the measurement.
 kills a process. The list it walks contains `sceSystemServiceRequestPowerOff`,
 `sceLncUtilSystemShutdown`, `sceShellCoreUtilRequestShutdown` and ten more of that kind.
 
-**A blocklist cannot fix it.** Of the 67,053 entries, **50,344 are unnamed NIDs** - three
+**A blocklist cannot fix it.** Three-quarters of the censused entries are unnamed NIDs — three
 quarters of the sweep cannot be screened, because nobody knows what those functions are.
 
 So `HARDWARE=1` with `BULK=1` is a compile error, not a warning:

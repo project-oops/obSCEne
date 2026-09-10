@@ -9,7 +9,7 @@
 #                           report verification, imports. What CI runs.
 #   ./bin/obscene clean     remove build output
 #   ./bin/obscene pkg       the installable package (ps4-format, previous-generation)
-#   ./bin/obscene native    the ps5 native title directory: gen-5 eboot + param.json + icon0
+#   ./bin/obscene native    the ps5 native title directory: prospero eboot + param.json + icon0
 #   ./bin/obscene tool-build  build obscene-tool, which most other verbs need. Four CI
 #                           jobs run this by name before anything else
 #   ./bin/obscene klog      read the console system log
@@ -47,7 +47,7 @@
 # this script existed, which made `test` and `check` indistinguishable and said nothing true
 # about either.
 #
-# NOTE: obSCEne resolves SELFish and Prosperous by relative path, as siblings, so a clone of
+# NOTE: obSCEne resolves SELFish, Prosperous and oops-sdk by relative path, as siblings, so a clone of
 # only this repository does not build. `oops bootstrap obscene` fetches them. Compiling needs
 # clang and lld; on Windows that means WSL, which `oops` enters for you.
 set -euo pipefail

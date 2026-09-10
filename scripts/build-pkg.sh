@@ -1,5 +1,5 @@
 #!/bin/bash
-# Assemble obscene.pkg from the eboot, using selfish for every format step.
+# Assemble obscene-probe-orbis.pkg from the eboot, using selfish for every format step.
 #
 # This is obSCEne's orchestration; selfish owns the formats. `selfish image` now exists, so
 # the pipeline runs end to end.
@@ -7,7 +7,7 @@
 #   app0/eboot.bin
 #   (no param.json - see the staging note below)
 #        -> pfs image (selfish-pfs::build)
-#        -> package    (selfish pack --image ... --out obscene.pkg)
+#        -> package    (selfish pack --image ... --out obscene-probe-orbis.pkg)
 set -e
 
 BUILD="${1:?usage: build-pkg.sh <BUILD> [TARGET]}"

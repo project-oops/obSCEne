@@ -108,7 +108,7 @@ which is how that directory reached fifty-four ad-hoc probes once already.
 | verb | what it does |
 |---|---|
 | `deploy` | the whole round-trip: build the package, install it, launch it, capture the report |
-| `native` | lay out the ps5 native title directory (gen-5 eboot + `param.json` + `icon0.png`) |
+| `native` | lay out the ps5 native title directory (prospero eboot + `param.json` + `icon0.png`) |
 | `native --deploy` | build the native title and push it to a scan root (default `/user/data`) via prosperous, where an auto-mounter registers it - see [D291](decisions/D291-native-deploy-uploads-the-title-dir.md) |
 | `payload` | build the plain-ELF payload, run it through `elfldr`, capture the system log |
 | `inject` / `injector` | the same, through the native process injector - see [INJECTOR.md](INJECTOR.md) |
@@ -141,7 +141,8 @@ The verbs handle that themselves; `CLAUDE.md` has the reasoning.
 
 | | default | what it does |
 |---|---|---|
-| `GEN` | `5` | which generation the module is marked for. `GEN=4` builds one a previous-generation emulator will accept, since those refuse a current-generation mark |
+| `TARGET` | `prospero` | hardware target: `orbis` (PS4), `neo` (PS4 Pro), `prospero` (PS5), `trinity` (PS5 Pro). Primary target axis. |
+| `GEN` | (alias) | backward-compatibility alias for `TARGET` (`GEN=4` selects `orbis`, `GEN=5` selects `prospero`) |
 | `HARDWARE` | unset | the hardware-facing build |
 | `BUILD_ID` | `dev` | stamped into the artefact, so a report names the build that produced it |
 | `BULK` | unset | the blind prober. **Refused together with `HARDWARE=1`** |
@@ -159,12 +160,12 @@ a reboot.
 
 | target | file | loader |
 |---|---|---|
-| `payload` | `build/obscene-payload.elf` | plain ELF, homebrew loader |
+| `payload` | `build/obscene-probe-prospero.elf` | plain ELF, homebrew loader |
 | `injector` | `build/obscene-injector.elf` | plain ELF, native process injector |
 | `module` | `build/obscene.module.elf` | vendor ELF, emulators |
-| `eboot` | `build/eboot.bin` (`obscene-eboot.zip`) | the system loader (gen-4 by default; `EBOOT_GEN=5` for the current-generation container) |
-| `pkg` | `build/obscene.pkg` | the installer (ps4-format, previous-generation) |
-| `native` | `build/native/<TITLE_ID>/` | a ps5 native title directory (gen-5 eboot); registered under `/user/app` by an auto-mounter or `AppInstallTitleDir` |
+| `eboot` | `build/eboot.bin` (`obscene-probe-prospero.zip`) | the system loader (orbis by default; `TARGET=prospero` for the current-generation container) |
+| `pkg` | `build/obscene-probe-orbis.pkg` | the installer (ps4-format, previous-generation) |
+| `native` | `build/prospero/<TITLE_ID>/` | a ps5 native title directory (prospero eboot); registered under `/user/app` by an auto-mounter or `AppInstallTitleDir` |
 | `host` | `build/obscene-host` | your own machine |
 
 **The host build matters more than it looks.** It runs the harness on an ordinary machine
