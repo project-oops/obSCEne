@@ -120,6 +120,9 @@ static obs_result check_agc_compute_dispatch(void) {
 static obs_result check_agc_graphics_submit(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
+static obs_result check_agc_shader_differential(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
 
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -165,6 +168,8 @@ static const obs_check agc_checks[] = {
     {"166-agc/graphics-submit", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_graphics_submit,
      OBS_FROM_ASSUMED},
+    {"166-agc/shader-differential", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_differential, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -715,15 +720,15 @@ static obs_result check_agc_create_shader(void) {
     }
 
     /* 2. Authentic retail shader from AgcCompositor */
-    uint8_t hdr_buf[384];
+    uint8_t hdr_buf[512];
     for (size_t i = 0; i < sizeof(hdr_buf); i++) {
-        hdr_buf[i] = 0;
+        hdr_buf[i] = 0xc7;
     }
     for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0); i++) {
         hdr_buf[i] = agc_retail_hdr_full_0[i];
     }
 
-    void *shader_obj = NULL;
+    void *shader_obj = (void *)(uintptr_t)0xdeadbeefbaadf00d;
     uint64_t rc_retail = 0xffffffff;
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
@@ -732,15 +737,60 @@ static obs_result check_agc_create_shader(void) {
         obs_fault_unregister();
         obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "rc-retail",
                            rc_retail, "code");
-        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "obj-valid",
-                           (shader_obj != NULL) ? 1u : 0u, "flag");
+        obs_report_measure(
+            "166-agc/create-shader", "sceAgcCreateShader", "obj-valid",
+            (shader_obj != NULL && shader_obj != (void *)(uintptr_t)0xdeadbeefbaadf00d)
+                ? 1u
+                : 0u,
+            "flag");
     } else {
         obs_fault_unregister();
         obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "rc-retail",
                            (uint64_t)sig, "fault-sig");
     }
 
-    if (rc_retail == 0 && shader_obj != NULL && obs_address_is_callable(shader_obj)) {
+    if (rc_retail == 0 && shader_obj != NULL &&
+        shader_obj != (void *)(uintptr_t)0xdeadbeefbaadf00d &&
+        obs_address_is_callable(shader_obj)) {
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "arg0-addr",
+                           (uint64_t)(uintptr_t)&shader_obj, "addr");
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "arg1-addr",
+                           (uint64_t)(uintptr_t)hdr_buf, "addr");
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "arg2-addr",
+                           (uint64_t)(uintptr_t)agc_retail_payload_0, "addr");
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                           "shader-obj-ptr", (uint64_t)(uintptr_t)shader_obj, "addr");
+
+        obs_report_measure(
+            "166-agc/create-shader", "sceAgcCreateShader", "dist-from-arg0",
+            (uint64_t)((intptr_t)shader_obj - (intptr_t)&shader_obj), "offset");
+        obs_report_measure(
+            "166-agc/create-shader", "sceAgcCreateShader", "dist-from-arg1",
+            (uint64_t)((intptr_t)shader_obj - (intptr_t)hdr_buf), "offset");
+        obs_report_measure(
+            "166-agc/create-shader", "sceAgcCreateShader", "dist-from-arg2",
+            (uint64_t)((intptr_t)shader_obj - (intptr_t)agc_retail_payload_0),
+            "offset");
+
+        uint32_t hdr_changed = 0;
+        for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0); i++) {
+            if (hdr_buf[i] != agc_retail_hdr_full_0[i]) {
+                hdr_changed++;
+            }
+        }
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader",
+                           "hdr-changed-bytes", (uint64_t)hdr_changed, "count");
+
+        size_t highest_touched = 0;
+        for (size_t i = sizeof(hdr_buf); i > 0; i--) {
+            if (hdr_buf[i - 1] != 0xc7) {
+                highest_touched = i;
+                break;
+            }
+        }
+        obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "hdr-extent",
+                           (uint64_t)highest_touched, "bytes");
+
         obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "shader-obj", 0,
                          (const unsigned char *)shader_obj, 0x80u);
 
@@ -749,6 +799,9 @@ static obs_result check_agc_create_shader(void) {
         uint32_t field_50 = *(const uint32_t *)((const char *)shader_obj + 0x50);
         obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "field-0x10",
                            field_10, "addr");
+        obs_report_measure(
+            "166-agc/create-shader", "sceAgcCreateShader", "f10-dist-from-arg2",
+            (uint64_t)((intptr_t)field_10 - (intptr_t)agc_retail_payload_0), "offset");
         obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "field-0x30",
                            field_30, "val");
         obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "field-0x50",
@@ -760,6 +813,92 @@ static obs_result check_agc_create_shader(void) {
         return obs_pass();
     }
     return obs_partial_value("create shader returned non-zero code", rc_retail);
+}
+
+static obs_result check_agc_shader_differential(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip("sceAgcCreateShader not callable");
+    }
+
+    /* Base template from retail header */
+    uint8_t base_hdr[384];
+    for (size_t i = 0; i < sizeof(base_hdr); i++) {
+        base_hdr[i] = 0;
+    }
+    for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0); i++) {
+        base_hdr[i] = agc_retail_hdr_full_0[i];
+    }
+
+    const void *payload = (const void *)agc_retail_payload_0;
+
+    /* Perturbation testing matrix across format fields */
+    struct {
+        const char *name;
+        size_t offset;
+        size_t size;
+        uint32_t val;
+        int use_unaligned_payload;
+    } cases[] = {
+        {"baseline", 0, 0, 0, 0},
+        {"magic-zero", 0x00, 4, 0x00000000u, 0},
+        {"magic-deadbeef", 0x00, 4, 0xdeadbeefu, 0},
+        {"version-zero", 0x04, 4, 0x00000000u, 0},
+        {"version-17", 0x04, 4, 0x00000017u, 0},
+        {"user-data-zero", 0x08, 8, 0x00000000u, 0},
+        {"cx-reg-zero", 0x18, 8, 0x00000000u, 0},
+        {"sh-reg-zero", 0x20, 8, 0x00000000u, 0},
+        {"specials-zero", 0x28, 8, 0x00000000u, 0},
+        {"hdr-size-zero", 0x40, 4, 0x00000000u, 0},
+        {"hdr-size-60", 0x40, 4, 0x00000060u, 0},
+        {"shader-size-zero", 0x44, 4, 0x00000000u, 0},
+        {"target-zero", 0x4c, 4, 0x00000000u, 0},
+        {"type-pixel", 0x5a, 1, 0x01u, 0},
+        {"type-vertex", 0x5a, 1, 0x02u, 0},
+        {"type-invalid", 0x5a, 1, 0x63u, 0},
+        {"num-sh-zero", 0x5c, 1, 0x00u, 0},
+        {"unaligned-code", 0, 0, 0, 1},
+    };
+
+    unsigned int passed_tests = 0;
+    for (size_t c = 0; c < OBS_COUNT(cases); c++) {
+        uint8_t cur_hdr[384];
+        for (size_t i = 0; i < sizeof(cur_hdr); i++) {
+            cur_hdr[i] = base_hdr[i];
+        }
+
+        if (cases[c].size == 1) {
+            cur_hdr[cases[c].offset] = (uint8_t)cases[c].val;
+        } else if (cases[c].size == 2) {
+            *(uint16_t *)(cur_hdr + cases[c].offset) = (uint16_t)cases[c].val;
+        } else if (cases[c].size == 4) {
+            *(uint32_t *)(cur_hdr + cases[c].offset) = cases[c].val;
+        } else if (cases[c].size == 8) {
+            *(uint64_t *)(cur_hdr + cases[c].offset) = (uint64_t)cases[c].val;
+        }
+
+        const void *cur_payload = cases[c].use_unaligned_payload
+                                      ? (const void *)((uintptr_t)payload + 4)
+                                      : payload;
+        void *out_obj = NULL;
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            uint64_t rc = sceAgcCreateShader(&out_obj, cur_hdr, cur_payload, 0);
+            obs_fault_unregister();
+            obs_report_measure("166-agc/shader-differential", "sceAgcCreateShader",
+                               cases[c].name, rc, "code");
+            passed_tests++;
+        } else {
+            obs_fault_unregister();
+            obs_report_measure("166-agc/shader-differential", "sceAgcCreateShader",
+                               cases[c].name, (uint64_t)sig, "fault-sig");
+        }
+    }
+
+    if (passed_tests > 0) {
+        return obs_pass_value((uint64_t)passed_tests);
+    }
+    return obs_fail("differential shader tests failed to run");
 }
 
 /* DCB Constructor audit: audit potential constructor candidates without fabricating
@@ -1567,6 +1706,13 @@ static obs_result check_agc_graphics_submit(void) {
     uint32_t *dw = (uint32_t *)probe->cur;
     uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
 
+    /* Emit SET_CONTEXT_REG: packet type 3, opcode 0x28, count 2 body DWORDs (count - 1
+     * = 1) Sets CB_COLOR0_BASE (context register 0x200) to test graphics pipeline
+     * register setup */
+    *dw++ = 0xc0012800u;                /* DW0: PACKET3_SET_CONTEXT_REG, count 1 */
+    *dw++ = 0x200u;                     /* DW1: reg offset 0x200 (CB_COLOR0_BASE) */
+    *dw++ = (uint32_t)(fence_gpu >> 8); /* DW2: base address >> 8 */
+
     /* Emit RELEASE_MEM: EOP event write to fence address */
     *dw++ = 0xc0064900u; /* DW0: PACKET3_RELEASE_MEM, count 6 */
     *dw++ = 0x06603514u; /* DW1: GCR_SEQ | GCR_GL2_WB | GCR_GLM_INV | GCR_GLM_WB |
@@ -1706,6 +1852,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/graphics-submit", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_graphics_submit, OBS_FROM_ASSUMED},
+    {"166-agc/shader-differential", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcCreateShader, check_agc_shader_differential,
+     OBS_FROM_ASSUMED},
 };
 #endif
 
