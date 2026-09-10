@@ -1189,28 +1189,70 @@ static obs_result check_agc_compute_dispatch(void) {
         return obs_fail_code("fault before queue/shader creation", (uint64_t)sig);
     }
 
-    /* 1. Allocate GPU payload and fence buffer in Onion memory */
+    /* 1. Allocate GPU payload, fence buffer, and ALU output buffer in Onion memory */
 #if !defined(OBSCENE_HOST_BUILD)
     uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x1000, 256, OOPS_MEM_WB_ONION);
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *out_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
 #else
     static _Alignas(256) uint8_t s_host_payload[sizeof(agc_retail_payload_0)];
     static _Alignas(64) uint32_t s_host_fence[16];
+    static _Alignas(64) uint32_t s_host_out[16];
     uint8_t *gpu_payload = s_host_payload;
     volatile uint32_t *fence = s_host_fence;
+    volatile uint32_t *out_buf = s_host_out;
 #endif
 
     obs_fault_unregister();
 
-    if (gpu_payload == NULL || fence == NULL) {
-        return obs_skip("failed to allocate Onion memory for shader or fence");
+    if (gpu_payload == NULL || fence == NULL || out_buf == NULL) {
+        return obs_skip("failed to allocate Onion memory for shader, fence or out_buf");
     }
 
     for (size_t i = 0; i < sizeof(agc_retail_payload_0); i++) {
         gpu_payload[i] = agc_retail_payload_0[i];
     }
     *fence = 0x11111111u;
+    *out_buf = 0x55555555u;
+
+    /* Custom RDNA2 compute bytecode at gpu_payload + 0x000:
+     * 1. s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)  [0xbf8c0000]
+     * 2. s_mov_b32 s0, out_gpu_lo                 [0xbe8003ff, out_gpu_lo]
+     * 3. s_mov_b32 s1, out_gpu_hi                 [0xbe8103ff, out_gpu_hi]
+     * 4. v_mov_b32_e32 v0, s0                     [0x7e000200]
+     * 5. v_mov_b32_e32 v1, s1                     [0x7e020201]
+     * 6. v_mov_b32_e32 v2, 0x12345678             [0x7e0402ff, 0x12345678]
+     * 7. v_add_nc_u32_e32 v2, 0x11111111, v2      [0x4a0404ff, 0x11111111] (0x12345678
+     * + 0x11111111 = 0x23456789)
+     * 8. global_store_dword v[0:1], v2, off       [0xdc708000, 0x007d0200]
+     * 9. s_waitcnt vmcnt(0)                       [0xbf8c3f70]
+     * 10. s_endpgm                                [0xbf810000]
+     */
+    uint64_t out_gpu = (uint64_t)(uintptr_t)out_buf;
+    uint32_t out_gpu_lo = (uint32_t)out_gpu;
+    uint32_t out_gpu_hi = (uint32_t)(out_gpu >> 32);
+
+    uint32_t *code = (uint32_t *)gpu_payload;
+    code[0] = 0xbf8c0000u;
+    code[1] = 0xbe8003ffu;
+    code[2] = out_gpu_lo;
+    code[3] = 0xbe8103ffu;
+    code[4] = out_gpu_hi;
+    code[5] = 0x7e000200u;
+    code[6] = 0x7e020201u;
+    code[7] = 0x7e0402ffu;
+    code[8] = 0x12345678u;
+    code[9] = 0x4a0404ffu;
+    code[10] = 0x11111111u;
+    code[11] = 0xdc708000u;
+    code[12] = 0x007d0200u;
+    code[13] = 0xbf8c3f70u;
+    code[14] = 0xbf810000u;
+    for (size_t k = 15; k < 0x3b0u / 4u; k++) {
+        code[k] = 0xbf9f0000u; /* s_nop 0 */
+    }
 
     /* 2. Instantiate compute shader with GPU payload */
     uint8_t hdr_buf[384];
@@ -1274,6 +1316,14 @@ static obs_result check_agc_compute_dispatch(void) {
         *dw++ = reg_idx;
         *dw++ = reg_val;
     }
+
+    /* Also bind out_buf to COMPUTE_USER_DATA_0 and 1 */
+    *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
+    *dw++ = 0x240u;      /* COMPUTE_USER_DATA_0 */
+    *dw++ = out_gpu_lo;
+    *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
+    *dw++ = 0x241u;      /* COMPUTE_USER_DATA_1 */
+    *dw++ = out_gpu_hi;
 
     /* Emit DISPATCH_DIRECT: 1 threadgroup (8x8x1 = 64 threads) */
     *dw++ = 0xc0031500u; /* DISPATCH_DIRECT */
@@ -1349,7 +1399,18 @@ static obs_result check_agc_compute_dispatch(void) {
     obs_report_measure("166-agc/compute-dispatch", "sceAgcDriverSubmitDcb", "fence-hit",
                        (uint64_t)fence_hit, "bool");
 
-    /* 7. Destroy queue */
+    /* 7. Read back ALU output buffer */
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)out_buf);
+#endif
+    uint32_t alu_val = *out_buf;
+    int alu_hit = (alu_val == 0x23456789u);
+    obs_report_measure("166-agc/compute-dispatch", "sceAgcDriverSubmitDcb", "alu-val",
+                       (uint64_t)alu_val, "val");
+    obs_report_measure("166-agc/compute-dispatch", "sceAgcDriverSubmitDcb", "alu-hit",
+                       (uint64_t)alu_hit, "bool");
+
+    /* 8. Destroy queue */
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
@@ -1363,8 +1424,12 @@ static obs_result check_agc_compute_dispatch(void) {
     if (sig != 0) {
         return obs_fail("fault during compute dispatch submit or poll");
     }
-    if (submit_rc == 0 && fence_hit == 1) {
+    if (submit_rc == 0 && fence_hit == 1 && alu_hit == 1) {
         return obs_pass();
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        return obs_partial_value("fence hit but ALU output mismatch",
+                                 (uint64_t)alu_val);
     }
     if (submit_rc == 0) {
         return obs_partial_value("fence not hit after dispatch", (uint64_t)fence_val);
