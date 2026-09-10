@@ -161,6 +161,8 @@ const obs_section *const obs_sections[] = {
     &obs_section_gnm,
     /* Current-generation GPU command building and shaders (libSceAgc). */
     &obs_section_agc,
+    /* Live GPU command stream and shader memory capture from rendering processes. */
+    &obs_section_gpucap,
     &obs_section_surface,
     /* After the census, because it needs nothing the census establishes and because it
      * is the only section that may not return. Anything placed behind it would be lost

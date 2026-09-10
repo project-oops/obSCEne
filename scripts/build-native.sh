@@ -87,16 +87,24 @@ if [ -f assets/logo.png ]; then
     icon_arg=(--icon "$(pwd)/assets/logo.png")
 fi
 
-selfish build title \
-    --out "$(cd "$out" && pwd)" \
+elf_input="$BUILD/obscene.eboot.elf"
+if [ ! -f "$elf_input" ]; then
+    elf_input="$BUILD/obscene-probe-${TARGET_NAME}.elf"
+fi
+elf_abs="$(cd "$(dirname "$elf_input")" && pwd)/$(basename "$elf_input")"
+out_abs="$(cd "$out" && pwd)"
+
+selfish --input "$elf_abs" \
+    --target "$TARGET_NAME" \
+    --format title \
+    --output "$out_abs" \
     --title-id "$TITLE_ID" \
     --title "$TITLE" \
-    --content-id "$CONTENT_ID" \
-    --privilege "${PRIVILEGE:-app}" \
-    "${category_arg[@]}" \
-    "${deeplink_arg[@]}" \
-    "${root_arg[@]}" \
-    "${icon_arg[@]}"
+    --category "big-app"
+
+if [ -d "$BUILD/sce_module" ]; then
+    cp -r "$BUILD/sce_module" "$out/$TITLE_ID/sce_module"
+fi
 
 echo
 echo "build-native: laid out $out/$TITLE_ID ($TITLE_ID)"

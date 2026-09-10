@@ -124,6 +124,7 @@ extern const obs_section obs_section_audiodec;
 extern const obs_section obs_section_gpu;
 extern const obs_section obs_section_gnm;
 extern const obs_section obs_section_agc;
+extern const obs_section obs_section_gpucap;
 extern const obs_section obs_section_surface;
 
 /* The blind prober. Compiled in only under OBS_BULK - it is the one section expected to
