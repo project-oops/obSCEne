@@ -911,7 +911,10 @@ void obs_run_context(char *name, size_t name_cap, char *basis, size_t basis_cap)
     delivery = "host";
     delivery_detail = "host build";
 #else
-    if (obs_libkernel_base() != 0) {
+    /* Delivery discriminator: an explicit check for payload bootstrap / payload args rather
+     * than inferring from libkernel base != 0. A title running in an environment where dlsym
+     * resolves getpid may still have a known libkernel base without being a payload (REQ-20260910T0410Z-e5d9). */
+    if (obs_payload_output_bootstrapped || obs_get_payload_args() != NULL) {
         delivery = "payload";
         delivery_detail = "elfldr payload";
     } else {

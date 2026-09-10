@@ -150,10 +150,10 @@ obs_sys_state obs_sysinfo_value(obs_sys_field field, char *buf, size_t n) {
         /* The console's own firmware, read from `kern.version` rather than from
          * `sceKernelGetSystemSwVersion`.
          *
-         * That call answers 13.090.001 here, and it is not wrong - it is the version of
-         * the
-         * **PS4-compatibility environment** this title runs inside, because the title
-         * is a `ps4_game`. The console's actual system software is in the kernel's own
+         * That call answers 13.090.001 here. While often attributed to the
+         * PS4-compatibility environment, hardware measurements confirm the identical
+         * string across all legs (package ps4-bc, native eboot, and payload) on this
+         * firmware (12.40). The console's actual system software is in the kernel's own
          * version string, which this hardware reported as:
          *
          *     r226974/releases/12.40 Nov 27 2025 02:23:38

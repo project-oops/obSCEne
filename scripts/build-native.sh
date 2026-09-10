@@ -93,6 +93,8 @@ if [ ! -f "$elf_input" ]; then
 fi
 elf_abs="$(cd "$(dirname "$elf_input")" && pwd)/$(basename "$elf_input")"
 out_abs="$(cd "$out" && pwd)"
+PRIVILEGE="${PRIVILEGE:-root}"
+SDK="${SDK:-ps5-native}"
 
 selfish --input "$elf_abs" \
     --target "$TARGET_NAME" \
@@ -100,7 +102,9 @@ selfish --input "$elf_abs" \
     --output "$out_abs" \
     --title-id "$TITLE_ID" \
     --title "$TITLE" \
-    --category "big-app"
+    --category "big-app" \
+    --privilege "$PRIVILEGE" \
+    --sdk "$SDK"
 
 if [ -d "$BUILD/sce_module" ]; then
     cp -r "$BUILD/sce_module" "$out/$TITLE_ID/sce_module"

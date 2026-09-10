@@ -1,5 +1,7 @@
 # D022 - Symbol encoding is a build option, and the suffix is never committed
 
+Status: partly-superseded
+
 **partly superseded by D023** · 2026-08-19
 
 `tools/nid.py` computes the hash a real loader resolves by, encodes it, and generates a

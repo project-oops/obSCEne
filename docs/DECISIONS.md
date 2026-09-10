@@ -33,7 +33,7 @@ principles six weeks later.
 | 🟢 | D011 | [The synthetic error code is 0xDEADBEEF, returned unmodified](decisions/D011-the-synthetic-error-code-is-0xdeadbeef.md) | decided | 2026-08-19 |
 | 🟡 | D012 | [The build directory is overridable, and has to be](decisions/D012-the-build-directory-is-overridable-and.md) | assumed | 2026-08-19 |
 | 🟡 | D013 | [The entry point returns rather than exiting](decisions/D013-the-entry-point-returns-rather-than.md) | assumed | 2026-08-19 |
-| 🟢 | D014 | [Presence and behaviour are separate questions, measured separately](decisions/D014-presence-and-behaviour-are-separate.md) | measured | 2026-08-19 |
+| 🟡 | D014 | [Presence and behaviour are separate questions, measured separately](decisions/D014-presence-and-behaviour-are-separate.md) | assumed | 2026-08-19 |
 | 🟢 | D015 | [A census of absences needs a control in both directions](decisions/D015-a-census-of-absences-needs-a-control-in.md) | decided | 2026-08-19 |
 | 🟢 | D016 | [The census lists are fenced off from clang-format](decisions/D016-the-census-lists-are-fenced-off-from.md) | decided | 2026-08-19 |
 | 🟢 | D017 | [The C runtime is a first-class section, and it is where positive checks live](decisions/D017-the-c-runtime-is-a-first-class-section.md) | decided | 2026-08-19 |
@@ -41,10 +41,10 @@ principles six weeks later.
 | 🟢 | D019 | [The diff is the point; the report format is downstream of it](decisions/D019-the-diff-is-the-point-the-report-format.md) | decided | 2026-08-19 |
 | 🟡 | D020 | [The tooling has tests, and they run against real reports](decisions/D020-the-tooling-has-tests-and-they-run.md) | assumed | 2026-08-19 |
 | 🟡 | D021 | [Symbols carry which console generation they belong to](decisions/D021-symbols-carry-which-console-generation.md) | assumed | 2026-08-19 |
-| 🔴 | D022 | [Symbol encoding is a build option, and the suffix is never committed](decisions/D022-symbol-encoding-is-a-build-option-and.md) | superseded | 2026-08-19 |
-| 🔴 | D023 | [The suffix is committed and labelled](decisions/D023-the-suffix-is-committed-and-labelled.md) | superseded | 2026-08-19 |
+| ⚪ | D022 | [Symbol encoding is a build option, and the suffix is never committed](decisions/D022-symbol-encoding-is-a-build-option-and.md) | partly-superseded | 2026-08-19 |
+| ⚪ | D023 | [The suffix is committed and labelled](decisions/D023-the-suffix-is-committed-and-labelled.md) | partly-superseded | 2026-08-19 |
 | 🟢 | D024 | [The NID chain is pinned by a published test vector, not by prose](decisions/D024-the-nid-chain-is-pinned-by-a-published.md) | decided | 2026-08-19 |
-| 🟢 | D025 | [Unknown format constants are measured from a loader, not read from a parser](decisions/D025-unknown-format-constants-are-measured.md) | measured | 2026-08-19 |
+| 🟢 | D025 | [Unknown format constants are measured from a loader, not read from a parser](decisions/D025-unknown-format-constants-are-measured.md) | decided | 2026-08-19 |
 | 🟢 | D026 | [The tooling is Rust, in one binary](decisions/D026-the-tooling-is-rust-in-one-binary.md) | decided | 2026-08-19 |
 | 🟢 | D027 | [The vendor dynamic segment is built on every module build, not behind a flag](decisions/D027-the-vendor-dynamic-segment-is-built-on.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D028 | [The tag derivation is a command that runs on every build, not a paragraph](decisions/D028-the-tag-derivation-is-a-command-that.md) | decided | ~2026-08-19..08-20 |
@@ -55,7 +55,7 @@ principles six weeks later.
 | 🟢 | D033 | [Which library each import comes from is published by the host build](decisions/D033-which-library-each-import-comes-from-is.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D034 | [A finished module has no section headers](decisions/D034-a-finished-module-has-no-section-headers.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D035 | [The entry point ends the process. It does not return](decisions/D035-the-entry-point-ends-the-process-it.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D036 | [`DT_SCE_JMPREL` and `DT_SCE_PLTRELSZ` were swapped, and the derivation could not have caught it](decisions/D036-dt-sce-jmprel-and-dt-sce-pltrelsz-were.md) | unrecorded | ~2026-08-19..08-20 |
+| ⚪ | D036 | [`DT_SCE_JMPREL` and `DT_SCE_PLTRELSZ` were swapped, and the derivation could not have caught it](decisions/D036-dt-sce-jmprel-and-dt-sce-pltrelsz-were.md) | corrected | ~2026-08-19..08-20 |
 | 🟢 | D037 | [`puts` is an output channel, tried before `write`](decisions/D037-puts-is-an-output-channel-tried-before.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D038 | [Libraries and modules declare version 1, and they pack it differently](decisions/D038-libraries-and-modules-declare-version-1.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D039 | [Imported symbols are rewritten to `STT_FUNC`, and this is what makes a report come out](decisions/D039-imported-symbols-are-rewritten-to-stt.md) | decided | ~2026-08-19..08-20 |
@@ -71,65 +71,65 @@ principles six weeks later.
 | 🟢 | D049 | [`obscene-tool crack` recovers names from NIDs by guessing, and says what a miss is worth](decisions/D049-obscene-tool-crack-recovers-names-from.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D050 | [The orchestration is scripts in the repository, not steps somebody remembers](decisions/D050-the-orchestration-is-scripts-in-the.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D051 | [Thirty census names promoted to behavioural checks, all of them settled by a document](decisions/D051-thirty-census-names-promoted-to.md) | decided | ~2026-08-19..08-20 |
-| 🔴 | D052 | [`div` and `ldiv` were checked, then withdrawn to the census](decisions/D052-div-and-ldiv-were-checked-then.md) | withdrawn | ~2026-08-19..08-20 |
-| ⚪ | D053 | [The census had been carrying a fragment of a symbol name, and now it cannot](decisions/D053-the-census-had-been-carrying-a-fragment.md) | unrecorded | ~2026-08-19..08-20 |
+| 🟢 | D052 | [`div` and `ldiv` were checked, then withdrawn to the census](decisions/D052-div-and-ldiv-were-checked-then.md) | decided | ~2026-08-19..08-20 |
+| ⚪ | D053 | [The census had been carrying a fragment of a symbol name, and now it cannot](decisions/D053-the-census-had-been-carrying-a-fragment.md) | bug | ~2026-08-19..08-20 |
 | 🟢 | D054 | [The emulators live in `<emulators>`, source and all, outside this repository](decisions/D054-the-emulators-live-in-emulators-source.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D055 | [The NID implementation now has an independent 42,010-name confirmation](decisions/D055-the-nid-implementation-now-has-an.md) | unrecorded | ~2026-08-19..08-20 |
-| ⚪ | D056 | [A value check whose every expected answer is zero cannot tell a stub from a success](decisions/D056-a-value-check-whose-every-expected.md) | unrecorded | ~2026-08-19..08-20 |
+| ⚪ | D055 | [The NID implementation now has an independent 42,010-name confirmation](decisions/D055-the-nid-implementation-now-has-an.md) | evidence | ~2026-08-19..08-20 |
+| ⚪ | D056 | [A value check whose every expected answer is zero cannot tell a stub from a success](decisions/D056-a-value-check-whose-every-expected.md) | bug | ~2026-08-19..08-20 |
 | 🟢 | D057 | [`libScePosix` is checked, and it is the best provenance available without a console](decisions/D057-libsceposix-is-checked-and-it-is-the.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D058 | [A check that calls a second library must test that symbol's address itself](decisions/D058-a-check-that-calls-a-second-library.md) | unrecorded | ~2026-08-19..08-20 |
+| ⚪ | D058 | [A check that calls a second library must test that symbol's address itself](decisions/D058-a-check-that-calls-a-second-library.md) | bug | ~2026-08-19..08-20 |
 | 🟢 | D059 | [A third kind of record: measurements, which assert nothing](decisions/D059-a-third-kind-of-record-measurements.md) | decided | ~2026-08-19..08-20 |
-| 🟡 | D060 | [Which clock counts what is established by experiment, not assumed](decisions/D060-which-clock-counts-what-is-established.md) | assumed | ~2026-08-19..08-20 |
+| 🟢 | D060 | [Which clock counts what is established by experiment, not assumed](decisions/D060-which-clock-counts-what-is-established.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D061 | [Three loaders, not one, and the second and third each found something the first could not](decisions/D061-three-loaders-not-one-and-the-second.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D062 | [The console generation is a build option, because the loaders disagree and all of them are right](decisions/D062-the-console-generation-is-a-build.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D063 | [The NID implementation agrees with an independent one on 78,372 pairs out of 78,372](decisions/D063-the-nid-implementation-agrees-with-an.md) | unrecorded | ~2026-08-19..08-20 |
-| 🟢 | D064 | [A correction to D063: fpPS4's table is derived from ps4libdoc, not independent of it](decisions/D064-a-correction-to-d063-fpps4-s-table-is.md) | derived | ~2026-08-19..08-20 |
-| 🟢 | D065 | [The gate could not fail, and that is why everything else survived](decisions/D065-the-gate-could-not-fail-and-that-is-why.md) | done | ~2026-08-19..08-20 |
-| ⚪ | D066 | [The rule from D058 is enforced by a script now, because writing it down did nothing](decisions/D066-the-rule-from-d058-is-enforced-by-a.md) | unrecorded | ~2026-08-19..08-20 |
+| ⚪ | D063 | [The NID implementation agrees with an independent one on 78,372 pairs out of 78,372](decisions/D063-the-nid-implementation-agrees-with-an.md) | evidence | ~2026-08-19..08-20 |
+| ⚪ | D064 | [A correction to D063: fpPS4's table is derived from ps4libdoc, not independent of it](decisions/D064-a-correction-to-d063-fpps4-s-table-is.md) | correction | ~2026-08-19..08-20 |
+| ⚪ | D065 | [The gate could not fail, and that is why everything else survived](decisions/D065-the-gate-could-not-fail-and-that-is-why.md) | bug | ~2026-08-19..08-20 |
+| ⚪ | D066 | [The rule from D058 is enforced by a script now, because writing it down did nothing](decisions/D066-the-rule-from-d058-is-enforced-by-a.md) | bug | ~2026-08-19..08-20 |
 | 🟢 | D067 | [The headline number is a frontier, not a sum](decisions/D067-the-headline-number-is-a-frontier-not-a.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D068 | [`018-relational`: properties instead of values, aimed where no document reaches](decisions/D068-018-relational-properties-instead-of.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D069 | [Volatile facts are generated; static facts are written. The distinction is the whole fix](decisions/D069-volatile-facts-are-generated-static.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D070 | [Documentation that names a command is checked against the commands that exist](decisions/D070-documentation-that-names-a-command-is.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D071 | [The orchestration scripts are `sh`. PowerShell was solving one environment variable](decisions/D071-the-orchestration-scripts-are-sh.md) | decided | ~2026-08-19..08-20 |
-| 🟢 | D072 | [`obscene-tool consensus`: agreement between implementations, used where hardware is not available](decisions/D072-obscene-tool-consensus-agreement.md) | hardware | ~2026-08-19..08-20 |
+| 🟢 | D072 | [`obscene-tool consensus`: agreement between implementations, used where hardware is not available](decisions/D072-obscene-tool-consensus-agreement.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D073 | [Five more relations, and the one with the worst failure mode](decisions/D073-five-more-relations-and-the-one-with.md) | decided | ~2026-08-19..08-20 |
-| 🟢 | D074 | [`derived` is a fifth provenance, because the FreeBSD upgrade was not the one the backlog described](decisions/D074-derived-is-a-fifth-provenance-because.md) | derived | ~2026-08-19..08-20 |
+| 🟢 | D074 | [`derived` is a fifth provenance, because the FreeBSD upgrade was not the one the backlog described](decisions/D074-derived-is-a-fifth-provenance-because.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D075 | [The current generation's graphics interface is censused, and its first run is the best evidence yet that presence means little](decisions/D075-the-current-generation-s-graphics.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D076 | [Condition variables and barriers: the operations that cannot block were available all along](decisions/D076-condition-variables-and-barriers-the.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D077 | [The wakeup path is testable, and the timeout was never the thing that was needed](decisions/D077-the-wakeup-path-is-testable-and-the.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D078 | [The census now states its own limit, in the report, where a coverage figure gets quoted](decisions/D078-the-census-now-states-its-own-limit-in.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D079 | [`scripts/repeat.sh`: an intermittent fault needs a denominator](decisions/D079-scripts-repeat-sh-an-intermittent-fault.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D080 | [Kyty cannot emit a report, and the reason is structural rather than a missing flag](decisions/D080-kyty-cannot-emit-a-report-and-the.md) | unrecorded | ~2026-08-19..08-20 |
+| ⚪ | D080 | [Kyty cannot emit a report, and the reason is structural rather than a missing flag](decisions/D080-kyty-cannot-emit-a-report-and-the.md) | closed | ~2026-08-19..08-20 |
 | 🟢 | D081 | [`130-layout`: the instrument half. Bytes recorded, nothing interpreted](decisions/D081-130-layout-the-instrument-half-bytes.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D082 | [Two more libkernel checks, and one of them found a real fault](decisions/D082-two-more-libkernel-checks-and-one-of.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D083 | [Why craziiEmu resolves nothing: two bugs, one fixed, and the earlier guess was wrong](decisions/D083-why-craziiemu-resolves-nothing-two-bugs.md) | unrecorded | ~2026-08-19..08-20 |
-| ⚪ | D084 | [obSCEne may consult other projects. orbistoun may not. The asymmetry is load-bearing](decisions/D084-obscene-may-consult-other-projects.md) | unrecorded | ~2026-08-19..08-20 |
-| ⚪ | D085 | [Before believing a setting works, set it to something that must visibly break](decisions/D085-before-believing-a-setting-works-set-it.md) | unrecorded | ~2026-08-19..08-20 |
-| ⚪ | D086 | [Guest output may arrive on stderr, and reading only stdout would have looked like silence](decisions/D086-guest-output-may-arrive-on-stderr-and.md) | unrecorded | ~2026-08-19..08-20 |
-| ⚪ | D087 | [`000-boot/stack-alignment`, offered by the orbistoun side and worth taking](decisions/D087-000-boot-stack-alignment-offered-by-the.md) | unrecorded | ~2026-08-19..08-20 |
+| ⚪ | D083 | [Why craziiEmu resolves nothing: two bugs, one fixed, and the earlier guess was wrong](decisions/D083-why-craziiemu-resolves-nothing-two-bugs.md) | diagnosed | ~2026-08-19..08-20 |
+| ⚪ | D084 | [obSCEne may consult other projects. orbistoun may not. The asymmetry is load-bearing](decisions/D084-obscene-may-consult-other-projects.md) | correction | ~2026-08-19..08-20 |
+| ⚪ | D085 | [Before believing a setting works, set it to something that must visibly break](decisions/D085-before-believing-a-setting-works-set-it.md) | adopted | ~2026-08-19..08-20 |
+| ⚪ | D086 | [Guest output may arrive on stderr, and reading only stdout would have looked like silence](decisions/D086-guest-output-may-arrive-on-stderr-and.md) | fixed | ~2026-08-19..08-20 |
+| ⚪ | D087 | [`000-boot/stack-alignment`, offered by the orbistoun side and worth taking](decisions/D087-000-boot-stack-alignment-offered-by-the.md) | added | ~2026-08-19..08-20 |
 | 🟢 | D088 | [`140-oracle`: asking the platform what it knows, and recording what it returns](decisions/D088-140-oracle-asking-the-platform-what-it.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D089 | [`150-memory-map`: the map walked, with the walk's own hypothesis checked as it goes](decisions/D089-150-memory-map-the-map-walked-with-the.md) | decided | ~2026-08-19..08-20 |
 | 🟢 | D090 | [The compatibility table is generated from reports, because a hand-written one would be stale by tomorrow](decisions/D090-the-compatibility-table-is-generated.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D091 | [fpPS4 builds on a stable compiler, and reads our module perfectly](decisions/D091-fpps4-builds-on-a-stable-compiler-and.md) | unrecorded | ~2026-08-19..08-20 |
+| ⚪ | D091 | [fpPS4 builds on a stable compiler, and reads our module perfectly](decisions/D091-fpps4-builds-on-a-stable-compiler-and.md) | a | ~2026-08-19..08-20 |
 | 🟢 | D092 | [Screenshots of each loader, captured on the summary screen](decisions/D092-screenshots-of-each-loader-captured-on.md) | decided | ~2026-08-19..08-20 |
-| ⚪ | D093 | [What the current-generation emulators implement that obSCEne does not touch](decisions/D093-what-the-current-generation-emulators.md) | unrecorded | ~2026-08-19..08-20 |
-| ⚪ | D094 | [Emulators are built from source. Running a binary that does not match the source read is a method error](decisions/D094-emulators-are-built-from-source-running.md) | unrecorded | 2026-08-20 |
+| ⚪ | D093 | [What the current-generation emulators implement that obSCEne does not touch](decisions/D093-what-the-current-generation-emulators.md) | analysed | ~2026-08-19..08-20 |
+| ⚪ | D094 | [Emulators are built from source. Running a binary that does not match the source read is a method error](decisions/D094-emulators-are-built-from-source-running.md) | policy | 2026-08-20 |
 | 🟡 | D095 | [Loaders that share a codebase count once. The compatibility table records lineage](decisions/D095-loaders-that-share-a-codebase-count.md) | assumed | ~2026-08-20..08-26 |
 | 🟡 | D096 | [The blind prober calls what it cannot describe, and that is not a breach of D008](decisions/D096-the-blind-prober-calls-what-it-cannot.md) | assumed | ~2026-08-20..08-26 |
 | 🟡 | D097 | [Blame for a loader failure is not assigned without a control build](decisions/D097-blame-for-a-loader-failure-is-not.md) | assumed | ~2026-08-20..08-26 |
 | 🟢 | D098 | [The missing program headers come from `link/module.ld`, not from the link mode or the packaging. Two hypotheses were tested and both were wrong](decisions/D098-the-missing-program-headers-come-from.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D099 | [Two loadable segments, not three. A third was silently not mapped, and that was the crash](decisions/D099-two-loadable-segments-not-three-a-third.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D100 | [`DT_SCE_NEEDED_MODULE` is not enough. A loader keys its implementations on the ordinary `DT_NEEDED` filename, and obSCEne emits none](decisions/D100-dt-sce-needed-module-is-not-enough-a.md) | derived | ~2026-08-20..08-26 |
-| 🟢 | D101 | [obSCEne runs on a second loader. `DT_NEEDED` was the whole of what was missing](decisions/D101-obscene-runs-on-a-second-loader-dt.md) | hardware | ~2026-08-20..08-26 |
+| ⚪ | D101 | [obSCEne runs on a second loader. `DT_NEEDED` was the whole of what was missing](decisions/D101-obscene-runs-on-a-second-loader-dt.md) | hardware-adjacent | ~2026-08-20..08-26 |
 | 🟡 | D102 | [The command protocol is specified before it is implemented, and the captured exchanges are part of the contract](decisions/D102-the-command-protocol-is-specified.md) | assumed | ~2026-08-20..08-26 |
-| 🟢 | D103 | [The hash is confirmed against a second, independent corpus - 281 of 281. And obSCEne will not discover a symbol it has never heard of, ever](decisions/D103-the-hash-is-confirmed-against-a-second.md) | confirmed | ~2026-08-20..08-26 |
+| 🟢 | D103 | [The hash is confirmed against a second, independent corpus - 281 of 281. And obSCEne will not discover a symbol it has never heard of, ever](decisions/D103-the-hash-is-confirmed-against-a-second.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D104 | [The report is written to a file as well, not instead. And the backend is chosen by which file is compiled](decisions/D104-the-report-is-written-to-a-file-as-well.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D105 | [166,960 names and 1,130,742 unnamed identifiers, from eleven sources across 23 firmware versions](decisions/D105-166-960-names-and-1-130-742-unnamed.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D106 | [The driver, and the one thing that lives only at this end](decisions/D106-the-driver-and-the-one-thing-that-lives.md) | derived | ~2026-08-20..08-26 |
-| 🟢 | D107 | [The console socket backend is implemented, and proven inside shadPS4 with no hardware](decisions/D107-the-console-socket-backend-is.md) | hardware | ~2026-08-20..08-26 |
-| ⚪ | D108 | [A report and a corpus are different artifacts, and only the corpus carries origin](decisions/D108-a-report-and-a-corpus-are-different.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D109 | [The GPU is probed by executing shaders and reading the result bits, not by calling an API](decisions/D109-the-gpu-is-probed-by-executing-shaders.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D110 | [Generation detection exists and gates nothing. `obs_detected_generation()` has no callers](decisions/D110-generation-detection-exists-and-gates.md) | unrecorded | ~2026-08-20..08-26 |
+| 🟢 | D107 | [The console socket backend is implemented, and proven inside shadPS4 with no hardware](decisions/D107-the-console-socket-backend-is.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D108 | [A report and a corpus are different artifacts, and only the corpus carries origin](decisions/D108-a-report-and-a-corpus-are-different.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D109 | [The GPU is probed by executing shaders and reading the result bits, not by calling an API](decisions/D109-the-gpu-is-probed-by-executing-shaders.md) | derived | ~2026-08-20..08-26 |
+| ⚪ | D110 | [Generation detection exists and gates nothing. `obs_detected_generation()` has no callers](decisions/D110-generation-detection-exists-and-gates.md) | correction | ~2026-08-20..08-26 |
 | 🟢 | D111 | [One source, both generations: the display takes whichever video-out pair resolved](decisions/D111-one-source-both-generations-the-display.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D112 | [GPU device selection prefers real silicon, and the device type is recorded as gradable provenance](decisions/D112-gpu-device-selection-prefers-real.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D113 | [The unary kernel set is widened to the rest of the transcendentals, and the input vector to the edges they strain](decisions/D113-the-unary-kernel-set-is-widened-to-the.md) | derived | ~2026-08-20..08-26 |
@@ -140,7 +140,7 @@ principles six weeks later.
 | 🟢 | D118 | [Closing the three GLSL-reachable gaps the census named, and finding a denormal difference by doing it](decisions/D118-closing-the-three-glsl-reachable-gaps.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D119 | [Integer/bit breadth: a second GPU surface the float census did not map, and the kernels for its first four operations](decisions/D119-integer-bit-breadth-a-second-gpu.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D120 | [Controlled-ISA: pinning the fast SFU path against the correctly-rounded one, through the precision the SPIR-V asks for](decisions/D120-controlled-isa-pinning-the-fast-sfu.md) | derived | ~2026-08-20..08-26 |
-| ⚪ | D121 | [Console generation is observed, never asserted from presence](decisions/D121-console-generation-is-observed-never.md) | unrecorded | ~2026-08-20..08-26 |
+| ⚪ | D121 | [Console generation is observed, never asserted from presence](decisions/D121-console-generation-is-observed-never.md) | implemented | ~2026-08-20..08-26 |
 | 🟢 | D122 | [Protocol completion: the `blob`/`run`/`reset` verbs, with the escape hatch off unless a build asks for it](decisions/D122-protocol-completion-the-blob-run-reset.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D123 | [A golden GPU corpus and a regression check, so a change to a kernel's output is caught even where the reference stays silent](decisions/D123-a-golden-gpu-corpus-and-a-regression.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D124 | [More execution breadth: bitfield ops, an FTZ probe, and a bit-pattern input vector for the kernels that work on bits](decisions/D124-more-execution-breadth-bitfield-ops-an.md) | derived | ~2026-08-20..08-26 |
@@ -154,9 +154,9 @@ principles six weeks later.
 | 🟢 | D132 | [A serving build listens first and runs the suite on demand. The report streams over the socket. A named Deck target exists](decisions/D132-a-serving-build-listens-first-and-runs.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D133 | [A consumer's strict decoder found a defective fixture the checker had passed. Both are fixed](decisions/D133-a-consumer-s-strict-decoder-found-a.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D134 | [Multi-operand kernels sweep the operand cross-product, in a new record that leaves the unary one untouched](decisions/D134-multi-operand-kernels-sweep-the-operand.md) | derived | ~2026-08-20..08-26 |
-| ⚪ | D135 | [The non-platform corpus is the console's own software, and it is a different target rather than a worthless one](decisions/D135-the-non-platform-corpus-is-the-console.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟡 | D136 | [352 libraries and 35,518 imports load and run. The ceiling was far higher than assumed](decisions/D136-352-libraries-and-35-518-imports-load.md) | assumed | ~2026-08-20..08-26 |
-| 🟢 | D137 | [The GPU corpus diff, so a hardware run ends in a gap list rather than a pile of records](decisions/D137-the-gpu-corpus-diff-so-a-hardware-run.md) | hardware | ~2026-08-20..08-26 |
+| ⚪ | D135 | [The non-platform corpus is the console's own software, and it is a different target rather than a worthless one](decisions/D135-the-non-platform-corpus-is-the-console.md) | correction | ~2026-08-20..08-26 |
+| 🟢 | D136 | [352 libraries and 35,518 imports load and run. The ceiling was far higher than assumed](decisions/D136-352-libraries-and-35-518-imports-load.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D137 | [The GPU corpus diff, so a hardware run ends in a gap list rather than a pile of records](decisions/D137-the-gpu-corpus-diff-so-a-hardware-run.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D138 | [A symbol can be imported with no name at all. The identifier is the import; the name only ever existed to compute it](decisions/D138-a-symbol-can-be-imported-with-no-name.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D139 | [A platform HUD replaces the static tagline: every system fact, value or `unknown`](decisions/D139-a-platform-hud-replaces-the-static.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D140 | [A resolved address proves nothing on a loader that stubs what it cannot resolve. The display learned this the hard way](decisions/D140-a-resolved-address-proves-nothing-on-a.md) | derived | ~2026-08-20..08-26 |
@@ -168,14 +168,14 @@ principles six weeks later.
 | 🟢 | D146 | [Pack/unpack conversions, and the per-kernel input scheme they needed](decisions/D146-pack-unpack-conversions-and-the-per.md) | derived | ~2026-08-20..08-26 |
 | ⚪ | D147 | [The three letters in the middle of the name are marked wherever the project renders it](decisions/D147-the-three-letters-in-the-middle-of-the.md) | unrecorded | ~2026-08-20..08-26 |
 | 🟢 | D148 | [`gpustats`: the diff as a distance, so the approximation is a number, not a yes/no](decisions/D148-gpustats-the-diff-as-a-distance-so-the.md) | derived | ~2026-08-20..08-26 |
-| ⚪ | D149 | [A censused library is not a load-time dependency, and saying it is stops obSCEne loading on current shadPS4 at all](decisions/D149-a-censused-library-is-not-a-load-time.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D150 | [The hardware day made turnkey: one analysis command and a runbook, so a Deck corpus needs no new thinking](decisions/D150-the-hardware-day-made-turnkey-one.md) | hardware | ~2026-08-20..08-26 |
+| ⚪ | D149 | [A censused library is not a load-time dependency, and saying it is stops obSCEne loading on current shadPS4 at all](decisions/D149-a-censused-library-is-not-a-load-time.md) | defect | ~2026-08-20..08-26 |
+| 🟢 | D150 | [The hardware day made turnkey: one analysis command and a runbook, so a Deck corpus needs no new thinking](decisions/D150-the-hardware-day-made-turnkey-one.md) | derived | ~2026-08-20..08-26 |
 | ⚪ | D151 | [The blind prober does not belong on the host build, and the harness did not scale to the corpus. Both were found by running it](decisions/D151-the-blind-prober-does-not-belong-on-the.md) | unrecorded | ~2026-08-20..08-26 |
 | 🟢 | D152 | [The Gnm command-building API probe: the console GPU's own calls, the other GPU axis - and a correction to having dismissed it](decisions/D152-the-gnm-command-building-api-probe-the.md) | derived | ~2026-08-20..08-26 |
 | 🟢 | D153 | [Scoping the Gnm execution axis: the GCN shader is not the blocker; the input struct layouts are](decisions/D153-scoping-the-gnm-execution-axis-the-gcn.md) | derived | ~2026-08-20..08-26 |
 | ⚪ | D154 | [Three threading contract probes, added at the sibling project's request](decisions/D154-three-threading-contract-probes-added.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D155 | [One source, as many binaries as the targets need. Single-binary was never the goal and is not a constraint to design around](decisions/D155-one-source-as-many-binaries-as-the.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D156 | [The compatibility table ignored the census control that was in every report, and presented a void count beside a measured one](decisions/D156-the-compatibility-table-ignored-the.md) | measured | ~2026-08-20..08-26 |
+| ⚪ | D156 | [The compatibility table ignored the census control that was in every report, and presented a void count beside a measured one](decisions/D156-the-compatibility-table-ignored-the.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D157 | [The runtime census exists, and its first run settled what the address census could not](decisions/D157-the-runtime-census-exists-and-its-first.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D158 | [Two relational checks had never run anywhere, and the report said so in words that read as a platform limitation](decisions/D158-two-relational-checks-had-never-run.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D159 | [The two new threading relations spin for their child rather than joining it](decisions/D159-the-two-new-threading-relations-spin.md) | unrecorded | ~2026-08-20..08-26 |
@@ -187,7 +187,7 @@ principles six weeks later.
 | ⚪ | D165 | [The command socket takes a session secret, generated per startup and displayed](decisions/D165-the-command-socket-takes-a-session.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D166 | [A test asserted the opposite of what `sceKernelClearEventFlag` does, and the stub agreed](decisions/D166-a-test-asserted-the-opposite-of-what.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D167 | [The blind prober against a current-generation loader: the two emulators are opposites, and twelve functions hand the guest a host address](decisions/D167-the-blind-prober-against-a-current.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟡 | D168 | [A comment inside a table row's braces made a check invisible to every gate, and nothing failed](decisions/D168-a-comment-inside-a-table-row-s-braces.md) | assumed | ~2026-08-20..08-26 |
+| ⚪ | D168 | [A comment inside a table row's braces made a check invisible to every gate, and nothing failed](decisions/D168-a-comment-inside-a-table-row-s-braces.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D169 | [The provenance ladder gains a rung: `implementations`](decisions/D169-the-provenance-ladder-gains-a-rung.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D170 | [Anchored prose: a document may state one checkable fact about the source beside the passage that depends on it](decisions/D170-anchored-prose-a-document-may-state-one.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D171 | [fpPS4 writes a pointer-sized semaphore handle through an `int *`, and the check that found it described the wrong thing](decisions/D171-fpps4-writes-a-pointer-sized-semaphore.md) | unrecorded | ~2026-08-20..08-26 |
@@ -195,46 +195,46 @@ principles six weeks later.
 | ⚪ | D173 | [The module now carries a `DT_INIT`, because a loader may call one and ours pointed at the ELF header](decisions/D173-the-module-now-carries-a-dt-init.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D174 | [The screen said nothing about what it was doing, and the first fix for that made the probe worse](decisions/D174-the-screen-said-nothing-about-what-it.md) | unrecorded | ~2026-08-20..08-26 |
 | ⚪ | D175 | [`e_type` was `0xFE18` - the shared-library type - and the constants were named backwards](decisions/D175-e-type-was-0xfe18-the-shared-library.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D176 | [A loader can be patched to let the probe run, and doing so measures the patch](decisions/D176-a-loader-can-be-patched-to-let-the.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D177 | [The mutex type constants are one-based and are not the POSIX values](decisions/D177-the-mutex-type-constants-are-one-based.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D178 | [The shell's process id is not the loader, and the runner had already learnt that once](decisions/D178-the-shell-s-process-id-is-not-the.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D179 | [Four shapes, two axes, and the filename now says which](decisions/D179-four-shapes-two-axes-and-the-filename.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D180 | [The loading mechanism is coverage surface, so each one is an artifact](decisions/D180-the-loading-mechanism-is-coverage.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D181 | [Runtime resume can lose twenty thousand measurements and still report success](decisions/D181-runtime-resume-can-lose-twenty-thousand.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D182 | [The container format is derived the way NIDs already are: binaries outside, provenance-headed data inside](decisions/D182-the-container-format-is-derived-the-way.md) | derived | ~2026-08-20..08-26 |
-| ⚪ | D183 | [A shell exists on the real target after all, and the protocol survives it for a better reason](decisions/D183-a-shell-exists-on-the-real-target-after.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D184 | [Hardware is registered, and its capabilities are measured on every use rather than stored](decisions/D184-hardware-is-registered-and-its.md) | hardware | ~2026-08-20..08-26 |
-| ⚪ | D185 | [`mkself` works, and the loader that rejected it first is why](decisions/D185-mkself-works-and-the-loader-that.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D186 | [The module version is per library, and declaring one value for all of them was why nothing appeared on screen](decisions/D186-the-module-version-is-per-library-and.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D187 | ["The display accepted it" and "a frame reached the screen" are different facts, and the report only carried the first](decisions/D187-the-display-accepted-it-and-a-frame.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D188 | [Retail titles render and a CPU-drawn framebuffer does not, and the difference is who wrote the pixels](decisions/D188-retail-titles-render-and-a-cpu-drawn.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D189 | [The half of `hardware.rs` that talked to a console now lives in a shared crate, and this project depends on it by path](decisions/D189-the-half-of-hardware-rs-that-talked-to.md) | hardware | ~2026-08-20..08-26 |
-| ⚪ | D190 | [The tool fetches the report off the console itself, rather than telling somebody to go and get it](decisions/D190-the-tool-fetches-the-report-off-the.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D191 | [A check must fail to return on two *consecutive* runs before it is skipped](decisions/D191-a-check-must-fail-to-return-on-two.md) | measured | ~2026-08-20..08-26 |
-| 🟢 | D192 | [A project that reads the others is not another vote, and prosper says so in its own comments](decisions/D192-a-project-that-reads-the-others-is-not.md) | hardware | ~2026-08-20..08-26 |
-| ⚪ | D193 | [obSCEne writes a dynamic table no retail current-generation module uses, and six real dumps say so](decisions/D193-obscene-writes-a-dynamic-table-no.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D194 | [`grep -q` reading a Windows program deadlocks the harness, and it hid as a timeout bug for hours](decisions/D194-grep-q-reading-a-windows-program.md) | measured | ~2026-08-20..08-26 |
-| ⚪ | D195 | [prosper is the sixth loader, the only headless one, and the first to have ground truth to check us against](decisions/D195-prosper-is-the-sixth-loader-the-only.md) | unrecorded | ~2026-08-20..08-26 |
-| ⚪ | D196 | [fpPS4 does not crash on an unimplemented import - it sleeps forever, and that is one line](decisions/D196-fpps4-does-not-crash-on-an.md) | unrecorded | ~2026-08-20..08-26 |
-| 🟢 | D197 | [A consensus across generations is not a consensus, and mixing them destroyed the signal](decisions/D197-a-consensus-across-generations-is-not-a.md) | hardware | ~2026-08-20..08-26 |
-| 🟢 | D198 | [`verify.sh` takes fifty minutes, none of it work, and D012's rule had one more place to apply](decisions/D198-verify-sh-takes-fifty-minutes-none-of.md) | measured | ~2026-08-20..08-26 |
-| ⚪ | D199 | [Five scripts were still driving a build environment that had been deleted that morning](decisions/D199-five-scripts-were-still-driving-a-build.md) | unrecorded | 2026-08-26 |
+| 🟡 | D176 | [A loader can be patched to let the probe run, and doing so measures the patch](decisions/D176-a-loader-can-be-patched-to-let-the.md) | assumed | ~2026-08-20..08-26 |
+| 🟡 | D177 | [The mutex type constants are one-based and are not the POSIX values](decisions/D177-the-mutex-type-constants-are-one-based.md) | assumed | ~2026-08-20..08-26 |
+| 🟢 | D178 | [The shell's process id is not the loader, and the runner had already learnt that once](decisions/D178-the-shell-s-process-id-is-not-the.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D179 | [Four shapes, two axes, and the filename now says which](decisions/D179-four-shapes-two-axes-and-the-filename.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D180 | [The loading mechanism is coverage surface, so each one is an artifact](decisions/D180-the-loading-mechanism-is-coverage.md) | decided | ~2026-08-20..08-26 |
+| 🟡 | D181 | [Runtime resume can lose twenty thousand measurements and still report success](decisions/D181-runtime-resume-can-lose-twenty-thousand.md) | assumed | ~2026-08-20..08-26 |
+| 🟢 | D182 | [The container format is derived the way NIDs already are: binaries outside, provenance-headed data inside](decisions/D182-the-container-format-is-derived-the-way.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D183 | [A shell exists on the real target after all, and the protocol survives it for a better reason](decisions/D183-a-shell-exists-on-the-real-target-after.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D184 | [Hardware is registered, and its capabilities are measured on every use rather than stored](decisions/D184-hardware-is-registered-and-its.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D185 | [`mkself` works, and the loader that rejected it first is why](decisions/D185-mkself-works-and-the-loader-that.md) | decided | ~2026-08-20..08-26 |
+| 🟡 | D186 | [The module version is per library, and declaring one value for all of them was why nothing appeared on screen](decisions/D186-the-module-version-is-per-library-and.md) | assumed | ~2026-08-20..08-26 |
+| 🟡 | D187 | ["The display accepted it" and "a frame reached the screen" are different facts, and the report only carried the first](decisions/D187-the-display-accepted-it-and-a-frame.md) | assumed | ~2026-08-20..08-26 |
+| 🟢 | D188 | [Retail titles render and a CPU-drawn framebuffer does not, and the difference is who wrote the pixels](decisions/D188-retail-titles-render-and-a-cpu-drawn.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D189 | [The half of `hardware.rs` that talked to a console now lives in a shared crate, and this project depends on it by path](decisions/D189-the-half-of-hardware-rs-that-talked-to.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D190 | [The tool fetches the report off the console itself, rather than telling somebody to go and get it](decisions/D190-the-tool-fetches-the-report-off-the.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D191 | [A check must fail to return on two *consecutive* runs before it is skipped](decisions/D191-a-check-must-fail-to-return-on-two.md) | decided | ~2026-08-20..08-26 |
+| 🟢 | D192 | [A project that reads the others is not another vote, and prosper says so in its own comments](decisions/D192-a-project-that-reads-the-others-is-not.md) | decided | ~2026-08-20..08-26 |
+| 🟡 | D193 | [obSCEne writes a dynamic table no retail current-generation module uses, and six real dumps say so](decisions/D193-obscene-writes-a-dynamic-table-no.md) | assumed | ~2026-08-20..08-26 |
+| 🟢 | D194 | [`grep -q` reading a Windows program deadlocks the harness, and it hid as a timeout bug for hours](decisions/D194-grep-q-reading-a-windows-program.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D195 | [prosper is the sixth loader, the only headless one, and the first to have ground truth to check us against](decisions/D195-prosper-is-the-sixth-loader-the-only.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D196 | [fpPS4 does not crash on an unimplemented import - it sleeps forever, and that is one line](decisions/D196-fpps4-does-not-crash-on-an.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D197 | [A consensus across generations is not a consensus, and mixing them destroyed the signal](decisions/D197-a-consensus-across-generations-is-not-a.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D198 | [`verify.sh` takes fifty minutes, none of it work, and D012's rule had one more place to apply](decisions/D198-verify-sh-takes-fifty-minutes-none-of.md) | derived | ~2026-08-20..08-26 |
+| 🟢 | D199 | [Five scripts were still driving a build environment that had been deleted that morning](decisions/D199-five-scripts-were-still-driving-a-build.md) | derived | 2026-08-26 |
 | ⚪ | D200 | [The file formats moved to `selfish`, and this repository now depends on them](decisions/D200-the-file-formats-moved-to-selfish-and.md) | unrecorded | ~2026-08-26..08-27 |
 | ⚪ | D201 | [The migration found four things wrong, and three of them were wrong here](decisions/D201-the-migration-found-four-things-wrong.md) | unrecorded | ~2026-08-26..08-27 |
 | ⚪ | D202 | [A mined-corpus name that a section wants to call is declared in the section, not in `platform.h`](decisions/D202-a-mined-corpus-name-that-a-section.md) | unrecorded | ~2026-08-26..08-27 |
 | ⚪ | D203 | [`105-record`, not `170-record`: the section numbers carry the layering and the report contract enforces it](decisions/D203-105-record-not-170-record-the-section.md) | unrecorded | ~2026-08-26..08-27 |
-| ⚪ | D204 | [The layout verdict counted non-zero bytes while its dump counted changed bytes](decisions/D204-the-layout-verdict-counted-non-zero.md) | unrecorded | ~2026-08-26..08-27 |
+| 🟢 | D204 | [The layout verdict counted non-zero bytes while its dump counted changed bytes](decisions/D204-the-layout-verdict-counted-non-zero.md) | derived | ~2026-08-26..08-27 |
 | 🟢 | D205 | [First contact with a console, and the answer arrived in ninety seconds: elfldr does not resolve our imports](decisions/D205-first-contact-with-a-console-and-the.md) | hardware | 2026-08-27 |
-| ⚪ | D206 | [The console runs our payload - the blocker was 16 KB pages, and the loader blocks direct syscalls and passes a bootstrap](decisions/D206-the-console-runs-our-payload-the.md) | unrecorded | 2026-08-27 |
-| ⚪ | D207 | [The backtrace-echo readout is defeated by log caching, and the signal ladder is the trustworthy channel](decisions/D207-the-backtrace-echo-readout-is-defeated.md) | unrecorded | ~2026-08-27 |
-| ⚪ | D208 | [The payload ABI is fully mapped, and the frontier is precise: word 0 is not a working resolver in the sandbox](decisions/D208-the-payload-abi-is-fully-mapped-and-the.md) | unrecorded | 2026-08-27 |
+| 🟢 | D206 | [The console runs our payload - the blocker was 16 KB pages, and the loader blocks direct syscalls and passes a bootstrap](decisions/D206-the-console-runs-our-payload-the.md) | hardware | 2026-08-27 |
+| 🟢 | D207 | [The backtrace-echo readout is defeated by log caching, and the signal ladder is the trustworthy channel](decisions/D207-the-backtrace-echo-readout-is-defeated.md) | hardware | ~2026-08-27 |
+| 🟢 | D208 | [The payload ABI is fully mapped, and the frontier is precise: word 0 is not a working resolver in the sandbox](decisions/D208-the-payload-abi-is-fully-mapped-and-the.md) | hardware | 2026-08-27 |
 | 🟢 | D209 | [obSCEne runs on a real PS5 and produces a report with hardware provenance - the first in the project's history](decisions/D209-obscene-runs-on-a-real-ps5-and-produces.md) | hardware | 2026-08-27 |
-| ⚪ | D210 | [Video is reachable from the payload, but the display is owned by the system](decisions/D210-video-is-reachable-from-the-payload-but.md) | unrecorded | 2026-08-27 |
+| 🟢 | D210 | [Video is reachable from the payload, but the display is owned by the system](decisions/D210-video-is-reachable-from-the-payload-but.md) | hardware | 2026-08-27 |
 | 🟢 | D211 | [A general payload crt0 resolves obSCEne's imports on-device - proven on hardware, and the artifact that moves into selfish](decisions/D211-a-general-payload-crt0-resolves-obscene.md) | hardware | 2026-08-27 |
-| ⚪ | D212 | [obSCEne is built by selfish, deployed by prosperous, and runs on the console - the toolchain is real](decisions/D212-obscene-is-built-by-selfish-deployed-by.md) | unrecorded | 2026-08-27 |
-| ⚪ | D213 | [The payload path split along selfish's charter: format knowledge in selfish, runtime in obSCEne - and multi-library resolution works](decisions/D213-the-payload-path-split-along-selfish-s.md) | unrecorded | 2026-08-27 |
-| 🔴 | D214 | [Rendering is blocked by process context, not by the toolchain - the injected process has no display to own](decisions/D214-rendering-is-blocked-by-process-context.md) | blocked | 2026-08-27 |
-| ⚪ | D215 | [selfish is made the explicit, required build path - in the Makefile, in CI, and through a wired `make pkg`](decisions/D215-selfish-is-made-the-explicit-required.md) | unrecorded | ~2026-08-27..08-29 |
+| 🟢 | D212 | [obSCEne is built by selfish, deployed by prosperous, and runs on the console - the toolchain is real](decisions/D212-obscene-is-built-by-selfish-deployed-by.md) | hardware | 2026-08-27 |
+| 🟢 | D213 | [The payload path split along selfish's charter: format knowledge in selfish, runtime in obSCEne - and multi-library resolution works](decisions/D213-the-payload-path-split-along-selfish-s.md) | hardware | 2026-08-27 |
+| 🟢 | D214 | [Rendering is blocked by process context, not by the toolchain - the injected process has no display to own](decisions/D214-rendering-is-blocked-by-process-context.md) | hardware | 2026-08-27 |
+| 🟡 | D215 | [selfish is made the explicit, required build path - in the Makefile, in CI, and through a wired `make pkg`](decisions/D215-selfish-is-made-the-explicit-required.md) | assumed | ~2026-08-27..08-29 |
 | 🟡 | D216 | [obSCEne's end of "the real way" is built and waiting on one selfish command - install and launch via prosperous, into a foreground context](decisions/D216-obscene-s-end-of-the-real-way-is-built.md) | assumed | ~2026-08-27..08-29 |
 | 🟢 | D217 | [Import libraries are numbered from zero, needed modules from one](decisions/D217-import-libraries-are-numbered-from-zero.md) | decided | 2026-08-29 |
 | 🟢 | D218 | [`MIN_DEFINES`, and what the importless control turned out not to prove](decisions/D218-min-defines-and-what-the-importless.md) | decided | 2026-08-29 |
@@ -246,7 +246,7 @@ principles six weeks later.
 | ⚪ | D224 | [The bundled stubs must not be named after a library, and the guard was checking the wrong list](decisions/D224-the-bundled-stubs-must-not-be-named.md) | unrecorded | ~2026-08-29..08-30 |
 | ⚪ | D225 | [The report goes to the system log first, because a title has no descriptor](decisions/D225-the-report-goes-to-the-system-log-first.md) | unrecorded | ~2026-08-29..08-30 |
 | ⚪ | D226 | [An eboot may not require more libraries than a title can load](decisions/D226-an-eboot-may-not-require-more-libraries.md) | unrecorded | ~2026-08-29..08-30 |
-| 🟢 | D227 | [The harness needs two libraries; the other 350 are measurements](decisions/D227-the-harness-needs-two-libraries-the.md) | measured | ~2026-08-29..08-30 |
+| ⚪ | D227 | [The harness needs two libraries; the other 350 are measurements](decisions/D227-the-harness-needs-two-libraries-the.md) | unrecorded | ~2026-08-29..08-30 |
 | ⚪ | D228 | [The eboot does not link the census, and the census says so](decisions/D228-the-eboot-does-not-link-the-census-and.md) | unrecorded | ~2026-08-29..08-30 |
 | ⚪ | D229 | [The census resolves at run time, so an unloadable library is a finding](decisions/D229-the-census-resolves-at-run-time-so-an.md) | unrecorded | ~2026-08-29..08-30 |
 | ⚪ | D230 | [The generation probe asked by linking, and could have killed what it was probing](decisions/D230-the-generation-probe-asked-by-linking.md) | unrecorded | ~2026-08-29..08-30 |
@@ -282,18 +282,18 @@ principles six weeks later.
 | 🟢 | D261 | [Firmware is the console's, not the compatibility environment's](decisions/D261-firmware-is-the-console-s-not-the.md) | measured | ~2026-08-29..08-30 |
 | 🟢 | D262 | [A build with no status bar does not gather what would fill one](decisions/D262-a-build-with-no-status-bar-does-not.md) | decided | ~2026-08-29..08-30 |
 | 🟢 | D263 | [The GEN field names the mode when it cannot name the console; the PS4-compat version is its own field](decisions/D263-the-gen-field-names-the-mode-when-it.md) | decided | ~2026-08-29..08-30 |
-| 🟢 | D264 | [Export vaddrs are confirmed by behaviour, not read from firmware](decisions/D264-export-vaddrs-are-confirmed-by.md) | confirmed | 2026-08-30 |
-| 🟢 | D265 | [`obscene-tool vaddrs`: exports resolved to names, in the tool not a script](decisions/D265-obscene-tool-vaddrs-exports-resolved-to.md) | measured | ~2026-08-30..08-31 |
-| 🟢 | D266 | [Three checks staged for the next hardware run: the layout of a memory type, whether a short size bounds a write, and more export candidates](decisions/D266-three-checks-staged-for-the-next.md) | hardware | 2026-08-31 |
-| 🟢 | D267 | [The package must stage `sce_module/`, and a rewrite dropped it](decisions/D267-the-package-must-stage-sce-module-and-a.md) | hardware | ~2026-08-31 |
-| ⚪ | D268 | [On-console libkernel export table enumeration replaces offline sprx dumps](decisions/D268-on-console-libkernel-export-table.md) | unrecorded | ~2026-08-31 |
-| 🟢 | D269 | [One verb per hardware task; the report comes off the system log, in the tool](decisions/D269-one-verb-per-hardware-task-the-report.md) | hardware | ~2026-08-31 |
-| 🟢 | D270 | [Real hardware is a pointer from the compatibility table, not a column in it](decisions/D270-real-hardware-is-a-pointer-from-the.md) | hardware | ~2026-08-31 |
-| ⚪ | D271 | [The report screen wraps into two columns before it overruns the totals](decisions/D271-the-report-screen-wraps-into-two.md) | unrecorded | ~2026-08-31 |
-| ⚪ | D272 | [A GPU field for the driver, DISK wired through `statfs`; TEMP stays honestly unknown](decisions/D272-a-gpu-field-for-the-driver-disk-wired.md) | unrecorded | ~2026-08-31 |
-| ⚪ | D273 | [The payload round-trip is a verb too: `./bin/obscene payload`](decisions/D273-the-payload-round-trip-is-a-verb-too.md) | unrecorded | ~2026-08-31 |
+| 🟢 | D264 | [Export vaddrs are confirmed by behaviour, not read from firmware](decisions/D264-export-vaddrs-are-confirmed-by.md) | hardware | 2026-08-30 |
+| ⚪ | D265 | [`obscene-tool vaddrs`: exports resolved to names, in the tool not a script](decisions/D265-obscene-tool-vaddrs-exports-resolved-to.md) | unrecorded | ~2026-08-30..08-31 |
+| ⚪ | D266 | [Three checks staged for the next hardware run: the layout of a memory type, whether a short size bounds a write, and more export candidates](decisions/D266-three-checks-staged-for-the-next.md) | unrecorded | 2026-08-31 |
+| ⚪ | D267 | [The package must stage `sce_module/`, and a rewrite dropped it](decisions/D267-the-package-must-stage-sce-module-and-a.md) | unrecorded | ~2026-08-31 |
+| 🟢 | D268 | [On-console libkernel export table enumeration replaces offline sprx dumps](decisions/D268-on-console-libkernel-export-table.md) | done | ~2026-08-31 |
+| 🟢 | D269 | [One verb per hardware task; the report comes off the system log, in the tool](decisions/D269-one-verb-per-hardware-task-the-report.md) | done | ~2026-08-31 |
+| 🟢 | D270 | [Real hardware is a pointer from the compatibility table, not a column in it](decisions/D270-real-hardware-is-a-pointer-from-the.md) | done | ~2026-08-31 |
+| 🟢 | D271 | [The report screen wraps into two columns before it overruns the totals](decisions/D271-the-report-screen-wraps-into-two.md) | done | ~2026-08-31 |
+| 🟢 | D272 | [A GPU field for the driver, DISK wired through `statfs`; TEMP stays honestly unknown](decisions/D272-a-gpu-field-for-the-driver-disk-wired.md) | done | ~2026-08-31 |
+| 🟢 | D273 | [The payload round-trip is a verb too: `./bin/obscene payload`](decisions/D273-the-payload-round-trip-is-a-verb-too.md) | done | ~2026-08-31 |
 | 🟢 | D274 | [The TSC-frequency signature is a band, not an equality; four more export candidates](decisions/D274-the-tsc-frequency-signature-is-a-band.md) | measured | 2026-08-31 |
-| 🟢 | D275 | [a measured run-context axis, and the loaded-module link-map that feeds it](decisions/D275-a-measured-run-context-axis-and-the.md) | measured | ~2026-08-31..09-01 |
+| 🟡 | D275 | [a measured run-context axis, and the loaded-module link-map that feeds it](decisions/D275-a-measured-run-context-axis-and-the.md) | assumed | ~2026-08-31..09-01 |
 | 🟡 | D276 | [payload mode is the ps4 backward-compatibility context](decisions/D276-payload-mode-is-the-ps4-backward.md) | assumed | ~2026-08-31..09-01 |
 | 🟡 | D277 | [enumerate modules by base+vaddr, the way past a payload's three shut doors](decisions/D277-enumerate-modules-by-base-vaddr-the-way.md) | assumed | ~2026-08-31..09-01 |
 | 🟢 | D278 | [obscene-injector: decoupled freestanding ELF injection via session kernel R/W](decisions/D278-obscene-injector-decoupled-freestanding.md) | decided | ~2026-08-31..09-01 |
@@ -301,30 +301,30 @@ principles six weeks later.
 | 🟡 | D280 | [Porthole scaffolded, and the encoder reachability made a section (106-encoder)](decisions/D280-porthole-scaffolded-and-the-encoder.md) | assumed | 2026-09-01 |
 | 🟢 | D281 | [Projects live under src/, and the encoder section finished its wiring](decisions/D281-projects-live-under-src-and-the-encoder.md) | decided | 2026-09-01 |
 | ⚪ | D282 | [dlsym gets its positive: a known symbol through a valid handle](decisions/D282-dlsym-gets-its-positive-a-known-symbol.md) | unrecorded | ~2026-09-01..09-02 |
-| 🔴 | D283 | [flexible-configured: the probe orbistoun's allocator work was blocked on](decisions/D283-flexible-configured-the-probe-orbistoun.md) | blocked | ~2026-09-01..09-02 |
+| ⚪ | D283 | [flexible-configured: the probe orbistoun's allocator work was blocked on](decisions/D283-flexible-configured-the-probe-orbistoun.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D284 | [obs_read_header is bounded by the caller's buffer, not by a constant](decisions/D284-obs-read-header-is-bounded-by-the.md) | unrecorded | ~2026-09-01..09-02 |
-| 🟢 | D285 | [the measured value is reported on every row, not only on a difference](decisions/D285-the-measured-value-is-reported-on-every.md) | measured | ~2026-09-01..09-02 |
-| 🟢 | D286 | [container-structure: a raw measured dump of a real gen-5 container](decisions/D286-container-structure-a-raw-measured.md) | measured | ~2026-09-01..09-02 |
+| ⚪ | D285 | [the measured value is reported on every row, not only on a difference](decisions/D285-the-measured-value-is-reported-on-every.md) | unrecorded | ~2026-09-01..09-02 |
+| ⚪ | D286 | [container-structure: a raw measured dump of a real gen-5 container](decisions/D286-container-structure-a-raw-measured.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D287 | [the native title carries its eboot and is a `./bin/obscene` verb](decisions/D287-the-native-title-carries-its-eboot-and.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D288 | [the title identity has one home: data/identity.toml](decisions/D288-the-title-identity-has-one-home.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D289 | [the eboot container generation follows EBOOT_GEN](decisions/D289-the-eboot-container-generation-follows.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D290 | [the ctype table accessors get a library assignment](decisions/D290-the-ctype-table-accessors-get-a-library.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D291 | [native deploy uploads the title dir to a scan root via prosperous](decisions/D291-native-deploy-uploads-the-title-dir.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D292 | [the native title gets its own id, distinct from the package](decisions/D292-the-native-title-gets-its-own-id.md) | unrecorded | ~2026-09-01..09-02 |
-| 🟢 | D293 | [a real ps5 native title uses the 4F 15 3D 1D eboot, so `native` defaults to it](decisions/D293-ps5-native-titles-use-the-4f153d1d-eboot.md) | hardware | ~2026-09-01..09-02 |
-| 🟢 | D294 | [SceShellUI restart recovers from VSH UI softlocks](decisions/D294-sceshellui-restart-recovers-from-vsh-ui-softlocks.md) | decided | 2026-09-02 |
-| 🟢 | D295 | [Dynamic module resolution for non-essential libraries](decisions/D295-dynamic-module-resolution-for-non-essential-libraries.md) | decided | 2026-09-02 |
-| 🟢 | D296 | [Four-tier privilege model and module categorization](decisions/D296-four-tier-privilege-model-and-module-categorization.md) | decided | 2026-09-02 |
-| 🟢 | D297 | [External SDK Version Dictionary and Targeted SDK Builds in SELFish and obSCEne](decisions/D297-external-sdk-dictionary-and-targeted-sdk-builds.md) | decided | 2026-09-02 |
-| 🟢 | D298 | [PT_SCE_PROCPARAM and PT_SCE_MODULE_PARAM Contracts on PS5 Native](decisions/D298-pt-sce-procparam-and-module-param-contracts.md) | decided | 2026-09-02 |
-| 🟢 | D299 | [Reproducible Process Parameter Audit in 048-selfaudit](decisions/D299-reproducible-procparam-audit-in-048-selfaudit.md) | decided | 2026-09-02 |
+| ⚪ | D293 | [a real ps5 native title uses the 4F 15 3D 1D eboot, so `native` defaults to it](decisions/D293-ps5-native-titles-use-the-4f153d1d-eboot.md) | unrecorded | ~2026-09-01..09-02 |
+| ⚪ | D294 | [SceShellUI restart recovers from VSH UI softlocks](decisions/D294-sceshellui-restart-recovers-from-vsh-ui-softlocks.md) | unrecorded | 2026-09-02 |
+| ⚪ | D295 | [Dynamic module resolution for non-essential libraries](decisions/D295-dynamic-module-resolution-for-non-essential-libraries.md) | unrecorded | 2026-09-02 |
+| ⚪ | D296 | [Four-tier privilege model and module categorization](decisions/D296-four-tier-privilege-model-and-module-categorization.md) | unrecorded | 2026-09-02 |
+| ⚪ | D297 | [External SDK Version Dictionary and Targeted SDK Builds in SELFish and obSCEne](decisions/D297-external-sdk-dictionary-and-targeted-sdk-builds.md) | unrecorded | 2026-09-02 |
+| ⚪ | D298 | [PT_SCE_PROCPARAM and PT_SCE_MODULE_PARAM Contracts on PS5 Native](decisions/D298-pt-sce-procparam-and-module-param-contracts.md) | unrecorded | 2026-09-02 |
+| ⚪ | D299 | [Reproducible Process Parameter Audit in 048-selfaudit](decisions/D299-reproducible-procparam-audit-in-048-selfaudit.md) | unrecorded | 2026-09-02 |
 | 🟢 | D300 | [Porthole encoder self-resolution: loading VENC sysmodule and export table traversal](decisions/D300-porthole-encoder-self-resolution.md) | decided | 2026-09-03 |
-| 🟢 | D301 | [Application Category, Privilege Tiers, and Display Arbitration on PS5 Native](decisions/D301-application-category-privilege-tiers-and-display-arbitration.md) | measured | 2026-09-03 |
-| 🟢 | D302 | [The conformance matrix - one capture per launch shape, named for the shape](decisions/D302-the-conformance-matrix-and-its-naming.md) | decided | 2026-09-03 |
+| ⚪ | D301 | [Application Category, Privilege Tiers, and Display Arbitration on PS5 Native](decisions/D301-application-category-privilege-tiers-and-display-arbitration.md) | unrecorded | 2026-09-03 |
+| ⚪ | D302 | [The conformance matrix - one capture per launch shape, named for the shape](decisions/D302-the-conformance-matrix-and-its-naming.md) | unrecorded | 2026-09-03 |
 | 🟡 | D303 | [a scalar out-parameter is poisoned, not zeroed](decisions/D303-a-scalar-out-parameter-is-poisoned-not-zeroed.md) | assumed | 2026-09-03 |
 | 🟢 | D314 | [the decision gate checks the log this repository actually has](decisions/D314-the-decision-gate-checks-the-log-it-has.md) | decided | 2026-09-03 |
 | 🟢 | D315 | [a document beside a Makefile means that Makefile](decisions/D315-a-document-beside-a-makefile-means-that-makefile.md) | decided | 2026-09-03 |
-| 🟢 | D316 | [Porthole input injection via Ghostpad Virtual Device Interface (VDI)](decisions/D316-porthole-input-injection-and-ghostpad-vdi.md) | decided | 2026-09-03 |
+| 🟢 | D316 | [Porthole input injection via Ghostpad Virtual Device Interface (VDI)](decisions/D316-porthole-input-injection-and-ghostpad-vdi.md) | decided | 2026-09-03 |
 | 🟢 | D317 | [Porthole video pipeline reusing oops-sdk display and direct memory](decisions/D317-porthole-video-pipeline-reusing-oops-sdk.md) | decided | 2026-09-03 |
 | 🟢 | D320 | [the orbistoun backlog is generated and tiered by what blocks it](decisions/D320-the-orbistoun-backlog-is-generated-and-tiered.md) | decided | 2026-09-03 |
 | 🟡 | D321 | [the encoding and bounds probes poll rather than wait, and resolve by name](decisions/D321-poll-not-wait-and-resolve-by-name-for-the-blocked-premises.md) | assumed | 2026-09-07 |
@@ -334,8 +334,8 @@ principles six weeks later.
 | 🟡 | D325 | [a fault guard catches a crashing check, so the suite continues](decisions/D325-a-fault-guard-catches-a-crashing-check-so-the-suite-continues.md) | assumed | 2026-09-07 |
 | 🟡 | D326 | [the guard carries its own setjmp and imports its signal primitives, so a native title is guarded](decisions/D326-the-guard-carries-its-own-setjmp-and-imports-its-signal-primitives-so-a-native-title-is-guarded.md) | assumed | 2026-09-08 |
 | 🟡 | D327 | [the payload zeroes its own .bss, because elfldr does not](decisions/D327-the-payload-zeroes-its-own-bss-because-elfldr-does-not.md) | assumed | 2026-09-08 |
-| 🟢 | D328 | [a pending status, and behavioural peripheral probes that wait for their input](decisions/D328-a-pending-status-and-behavioural-peripheral-probes.md) | decided | 2026-09-08 |
-| 🟢 | D329 | [a network section for Porthole, and a record for "I could not look"](decisions/D329-a-network-section-for-porthole-and-a-resolution-record.md) | decided | 2026-09-08 |
+| 🟡 | D328 | [a pending status, and peripheral probes that wait for their input rather than failing](decisions/D328-a-pending-status-and-behavioural-peripheral-probes.md) | assumed | 2026-09-08 |
+| 🟡 | D329 | [a network section for Porthole, and a record for "I could not look"](decisions/D329-a-network-section-for-porthole-and-a-resolution-record.md) | assumed | 2026-09-08 |
 | 🟢 | D330 | [Audio format selectors, mouse stubs in unsigned payloads, and POSIX sockets for Porthole](decisions/D330-audio-format-selector-mouse-in-payload-and-posix-sockets.md) | decided | 2026-09-08 |
 
 | | meaning |

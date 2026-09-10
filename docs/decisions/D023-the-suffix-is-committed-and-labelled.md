@@ -1,5 +1,7 @@
 # D023 - The suffix is committed and labelled
 
+Status: partly-superseded
+
 **byte-order half superseded by D024** · 2026-08-19
 
 `data/hash-suffix.toml` carries the value. `nid.py` defaults to it; `--suffix-file`
