@@ -123,6 +123,9 @@ static obs_result check_agc_graphics_submit(void) {
 static obs_result check_agc_shader_differential(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
+static obs_result check_agc_primitive_draw(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
 
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -170,6 +173,8 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/shader-differential", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_differential, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -1807,6 +1812,280 @@ static obs_result check_agc_graphics_submit(void) {
                              (uint64_t)(uint32_t)submit_rc);
 }
 
+static obs_result check_agc_primitive_draw(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before queue/fence creation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x1000, 256, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *color_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(256) uint8_t s_host_draw_payload[64];
+    static _Alignas(64) uint32_t s_host_draw_fence[16];
+    static _Alignas(64) uint32_t s_host_draw_color[1024];
+    uint8_t *gpu_payload = s_host_draw_payload;
+    volatile uint32_t *fence = s_host_draw_fence;
+    volatile uint32_t *color_buf = s_host_draw_color;
+#endif
+
+    obs_fault_unregister();
+    if (gpu_payload == NULL || fence == NULL || color_buf == NULL) {
+        return obs_skip(
+            "failed to allocate Onion memory for payload, fence or color buffer");
+    }
+    *fence = 0x11111111u;
+    for (size_t i = 0; i < 1024; i++) {
+        color_buf[i] = 0x55555555u;
+    }
+
+    /* Distinct RDNA2 shader bytecode per stage:
+     * 1. VS: allocates GS/NGG space, exports position, and terminates
+     * 2. GS/NGG: allocates 0 outputs via MSG_GS_ALLOC_REQ so Primitive Assembly retires
+     * cleanly
+     * 3. PS: exports color to MRT0 and terminates
+     * 4. Fallback (HS/ES): minimal alloc + s_endpgm
+     */
+    uint32_t *vs_code = (uint32_t *)gpu_payload;
+    vs_code[0] = 0xbefc0380u; /* s_mov_b32 m0, 0 */
+    vs_code[1] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    vs_code[2] = 0xf80008cfu; /* exp pos0 v0, v0, v0, v0 done */
+    vs_code[3] = 0x00000000u;
+    vs_code[4] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 5; p < 64; p++) {
+        vs_code[p] = 0xbf800000u;
+    }
+
+    uint32_t *gs_code = (uint32_t *)((char *)gpu_payload + 0x100);
+    gs_code[0] = 0xbefc0380u; /* s_mov_b32 m0, 0 */
+    gs_code[1] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    gs_code[2] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 3; p < 64; p++) {
+        gs_code[p] = 0xbf800000u;
+    }
+
+    uint32_t *ps_code = (uint32_t *)((char *)gpu_payload + 0x200);
+    ps_code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
+    ps_code[1] = 0xf800080fu; /* exp mrt0 v0, v0, v0, v0 done */
+    ps_code[2] = 0x00000000u;
+    ps_code[3] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 4; p < 64; p++) {
+        ps_code[p] = 0xbf800000u;
+    }
+
+    uint32_t *fb_code = (uint32_t *)((char *)gpu_payload + 0x300);
+    fb_code[0] = 0xbefc0380u; /* s_mov_b32 m0, 0 */
+    fb_code[1] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    fb_code[2] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 3; p < 64; p++) {
+        fb_code[p] = 0xbf800000u;
+    }
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)gpu_payload);
+    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x100));
+    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x200));
+    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x300));
+#endif
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation");
+    }
+    /* Create Type 0 (Universal / Graphics) Queue */
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverCreateQueue", "rc-create",
+                       (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip(
+            "type 0 graphics queue creation failed; skipping primitive draw");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x1000);
+
+    uint32_t *dw = (uint32_t *)probe->cur;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+
+    /* 1. Context register setup for Color Target 0:
+     * Emit SET_CONTEXT_REG (opcode 0x69) setting CB_COLOR0_BASE */
+    *dw++ = 0xc0016900u; /* PACKET3_SET_CONTEXT_REG, count 1 */
+    *dw++ = 0x200u;      /* CB_COLOR0_BASE (GCN/RDNA context space offset 0x200) */
+    *dw++ = (uint32_t)(color_gpu >> 8); /* Base address >> 8 */
+    *dw++ = 0xc0016900u;                /* PACKET3_SET_CONTEXT_REG, count 1 */
+    *dw++ = 0x318u; /* CB_COLOR0_BASE (GFX10 alternate context space offset) */
+    *dw++ = (uint32_t)(color_gpu >> 8); /* Base address >> 8 */
+
+    /* 2. Shader program binding to avoid SQC instruction fetch unmapped VA fault:
+     * Bind all graphics stages (PS, VS, GS/NGG, HS, ES) to their respective payloads:
+     * PS: LO=0x08, HI=0x09, RSRC1=0x0A, RSRC2=0x0B (offset 0x200)
+     * VS: LO=0x48, HI=0x49, RSRC1=0x4A, RSRC2=0x4B (offset 0x000)
+     * GS: LO=0x88, HI=0x89, RSRC1=0x8A, RSRC2=0x8B (offset 0x100)
+     * HS: LO=0xC8, HI=0xC9, RSRC1=0xCA, RSRC2=0xCB (offset 0x300)
+     * ES: LO=0x108, HI=0x109, RSRC1=0x10A, RSRC2=0x10B (offset 0x300)
+     */
+    static const struct {
+        uint32_t base_reg;
+        uint64_t va_offset;
+    } stages[] = {
+        {0x08u, 0x200u},  /* PS (Pixel Shader) */
+        {0x48u, 0x000u},  /* VS (Vertex Shader) */
+        {0x88u, 0x100u},  /* GS / NGG (Geometry Shader) */
+        {0xc8u, 0x300u},  /* HS (Hull / Tessellation Shader) */
+        {0x108u, 0x300u}, /* ES / LS (Export / Local Shader) */
+    };
+    for (size_t s = 0; s < sizeof(stages) / sizeof(stages[0]); s++) {
+        uint32_t base_reg = stages[s].base_reg;
+        uint64_t s_va = payload_va + stages[s].va_offset;
+        *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
+        *dw++ = base_reg;
+        *dw++ = (uint32_t)(s_va >> 8);
+        *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
+        *dw++ = base_reg + 1u;
+        *dw++ = (uint32_t)(s_va >> 40);
+        *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
+        *dw++ = base_reg + 2u;
+        *dw++ = 0x000c0008u; /* RSRC1: 8 VGPRs, float mode */
+        *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
+        *dw++ = base_reg + 3u;
+        *dw++ = 0x00000008u; /* RSRC2: 8 SGPRs */
+    }
+
+    /* 3. Primitive topology setup: VGT_PRIMITIVE_TYPE via SET_UCONFIG_REG (opcode 0x79)
+     * Register 0x242 in UCONFIG space = mmVGT_PRIMITIVE_TYPE (0xC242 - 0xC000)
+     * Value 0x4 = DI_PT_TRILIST */
+    *dw++ = 0xc0017900u; /* PACKET3_SET_UCONFIG_REG, count 1 */
+    *dw++ = 0x242u;      /* Reg offset 0x242 */
+    *dw++ = 0x4u;        /* DI_PT_TRILIST */
+
+    /* 4. Primitive draw execution: DRAW_INDEX_AUTO (opcode 0x2D)
+     * DW1: index_count = 3 (1 triangle)
+     * DW2: initiator = 2 (DI_SRC_SEL_AUTO_INDEX, confirmed from sceAgcDcbDrawIndexAuto
+     * disassembly) */
+    *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO, count 1 */
+    *dw++ = 3u;          /* index_count */
+    *dw++ = 2u;          /* initiator */
+
+    /* 5. Flush and fence retirement: RELEASE_MEM with EOP event */
+    *dw++ = 0xc0064900u;         /* PACKET3_RELEASE_MEM, count 6 */
+    *dw++ = 0x06603514u;         /* GCR_SEQ | GCR_GL2_WB | GCR_GLM_INV | GCR_GLM_WB |
+                                    CACHE_POLICY(3) | EVENT_TYPE(0x14) | EVENT_INDEX(5) */
+    *dw++ = 0x20000000u;         /* DATA_SEL(1) = write 32-bit int low */
+    *dw++ = (uint32_t)fence_gpu; /* Address low */
+    *dw++ = (uint32_t)(fence_gpu >> 32); /* Address high */
+    *dw++ = 0xbeefcafeu;                 /* Fence value */
+    *dw++ = 0u;                          /* High 32 bits */
+    *dw++ = 0u;                          /* Context_id / pad */
+
+    /* Pad trailing area with PM4 NOPs to ensure prefetch safety */
+    for (int p = 0; p < 16; p++) {
+        dw[p] = 0xffff1000u;
+    }
+    dw += 16;
+
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    uint32_t bytes_written = (uint32_t)(probe->cur - probe->begin);
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                       "bytes-written", (uint64_t)bytes_written, "size");
+
+    obs_agc_dcb_desc desc;
+    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc.size = bytes_written / 4u; /* PM4 size in DWORDs */
+    desc.flags = 0u;
+    desc.pad[0] = 0u;
+    desc.pad[1] = 0u;
+    desc.pad[2] = 0u;
+
+    int submit_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            submit_rc = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+        obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                           "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                           "rc-submit", (uint64_t)sig, "fault-sig");
+    }
+
+    uint32_t fence_val = *fence;
+    int fence_hit = 0;
+    if (submit_rc == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            fence_val = *fence;
+            if (fence_val == 0xbeefcafeu) {
+                fence_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "fence-val",
+                       (uint64_t)fence_val, "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "fence-hit",
+                       (uint64_t)fence_hit, "bool");
+
+    /* Check color buffer memory */
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)color_buf);
+#endif
+    uint32_t color_val = color_buf[0];
+    int color_mod = (color_val != 0x55555555u);
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "color-val",
+                       (uint64_t)color_val, "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "color-mod",
+                       (uint64_t)color_mod, "bool");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            sceAgcDriverDestroyQueue(queue);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (sig != 0) {
+        return obs_fail("fault during primitive draw submit or poll");
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        return obs_pass();
+    }
+    if (submit_rc == 0) {
+        return obs_partial_value("fence not hit after primitive draw",
+                                 (uint64_t)fence_val);
+    }
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
+}
+
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_agc_cb_nop, OBS_FROM_ASSUMED},
@@ -1854,6 +2133,9 @@ static const obs_check agc_checks[] = {
      check_agc_graphics_submit, OBS_FROM_ASSUMED},
     {"166-agc/shader-differential", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcCreateShader, check_agc_shader_differential,
+     OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw,
      OBS_FROM_ASSUMED},
 };
 #endif
