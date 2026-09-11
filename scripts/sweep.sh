@@ -239,7 +239,7 @@ run_leg() {
         echo "### obSCEne sweep :: leg=$leg :: corpus=$CORPUS :: $(date -u +%FT%TZ)"
         "$fn"
     } 2>&1 | tee "$full"
-    grep -aE '^OBS\|' "$full" 2>/dev/null | awk '!seen[$0]++' > "$obs" || true
+    sed -n -e 's/.*\(OBS|.*\)/\1/p' "$full" 2>/dev/null | awk '!seen[$0]++' > "$obs" || true
     local n end crash; n=$(grep -acE '^OBS\|' "$obs" 2>/dev/null || true)
     end=$(grep -acE '^OBS\|end' "$obs" 2>/dev/null || true)
     crash=$(grep -acE '\|crash\|' "$obs" 2>/dev/null || true)
@@ -247,7 +247,7 @@ run_leg() {
         echo "sweep: payload log incomplete, pulling /mnt/usb0/obscene/report.txt..."
         local usbtmp; usbtmp="$(mktemp)"
         if "$LTOOL" hw pull /mnt/usb0/obscene/report.txt --into "$usbtmp" 2>/dev/null; then
-            grep -aE '^OBS\|' "$usbtmp" 2>/dev/null >> "$obs" || true
+            sed -n -e 's/.*\(OBS|.*\)/\1/p' "$usbtmp" 2>/dev/null >> "$obs" || true
             awk '!seen[$0]++' "$obs" > "$obs.tmp" && mv -f "$obs.tmp" "$obs"
             n=$(grep -acE '^OBS\|' "$obs" 2>/dev/null || true)
             end=$(grep -acE '^OBS\|end' "$obs" 2>/dev/null || true)
