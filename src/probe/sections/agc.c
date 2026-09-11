@@ -147,6 +147,24 @@ static obs_result check_agc_dcb_draw_auto(void) {
 static obs_result check_agc_create_prim_state(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
+static obs_result check_agc_dcb_set_cf_reg(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_set_sh_reg_direct(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_create_interpolant_mapping(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_update_interpolant_mapping(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_update_prim_state(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_link_shaders(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
 
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -213,6 +231,22 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_draw_auto, OBS_FROM_ASSUMED},
     {"166-agc/create-prim-state", "libSceAgc", "sceAgcCreatePrimState", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_create_prim_state, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-cf-reg", "libSceAgc", "sceAgcDcbSetCfRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_cf_reg,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-sh-reg-direct", "libSceAgc", "sceAgcDcbSetShRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_sh_reg_direct,
+     OBS_FROM_ASSUMED},
+    {"166-agc/create-interpolant-mapping", "libSceAgc",
+     "sceAgcCreateInterpolantMapping", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_create_interpolant_mapping, OBS_FROM_ASSUMED},
+    {"166-agc/update-interpolant-mapping", "libSceAgc",
+     "sceAgcUpdateInterpolantMapping", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_update_interpolant_mapping, OBS_FROM_ASSUMED},
+    {"166-agc/update-prim-state", "libSceAgc", "sceAgcUpdatePrimState", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_update_prim_state, OBS_FROM_ASSUMED},
+    {"166-agc/link-shaders", "libSceAgc", "sceAgcLinkShaders", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_link_shaders, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -1489,6 +1523,368 @@ static obs_result check_agc_create_prim_state(void) {
     return obs_fail("sceAgcCreatePrimState failed");
 }
 
+static obs_result check_agc_dcb_set_cf_reg(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetCfRegisterDirect)) {
+        return obs_skip("sceAgcDcbSetCfRegisterDirect not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    /* Emit SET_CONFIG_REG for reg 0x100 with value 0x12345678 */
+    uint64_t entry = ((uint64_t)0x12345678u << 32) | 0x100u;
+    void *res = sceAgcDcbSetCfRegisterDirect(&probe->begin, entry);
+
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-cf-reg", "sceAgcDcbSetCfRegisterDirect",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-cf-reg", "sceAgcDcbSetCfRegisterDirect",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-cf-reg", "sceAgcDcbSetCfRegisterDirect",
+                       "pkt-reg", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-cf-reg", "sceAgcDcbSetCfRegisterDirect",
+                       "pkt-val", (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-set-cf-reg", "sceAgcDcbSetCfRegisterDirect",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0016800u && pkt[1] == 0x100u &&
+        pkt[2] == 0x12345678u && (probe->cur - probe->begin) == 12u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetCfRegisterDirect");
+}
+
+static obs_result check_agc_dcb_set_sh_reg_direct(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetShRegisterDirect)) {
+        return obs_skip("sceAgcDcbSetShRegisterDirect not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    /* Emit SET_SH_REG for reg 0x8 with value 0x12345678 */
+    uint64_t entry = ((uint64_t)0x12345678u << 32) | 0x8u;
+    void *res = sceAgcDcbSetShRegisterDirect(&probe->begin, entry);
+
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-sh-reg-direct", "sceAgcDcbSetShRegisterDirect",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-sh-reg-direct", "sceAgcDcbSetShRegisterDirect",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-sh-reg-direct", "sceAgcDcbSetShRegisterDirect",
+                       "pkt-reg", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-sh-reg-direct", "sceAgcDcbSetShRegisterDirect",
+                       "pkt-val", (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-set-sh-reg-direct", "sceAgcDcbSetShRegisterDirect",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0017600u && pkt[1] == 0x8u &&
+        pkt[2] == 0x12345678u && (probe->cur - probe->begin) == 12u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetShRegisterDirect");
+}
+
+static obs_result check_agc_create_interpolant_mapping(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcCreateInterpolantMapping) ||
+        !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip(
+            "sceAgcCreateInterpolantMapping or sceAgcCreateShader not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    /* 1. Default interpolant mapping with NULL shaders */
+    uint64_t def_mapping[32];
+    for (size_t i = 0; i < 32; i++) {
+        def_mapping[i] = 0;
+    }
+    int def_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        def_rc = sceAgcCreateInterpolantMapping(def_mapping, NULL, NULL);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during default sceAgcCreateInterpolantMapping");
+    }
+    obs_report_measure("166-agc/create-interpolant-mapping",
+                       "sceAgcCreateInterpolantMapping", "def-rc",
+                       (uint64_t)(uint32_t)def_rc, "code");
+    obs_report_measure("166-agc/create-interpolant-mapping",
+                       "sceAgcCreateInterpolantMapping", "def-entry0", def_mapping[0],
+                       "hex");
+    obs_report_bytes("166-agc/create-interpolant-mapping",
+                     "sceAgcCreateInterpolantMapping", "def-mapping", 0,
+                     (const unsigned char *)def_mapping, 32);
+
+    /* 2. Create VS and PS shaders */
+    uint8_t vs_hdr[384];
+    init_stage_hdr(vs_hdr, 2u /* VS */, 0xc8u);
+    void *vs_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&vs_obj, vs_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during vertex shader setup");
+    }
+
+    uint8_t ps_hdr[384];
+    init_stage_hdr(ps_hdr, 1u /* PS */, 0x08u);
+    void *ps_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&ps_obj, ps_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during pixel shader setup");
+    }
+
+    /* 3. Call sceAgcCreateInterpolantMapping with VS and PS shaders */
+    uint64_t mapping[32];
+    for (size_t i = 0; i < 32; i++) {
+        mapping[i] = 0;
+    }
+    int rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc = sceAgcCreateInterpolantMapping(mapping, vs_hdr, ps_hdr);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during sceAgcCreateInterpolantMapping(vs, ps)");
+    }
+
+    obs_report_measure("166-agc/create-interpolant-mapping",
+                       "sceAgcCreateInterpolantMapping", "rc", (uint64_t)(uint32_t)rc,
+                       "code");
+    obs_report_measure("166-agc/create-interpolant-mapping",
+                       "sceAgcCreateInterpolantMapping", "mapping-valid",
+                       (uint64_t)(rc == 0), "bool");
+    obs_report_measure("166-agc/create-interpolant-mapping",
+                       "sceAgcCreateInterpolantMapping", "entry0", mapping[0], "hex");
+    obs_report_bytes("166-agc/create-interpolant-mapping",
+                     "sceAgcCreateInterpolantMapping", "mapping", 0,
+                     (const unsigned char *)mapping, 32);
+
+    if (def_rc == 0 && rc == 0) {
+        return obs_pass();
+    }
+    return obs_fail("sceAgcCreateInterpolantMapping returned failure");
+}
+
+static obs_result check_agc_update_interpolant_mapping(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcUpdateInterpolantMapping) ||
+        !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip(
+            "sceAgcUpdateInterpolantMapping or sceAgcCreateShader not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    uint8_t vs_hdr[384];
+    init_stage_hdr(vs_hdr, 2u /* VS */, 0xc8u);
+    void *vs_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&vs_obj, vs_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during vertex shader setup");
+    }
+
+    uint8_t ps_hdr[384];
+    init_stage_hdr(ps_hdr, 1u /* PS */, 0x08u);
+    void *ps_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&ps_obj, ps_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during pixel shader setup");
+    }
+
+    uint64_t mapping[32];
+    for (size_t i = 0; i < 32; i++) {
+        mapping[i] = 0;
+    }
+
+    int rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc = sceAgcUpdateInterpolantMapping(mapping, vs_hdr, ps_hdr);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during sceAgcUpdateInterpolantMapping");
+    }
+
+    obs_report_measure("166-agc/update-interpolant-mapping",
+                       "sceAgcUpdateInterpolantMapping", "rc", (uint64_t)(uint32_t)rc,
+                       "code");
+    obs_report_measure("166-agc/update-interpolant-mapping",
+                       "sceAgcUpdateInterpolantMapping", "mapping-valid",
+                       (uint64_t)(rc == 0), "bool");
+    obs_report_bytes("166-agc/update-interpolant-mapping",
+                     "sceAgcUpdateInterpolantMapping", "mapping", 0,
+                     (const unsigned char *)mapping, 32);
+
+    if (rc == 0) {
+        return obs_pass();
+    }
+    return obs_fail("sceAgcUpdateInterpolantMapping returned failure");
+}
+
+static obs_result check_agc_update_prim_state(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcCreatePrimState) ||
+        !obs_address_is_callable((const void *)&sceAgcUpdatePrimState) ||
+        !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip("prim state functions not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+    uint8_t vs_hdr[384];
+    init_stage_hdr(vs_hdr, 2u, 0xc8u);
+    void *vs_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&vs_obj, vs_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during vertex shader setup");
+    }
+
+    uint8_t prim_state[64];
+    uint8_t sec_state[64];
+    for (size_t i = 0; i < 64; i++) {
+        prim_state[i] = 0;
+        sec_state[i] = 0;
+    }
+
+    int rc_create = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_create = sceAgcCreatePrimState(prim_state, sec_state, NULL, vs_hdr,
+                                          4u /* DI_PT_TRILIST */);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during sceAgcCreatePrimState");
+    }
+
+    uint32_t topo_orig = *(uint32_t *)(sec_state + 0x14) & 0x1fu;
+
+    int rc_update = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_update =
+            sceAgcUpdatePrimState(prim_state, sec_state, 1u /* DI_PT_POINTLIST */);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during sceAgcUpdatePrimState");
+    }
+
+    uint32_t topo_updated = *(uint32_t *)(sec_state + 0x14) & 0x1fu;
+
+    obs_report_measure("166-agc/update-prim-state", "sceAgcUpdatePrimState",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
+    obs_report_measure("166-agc/update-prim-state", "sceAgcUpdatePrimState",
+                       "rc-update", (uint64_t)(uint32_t)rc_update, "code");
+    obs_report_measure("166-agc/update-prim-state", "sceAgcUpdatePrimState",
+                       "topo-orig", (uint64_t)topo_orig, "hex");
+    obs_report_measure("166-agc/update-prim-state", "sceAgcUpdatePrimState",
+                       "topo-updated", (uint64_t)topo_updated, "hex");
+
+    if (rc_create == 0 && rc_update == 0 && topo_orig == 4u && topo_updated == 1u) {
+        return obs_pass();
+    }
+    return obs_fail("update prim state failed or topology not updated");
+}
+
+static obs_result check_agc_link_shaders(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcLinkShaders) ||
+        !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip("sceAgcLinkShaders or sceAgcCreateShader not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    uint8_t vs_hdr[384];
+    init_stage_hdr(vs_hdr, 2u /* VS */, 0xc8u);
+    void *vs_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&vs_obj, vs_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during vertex shader setup");
+    }
+
+    uint8_t ps_hdr[384];
+    init_stage_hdr(ps_hdr, 1u /* PS */, 0x08u);
+    void *ps_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&ps_obj, ps_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during pixel shader setup");
+    }
+
+    uint8_t link_state[384];
+    uint8_t sec_state[64];
+    for (size_t i = 0; i < sizeof(link_state); i++) {
+        link_state[i] = 0;
+    }
+    for (size_t i = 0; i < sizeof(sec_state); i++) {
+        sec_state[i] = 0;
+    }
+
+    int rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc = sceAgcLinkShaders(link_state, sec_state, NULL, vs_hdr, ps_hdr,
+                               4u /* DI_PT_TRILIST */);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during sceAgcLinkShaders");
+    }
+
+    obs_report_measure("166-agc/link-shaders", "sceAgcLinkShaders", "rc",
+                       (uint64_t)(uint32_t)rc, "code");
+    obs_report_measure("166-agc/link-shaders", "sceAgcLinkShaders", "link-valid",
+                       (uint64_t)(rc == 0), "bool");
+    obs_report_bytes("166-agc/link-shaders", "sceAgcLinkShaders", "link-state-interp",
+                     0, (const unsigned char *)link_state, 32);
+    obs_report_bytes("166-agc/link-shaders", "sceAgcLinkShaders", "link-state-routing",
+                     0x100, (const unsigned char *)(link_state + 0x100), 32);
+
+    if (rc == 0) {
+        return obs_pass();
+    }
+    return obs_fail("sceAgcLinkShaders returned failure");
+}
+
 /* DCB Constructor audit: audit potential constructor candidates without fabricating
  * handles. */
 static obs_result check_agc_dcb_constructor_audit(void) {
@@ -2742,6 +3138,26 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/create-prim-state", "libSceAgc", "sceAgcCreatePrimState", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcCreatePrimState, check_agc_create_prim_state,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-cf-reg", "libSceAgc", "sceAgcDcbSetCfRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetCfRegisterDirect,
+     check_agc_dcb_set_cf_reg, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-sh-reg-direct", "libSceAgc", "sceAgcDcbSetShRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetShRegisterDirect,
+     check_agc_dcb_set_sh_reg_direct, OBS_FROM_ASSUMED},
+    {"166-agc/create-interpolant-mapping", "libSceAgc",
+     "sceAgcCreateInterpolantMapping", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)&sceAgcCreateInterpolantMapping,
+     check_agc_create_interpolant_mapping, OBS_FROM_ASSUMED},
+    {"166-agc/update-interpolant-mapping", "libSceAgc",
+     "sceAgcUpdateInterpolantMapping", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)&sceAgcUpdateInterpolantMapping,
+     check_agc_update_interpolant_mapping, OBS_FROM_ASSUMED},
+    {"166-agc/update-prim-state", "libSceAgc", "sceAgcUpdatePrimState", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcUpdatePrimState, check_agc_update_prim_state,
+     OBS_FROM_ASSUMED},
+    {"166-agc/link-shaders", "libSceAgc", "sceAgcLinkShaders", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcLinkShaders, check_agc_link_shaders,
      OBS_FROM_ASSUMED},
 };
 #endif

@@ -1282,6 +1282,18 @@ OBS_WEAK int sceAgcCreatePrimState(void *prim_state, void *sec_state,
 OBS_WEAK int
 sceAgcCreateInterpolantMapping(void *mapping, const void *shader_vs,
                                const void *shader_ps) __asm__("$pdEV7bI6COI");
+OBS_WEAK void *
+sceAgcDcbSetCfRegisterDirect(void *dcb, uint64_t reg_and_val) __asm__("$73ZZdojLIgs");
+OBS_WEAK void *
+sceAgcDcbSetShRegisterDirect(void *dcb, uint64_t reg_and_val) __asm__("$pFLArOT53+w");
+OBS_WEAK int
+sceAgcUpdateInterpolantMapping(void *mapping, const void *shader_vs,
+                               const void *shader_ps) __asm__("$SbuY2jN+axQ");
+OBS_WEAK int sceAgcUpdatePrimState(void *prim_state, void *sec_state,
+                                   uint32_t prim_type) __asm__("$Y3ymLfZ1384");
+OBS_WEAK int sceAgcLinkShaders(void *link_state, void *sec_state, const void *shader_hs,
+                               const void *shader_vs, const void *shader_ps,
+                               uint32_t prim_type) __asm__("$MqAdbRMdNz4");
 
 /* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
 OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);
