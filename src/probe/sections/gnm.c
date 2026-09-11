@@ -54,15 +54,15 @@
 #define OBS_GNM_GUARD 64u
 #define OBS_GNM_PATTERN 0xC7u
 
-#if OOPS_TARGET_IS_PS5
+#if OOPS_TARGET_IS_PROSPERO
 static obs_result check_gnm_dispatch_init(void) {
     return obs_skip(
-        "libSceGnmDriver is previous-generation; excluded from native PS5 target");
+        "libSceGnmDriver is previous-generation; excluded from native Prospero target");
 }
 
 static obs_result check_gnm_dispatch_direct(void) {
     return obs_skip(
-        "libSceGnmDriver is previous-generation; excluded from native PS5 target");
+        "libSceGnmDriver is previous-generation; excluded from native Prospero target");
 }
 
 static const obs_check gnm_checks[] = {

@@ -262,7 +262,7 @@ enum Command {
         /// Privilege tier: app, sysmodule, system, or root.
         #[arg(long, default_value = "app")]
         privilege: String,
-        /// Target SDK version or alias (e.g. "2.000.009", "ps5-native", "ps4-compat").
+        /// Target SDK version or alias (e.g. "2.000.009", "prospero", "orbis").
         #[arg(long)]
         sdk: Option<String>,
     },
@@ -788,7 +788,7 @@ fn run_hw(
             let Some(address) = address else {
                 return Err("register needs an address: obscene-tool hw register <address>".into());
             };
-            hardware::register(name.unwrap_or("ps5"), address)?;
+            hardware::register(name.unwrap_or("prospero"), address)?;
             Ok(ExitCode::SUCCESS)
         }
         "list" => {
@@ -2129,7 +2129,7 @@ fn run_mkself(
         target.display(),
         container.len(),
         payload.len(),
-        target_sdk.ps4_sdk,
+        target_sdk.orbis_sdk,
         target_sdk.ppr_sdk,
     );
     Ok(ExitCode::SUCCESS)

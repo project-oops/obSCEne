@@ -247,7 +247,7 @@ void obs_screen_begin(unsigned int sections, unsigned int checks) {
     obs_report_display(names[(int)state], obs_display_status_text(),
                        obs_display_status_code());
 
-#if !OOPS_TARGET_IS_PS4
+#if !OOPS_TARGET_IS_ORBIS
     if (obs_pltauth_check() == 0) {
         s_obs_pltauth_failed = 1;
         obs_boot_note("obscene: FATAL: /dev/pltauth bypass is not active!\n");
@@ -422,7 +422,7 @@ void obs_screen_hud(void) {
     if (!obs_live) {
         return;
     }
-#if !OOPS_TARGET_IS_PS4
+#if !OOPS_TARGET_IS_ORBIS
     if (obs_pltauth_check() == 0) {
         s_obs_pltauth_failed = 1;
         obs_boot_note("obscene: FATAL: /dev/pltauth bypass is not active!\n");

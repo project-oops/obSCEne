@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn rendering_is_parseable_again() {
         let consoles = vec![Console {
-            name: "ps5".to_owned(),
+            name: "prospero".to_owned(),
             address: "192.168.1.206".to_owned(),
         }];
         let found = parse(&render(&consoles));
@@ -219,10 +219,10 @@ mod tests {
 
     #[test]
     fn registering_the_same_name_replaces_rather_than_duplicates() {
-        let mut consoles = parse("ps5 192.168.1.206\n");
-        consoles.retain(|c| c.name != "ps5");
+        let mut consoles = parse("prospero 192.168.1.206\n");
+        consoles.retain(|c| c.name != "prospero");
         consoles.push(Console {
-            name: "ps5".to_owned(),
+            name: "prospero".to_owned(),
             address: "192.168.1.9".to_owned(),
         });
         assert_eq!(consoles.len(), 1);

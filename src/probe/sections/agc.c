@@ -65,105 +65,123 @@
 #define OBS_AGC_POISON_BYTE 0xCCu
 #define OBS_AGC_GUARD_BYTE 0xC7u
 
-#if OOPS_TARGET_IS_PS4
+#if OOPS_TARGET_IS_ORBIS
 static obs_result check_agc_cb_nop(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_cb_release_mem(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_dma_data(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_wait_reg_mem(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_cb_unnamed_ef57(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_reset_queue(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_create_shader(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_constructor_audit(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_patch_exclusion_guard(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_driver_symbols(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_driver_create_queue(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_init(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_driver_queue_types(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_driver_submit_nop(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_driver_submit_batch(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_driver_submit_fence(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_compute_dispatch(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_graphics_submit(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_shader_differential(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_primitive_draw(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_shader_graphics_stages(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_shader_fused_stages(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_set_cx_reg(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_set_uc_reg(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_set_sh_reg(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_draw_auto(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_create_prim_state(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_set_cf_reg(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_dcb_set_sh_reg_direct(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_create_interpolant_mapping(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_update_interpolant_mapping(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_update_prim_state(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_link_shaders(void) {
-    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_set_index_buffer(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_set_index_size(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_set_index_count(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_draw_index(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_event_write(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_set_num_instances(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 
 static const obs_check agc_checks[] = {
@@ -247,6 +265,20 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_update_prim_state, OBS_FROM_ASSUMED},
     {"166-agc/link-shaders", "libSceAgc", "sceAgcLinkShaders", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_link_shaders, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-buffer", "libSceAgc", "sceAgcDcbSetIndexBuffer",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_index_buffer,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-size", "libSceAgc", "sceAgcDcbSetIndexSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_index_size, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-count", "libSceAgc", "sceAgcDcbSetIndexCount", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_index_count, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-index", "libSceAgc", "sceAgcDcbDrawIndex", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_draw_index, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-event-write", "libSceAgc", "sceAgcDcbEventWrite", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_event_write, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-num-instances", "libSceAgc", "sceAgcDcbSetNumInstances",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_num_instances,
+     OBS_FROM_ASSUMED},
 };
 #else
 
@@ -1885,6 +1917,188 @@ static obs_result check_agc_link_shaders(void) {
     return obs_fail("sceAgcLinkShaders returned failure");
 }
 
+static obs_result check_agc_dcb_set_index_buffer(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetIndexBuffer)) {
+        return obs_skip("sceAgcDcbSetIndexBuffer not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    void *res = sceAgcDcbSetIndexBuffer(&probe->begin, 0x12345678ULL);
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-index-buffer", "sceAgcDcbSetIndexBuffer",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-index-buffer", "sceAgcDcbSetIndexBuffer",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-index-buffer", "sceAgcDcbSetIndexBuffer",
+                       "pkt-lo", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-index-buffer", "sceAgcDcbSetIndexBuffer",
+                       "pkt-hi", (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-set-index-buffer", "sceAgcDcbSetIndexBuffer",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0012600u && pkt[1] == 0x12345678u && pkt[2] == 0u &&
+        (probe->cur - probe->begin) == 12u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetIndexBuffer");
+}
+
+static obs_result check_agc_dcb_set_index_size(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetIndexSize)) {
+        return obs_skip("sceAgcDcbSetIndexSize not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    void *res = sceAgcDcbSetIndexSize(&probe->begin, 0u, 0u);
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-index-size", "sceAgcDcbSetIndexSize",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-index-size", "sceAgcDcbSetIndexSize", "pkt-hdr",
+                       (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-index-size", "sceAgcDcbSetIndexSize", "pkt-reg",
+                       (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-index-size", "sceAgcDcbSetIndexSize", "pkt-val",
+                       (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-set-index-size", "sceAgcDcbSetIndexSize",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0017a00u && pkt[1] == 0x20000243u &&
+        pkt[2] == 0x400u && (probe->cur - probe->begin) == 12u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetIndexSize");
+}
+
+static obs_result check_agc_dcb_set_index_count(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetIndexCount)) {
+        return obs_skip("sceAgcDcbSetIndexCount not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    void *res = sceAgcDcbSetIndexCount(&probe->begin, 36u);
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-index-count", "sceAgcDcbSetIndexCount",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-index-count", "sceAgcDcbSetIndexCount",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-index-count", "sceAgcDcbSetIndexCount",
+                       "pkt-val", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-index-count", "sceAgcDcbSetIndexCount",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0001300u && pkt[1] == 36u &&
+        (probe->cur - probe->begin) == 8u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetIndexCount");
+}
+
+static obs_result check_agc_dcb_draw_index(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbDrawIndex)) {
+        return obs_skip("sceAgcDcbDrawIndex not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    void *res = sceAgcDcbDrawIndex(&probe->begin, 3u, 0x12345678ULL, 0u);
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-draw-index", "sceAgcDcbDrawIndex", "res-valid",
+                       (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-draw-index", "sceAgcDcbDrawIndex", "pkt-hdr",
+                       (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-draw-index", "sceAgcDcbDrawIndex", "pkt-lo",
+                       (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-draw-index", "sceAgcDcbDrawIndex", "pkt-hi",
+                       (uint64_t)pkt[3], "val");
+    obs_report_measure("166-agc/dcb-draw-index", "sceAgcDcbDrawIndex", "pkt-count",
+                       (uint64_t)pkt[4], "val");
+    obs_report_measure("166-agc/dcb-draw-index", "sceAgcDcbDrawIndex", "bytes-advanced",
+                       (uint64_t)(probe->cur - probe->begin), "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0042700u && pkt[2] == 0x12345678u && pkt[3] == 0u &&
+        pkt[4] == 3u && (probe->cur - probe->begin) == 24u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbDrawIndex");
+}
+
+static obs_result check_agc_dcb_event_write(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbEventWrite)) {
+        return obs_skip("sceAgcDcbEventWrite not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    void *res =
+        sceAgcDcbEventWrite(&probe->begin, 62u /* ENABLE_LEGACY_PIPELINE */, 0u);
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-event-write", "sceAgcDcbEventWrite", "res-valid",
+                       (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-event-write", "sceAgcDcbEventWrite", "pkt-hdr",
+                       (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-event-write", "sceAgcDcbEventWrite", "pkt-val",
+                       (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-event-write", "sceAgcDcbEventWrite",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0004600u && pkt[1] == 62u &&
+        (probe->cur - probe->begin) == 8u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbEventWrite");
+}
+
+static obs_result check_agc_dcb_set_num_instances(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetNumInstances)) {
+        return obs_skip("sceAgcDcbSetNumInstances not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    void *res = sceAgcDcbSetNumInstances(&probe->begin, 1u);
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-num-instances", "sceAgcDcbSetNumInstances",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-num-instances", "sceAgcDcbSetNumInstances",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-num-instances", "sceAgcDcbSetNumInstances",
+                       "pkt-val", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-num-instances", "sceAgcDcbSetNumInstances",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0002f00u && pkt[1] == 1u &&
+        (probe->cur - probe->begin) == 8u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetNumInstances");
+}
+
 /* DCB Constructor audit: audit potential constructor candidates without fabricating
  * handles. */
 static obs_result check_agc_dcb_constructor_audit(void) {
@@ -2812,57 +3026,152 @@ static obs_result check_agc_primitive_draw(void) {
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
         (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *canary =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
 #else
     static _Alignas(256) uint8_t s_host_draw_payload[64];
     static _Alignas(64) uint32_t s_host_draw_fence[16];
     static _Alignas(64) uint32_t s_host_draw_color[1024];
+    static _Alignas(64) uint32_t s_host_draw_canary[16];
     uint8_t *gpu_payload = s_host_draw_payload;
     volatile uint32_t *fence = s_host_draw_fence;
     volatile uint32_t *color_buf = s_host_draw_color;
+    volatile uint32_t *canary = s_host_draw_canary;
 #endif
 
     obs_fault_unregister();
-    if (gpu_payload == NULL || fence == NULL || color_buf == NULL) {
-        return obs_skip(
-            "failed to allocate Onion memory for payload, fence or color buffer");
+    if (gpu_payload == NULL || fence == NULL || color_buf == NULL || canary == NULL) {
+        return obs_skip("failed to allocate Onion memory for payload, fence, color "
+                        "buffer or canary");
     }
     *fence = 0x11111111u;
+    canary[0] = 0x11111111u;
+    canary[1] = 0x22222222u;
+    canary[2] = 0x33333333u;
+    canary[3] = 0x44444444u;
+    canary[5] = 0x55555555u;
+    canary[6] = 0x66666666u;
+    canary[7] = 0x77777777u;
+    canary[8] = 0x88888888u;
+    canary[9] = 0x99999999u;
+    canary[10] = 0xaaaaaaaau;
     for (size_t i = 0; i < 1024; i++) {
         color_buf[i] = 0x55555555u;
     }
 
     /* Distinct RDNA2 shader bytecode per stage:
-     * 1. VS: allocates GS/NGG space, exports position, and terminates
-     * 2. GS/NGG: allocates 0 outputs via MSG_GS_ALLOC_REQ so Primitive Assembly
-     * retires cleanly
-     * 3. PS: exports color to MRT0 and terminates
-     * 4. Fallback (HS/ES): minimal alloc + s_endpgm
+     * 1. VS / GS (NGG Primitive Shader): allocates 1 prim + 3 verts via
+     * MSG_GS_ALLOC_REQ, writes canary[0] = 0xbeef0001, computes 3 triangle vertices,
+     * exports pos0 and prim.
+     * 2. PS (Pixel Shader): writes canary[1] = 0xbeef0002, exports solid red to MRT0.
+     * 3. Fallback (HS/ES/LS): minimal alloc + s_endpgm.
      */
+    uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
     uint32_t *vs_code = (uint32_t *)gpu_payload;
-    vs_code[0] = 0xbefc0380u; /* s_mov_b32 m0, 0 */
-    vs_code[1] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
-    vs_code[2] = 0xf80008cfu; /* exp pos0 v0, v0, v0, v0 done */
-    vs_code[3] = 0x00000000u;
-    vs_code[4] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 5; p < 64; p++) {
-        vs_code[p] = 0xbf800000u;
+    vs_code[0] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
+    vs_code[1] = 0x00001003u;
+    vs_code[2] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    vs_code[3] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+    vs_code[4] = 0x7e160300u; /* v_mov_b32 v11, v0 */
+    vs_code[5] = 0x7e180301u; /* v_mov_b32 v12, v1 */
+    vs_code[6] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
+    vs_code[7] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    vs_code[8] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    vs_code[9] = (uint32_t)canary_gpu;
+    vs_code[10] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    vs_code[11] = (uint32_t)(canary_gpu >> 32);
+    vs_code[12] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    vs_code[13] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    vs_code[14] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0001 */
+    vs_code[15] = 0xbeef0001u;
+    vs_code[16] = 0xdc708000u; /* global_store_dword v[8:9], v10, off offset:0 */
+    vs_code[17] = 0x007d0a08u;
+    vs_code[18] = 0xdc708008u; /* global_store_dword v[8:9], v11, off offset:8 */
+    vs_code[19] = 0x007d0b08u;
+    vs_code[20] = 0xdc70800cu; /* global_store_dword v[8:9], v12, off offset:12 */
+    vs_code[21] = 0x007d0c08u;
+    vs_code[22] = 0xdc708014u; /* global_store_dword v[8:9], v13, off offset:20 */
+    vs_code[23] = 0x007d0d08u;
+    vs_code[24] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    vs_code[25] = 0xbefe0387u; /* s_mov_b32 exec_lo, 0x7 (lanes 0..2) */
+    vs_code[26] = 0xd765000eu; /* v_mbcnt_lo_u32_b32 v14, -1, 0 */
+    vs_code[27] = 0x000100c1u;
+    vs_code[28] = 0x7e0202f3u; /* v_mov_b32 v1, -1.0 */
+    vs_code[29] = 0x7e0402ffu; /* v_mov_b32 v2, 3.0 */
+    vs_code[30] = 0x40400000u; /* 3.0f literal */
+    vs_code[31] = 0x7e060280u; /* v_mov_b32 v3, 0.0 */
+    vs_code[32] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0 */
+    vs_code[33] = 0x7d841c81u; /* v_cmp_eq_u32 vcc_lo, 1, v14 */
+    vs_code[34] = 0x020a0501u; /* v_cndmask_b32 v5, v1, v2, vcc_lo */
+    vs_code[35] = 0x7d841c82u; /* v_cmp_eq_u32 vcc_lo, 2, v14 */
+    vs_code[36] = 0x020c0501u; /* v_cndmask_b32 v6, v1, v2, vcc_lo */
+    vs_code[37] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
+    vs_code[38] = 0x04030605u;
+    vs_code[39] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    vs_code[40] = 0x7e0e02ffu; /* v_mov_b32 v7, 0x00200400 */
+    vs_code[41] = 0x00200400u; /* Prim indices: 0 | (1 << 10) | (2 << 20) */
+    vs_code[42] = 0xf8000941u; /* exp prim, v7, off, off, off done */
+    vs_code[43] = 0x00000007u;
+    vs_code[44] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0003 */
+    vs_code[45] = 0xbeef0003u;
+    vs_code[46] = 0xdc708018u; /* global_store_dword v[8:9], v10, off offset:24 */
+    vs_code[47] = 0x007d0a08u;
+    vs_code[48] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    vs_code[49] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    vs_code[50] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 51; p < 64; p++) {
+        vs_code[p] = 0xbf800000u; /* s_nop */
     }
 
     uint32_t *gs_code = (uint32_t *)((char *)gpu_payload + 0x100);
-    gs_code[0] = 0xbefc0380u; /* s_mov_b32 m0, 0 */
-    gs_code[1] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
-    gs_code[2] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 3; p < 64; p++) {
+    for (size_t p = 0; p < 51; p++) {
+        gs_code[p] = vs_code[p];
+    }
+    for (size_t p = 51; p < 64; p++) {
         gs_code[p] = 0xbf800000u;
     }
 
     uint32_t *ps_code = (uint32_t *)((char *)gpu_payload + 0x200);
     ps_code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
-    ps_code[1] = 0xf800080fu; /* exp mrt0 v0, v0, v0, v0 done */
-    ps_code[2] = 0x00000000u;
-    ps_code[3] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 4; p < 64; p++) {
-        ps_code[p] = 0xbf800000u;
+    ps_code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+    ps_code[2] = 0x7e160300u; /* v_mov_b32 v11, v0 */
+    ps_code[3] = 0x7e180301u; /* v_mov_b32 v12, v1 */
+    ps_code[4] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
+    ps_code[5] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    ps_code[6] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    ps_code[7] = (uint32_t)canary_gpu;
+    ps_code[8] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    ps_code[9] = (uint32_t)(canary_gpu >> 32);
+    ps_code[10] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    ps_code[11] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    ps_code[12] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0002 */
+    ps_code[13] = 0xbeef0002u;
+    ps_code[14] = 0xdc708004u; /* global_store_dword v[8:9], v10, off offset:4 */
+    ps_code[15] = 0x007d0a08u;
+    ps_code[16] = 0xdc70801cu; /* global_store_dword v[8:9], v11, off offset:28 */
+    ps_code[17] = 0x007d0b08u;
+    ps_code[18] = 0xdc708020u; /* global_store_dword v[8:9], v12, off offset:32 */
+    ps_code[19] = 0x007d0c08u;
+    ps_code[20] = 0xdc708024u; /* global_store_dword v[8:9], v13, off offset:36 */
+    ps_code[21] = 0x007d0d08u;
+    ps_code[22] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    ps_code[23] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    ps_code[24] = 0x7e0002f2u; /* v_mov_b32 v0, 1.0 (R = 1.0f) */
+    ps_code[25] = 0x7e020280u; /* v_mov_b32 v1, 0.0 (G = 0.0f) */
+    ps_code[26] = 0x7e040280u; /* v_mov_b32 v2, 0.0 (B = 0.0f) */
+    ps_code[27] = 0x7e0602f2u; /* v_mov_b32 v3, 1.0 (A = 1.0f) */
+    ps_code[28] = 0xf800080fu; /* exp mrt0, v0, v1, v2, v3 done */
+    ps_code[29] = 0x03020100u;
+    ps_code[30] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    ps_code[31] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0004 */
+    ps_code[32] = 0xbeef0004u;
+    ps_code[33] = 0xdc708028u; /* global_store_dword v[8:9], v10, off offset:40 */
+    ps_code[34] = 0x007d0a08u;
+    ps_code[35] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    ps_code[36] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    ps_code[37] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 38; p < 64; p++) {
+        ps_code[p] = 0xbf800000u; /* s_nop */
     }
 
     uint32_t *fb_code = (uint32_t *)((char *)gpu_payload + 0x300);
@@ -2904,22 +3213,117 @@ static obs_result check_agc_primitive_draw(void) {
     uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
     uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
 
-    /* 1. Context register setup for Color Target 0:
-     * Emit SET_CONTEXT_REG (opcode 0x69) setting CB_COLOR0_BASE */
-    *dw++ = 0xc0016900u; /* PACKET3_SET_CONTEXT_REG, count 1 */
-    *dw++ = 0x200u;      /* CB_COLOR0_BASE (GCN/RDNA context space offset 0x200) */
-    *dw++ = (uint32_t)(color_gpu >> 8); /* Base address >> 8 */
-    *dw++ = 0xc0016900u;                /* PACKET3_SET_CONTEXT_REG, count 1 */
-    *dw++ = 0x318u; /* CB_COLOR0_BASE (GFX10 alternate context space offset) */
-    *dw++ = (uint32_t)(color_gpu >> 8); /* Base address >> 8 */
+    /* 1. Context register setup for Color Target, Rasterizer, Viewport, Scissor:
+     * Emit SET_CONTEXT_REG (opcode 0x69) configuring the complete fixed-function
+     * pipeline. */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } ctx_regs[] = {
+        /* Color Target 0 */
+        {0x318u, 0}, /* CB_COLOR0_BASE (GFX10 context offset, patched below) */
+        {0x390u, 0}, /* CB_COLOR0_BASE_EXT (GFX10 context offset, patched below) */
+        {0x319u, 0x00000007u}, /* CB_COLOR0_PITCH: (64/8)-1 = 7 */
+        {0x31au, 0x0000003fu}, /* CB_COLOR0_SLICE: (64*64/64)-1 = 63 */
+        {0x31bu, 0x00000000u}, /* CB_COLOR0_VIEW */
+        {0x31cu,
+         0x000180a8u}, /* CB_COLOR0_INFO: COLOR_8_8_8_8, LINEAR_GENERAL, UNORM */
+        {0x31eu, 0x00000048u}, /* CB_COLOR0_DCC_CONTROL */
+        {0x3b8u, 0x08c6c000u}, /* CB_COLOR0_ATTRIB3: 2D linear buffer */
+        {0x109u, 0x0000000au}, /* CB_DCC_CONTROL */
+        /* Color Control & Mask & Blend */
+        {0x202u, 0x00cc0010u}, /* CB_COLOR_CONTROL: CB_NORMAL, ROP3_COPY */
+        {0x08eu, 0x0000000fu}, /* CB_TARGET_MASK: MRT0 4 components enabled */
+        {0x08fu, 0xffffffffu}, /* CB_SHADER_MASK: all components export enabled */
+        {0x1e0u, 0x20010001u}, /* CB_BLEND0_CONTROL: SRC=ONE, DST=ZERO, ADD */
+        /* Depth disabled */
+        {0x200u, 0x00000000u}, /* DB_DEPTH_CONTROL: disabled */
+        {0x201u, 0x00000000u}, /* DB_EQAA: disabled */
+        {0x203u, 0x00000000u}, /* DB_SHADER_CONTROL */
+        /* NGG Primitive Type & Stages */
+        {0x29bu, 0x00000002u}, /* VGT_GS_OUT_PRIM_TYPE: TRILIST */
+        {0x2d5u, 0x00002000u}, /* VGT_SHADER_STAGES_EN: PRIMGEN_EN */
+        {0x2ceu, 0x00000400u}, /* VGT_GS_MAX_VERT_OUT: 1024 */
+        {0x2d4u, 0x88101010u}, /* VGT_TESS_DISTRIBUTION */
+        {0x103u, 0xffffffffu}, /* VGT_MULTI_PRIM_IB_RESET_INDX */
+        /* Sample Mask & NGG Control */
+        {0x30eu, 0xffffffffu}, /* PA_SC_AA_MASK_X0Y0_X1Y0: enable all samples */
+        {0x30fu, 0xffffffffu}, /* PA_SC_AA_MASK_X0Y1_X1Y1: enable all samples */
+        {0x314u, 0x00000202u}, /* PA_SC_NGG_MODE_CNTL: MAX_DEALLOCS=2, MAX_FPOVS=2 */
+        {0x311u, 0x01f92400u}, /* PA_SC_BINNER_CNTL_0 */
+        {0x312u, 0x03ff0080u}, /* PA_SC_BINNER_CNTL_1 */
+        {0x313u, 0x00006000u}, /* PA_SC_CONSERVATIVE_RASTERIZATION_CNTL */
+        {0x00eu, 0x00000002u}, /* DB_DFSM_CONTROL */
+        {0x280u, 0x00080008u}, /* PA_SU_POINT_SIZE */
+        {0x281u, 0xffff0000u}, /* PA_SU_POINT_MINMAX */
+        {0x282u, 0x00000008u}, /* PA_SU_LINE_CNTL */
+        {0x2deu, 0x000001e9u}, /* PA_SU_POLY_OFFSET_DB_FMT_CNTL */
+        /* Scissors (Screen, Window, Generic, Viewport) */
+        {0x00cu, 0x00000000u}, /* PA_SC_SCREEN_SCISSOR_TL */
+        {0x00du, 0x40004000u}, /* PA_SC_SCREEN_SCISSOR_BR */
+        {0x081u, 0x80000000u}, /* PA_SC_WINDOW_SCISSOR_TL (WINDOW_OFFSET_DISABLE) */
+        {0x082u, 0x40004000u}, /* PA_SC_WINDOW_SCISSOR_BR */
+        {0x090u, 0x80000000u}, /* PA_SC_GENERIC_SCISSOR_TL (WINDOW_OFFSET_DISABLE) */
+        {0x091u, 0x40004000u}, /* PA_SC_GENERIC_SCISSOR_BR */
+        {0x094u, 0x80000000u}, /* PA_SC_VPORT_SCISSOR_0_TL (WINDOW_OFFSET_DISABLE) */
+        {0x095u, 0x40004000u}, /* PA_SC_VPORT_SCISSOR_0_BR */
+        /* Viewport Bounds & Transform */
+        {0x0b4u, 0x00000000u}, /* PA_SC_VPORT_ZMIN_0: 0.0f */
+        {0x0b5u, 0x3f800000u}, /* PA_SC_VPORT_ZMAX_0: 1.0f */
+        {0x10fu, 0x42000000u}, /* PA_CL_VPORT_XSCALE: 32.0f */
+        {0x110u, 0x42000000u}, /* PA_CL_VPORT_XOFFSET: 32.0f */
+        {0x111u, 0x42000000u}, /* PA_CL_VPORT_YSCALE: 32.0f */
+        {0x112u, 0x42000000u}, /* PA_CL_VPORT_YOFFSET: 32.0f */
+        {0x113u, 0x3f000000u}, /* PA_CL_VPORT_ZSCALE: 0.5f */
+        {0x114u, 0x3f000000u}, /* PA_CL_VPORT_ZOFFSET: 0.5f */
+        /* Cliprect Rules */
+        {0x083u, 0x0000ffffu}, /* PA_SC_CLIPRECT_RULE: allow all cliprects */
+        {0x084u, 0x00000000u}, /* PA_SC_CLIPRECT_0_TL */
+        {0x085u, 0x20002000u}, /* PA_SC_CLIPRECT_0_BR (8192x8192) */
+        /* Guardband & Viewport Transform Enable */
+        {0x204u, 0x00000000u}, /* PA_CL_CLIP_CNTL: normal clipping */
+        {0x206u, 0x0000043fu}, /* PA_CL_VTE_CNTL: enable VPORT X,Y,Z scale & offset */
+        {0x2fau, 0x3f800000u}, /* PA_CL_GB_VERT_CLIP_ADJ: 1.0f */
+        {0x2fbu, 0x3f800000u}, /* PA_CL_GB_VERT_DISC_ADJ: 1.0f */
+        {0x2fcu, 0x3f800000u}, /* PA_CL_GB_HORZ_CLIP_ADJ: 1.0f */
+        {0x2fdu, 0x3f800000u}, /* PA_CL_GB_HORZ_DISC_ADJ: 1.0f */
+        /* Scan Converter & Surface Setup */
+        {0x205u, 0x00000240u}, /* PA_SU_SC_MODE_CNTL: no cull, face=0, poly=trilist */
+        {0x20cu, 0x00000021u}, /* PA_SU_SMALL_PRIM_FILTER_CNTL */
+        {0x292u, 0x00000002u}, /* PA_SC_MODE_CNTL_0: VPORT_SCISSOR_ENABLE */
+        {0x293u, 0x06020000u}, /* PA_SC_MODE_CNTL_1 */
+        {0x2f8u, 0x00000000u}, /* PA_SC_AA_CONFIG: 1x MSAA */
+        {0x2f9u, 0x0000002du}, /* PA_SU_VTX_CNTL: 1/16th subpixel, half-pixel center */
+        /* Shader Formats & SPI PS Controls */
+        {0x191u, 0x00000000u}, /* SPI_PS_INPUT_CNTL_0 */
+        {0x1c3u, 0x00000004u}, /* SPI_SHADER_POS_FORMAT: POS0 = 4COMP */
+        {0x1c5u, 0x00000009u}, /* SPI_SHADER_COL_FORMAT: COL0 = 32_ABGR */
+        {0x1b3u, 0x00000002u}, /* SPI_PS_INPUT_ENA: PERSP_CENTER_ENA */
+        {0x1b4u, 0x00000002u}, /* SPI_PS_INPUT_ADDR: PERSP_CENTER_ENA */
+        {0x1b5u, 0x00000001u}, /* SPI_INTERP_CONTROL_0: FLAT_SHADE_ENA */
+        {0x1b6u, 0x00008000u}, /* SPI_PS_IN_CONTROL: PS_W32_EN */
+        {0x1b8u, 0x00000001u}, /* SPI_BARYC_CNTL: PERSP_CENTER_CNTL */
+    };
+    for (size_t i = 0; i < sizeof(ctx_regs) / sizeof(ctx_regs[0]); i++) {
+        uint32_t reg = ctx_regs[i].reg;
+        uint32_t val = ctx_regs[i].val;
+        if (reg == 0x318u) {
+            val = (uint32_t)(color_gpu >> 8);
+        } else if (reg == 0x390u) {
+            val = (uint32_t)(color_gpu >> 40);
+        }
+        *dw++ = 0xc0016900u; /* PACKET3_SET_CONTEXT_REG, count 1 */
+        *dw++ = reg;
+        *dw++ = val;
+    }
 
     /* 2. Shader program binding to avoid SQC instruction fetch unmapped VA fault:
-     * Bind all graphics stages (PS, VS, GS/NGG, HS, ES) to their respective
+     * Bind all graphics stages (PS, VS, GS/NGG, HS, ES, LS) to their respective
      * payloads: PS: LO=0x08, HI=0x09, RSRC1=0x0A, RSRC2=0x0B (offset 0x200) VS:
      * LO=0x48, HI=0x49, RSRC1=0x4A, RSRC2=0x4B (offset 0x000) GS: LO=0x88, HI=0x89,
-     * RSRC1=0x8A, RSRC2=0x8B (offset 0x100) HS: LO=0xC8, HI=0xC9, RSRC1=0xCA,
-     * RSRC2=0xCB (offset 0x300) ES: LO=0x108, HI=0x109, RSRC1=0x10A, RSRC2=0x10B
-     * (offset 0x300)
+     * RSRC1=0x8A, RSRC2=0x8B (offset 0x000) ES: LO=0xC8, HI=0xC9, RSRC1=0xCA,
+     * RSRC2=0xCB (offset 0x000) HS: LO=0x108, HI=0x109, RSRC1=0x10A, RSRC2=0x10B
+     * (offset 0x000) LS: LO=0x148, HI=0x149, RSRC1=0x14A, RSRC2=0x14B (offset 0x000)
      */
     static const struct {
         uint32_t base_reg;
@@ -2927,9 +3331,10 @@ static obs_result check_agc_primitive_draw(void) {
     } stages[] = {
         {0x08u, 0x200u},  /* PS (Pixel Shader) */
         {0x48u, 0x000u},  /* VS (Vertex Shader) */
-        {0x88u, 0x100u},  /* GS / NGG (Geometry Shader) */
-        {0xc8u, 0x300u},  /* HS (Hull / Tessellation Shader) */
-        {0x108u, 0x300u}, /* ES / LS (Export / Local Shader) */
+        {0x88u, 0x000u},  /* GS / NGG (Geometry Shader) */
+        {0xc8u, 0x000u},  /* ES / HS */
+        {0x108u, 0x000u}, /* HS / LS */
+        {0x148u, 0x000u}, /* LS */
     };
     for (size_t s = 0; s < sizeof(stages) / sizeof(stages[0]); s++) {
         uint32_t base_reg = stages[s].base_reg;
@@ -2942,20 +3347,42 @@ static obs_result check_agc_primitive_draw(void) {
         *dw++ = (uint32_t)(s_va >> 40);
         *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
         *dw++ = base_reg + 2u;
-        *dw++ = 0x000c0008u; /* RSRC1: 8 VGPRs, float mode */
+        *dw++ = 0x000c0010u; /* RSRC1: 16 VGPRs, float mode */
         *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
         *dw++ = base_reg + 3u;
         *dw++ = 0x00000008u; /* RSRC2: 8 SGPRs */
     }
 
-    /* 3. Primitive topology setup: VGT_PRIMITIVE_TYPE via SET_UCONFIG_REG (opcode
+    /* 3. SPI Compute Unit Enable masks:
+     * SPI_SHADER_PGM_RSRC3_PS (0x007) and RSRC4_PS (0x001) enable CUs for PS stage.
+     * SPI_SHADER_PGM_RSRC3_GS (0x087) and RSRC4_GS (0x081) enable CUs for GS stage.
+     */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } spi_cu_regs[] = {
+        {0x007u, 0x0000ffffu}, /* SPI_SHADER_PGM_RSRC3_PS: CU_EN = 0xffff (16 CUs) */
+        {0x001u, 0x00000003u}, /* SPI_SHADER_PGM_RSRC4_PS: CU_EN bits 17:16 = 0x3 (18
+                                  CUs total) */
+        {0x087u, 0x0000ffffu}, /* SPI_SHADER_PGM_RSRC3_GS: CU_EN = 0xffff (16 CUs) */
+        {0x081u, 0x00000003u}, /* SPI_SHADER_PGM_RSRC4_GS: CU_EN bits 17:16 = 0x3 (18
+                                  CUs total) */
+        {0x107u, 0xffff0000u}, /* SPI_SHADER_PGM_RSRC3_HS */
+    };
+    for (size_t i = 0; i < sizeof(spi_cu_regs) / sizeof(spi_cu_regs[0]); i++) {
+        *dw++ = 0xc0017600u; /* SET_SH_REG, count 1 */
+        *dw++ = spi_cu_regs[i].reg;
+        *dw++ = spi_cu_regs[i].val;
+    }
+
+    /* 4. Primitive topology setup: VGT_PRIMITIVE_TYPE via SET_UCONFIG_REG (opcode
      * 0x79) Register 0x242 in UCONFIG space = mmVGT_PRIMITIVE_TYPE (0xC242 -
      * 0xC000) Value 0x4 = DI_PT_TRILIST */
     *dw++ = 0xc0017900u; /* PACKET3_SET_UCONFIG_REG, count 1 */
     *dw++ = 0x242u;      /* Reg offset 0x242 */
     *dw++ = 0x4u;        /* DI_PT_TRILIST */
 
-    /* 4. Primitive draw execution: DRAW_INDEX_AUTO (opcode 0x2D)
+    /* 5. Primitive draw execution: DRAW_INDEX_AUTO (opcode 0x2D)
      * DW1: index_count = 3 (1 triangle)
      * DW2: initiator = 2 (DI_SRC_SEL_AUTO_INDEX, confirmed from
      * sceAgcDcbDrawIndexAuto disassembly) */
@@ -2963,7 +3390,7 @@ static obs_result check_agc_primitive_draw(void) {
     *dw++ = 3u;          /* index_count */
     *dw++ = 2u;          /* initiator */
 
-    /* 5. Flush and fence retirement: RELEASE_MEM with EOP event */
+    /* 6. Flush and fence retirement: RELEASE_MEM with EOP event */
     *dw++ = 0xc0064900u;         /* PACKET3_RELEASE_MEM, count 6 */
     *dw++ = 0x06603514u;         /* GCR_SEQ | GCR_GL2_WB | GCR_GLM_INV | GCR_GLM_WB |
                                     CACHE_POLICY(3) | EVENT_TYPE(0x14) | EVENT_INDEX(5) */
@@ -3034,14 +3461,49 @@ static obs_result check_agc_primitive_draw(void) {
 
     /* Check color buffer memory */
 #if defined(__x86_64__)
-    __builtin_ia32_clflush((const void *)color_buf);
+    for (size_t p = 0; p < 0x4000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    }
 #endif
     uint32_t color_val = color_buf[0];
-    int color_mod = (color_val != 0x55555555u);
+    int color_mod = 0;
+    for (size_t i = 0; i < 1024; i++) {
+        if (color_buf[i] != 0x55555555u) {
+            color_mod = 1;
+            color_val = color_buf[i];
+            break;
+        }
+    }
+
     obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "color-val",
                        (uint64_t)color_val, "val");
     obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "color-mod",
                        (uint64_t)color_mod, "bool");
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)canary + p));
+    }
+#endif
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "canary-vs",
+                       (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "canary-ps",
+                       (uint64_t)canary[1], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "canary-v0",
+                       (uint64_t)canary[2], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "canary-v1",
+                       (uint64_t)canary[3], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb", "canary-exec",
+                       (uint64_t)canary[5], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                       "canary-vs-done", (uint64_t)canary[6], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                       "canary-ps-v0", (uint64_t)canary[7], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                       "canary-ps-v1", (uint64_t)canary[8], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                       "canary-ps-exec", (uint64_t)canary[9], "val");
+    obs_report_measure("166-agc/primitive-draw", "sceAgcDriverSubmitDcb",
+                       "canary-ps-done", (uint64_t)canary[10], "val");
 
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
         sig = OBS_FAULT_ARM(&guard);
@@ -3159,6 +3621,24 @@ static const obs_check agc_checks[] = {
     {"166-agc/link-shaders", "libSceAgc", "sceAgcLinkShaders", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcLinkShaders, check_agc_link_shaders,
      OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-buffer", "libSceAgc", "sceAgcDcbSetIndexBuffer",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetIndexBuffer,
+     check_agc_dcb_set_index_buffer, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-size", "libSceAgc", "sceAgcDcbSetIndexSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDcbSetIndexSize, check_agc_dcb_set_index_size,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-count", "libSceAgc", "sceAgcDcbSetIndexCount", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDcbSetIndexCount, check_agc_dcb_set_index_count,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-index", "libSceAgc", "sceAgcDcbDrawIndex", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDcbDrawIndex, check_agc_dcb_draw_index,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-event-write", "libSceAgc", "sceAgcDcbEventWrite", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDcbEventWrite, check_agc_dcb_event_write,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-num-instances", "libSceAgc", "sceAgcDcbSetNumInstances",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetNumInstances,
+     check_agc_dcb_set_num_instances, OBS_FROM_ASSUMED},
 };
 #endif
 

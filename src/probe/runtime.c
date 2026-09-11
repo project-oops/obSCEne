@@ -936,10 +936,10 @@ void obs_run_context(char *name, size_t name_cap, char *basis, size_t basis_cap)
             generation = "unknown-gpu";
             gpu_detail = why;
         } else if (g.agc) {
-            generation = "ps5-native";
+            generation = "prospero-native";
             gpu_detail = "libSceAgc mapped";
         } else if (g.gnm) {
-            generation = "ps4-bc";
+            generation = "orbis-compat";
             gpu_detail = "libSceGnm mapped, libSceAgc absent";
         } else {
             generation = "unknown-gpu";
@@ -1180,20 +1180,20 @@ void obs_bind_dynamic_symbols(void) {
 }
 
 #if !defined(OBSCENE_TARGET_MODULE)
-static int obs_is_ps5(void) {
-    static int s_is_ps5 = -1;
-    if (s_is_ps5 != -1) {
-        return s_is_ps5;
+static int obs_is_prospero(void) {
+    static int s_is_prospero = -1;
+    if (s_is_prospero != -1) {
+        return s_is_prospero;
     }
     if (obs_libkernel_base_value != 0) {
         const unsigned char *lk = (const unsigned char *)obs_libkernel_base_value;
         if (lk[0x5e40] == 0x48 && lk[0x5e41] == 0xc7 && lk[0x5e42] == 0xc0 &&
             *(const uint32_t *)(lk + 0x5e43) == 585) {
-            s_is_ps5 = 1;
+            s_is_prospero = 1;
             return 1;
         }
     }
-    s_is_ps5 = 0;
+    s_is_prospero = 0;
     return 0;
 }
 
@@ -1208,7 +1208,7 @@ int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end,
 
 int sceKernelMapDirectMemory(void **virtual_address, size_t length, int protection,
                              int flags, sce_off_t physical_address, size_t alignment) {
-    long num = obs_is_ps5() ? 585 : 573;
+    long num = obs_is_prospero() ? 585 : 573;
     long ret =
         obs_invoke_syscall(num, (long)virtual_address, (long)length, (long)protection,
                            (long)flags, (long)physical_address, (long)alignment);
@@ -1216,7 +1216,7 @@ int sceKernelMapDirectMemory(void **virtual_address, size_t length, int protecti
 }
 
 int sceKernelReleaseDirectMemory(sce_off_t physical_address, size_t length) {
-    long num = obs_is_ps5() ? 586 : 574;
+    long num = obs_is_prospero() ? 586 : 574;
     long ret =
         obs_invoke_syscall(num, (long)physical_address, (long)length, 0, 0, 0, 0);
     return (int)ret;

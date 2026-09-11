@@ -106,9 +106,9 @@ static obs_result census(const char *library, obs_availability availability,
             "a fact about the loader rather than about any library");
     }
 
-#if OOPS_TARGET_IS_PS4
+#if OOPS_TARGET_IS_ORBIS
     if (availability == OBS_CURRENT) {
-        return obs_skip("current-generation library excluded on PS4 target");
+        return obs_skip("current-generation library excluded on Orbis target");
     }
 #endif
 

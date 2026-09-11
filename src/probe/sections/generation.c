@@ -33,7 +33,7 @@
  * graphics driver has no counterpart on current hardware, and the current
  * generation's does not exist on the previous one. Declared as data so they can only
  * be probed, never called - the same rule the census follows, for the same reason. */
-#if !OOPS_TARGET_IS_PS5
+#if !OOPS_TARGET_IS_PROSPERO
 extern OBS_WEAK const char sceGnmSubmitCommandBuffers;
 extern OBS_WEAK const char sceGnmDrawIndex;
 #endif
@@ -46,7 +46,7 @@ extern OBS_WEAK const char sceGnmDrawIndex;
  * removed. The previous generation's submit-done and the current generation's
  * command-buffer acquire: both unambiguous, both already declared this way somewhere,
  * and having them here means one file owns the question. */
-#if !OOPS_TARGET_IS_PS5
+#if !OOPS_TARGET_IS_PROSPERO
 extern OBS_WEAK const char sceGnmSubmitDone;
 #endif
 
@@ -66,7 +66,7 @@ static obs_generation detected = OBS_GENERATION_UNKNOWN;
  * and not another still answers, and any of them resolving is evidence the driver is
  * there. */
 static int obs_previous_present(void) {
-#if OOPS_TARGET_IS_PS5
+#if OOPS_TARGET_IS_PROSPERO
     return 0;
 #else
     return &sceGnmSubmitCommandBuffers != NULL || &sceGnmDrawIndex != NULL ||
@@ -91,10 +91,10 @@ static int obs_previous_present(void) {
  * The markers stay the same two, for the reason above them - more markers rather than
  * fewer - and so does the meaning of the answer. (D230) */
 static int obs_current_present(void) {
-#if OOPS_TARGET_IS_PS4
-    /* When targeting PS4 (EI_ABIVERSION 0), attempting to open current-generation
+#if OOPS_TARGET_IS_ORBIS
+    /* When targeting Orbis (EI_ABIVERSION 0), attempting to open current-generation
      * EI_ABIVERSION 2 libraries causes the loader to reject them with
-     * 'ABIVERSION mismatch' in system logs. Skip probe on PS4 targets. */
+     * 'ABIVERSION mismatch' in system logs. Skip probe on Orbis targets. */
     return -1;
 #else
     /* Unanswerable, not absent.

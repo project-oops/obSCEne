@@ -45,15 +45,15 @@ typedef struct {
  *
  * The two `/app0` and `/data` entries are the jail a normal application always has. The
  * `/system` entries are outside it - a sandboxed module cannot open them, a payload
- * can. Device nodes `/dev/agc0` and `/dev/gnm` distinguish native PS5 mode from PS4
- * compat mode. */
+ * can. Device nodes `/dev/agc0` and `/dev/gnm` distinguish native Prospero mode from
+ * Orbis compat mode. */
 static const obs_reach_probe obs_reach_probes[] = {
     {"/app0/eboot.bin", 0, "the application's own executable, inside its mount"},
     {"/system/vsh/app/NPXS40112/eboot.bin", 1,
      "a system application, outside the jail"},
     {"/system/common/lib/libc.prx", 1, "a system library, outside the jail"},
-    {"/dev/agc0", 1, "native PS5 GPU driver interface (RDNA2)"},
-    {"/dev/gnm", 0, "PS4 backward-compatibility GPU interface (GCN)"},
+    {"/dev/agc0", 1, "native Prospero GPU driver interface (RDNA2)"},
+    {"/dev/gnm", 0, "Orbis backward-compatibility GPU interface (GCN)"},
     {"/dev/dmem0", 1, "direct memory allocator device node"},
 };
 
@@ -118,20 +118,20 @@ static obs_result check_mode_verdict(void) {
     int dmem_reachable = obs_reach_open("/dev/dmem0");
 
     obs_report_sysinfo("gpu/agc", agc_reachable ? "reachable" : "blocked",
-                       "PS5 native GPU device path (/dev/agc0)");
+                       "Prospero native GPU device path (/dev/agc0)");
     obs_report_sysinfo("gpu/gnm", gnm_reachable ? "reachable" : "blocked",
-                       "PS4 compat GPU device path (/dev/gnm)");
+                       "Orbis compat GPU device path (/dev/gnm)");
     obs_report_sysinfo("gpu/dmem", dmem_reachable ? "reachable" : "blocked",
                        "direct memory device (/dev/dmem0)");
 
     if (agc_reachable) {
         obs_report_sysinfo("mode/verdict", "ps5_native",
-                           "native Prospero environment with PS5 GPU (AGC) reach");
+                           "native Prospero environment with GPU (AGC) reach");
         return obs_pass_value(2);
     }
     if (gnm_reachable) {
         obs_report_sysinfo("mode/verdict", "ps4_compat",
-                           "running in PS4 backward-compatibility container");
+                           "running in Orbis backward-compatibility container");
         return obs_pass_value(1);
     }
 

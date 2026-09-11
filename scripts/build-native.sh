@@ -94,7 +94,7 @@ fi
 elf_abs="$(cd "$(dirname "$elf_input")" && pwd)/$(basename "$elf_input")"
 out_abs="$(cd "$out" && pwd)"
 PRIVILEGE="${PRIVILEGE:-root}"
-SDK="${SDK:-ps5-native}"
+SDK="${SDK:-prospero}"
 
 selfish --input "$elf_abs" \
     --target "$TARGET_NAME" \

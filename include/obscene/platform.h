@@ -1294,6 +1294,18 @@ OBS_WEAK int sceAgcUpdatePrimState(void *prim_state, void *sec_state,
 OBS_WEAK int sceAgcLinkShaders(void *link_state, void *sec_state, const void *shader_hs,
                                const void *shader_vs, const void *shader_ps,
                                uint32_t prim_type) __asm__("$MqAdbRMdNz4");
+OBS_WEAK void *sceAgcDcbSetIndexBuffer(void *dcb,
+                                       uint64_t gpu_addr) __asm__("$l4fM9K-Lyks");
+OBS_WEAK void *sceAgcDcbSetIndexSize(void *dcb, uint32_t type,
+                                     uint32_t flags) __asm__("$GIIW2J37e70");
+OBS_WEAK void *sceAgcDcbSetIndexCount(void *dcb,
+                                      uint32_t count) __asm__("$8N2tmT3jmC8");
+OBS_WEAK void *sceAgcDcbDrawIndex(void *dcb, uint32_t count, uint64_t index_gpu_addr,
+                                  uint32_t flags) __asm__("$q88lQ+GP5Yk");
+OBS_WEAK void *sceAgcDcbEventWrite(void *dcb, uint32_t event_type,
+                                   uint32_t event_index) __asm__("$aJf+j5yntiU");
+OBS_WEAK void *sceAgcDcbSetNumInstances(void *dcb,
+                                        uint32_t num_instances) __asm__("$tSBxhAPyytQ");
 
 /* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
 OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);

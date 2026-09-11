@@ -96,17 +96,17 @@ unsigned int obs_linkmap_walk(int (*cb)(const char *name, unsigned long base,
 int obs_linkmap_readable(uintptr_t p);
 
 /* Name the execution context this run measures in - "<delivery>/<generation>", e.g.
- * "payload/ps4-bc" or "payload/ps5-native" - into `name`, with a human-readable basis
- * into `basis`. Derived rather than declared: the build, the payload anchor, and which
- * GPU library the link-map shows mapped. Distinct from a check's OBS_FROM_* provenance,
- * which is where the *expectation* came from; this is where the *measurement* was
- * taken. See src/runtime.c. */
+ * "payload/orbis-compat" or "payload/prospero-native" - into `name`, with a
+ * human-readable basis into `basis`. Derived rather than declared: the build, the
+ * payload anchor, and which GPU library the link-map shows mapped. Distinct from a
+ * check's OBS_FROM_* provenance, which is where the *expectation* came from; this is
+ * where the *measurement* was taken. See src/runtime.c. */
 void obs_run_context(char *name, size_t name_cap, char *basis, size_t basis_cap);
 
 /* In-process dynamic symbol binder: walks the payload's .dynamic relocations
  * (R_X86_64_64, R_X86_64_GLOB_DAT, R_X86_64_JUMP_SLOT) and dynamically resolves weak
  * import symbols against all loaded module handles using sys_dynlib_dlsym. Enables full
- * native PS5 execution. */
+ * native Prospero execution. */
 void obs_bind_dynamic_symbols(void);
 
 /* Whether a syscall route exists (payload args captured or s_libkernel_syscall_gadget

@@ -272,7 +272,7 @@ obs_sys_state obs_sysinfo_value(obs_sys_field field, char *buf, size_t n) {
             driver[3] == '+') {
             obs_put(buf, n, driver);
         } else {
-#if OOPS_TARGET_IS_PS5
+#if OOPS_TARGET_IS_PROSPERO
             obs_put(buf, n,
                     (OOPS_TARGET == OOPS_TARGET_TRINITY) ? "agc (trinity)"
                                                          : "agc (prospero)");

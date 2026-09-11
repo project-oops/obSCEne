@@ -25,8 +25,8 @@
 //!
 //! ```text
 //! obscene-probe-<target>-<mode>-<privilege>-<category>.log
-//! obscene-probe-hardware-ps5-root-bigapp.log
-//! obscene-probe-orbistoun-ps5-app-bigapp.log
+//! obscene-probe-hardware-prospero-root-bigapp.log
+//! obscene-probe-orbistoun-prospero-app-bigapp.log
 //! ```
 //!
 //! **Latest run per cell, overwritten in place.** The history of a cell is the file's history,
@@ -55,9 +55,9 @@ const TARGETS: &[&str] = &["hardware", "orbistoun", "shadps4", "fpps4", "host"];
 
 /// How the artefact was launched.
 ///
-/// `ps5` is a native title, `ps4` a backwards-compatible one, `elf` a raw payload with no
+/// `prospero` is a native title, `orbis` a backwards-compatible one, `elf` a raw payload with no
 /// title around it at all.
-const MODES: &[&str] = &["ps5", "ps4", "elf"];
+const MODES: &[&str] = &["prospero", "orbis", "elf"];
 
 /// The authority id in the SELF header (D301).
 const PRIVILEGES: &[&str] = &["app", "sysmodule", "system", "root"];
@@ -132,6 +132,11 @@ pub fn parse_name(file: &str) -> Result<Cell, String> {
             "{file}: has {} fields after the prefix, expected 4 (target-mode-privilege-category)",
             fields.len()
         ));
+    };
+    let mode = match *mode {
+        "ps5" => "prospero",
+        "ps4" => "orbis",
+        other => other,
     };
     let checked = |value: &str, allowed: &[&str], axis: &str| -> Result<String, String> {
         if allowed.contains(&value) {
@@ -242,7 +247,7 @@ impl Matrix {
     /// has no application category; nothing runs a mini app as root.
     ///
     /// So the shapes worth having are **the ones somebody has already produced**: if hardware
-    /// was captured as `ps5/root/bigapp`, then an emulator that never ran that shape is a real
+    /// was captured as `prospero/root/bigapp`, then an emulator that never ran that shape is a real
     /// gap, and one nobody has run anywhere is not. That makes the list grow from evidence
     /// rather than from a guess about what the platform permits.
     ///
@@ -311,14 +316,14 @@ mod tests {
     /// A well-formed name reads back as the cell it describes, and round-trips.
     #[test]
     fn a_name_carries_the_whole_shape() {
-        let cell = parse_name("obscene-probe-hardware-ps5-root-bigapp.log").expect("parses");
+        let cell = parse_name("obscene-probe-hardware-prospero-root-bigapp.log").expect("parses");
         assert_eq!(cell.target, "hardware");
-        assert_eq!(cell.mode, "ps5");
+        assert_eq!(cell.mode, "prospero");
         assert_eq!(cell.privilege, "root");
         assert_eq!(cell.category, "bigapp");
         assert_eq!(
             cell.file_name(),
-            "obscene-probe-hardware-ps5-root-bigapp.log"
+            "obscene-probe-hardware-prospero-root-bigapp.log"
         );
     }
 
@@ -329,7 +334,7 @@ mod tests {
     /// merged cell would disagree with itself and the report would blame the emulator.
     #[test]
     fn a_name_without_a_category_is_refused() {
-        let error = parse_name("obscene-probe-hardware-ps5-root.log").expect_err("refused");
+        let error = parse_name("obscene-probe-hardware-prospero-root.log").expect_err("refused");
         assert!(error.contains("expected 4"), "{error}");
     }
 
@@ -337,7 +342,7 @@ mod tests {
     #[test]
     fn an_unknown_field_says_which_axis_it_failed() {
         let error =
-            parse_name("obscene-probe-hardware-ps5-superuser-bigapp.log").expect_err("refused");
+            parse_name("obscene-probe-hardware-prospero-superuser-bigapp.log").expect_err("refused");
         assert!(error.contains("privilege"), "{error}");
         assert!(error.contains("root"), "the allowed set is listed: {error}");
     }
@@ -346,7 +351,7 @@ mod tests {
     #[test]
     fn a_stray_file_is_refused() {
         assert!(parse_name("notes.log").is_err());
-        assert!(parse_name("obscene-probe-hardware-ps5-root-bigapp.txt").is_err());
+        assert!(parse_name("obscene-probe-hardware-prospero-root-bigapp.txt").is_err());
     }
 
     fn row(authority: Option<Status>, answers: &[(&str, Status)]) -> Row {
@@ -366,11 +371,11 @@ mod tests {
         let r = row(
             Some(Status::Pass),
             &[
-                ("hardware/ps5/app/bigapp", Status::Pass),
-                ("orbistoun/ps5/app/bigapp", Status::Fail),
+                ("hardware/prospero/app/bigapp", Status::Pass),
+                ("orbistoun/prospero/app/bigapp", Status::Fail),
             ],
         );
-        assert_eq!(r.diverging(), ["orbistoun/ps5/app/bigapp"]);
+        assert_eq!(r.diverging(), ["orbistoun/prospero/app/bigapp"]);
     }
 
     /// **A skip is not a disagreement.**
@@ -382,8 +387,8 @@ mod tests {
         let r = row(
             Some(Status::Pass),
             &[
-                ("hardware/ps5/app/bigapp", Status::Pass),
-                ("orbistoun/ps5/app/bigapp", Status::Skip),
+                ("hardware/prospero/app/bigapp", Status::Pass),
+                ("orbistoun/prospero/app/bigapp", Status::Skip),
             ],
         );
         assert!(r.diverging().is_empty());
@@ -395,8 +400,8 @@ mod tests {
         let r = row(
             None,
             &[
-                ("shadps4/ps5/app/bigapp", Status::Pass),
-                ("orbistoun/ps5/app/bigapp", Status::Fail),
+                ("shadps4/prospero/app/bigapp", Status::Pass),
+                ("orbistoun/prospero/app/bigapp", Status::Fail),
             ],
         );
         assert!(r.diverging().is_empty(), "nothing to diverge from");
@@ -409,8 +414,8 @@ mod tests {
         let r = row(
             None,
             &[
-                ("shadps4/ps5/app/bigapp", Status::Fail),
-                ("orbistoun/ps5/app/bigapp", Status::Fail),
+                ("shadps4/prospero/app/bigapp", Status::Fail),
+                ("orbistoun/prospero/app/bigapp", Status::Fail),
             ],
         );
         assert!(!r.unsettled());
@@ -424,9 +429,9 @@ mod tests {
     fn a_shape_one_target_lacks_is_named_with_the_file_to_produce() {
         let built = super::Matrix {
             cells: vec![
-                parse_name("obscene-probe-hardware-ps5-root-bigapp.log").expect("parses"),
-                parse_name("obscene-probe-hardware-ps5-app-bigapp.log").expect("parses"),
-                parse_name("obscene-probe-orbistoun-ps5-app-bigapp.log").expect("parses"),
+                parse_name("obscene-probe-hardware-prospero-root-bigapp.log").expect("parses"),
+                parse_name("obscene-probe-hardware-prospero-app-bigapp.log").expect("parses"),
+                parse_name("obscene-probe-orbistoun-prospero-app-bigapp.log").expect("parses"),
             ],
             rows: Vec::new(),
             unnamed: Vec::new(),
@@ -436,7 +441,7 @@ mod tests {
         let only = gaps.first().expect("just asserted there is one");
         assert_eq!(
             only.file_name(),
-            "obscene-probe-orbistoun-ps5-root-bigapp.log"
+            "obscene-probe-orbistoun-prospero-root-bigapp.log"
         );
     }
 
@@ -447,8 +452,8 @@ mod tests {
     fn a_shape_nobody_has_run_is_not_a_gap() {
         let built = super::Matrix {
             cells: vec![
-                parse_name("obscene-probe-hardware-ps5-app-bigapp.log").expect("parses"),
-                parse_name("obscene-probe-orbistoun-ps5-app-bigapp.log").expect("parses"),
+                parse_name("obscene-probe-hardware-prospero-app-bigapp.log").expect("parses"),
+                parse_name("obscene-probe-orbistoun-prospero-app-bigapp.log").expect("parses"),
             ],
             rows: Vec::new(),
             unnamed: Vec::new(),
@@ -463,5 +468,14 @@ mod tests {
         let em = parse_name("obscene-probe-orbistoun-elf-root-none.log").expect("parses");
         assert!(hw.is_authority());
         assert!(!em.is_authority());
+    }
+
+    /// Legacy mode names in filenames are normalized to canonical codenames.
+    #[test]
+    fn older_ps5_and_ps4_mode_names_are_normalized() {
+        let legacy_ps5 = parse_name("obscene-probe-hardware-ps5-root-bigapp.log").expect("parses");
+        assert_eq!(legacy_ps5.mode, "prospero");
+        let legacy_ps4 = parse_name("obscene-probe-hardware-ps4-app-bigapp.log").expect("parses");
+        assert_eq!(legacy_ps4.mode, "orbis");
     }
 }

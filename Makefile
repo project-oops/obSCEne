@@ -56,23 +56,23 @@ include $(OOPS_SDK)/oops-sdk.mk
 # Which console generation and dynamic table convention to target.
 # Derived from TARGET (orbis | neo | prospero | trinity, defined in oops-sdk.mk; default: prospero).
 ifeq ($(filter 1 2,$(OOPS_TARGET_NUM)),)
-    # PS5 native (Prospero / Trinity)
+    # Prospero native (Prospero / Trinity)
     GEN ?= 5
     TABLE ?= current
     EBOOT_GEN ?= 5
     EBOOT_TABLE ?= legacy
     EBOOT_KIND ?= executable
     PRIVILEGE ?= root
-    SDK ?= $(if $(filter trinity,$(TARGET)),ps5-trinity,ps5-native)
+    SDK ?= $(if $(filter trinity,$(TARGET)),trinity,prospero)
 else
-    # PS4 (Orbis / Neo)
+    # Orbis (Orbis / Neo)
     GEN ?= 4
     TABLE ?= legacy
     EBOOT_GEN ?= 4
     EBOOT_TABLE ?= legacy
     EBOOT_KIND ?= fixed
     PRIVILEGE ?= app
-    SDK ?= $(if $(filter neo,$(TARGET)),ps4-neo,ps4)
+    SDK ?= $(if $(filter neo,$(TARGET)),neo,orbis)
 endif
 
 WARNINGS := -Wall -Wextra -Werror -Wshadow -Wconversion -Wsign-conversion \
@@ -910,7 +910,7 @@ NATIVE_TARGET ?= $(if $(filter trinity,$(TARGET)),trinity,prospero)
 .PHONY: native
 native: | $(BUILD)
 	@$(MAKE) eboot sce-module TARGET=$(NATIVE_TARGET) BUILD=$(BUILD)
-	@SELFISH=$(SELFISH) PRIVILEGE=root SDK=$(if $(filter trinity,$(NATIVE_TARGET)),ps5-trinity,ps5-native) bash scripts/build-native.sh $(BUILD) $(NATIVE_TARGET)
+	@SELFISH=$(SELFISH) PRIVILEGE=root SDK=$(if $(filter trinity,$(NATIVE_TARGET)),trinity,prospero) bash scripts/build-native.sh $(BUILD) $(NATIVE_TARGET)
 # The same package around the *minimal* module, which is what to send at a console first.
 # `module-min` is one import and one library, built by the same linker script through the same
 # `mkmodule` with the same tags, so everything structural is present and everything about scale

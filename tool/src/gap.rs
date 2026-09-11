@@ -310,7 +310,7 @@ pub fn run(root: &Path, emulators_dir: &Path, scope: Scope) -> std::io::Result<b
 
     let name = match scope {
         Scope::All => "gap-analysis.txt",
-        Scope::CurrentGeneration => "ps5-gap.txt",
+        Scope::CurrentGeneration => "prospero-gap.txt",
     };
     let out = root.join("reports").join(name);
     std::fs::create_dir_all(out.parent().unwrap_or(Path::new(".")))?;

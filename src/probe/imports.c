@@ -286,9 +286,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceNet", "sceNetSetsockopt"},
     {"libSceNet", "sceNetConnect"},
 
-#if !OOPS_TARGET_IS_PS5
-    /* The GPU command-builders (src/sections/gnm.c). Only on PS4 targets (Orbis/Neo).
-     * Excluded on PS5 targets so libSceGnmDriver is not in DT_NEEDED. */
+#if !OOPS_TARGET_IS_PROSPERO
+    /* The GPU command-builders (src/sections/gnm.c). Only on Orbis targets (Orbis/Neo).
+     * Excluded on Prospero targets so libSceGnmDriver is not in DT_NEEDED. */
     {"libSceGnmDriver", "sceGnmDispatchInitDefaultHardwareState"},
     {"libSceGnmDriver", "sceGnmDispatchDirect"},
     /* Called by checks and, until now, declared only by the census.
@@ -310,7 +310,7 @@ static const obs_import obs_platform_imports[] = {
     {"libSceGnmDriver", "sceGnmSubmitDone"},
 #endif
 
-#if !OOPS_TARGET_IS_PS4
+#if !OOPS_TARGET_IS_ORBIS
     /* libSceAgc: current-generation GPU command builders and shaders */
     {"libSceAgc", "$23LRUSvYu1M"},
     {"libSceAgc", "sceAgcInit"},
@@ -350,6 +350,14 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "sceAgcUpdatePrimState"},
     {"libSceAgc", "$MqAdbRMdNz4"},
     {"libSceAgc", "sceAgcLinkShaders"},
+    {"libSceAgc", "$l4fM9K-Lyks"},
+    {"libSceAgc", "sceAgcDcbSetIndexBuffer"},
+    {"libSceAgc", "$GIIW2J37e70"},
+    {"libSceAgc", "sceAgcDcbSetIndexSize"},
+    {"libSceAgc", "$8N2tmT3jmC8"},
+    {"libSceAgc", "sceAgcDcbSetIndexCount"},
+    {"libSceAgc", "$q88lQ+GP5Yk"},
+    {"libSceAgc", "sceAgcDcbDrawIndex"},
     /* libSceAgcDriver: current-generation GPU driver submission */
     {"libSceAgcDriver", "sceAgcDriverCreateQueue"},
     {"libSceAgcDriver", "sceAgcDriverDestroyQueue"},
@@ -449,6 +457,10 @@ static const obs_import obs_platform_imports[] = {
 
     /* Ends the run. See src/start.c. */
     {"libSceLibcInternal", "exit"},
+
+    /* libSceAgc pre-encoded imports */
+    {"libSceAgc", "$aJf+j5yntiU"},
+    {"libSceAgc", "$tSBxhAPyytQ"},
 
     /* ---- declared inside a section file rather than in platform.h ---------------
      *

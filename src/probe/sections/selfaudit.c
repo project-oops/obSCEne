@@ -608,17 +608,17 @@ static obs_result check_metadata_differential(void) {
 
     if (ps5_titles > 0 && ps4_titles == 0) {
         obs_report_sysinfo("metadata/verdict", "ps5_native_only",
-                           "all inspected titles are native PS5");
+                           "all inspected titles are native Prospero");
         return obs_pass_value(ps5_titles);
     }
     if (ps5_titles > 0 && ps4_titles > 0) {
         obs_report_sysinfo("metadata/verdict", "mixed",
-                           "both native PS5 and PS4 compat titles found");
+                           "both native Prospero and Orbis compat titles found");
         return obs_pass_value(ps5_titles + ps4_titles);
     }
     if (ps4_titles > 0) {
         obs_report_sysinfo("metadata/verdict", "ps4_compat_only",
-                           "only PS4 compat titles discovered");
+                           "only Orbis compat titles discovered");
         return obs_pass_value(ps4_titles);
     }
 
