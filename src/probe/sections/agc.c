@@ -126,6 +126,12 @@ static obs_result check_agc_shader_differential(void) {
 static obs_result check_agc_primitive_draw(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
+static obs_result check_agc_shader_graphics_stages(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_shader_fused_stages(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
 
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -175,6 +181,10 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_differential, OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw, OBS_FROM_ASSUMED},
+    {"166-agc/shader-graphics-stages", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_graphics_stages, OBS_FROM_ASSUMED},
+    {"166-agc/shader-fused-stages", "libSceAgc", "sceAgcFuseShaderHalves", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_fused_stages, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -906,6 +916,290 @@ static obs_result check_agc_shader_differential(void) {
     return obs_fail("differential shader tests failed to run");
 }
 
+static void init_stage_hdr(uint8_t *hdr, uint8_t stage, uint32_t reg) {
+    for (size_t i = 0; i < 384; i++) {
+        hdr[i] = 0;
+    }
+    for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0); i++) {
+        hdr[i] = agc_retail_hdr_full_0[i];
+    }
+    hdr[0x5a] = stage;
+    uint32_t *sh = (uint32_t *)(hdr + 0x90);
+    if (reg != 0) {
+        sh[0] = reg;
+        sh[1] = 0;
+        sh[2] = reg + 1u;
+        sh[3] = 0;
+    }
+}
+
+/* Graphics Shader Stages probe: systematically probe all 8 shader stages (0..7)
+ * supported by sceAgcCreateShader, reading hardware registers and verifying patching.
+ */
+static obs_result check_agc_shader_graphics_stages(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip("sceAgcCreateShader not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+    uint8_t hdr[384];
+    const void *payload = (const void *)agc_retail_payload_0;
+
+    /* 1. Safely read live library register variables from libSceAgc data segment */
+    const uint8_t *fn_base = (const uint8_t *)&sceAgcCreateShader;
+    uint32_t mem_cs_reg = 0, mem_vs_reg = 0, mem_es_reg = 0;
+    uint32_t mem_hs_reg = 0, mem_gs_reg = 0, mem_ps_reg = 0;
+
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        mem_cs_reg = *(const uint32_t *)(fn_base + 0x36d20);
+        mem_vs_reg = *(const uint32_t *)(fn_base + 0x36d30);
+        mem_es_reg = *(const uint32_t *)(fn_base + 0x36d40);
+        mem_hs_reg = *(const uint32_t *)(fn_base + 0x36d50);
+        mem_gs_reg = *(const uint32_t *)(fn_base + 0x36d60);
+        mem_ps_reg = *(const uint32_t *)(fn_base + 0x36d70);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "mem-cs-reg", (uint64_t)mem_cs_reg, "val");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "mem-vs-reg", (uint64_t)mem_vs_reg, "val");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "mem-es-reg", (uint64_t)mem_es_reg, "val");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "mem-hs-reg", (uint64_t)mem_hs_reg, "val");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "mem-gs-reg", (uint64_t)mem_gs_reg, "val");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "mem-ps-reg", (uint64_t)mem_ps_reg, "val");
+
+    /* Stage 0: Compute Shader */
+    void *cs_obj = NULL;
+    int rc_cs = -1;
+    init_stage_hdr(hdr, 0u, mem_cs_reg ? mem_cs_reg : 0x20cu);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_cs = (int)sceAgcCreateShader(&cs_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-cs",
+                       (uint64_t)(uint32_t)rc_cs, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "cs-obj-valid", (uint64_t)(cs_obj != NULL), "bool");
+
+    /* Stage 1: Pixel Shader */
+    void *ps_obj = NULL;
+    int rc_ps = -1;
+    init_stage_hdr(hdr, 1u, mem_ps_reg ? mem_ps_reg : 0x08u);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_ps = (int)sceAgcCreateShader(&ps_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-ps",
+                       (uint64_t)(uint32_t)rc_ps, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "ps-obj-valid", (uint64_t)(ps_obj != NULL), "bool");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "ps-patched-lo", (uint64_t)((const uint32_t *)(hdr + 0x90))[1],
+                       "val");
+
+    /* Stage 2: Vertex Shader */
+    void *vs_obj = NULL;
+    int rc_vs = -1;
+    init_stage_hdr(hdr, 2u, mem_vs_reg ? mem_vs_reg : 0xc8u);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_vs = (int)sceAgcCreateShader(&vs_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-vs",
+                       (uint64_t)(uint32_t)rc_vs, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "vs-obj-valid", (uint64_t)(vs_obj != NULL), "bool");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "vs-patched-lo", (uint64_t)((const uint32_t *)(hdr + 0x90))[1],
+                       "val");
+
+    /* Stage 3: Geometry Shader */
+    void *gs_obj = NULL;
+    int rc_gs = -1;
+    init_stage_hdr(hdr, 3u, mem_gs_reg ? mem_gs_reg : 0x148u);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_gs = (int)sceAgcCreateShader(&gs_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-gs",
+                       (uint64_t)(uint32_t)rc_gs, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "gs-obj-valid", (uint64_t)(gs_obj != NULL), "bool");
+
+    /* Stage 4: Unfused Local Shader (LS) */
+    void *s4_obj = NULL;
+    int rc_s4 = -1;
+    init_stage_hdr(hdr, 4u, 0);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_s4 = (int)sceAgcCreateShader(&s4_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-s4",
+                       (uint64_t)(uint32_t)rc_s4, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "s4-obj-valid", (uint64_t)(s4_obj != NULL), "bool");
+
+    /* Stage 5: Unfused Hull Shader Half (HS) */
+    void *s5_obj = NULL;
+    int rc_s5 = -1;
+    init_stage_hdr(hdr, 5u, 0);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_s5 = (int)sceAgcCreateShader(&s5_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-s5",
+                       (uint64_t)(uint32_t)rc_s5, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "s5-obj-valid", (uint64_t)(s5_obj != NULL), "bool");
+
+    /* Stage 6: Export Shader (ES) */
+    void *es_obj = NULL;
+    int rc_es = -1;
+    init_stage_hdr(hdr, 6u, mem_es_reg ? mem_es_reg : 0x88u);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_es = (int)sceAgcCreateShader(&es_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-es",
+                       (uint64_t)(uint32_t)rc_es, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "es-obj-valid", (uint64_t)(es_obj != NULL), "bool");
+
+    /* Stage 7: Hull Shader (HS) */
+    void *hs_obj = NULL;
+    int rc_hs = -1;
+    init_stage_hdr(hdr, 7u, mem_hs_reg ? mem_hs_reg : 0x108u);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_hs = (int)sceAgcCreateShader(&hs_obj, hdr, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader", "rc-hs",
+                       (uint64_t)(uint32_t)rc_hs, "code");
+    obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
+                       "hs-obj-valid", (uint64_t)(hs_obj != NULL), "bool");
+
+    if (rc_cs == 0 && rc_ps == 0 && rc_vs == 0 && rc_gs == 0 && rc_s4 == 0 &&
+        rc_s5 == 0 && rc_es == 0 && rc_hs == 0) {
+        return obs_pass();
+    }
+    return obs_partial_value("one or more stages failed", (uint64_t)(uint32_t)rc_cs);
+}
+
+static obs_result check_agc_shader_fused_stages(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcGetFusedShaderSize) ||
+        !obs_address_is_callable((const void *)&sceAgcFuseShaderHalves) ||
+        !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip("sceAgc fuse symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+    const void *payload = (const void *)agc_retail_payload_0;
+
+    /* Build Half 1 (Stage 4: Local/Export) and Half 2 (Stage 6: Geometry/Export) */
+    uint8_t half_vs[384];
+    uint8_t half_gs[384];
+    init_stage_hdr(half_vs, 4u, 0);
+    init_stage_hdr(half_gs, 6u, 0x88u);
+
+    /* Relocate/instantiate halves via sceAgcCreateShader so pointers at 0x28 are
+     * valid */
+    void *vs_half_obj = NULL;
+    void *gs_half_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&vs_half_obj, half_vs, payload, 0);
+        sceAgcCreateShader(&gs_half_obj, half_gs, payload, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    /* 1. Query fused shader size */
+    uint64_t fused_size_info[2] = {0, 0};
+    int rc_size = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_size = sceAgcGetFusedShaderSize(fused_size_info, half_vs, half_gs);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcGetFusedShaderSize",
+                       "rc-size", (uint64_t)(uint32_t)rc_size, "code");
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcGetFusedShaderSize",
+                       "fused-size", fused_size_info[0], "size");
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcGetFusedShaderSize",
+                       "fused-align", fused_size_info[1], "align");
+
+    /* 2. Fuse the shader halves into fused_hdr with auxiliary storage */
+    uint8_t fused_hdr[512];
+    uint8_t fuse_buf[512];
+    for (size_t i = 0; i < sizeof(fused_hdr); i++) {
+        fused_hdr[i] = 0;
+    }
+    for (size_t i = 0; i < sizeof(fuse_buf); i++) {
+        fuse_buf[i] = 0;
+    }
+    int rc_fuse = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_fuse = sceAgcFuseShaderHalves(fused_hdr, half_vs, half_gs, fuse_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcFuseShaderHalves",
+                       "rc-fuse", (uint64_t)(uint32_t)rc_fuse, "code");
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcFuseShaderHalves",
+                       "fused-stage", (uint64_t)fused_hdr[0x5a], "val");
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcFuseShaderHalves",
+                       "fused-valid", (uint64_t)(rc_fuse == 0 && fused_hdr[0x5a] == 2u),
+                       "bool");
+
+    if (rc_size == 0 && rc_fuse == 0 && fused_hdr[0x5a] == 2u) {
+        return obs_pass();
+    }
+    if (rc_size == 0 && rc_fuse == 0) {
+        return obs_partial_value("fused shader halves returned non-stage-2",
+                                 (uint64_t)fused_hdr[0x5a]);
+    }
+    return obs_fail("fused shader pipeline failed");
+}
+
 /* DCB Constructor audit: audit potential constructor candidates without fabricating
  * handles. */
 static obs_result check_agc_dcb_constructor_audit(void) {
@@ -1413,7 +1707,8 @@ static obs_result check_agc_compute_dispatch(void) {
         return obs_fail_code("fault before queue/shader creation", (uint64_t)sig);
     }
 
-    /* 1. Allocate GPU payload, fence buffer, and ALU output buffer in Onion memory */
+    /* 1. Allocate GPU payload, fence buffer, and ALU output buffer in Onion memory
+     */
 #if !defined(OBSCENE_HOST_BUILD)
     uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x1000, 256, OOPS_MEM_WB_ONION);
     volatile uint32_t *fence =
@@ -1448,7 +1743,8 @@ static obs_result check_agc_compute_dispatch(void) {
      * 4. v_mov_b32_e32 v0, s0                     [0x7e000200]
      * 5. v_mov_b32_e32 v1, s1                     [0x7e020201]
      * 6. v_mov_b32_e32 v2, 0x12345678             [0x7e0402ff, 0x12345678]
-     * 7. v_add_nc_u32_e32 v2, 0x11111111, v2      [0x4a0404ff, 0x11111111] (0x12345678
+     * 7. v_add_nc_u32_e32 v2, 0x11111111, v2      [0x4a0404ff, 0x11111111]
+     * (0x12345678
      * + 0x11111111 = 0x23456789)
      * 8. global_store_dword v[0:1], v2, off       [0xdc708000, 0x007d0200]
      * 9. s_waitcnt vmcnt(0)                       [0xbf8c3f70]
@@ -1524,8 +1820,8 @@ static obs_result check_agc_compute_dispatch(void) {
 
     uint32_t *dw = (uint32_t *)probe->cur;
 
-    /* Extract resolved registers from hdr_buf (starts at hdr_buf + 0x88, 11 register
-     * pairs) */
+    /* Extract resolved registers from hdr_buf (starts at hdr_buf + 0x88, 11
+     * register pairs) */
     const uint32_t *reg_table = (const uint32_t *)(hdr_buf + 0x88);
     uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
     for (int i = 0; i < 11; i++) {
@@ -1711,9 +2007,9 @@ static obs_result check_agc_graphics_submit(void) {
     uint32_t *dw = (uint32_t *)probe->cur;
     uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
 
-    /* Emit SET_CONTEXT_REG: packet type 3, opcode 0x28, count 2 body DWORDs (count - 1
-     * = 1) Sets CB_COLOR0_BASE (context register 0x200) to test graphics pipeline
-     * register setup */
+    /* Emit SET_CONTEXT_REG: packet type 3, opcode 0x28, count 2 body DWORDs (count
+     * - 1 = 1) Sets CB_COLOR0_BASE (context register 0x200) to test graphics
+     * pipeline register setup */
     *dw++ = 0xc0012800u;                /* DW0: PACKET3_SET_CONTEXT_REG, count 1 */
     *dw++ = 0x200u;                     /* DW1: reg offset 0x200 (CB_COLOR0_BASE) */
     *dw++ = (uint32_t)(fence_gpu >> 8); /* DW2: base address >> 8 */
@@ -1852,8 +2148,8 @@ static obs_result check_agc_primitive_draw(void) {
 
     /* Distinct RDNA2 shader bytecode per stage:
      * 1. VS: allocates GS/NGG space, exports position, and terminates
-     * 2. GS/NGG: allocates 0 outputs via MSG_GS_ALLOC_REQ so Primitive Assembly retires
-     * cleanly
+     * 2. GS/NGG: allocates 0 outputs via MSG_GS_ALLOC_REQ so Primitive Assembly
+     * retires cleanly
      * 3. PS: exports color to MRT0 and terminates
      * 4. Fallback (HS/ES): minimal alloc + s_endpgm
      */
@@ -1933,12 +2229,12 @@ static obs_result check_agc_primitive_draw(void) {
     *dw++ = (uint32_t)(color_gpu >> 8); /* Base address >> 8 */
 
     /* 2. Shader program binding to avoid SQC instruction fetch unmapped VA fault:
-     * Bind all graphics stages (PS, VS, GS/NGG, HS, ES) to their respective payloads:
-     * PS: LO=0x08, HI=0x09, RSRC1=0x0A, RSRC2=0x0B (offset 0x200)
-     * VS: LO=0x48, HI=0x49, RSRC1=0x4A, RSRC2=0x4B (offset 0x000)
-     * GS: LO=0x88, HI=0x89, RSRC1=0x8A, RSRC2=0x8B (offset 0x100)
-     * HS: LO=0xC8, HI=0xC9, RSRC1=0xCA, RSRC2=0xCB (offset 0x300)
-     * ES: LO=0x108, HI=0x109, RSRC1=0x10A, RSRC2=0x10B (offset 0x300)
+     * Bind all graphics stages (PS, VS, GS/NGG, HS, ES) to their respective
+     * payloads: PS: LO=0x08, HI=0x09, RSRC1=0x0A, RSRC2=0x0B (offset 0x200) VS:
+     * LO=0x48, HI=0x49, RSRC1=0x4A, RSRC2=0x4B (offset 0x000) GS: LO=0x88, HI=0x89,
+     * RSRC1=0x8A, RSRC2=0x8B (offset 0x100) HS: LO=0xC8, HI=0xC9, RSRC1=0xCA,
+     * RSRC2=0xCB (offset 0x300) ES: LO=0x108, HI=0x109, RSRC1=0x10A, RSRC2=0x10B
+     * (offset 0x300)
      */
     static const struct {
         uint32_t base_reg;
@@ -1967,17 +2263,17 @@ static obs_result check_agc_primitive_draw(void) {
         *dw++ = 0x00000008u; /* RSRC2: 8 SGPRs */
     }
 
-    /* 3. Primitive topology setup: VGT_PRIMITIVE_TYPE via SET_UCONFIG_REG (opcode 0x79)
-     * Register 0x242 in UCONFIG space = mmVGT_PRIMITIVE_TYPE (0xC242 - 0xC000)
-     * Value 0x4 = DI_PT_TRILIST */
+    /* 3. Primitive topology setup: VGT_PRIMITIVE_TYPE via SET_UCONFIG_REG (opcode
+     * 0x79) Register 0x242 in UCONFIG space = mmVGT_PRIMITIVE_TYPE (0xC242 -
+     * 0xC000) Value 0x4 = DI_PT_TRILIST */
     *dw++ = 0xc0017900u; /* PACKET3_SET_UCONFIG_REG, count 1 */
     *dw++ = 0x242u;      /* Reg offset 0x242 */
     *dw++ = 0x4u;        /* DI_PT_TRILIST */
 
     /* 4. Primitive draw execution: DRAW_INDEX_AUTO (opcode 0x2D)
      * DW1: index_count = 3 (1 triangle)
-     * DW2: initiator = 2 (DI_SRC_SEL_AUTO_INDEX, confirmed from sceAgcDcbDrawIndexAuto
-     * disassembly) */
+     * DW2: initiator = 2 (DI_SRC_SEL_AUTO_INDEX, confirmed from
+     * sceAgcDcbDrawIndexAuto disassembly) */
     *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO, count 1 */
     *dw++ = 3u;          /* index_count */
     *dw++ = 2u;          /* initiator */
@@ -2136,6 +2432,12 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw,
+     OBS_FROM_ASSUMED},
+    {"166-agc/shader-graphics-stages", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcCreateShader, check_agc_shader_graphics_stages,
+     OBS_FROM_ASSUMED},
+    {"166-agc/shader-fused-stages", "libSceAgc", "sceAgcFuseShaderHalves", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcFuseShaderHalves, check_agc_shader_fused_stages,
      OBS_FROM_ASSUMED},
 };
 #endif

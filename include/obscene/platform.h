@@ -1262,6 +1262,11 @@ OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
                                      const void *payload,
                                      uint64_t arg3) __asm__("$f3dg2CSgRKY");
+OBS_WEAK int sceAgcGetFusedShaderSize(uint64_t *out_size, const void *half1,
+                                      const void *half2) __asm__("$nQT5kYLv0cg");
+OBS_WEAK int sceAgcFuseShaderHalves(void *fused_hdr, const void *half1,
+                                    const void *half2,
+                                    void *arg3) __asm__("$nApJjpKNBl4");
 
 /* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
 OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);

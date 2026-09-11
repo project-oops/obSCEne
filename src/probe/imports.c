@@ -324,6 +324,10 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "$f3dg2CSgRKY"},
     {"libSceAgc", "$fYZQG4CU71c"},
     {"libSceAgc", "sceAgcCreateShader"},
+    {"libSceAgc", "$nQT5kYLv0cg"},
+    {"libSceAgc", "sceAgcGetFusedShaderSize"},
+    {"libSceAgc", "$nApJjpKNBl4"},
+    {"libSceAgc", "sceAgcFuseShaderHalves"},
     /* libSceAgcDriver: current-generation GPU driver submission */
     {"libSceAgcDriver", "sceAgcDriverCreateQueue"},
     {"libSceAgcDriver", "sceAgcDriverDestroyQueue"},
