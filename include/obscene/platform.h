@@ -1267,6 +1267,21 @@ OBS_WEAK int sceAgcGetFusedShaderSize(uint64_t *out_size, const void *half1,
 OBS_WEAK int sceAgcFuseShaderHalves(void *fused_hdr, const void *half1,
                                     const void *half2,
                                     void *arg3) __asm__("$nApJjpKNBl4");
+OBS_WEAK void *sceAgcDcbDrawIndexAuto(void *dcb, uint32_t count,
+                                      uint32_t initiator) __asm__("$Yw0jKSqop+E");
+OBS_WEAK void *
+sceAgcDcbSetCxRegisterDirect(void *dcb, uint64_t reg_and_val) __asm__("$LHFXRrlTPD8");
+OBS_WEAK void *
+sceAgcDcbSetUcRegisterDirect(void *dcb, uint64_t reg_and_val) __asm__("$w4-d0n60hdo");
+OBS_WEAK void *sceAgcCbSetShRegisterRangeDirect(void *dcb, uint32_t start_reg,
+                                                const void *values,
+                                                uint32_t count) __asm__("$n2fD4A+pb+g");
+OBS_WEAK int sceAgcCreatePrimState(void *prim_state, void *sec_state,
+                                   const void *shader_gs, const void *shader_vs,
+                                   uint32_t prim_type) __asm__("$D9sr1xGUriE");
+OBS_WEAK int
+sceAgcCreateInterpolantMapping(void *mapping, const void *shader_vs,
+                               const void *shader_ps) __asm__("$pdEV7bI6COI");
 
 /* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
 OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);

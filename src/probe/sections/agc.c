@@ -132,6 +132,21 @@ static obs_result check_agc_shader_graphics_stages(void) {
 static obs_result check_agc_shader_fused_stages(void) {
     return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
 }
+static obs_result check_agc_dcb_set_cx_reg(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_set_uc_reg(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_set_sh_reg(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_dcb_draw_auto(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
+static obs_result check_agc_create_prim_state(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from PS4 target");
+}
 
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -185,6 +200,19 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_graphics_stages, OBS_FROM_ASSUMED},
     {"166-agc/shader-fused-stages", "libSceAgc", "sceAgcFuseShaderHalves", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_fused_stages, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-cx-reg", "libSceAgc", "sceAgcDcbSetCxRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_cx_reg,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-uc-reg", "libSceAgc", "sceAgcDcbSetUcRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_uc_reg,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-sh-reg", "libSceAgc", "sceAgcCbSetShRegisterRangeDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_sh_reg,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-auto", "libSceAgc", "sceAgcDcbDrawIndexAuto", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_draw_auto, OBS_FROM_ASSUMED},
+    {"166-agc/create-prim-state", "libSceAgc", "sceAgcCreatePrimState", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_create_prim_state, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -1129,11 +1157,83 @@ static obs_result check_agc_shader_fused_stages(void) {
     int sig = 0;
     const void *payload = (const void *)agc_retail_payload_0;
 
+    /* 0. Safely inspect live fusion register variables in libSceAgc */
+    const uint8_t *fn_base = (const uint8_t *)&sceAgcCreateShader;
+    uint32_t mem_fuse_459d8 = 0, mem_fuse_459e0 = 0;
+    uint32_t mem_fuse_rsrc1 = 0, mem_fuse_rsrc2 = 0;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        mem_fuse_459d8 = *(const uint32_t *)(fn_base + 0x36a68);
+        mem_fuse_459e0 = *(const uint32_t *)(fn_base + 0x36a70);
+        mem_fuse_rsrc1 = *(const uint32_t *)(fn_base + 0x36a80);
+        mem_fuse_rsrc2 = *(const uint32_t *)(fn_base + 0x36a88);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcFuseShaderHalves",
+                       "mem-fuse-459d8", (uint64_t)mem_fuse_459d8, "val");
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcFuseShaderHalves",
+                       "mem-fuse-rsrc1", (uint64_t)mem_fuse_rsrc1, "val");
+    obs_report_measure("166-agc/shader-fused-stages", "sceAgcFuseShaderHalves",
+                       "mem-fuse-rsrc2", (uint64_t)mem_fuse_rsrc2, "val");
+
     /* Build Half 1 (Stage 4: Local/Export) and Half 2 (Stage 6: Geometry/Export) */
     uint8_t half_vs[384];
     uint8_t half_gs[384];
     init_stage_hdr(half_vs, 4u, 0);
     init_stage_hdr(half_gs, 6u, 0x88u);
+
+    /* Populate register lists with user-data and resource registers required by fusion
+     */
+    uint32_t *sh_vs = (uint32_t *)(half_vs + 0x90);
+    uint32_t *sh_gs = (uint32_t *)(half_gs + 0x90);
+    uint32_t r_459d8 = mem_fuse_459d8 ? mem_fuse_459d8 : 0x228u;
+    uint32_t r_rsrc1 = mem_fuse_rsrc1 ? mem_fuse_rsrc1 : 0x212u;
+    uint32_t r_rsrc2 = mem_fuse_rsrc2 ? mem_fuse_rsrc2 : 0x213u;
+    uint32_t r_459e0 = mem_fuse_459e0 ? mem_fuse_459e0 : 0x22au;
+
+    sh_vs[0] = 0xc8u;
+    sh_vs[1] = 0;
+    sh_vs[2] = 0xc9u;
+    sh_vs[3] = 0;
+    sh_vs[4] = 0x80u;
+    sh_vs[5] = 0x1111u;
+    sh_vs[6] = 0x80u;
+    sh_vs[7] = 0x2222u;
+    sh_vs[8] = r_459d8;
+    sh_vs[9] = 0x10u;
+    sh_vs[10] = r_rsrc1;
+    sh_vs[11] = 0x20u;
+    sh_vs[12] = r_rsrc2;
+    sh_vs[13] = 0x30u;
+    sh_vs[14] = r_459e0;
+    sh_vs[15] = 0x40u;
+    sh_vs[16] = 0x81u;
+    sh_vs[17] = 0x50u;
+    sh_vs[18] = 0x81u;
+    sh_vs[19] = 0x60u;
+
+    sh_gs[0] = 0x88u;
+    sh_gs[1] = 0;
+    sh_gs[2] = 0x89u;
+    sh_gs[3] = 0;
+    sh_gs[4] = 0x80u;
+    sh_gs[5] = 0x3333u;
+    sh_gs[6] = 0x80u;
+    sh_gs[7] = 0x4444u;
+    sh_gs[8] = r_459d8;
+    sh_gs[9] = 0x10u;
+    sh_gs[10] = r_rsrc1;
+    sh_gs[11] = 0x20u;
+    sh_gs[12] = r_rsrc2;
+    sh_gs[13] = 0x30u;
+    sh_gs[14] = r_459e0;
+    sh_gs[15] = 0x40u;
+    sh_gs[16] = 0x81u;
+    sh_gs[17] = 0x50u;
+    sh_gs[18] = 0x81u;
+    sh_gs[19] = 0x60u;
 
     /* Relocate/instantiate halves via sceAgcCreateShader so pointers at 0x28 are
      * valid */
@@ -1198,6 +1298,195 @@ static obs_result check_agc_shader_fused_stages(void) {
                                  (uint64_t)fused_hdr[0x5a]);
     }
     return obs_fail("fused shader pipeline failed");
+}
+
+static obs_result check_agc_dcb_set_cx_reg(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetCxRegisterDirect)) {
+        return obs_skip("sceAgcDcbSetCxRegisterDirect not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    /* Emit SET_CONTEXT_REG for CB_COLOR0_BASE (0x200) with value 0x12345678 */
+    uint64_t entry = ((uint64_t)0x12345678u << 32) | 0x200u;
+    void *res = sceAgcDcbSetCxRegisterDirect(&probe->begin, entry);
+
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-cx-reg", "sceAgcDcbSetCxRegisterDirect",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-cx-reg", "sceAgcDcbSetCxRegisterDirect",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-cx-reg", "sceAgcDcbSetCxRegisterDirect",
+                       "pkt-reg", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-cx-reg", "sceAgcDcbSetCxRegisterDirect",
+                       "pkt-val", (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-set-cx-reg", "sceAgcDcbSetCxRegisterDirect",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0016900u && pkt[1] == 0x200u &&
+        pkt[2] == 0x12345678u && (probe->cur - probe->begin) == 12u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetCxRegisterDirect");
+}
+
+static obs_result check_agc_dcb_set_uc_reg(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbSetUcRegisterDirect)) {
+        return obs_skip("sceAgcDcbSetUcRegisterDirect not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    /* Emit SET_UCONFIG_REG for VGT_PRIMITIVE_TYPE (0x242) with value 0x4
+     * (DI_PT_TRILIST) */
+    uint64_t entry = ((uint64_t)0x4u << 32) | 0x242u;
+    void *res = sceAgcDcbSetUcRegisterDirect(&probe->begin, entry);
+
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-uc-reg", "sceAgcDcbSetUcRegisterDirect",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-uc-reg", "sceAgcDcbSetUcRegisterDirect",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-uc-reg", "sceAgcDcbSetUcRegisterDirect",
+                       "pkt-reg", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-uc-reg", "sceAgcDcbSetUcRegisterDirect",
+                       "pkt-val", (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-set-uc-reg", "sceAgcDcbSetUcRegisterDirect",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0017900u && pkt[1] == 0x242u && pkt[2] == 0x4u &&
+        (probe->cur - probe->begin) == 12u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbSetUcRegisterDirect");
+}
+
+static obs_result check_agc_dcb_set_sh_reg(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcCbSetShRegisterRangeDirect)) {
+        return obs_skip("sceAgcCbSetShRegisterRangeDirect not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    /* Emit SET_SH_REG for SPI_SHADER_PGM_LO_PS (0x08) with 2 DWs: lo and hi */
+    uint32_t values[2] = {0x12345678u, 0x9abcdef0u};
+    void *res = sceAgcCbSetShRegisterRangeDirect(&probe->begin, 0x08u, values, 2u);
+
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-set-sh-reg", "sceAgcCbSetShRegisterRangeDirect",
+                       "res-valid", (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-set-sh-reg", "sceAgcCbSetShRegisterRangeDirect",
+                       "pkt-hdr", (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-set-sh-reg", "sceAgcCbSetShRegisterRangeDirect",
+                       "pkt-reg", (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-set-sh-reg", "sceAgcCbSetShRegisterRangeDirect",
+                       "pkt-val0", (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-set-sh-reg", "sceAgcCbSetShRegisterRangeDirect",
+                       "pkt-val1", (uint64_t)pkt[3], "val");
+    obs_report_measure("166-agc/dcb-set-sh-reg", "sceAgcCbSetShRegisterRangeDirect",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0027600u && pkt[1] == 0x08u &&
+        pkt[2] == values[0] && pkt[3] == values[1] &&
+        (probe->cur - probe->begin) == 16u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcCbSetShRegisterRangeDirect");
+}
+
+static obs_result check_agc_dcb_draw_auto(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDcbDrawIndexAuto)) {
+        return obs_skip("sceAgcDcbDrawIndexAuto not callable");
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+
+    /* Emit DRAW_INDEX_AUTO for 3 vertices, initiator 2 */
+    void *res = sceAgcDcbDrawIndexAuto(&probe->begin, 3u, 2u);
+
+    uint32_t *pkt = (uint32_t *)probe->cmdbuf;
+    obs_report_measure("166-agc/dcb-draw-auto", "sceAgcDcbDrawIndexAuto", "res-valid",
+                       (uint64_t)(res != NULL), "bool");
+    obs_report_measure("166-agc/dcb-draw-auto", "sceAgcDcbDrawIndexAuto", "pkt-hdr",
+                       (uint64_t)pkt[0], "val");
+    obs_report_measure("166-agc/dcb-draw-auto", "sceAgcDcbDrawIndexAuto", "pkt-count",
+                       (uint64_t)pkt[1], "val");
+    obs_report_measure("166-agc/dcb-draw-auto", "sceAgcDcbDrawIndexAuto",
+                       "pkt-initiator", (uint64_t)pkt[2], "val");
+    obs_report_measure("166-agc/dcb-draw-auto", "sceAgcDcbDrawIndexAuto",
+                       "bytes-advanced", (uint64_t)(probe->cur - probe->begin),
+                       "bytes");
+
+    if (res != NULL && pkt[0] == 0xc0012d00u && pkt[1] == 3u &&
+        (probe->cur - probe->begin) == 12u) {
+        return obs_pass();
+    }
+    return obs_fail("unexpected packet output from sceAgcDcbDrawIndexAuto");
+}
+
+static obs_result check_agc_create_prim_state(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcCreatePrimState) ||
+        !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip("sceAgcCreatePrimState or sceAgcCreateShader not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+    uint8_t vs_hdr[384];
+    init_stage_hdr(vs_hdr, 2u, 0xc8u);
+    void *vs_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sceAgcCreateShader(&vs_obj, vs_hdr, agc_retail_payload_0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        return obs_fail("fault during vertex shader setup");
+    }
+
+    uint8_t prim_state[64];
+    uint8_t sec_state[64];
+    for (size_t i = 0; i < sizeof(prim_state); i++) {
+        prim_state[i] = 0;
+        sec_state[i] = 0;
+    }
+
+    int rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc = sceAgcCreatePrimState(prim_state, sec_state, NULL, vs_hdr,
+                                   4u /* DI_PT_TRILIST */);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    obs_report_measure("166-agc/create-prim-state", "sceAgcCreatePrimState", "rc",
+                       (uint64_t)(uint32_t)rc, "code");
+    obs_report_measure("166-agc/create-prim-state", "sceAgcCreatePrimState",
+                       "state-valid", (uint64_t)(rc == 0), "bool");
+    obs_report_bytes("166-agc/create-prim-state", "sceAgcCreatePrimState", "prim-state",
+                     0, (const unsigned char *)prim_state, 32);
+
+    if (rc == 0) {
+        return obs_pass();
+    }
+    return obs_fail("sceAgcCreatePrimState failed");
 }
 
 /* DCB Constructor audit: audit potential constructor candidates without fabricating
@@ -2438,6 +2727,21 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/shader-fused-stages", "libSceAgc", "sceAgcFuseShaderHalves", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcFuseShaderHalves, check_agc_shader_fused_stages,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-cx-reg", "libSceAgc", "sceAgcDcbSetCxRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetCxRegisterDirect,
+     check_agc_dcb_set_cx_reg, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-uc-reg", "libSceAgc", "sceAgcDcbSetUcRegisterDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetUcRegisterDirect,
+     check_agc_dcb_set_uc_reg, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-sh-reg", "libSceAgc", "sceAgcCbSetShRegisterRangeDirect",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcCbSetShRegisterRangeDirect,
+     check_agc_dcb_set_sh_reg, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-auto", "libSceAgc", "sceAgcDcbDrawIndexAuto", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDcbDrawIndexAuto, check_agc_dcb_draw_auto,
+     OBS_FROM_ASSUMED},
+    {"166-agc/create-prim-state", "libSceAgc", "sceAgcCreatePrimState", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcCreatePrimState, check_agc_create_prim_state,
      OBS_FROM_ASSUMED},
 };
 #endif
