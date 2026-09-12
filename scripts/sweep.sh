@@ -228,6 +228,7 @@ leg_eboot() {
     ( cd /mnt/c && "$WEXE" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app "$NATIVE_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app GLHW00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw install-native "$dir" 2>&1 | tr -d '\r' )
     echo "waiting 20s for ShadowMountPlus to register the title..."; sleep 20
     echo "=== LAUNCH $NATIVE_TITLE_ID + DEVICE LOG (up to ${SECONDS_WIN}s) ==="

@@ -126,6 +126,9 @@ static obs_result check_agc_shader_differential(void) {
 static obs_result check_agc_primitive_draw(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_primitive_draw_depth(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 static obs_result check_agc_shader_graphics_stages(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
@@ -235,6 +238,8 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_differential, OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-depth", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_depth, OBS_FROM_ASSUMED},
     {"166-agc/shader-graphics-stages", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_graphics_stages, OBS_FROM_ASSUMED},
     {"166-agc/shader-fused-stages", "libSceAgc", "sceAgcFuseShaderHalves", OBS_CAP_NONE,
@@ -3618,6 +3623,1261 @@ static obs_result check_agc_primitive_draw(void) {
                              (uint64_t)(uint32_t)submit_rc);
 }
 
+static void agc_depth_build_vs(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
+                               uint32_t canary_val,
+                               uint32_t x0, uint32_t y0,
+                               uint32_t x1, uint32_t y1,
+                               uint32_t x2, uint32_t y2,
+                               uint32_t z_val) {
+    code[0] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo (save entry exec_lo) */
+    code[1] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
+    code[2] = 0x00001003u;
+    code[3] = 0xbf800000u; /* s_nop 0 */
+    code[4] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    code[5] = 0x7e160300u; /* v_mov_b32 v11, v0 */
+    code[6] = 0x7e180301u; /* v_mov_b32 v12, v1 */
+    code[7] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
+    code[8] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    code[9] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    code[10] = (uint32_t)canary_gpu;
+    code[11] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    code[12] = (uint32_t)(canary_gpu >> 32);
+    code[13] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    code[14] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    code[15] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
+    code[16] = canary_val;
+    code[17] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword v[8:9], v10, off offset */
+    code[18] = 0x007d0a08u;
+    code[19] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+    /* Primitive export: in GFX10 PRIMGEN_PASSTHRU mode, lane 0 exports v0 directly */
+    code[20] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[21] = 0xf8000941u; /* exp prim v0, off, off, off done */
+    code[22] = 0x00000000u;
+
+    /* Lane 0: (x0, y0) */
+    code[23] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[24] = 0x7e0a02ffu; /* v_mov_b32 v5, literal */
+    code[25] = x0;
+    code[26] = 0x7e0c02ffu; /* v_mov_b32 v6, literal */
+    code[27] = y0;
+
+    /* Lane 1: (x1, y1) */
+    code[28] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    code[29] = 0x7e0a02ffu; /* v_mov_b32 v5, literal */
+    code[30] = x1;
+    code[31] = 0x7e0c02ffu; /* v_mov_b32 v6, literal */
+    code[32] = y1;
+
+    /* Lane 2: (x2, y2) */
+    code[33] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    code[34] = 0x7e0a02ffu; /* v_mov_b32 v5, literal */
+    code[35] = x2;
+    code[36] = 0x7e0c02ffu; /* v_mov_b32 v6, literal */
+    code[37] = y2;
+
+    /* Lanes 0..2: Z and W=1.0f */
+    code[38] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    code[39] = 0x7e0602ffu; /* v_mov_b32 v3, literal (Z) */
+    code[40] = z_val;
+    code[41] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f (W) */
+    code[42] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
+    code[43] = 0x04030605u;
+
+    code[44] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    code[45] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 46; p < 64; p++) {
+        code[p] = 0xbf800000u; /* s_nop */
+    }
+}
+
+static void agc_depth_build_ps(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
+                               uint32_t canary_val, uint32_t r, uint32_t g, uint32_t b) {
+    code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
+    code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+    code[2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    code[3] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    code[4] = (uint32_t)canary_gpu;
+    code[5] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    code[6] = (uint32_t)(canary_gpu >> 32);
+    code[7] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    code[8] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    code[9] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
+    code[10] = canary_val;
+    code[11] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword */
+    code[12] = 0x007d0a08u;
+    code[13] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    code[14] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    code[15] = 0x7e0002ffu; /* v_mov_b32 v0, r */
+    code[16] = r;
+    code[17] = 0x7e0202ffu; /* v_mov_b32 v1, g */
+    code[18] = g;
+    code[19] = 0x7e0402ffu; /* v_mov_b32 v2, b */
+    code[20] = b;
+    code[21] = 0x7e0602f2u; /* v_mov_b32 v3, 1.0f (A) */
+    code[22] = 0xf800180fu; /* exp mrt0, v0, v1, v2, v3 done vm */
+    code[23] = 0x03020100u;
+    code[24] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 25; p < 64; p++) {
+        code[p] = 0xbf800000u; /* s_nop */
+    }
+}
+
+static void agc_depth_build_ps_rgba(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
+                                    uint32_t canary_val, uint32_t r, uint32_t g, uint32_t b, uint32_t a) {
+    code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
+    code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+    code[2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    code[3] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    code[4] = (uint32_t)canary_gpu;
+    code[5] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    code[6] = (uint32_t)(canary_gpu >> 32);
+    code[7] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    code[8] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    code[9] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
+    code[10] = canary_val;
+    code[11] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword */
+    code[12] = 0x007d0a08u;
+    code[13] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    code[14] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    code[15] = 0x7e0002ffu; /* v_mov_b32 v0, r */
+    code[16] = r;
+    code[17] = 0x7e0202ffu; /* v_mov_b32 v1, g */
+    code[18] = g;
+    code[19] = 0x7e0402ffu; /* v_mov_b32 v2, b */
+    code[20] = b;
+    code[21] = 0x7e0602ffu; /* v_mov_b32 v3, a */
+    code[22] = a;
+    code[23] = 0xf800180fu; /* exp mrt0, v0, v1, v2, v3 done vm */
+    code[24] = 0x03020100u;
+    code[25] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 26; p < 64; p++) {
+        code[p] = 0xbf800000u; /* s_nop */
+    }
+}
+
+static inline size_t agc_depth_swizzle_offset(uint32_t x, uint32_t y) {
+    static const uint32_t x_basis[7] = {0x000004u, 0x000008u, 0x000080u,
+                                        0x000100u, 0x002200u, 0x000800u,
+                                        0x008400u};
+    static const uint32_t y_basis[7] = {0x000010u, 0x000020u, 0x000040u,
+                                        0x001100u, 0x000200u, 0x000400u,
+                                        0x004800u};
+    uint32_t bx = 0, by = 0;
+    for (int b = 0; b < 7; b++) {
+        if ((x >> b) & 1u) bx ^= x_basis[b];
+        if ((y >> b) & 1u) by ^= y_basis[b];
+    }
+    return (size_t)((bx >> 2) ^ (by >> 2));
+}
+
+static inline void agc_depth_bind_stages(uint32_t **dw_ptr, uint64_t vs_va, uint64_t ps_va) {
+    uint32_t *dw = *dw_ptr;
+    struct {
+        uint32_t base_reg;
+        uint64_t va;
+        uint32_t rsrc1;
+        uint32_t rsrc2;
+    } stages[] = {
+        {0x08u, ps_va, 0x000c0010u, 0x00000000u}, /* PS: 16 VGPRs, USER_SGPR=0 */
+        {0x48u, vs_va, 0x000c0010u, 0x00000000u}, /* VS */
+        {0x88u, vs_va, 0x622c0042u, 0x00030000u}, /* GS/NGG: GS_COMP_CNT=3, ES_COMP_CNT=3, USER_SGPR=0 */
+        {0xc8u, vs_va, 0x000c0010u, 0x00000000u}, /* ES */
+        {0x108u, vs_va, 0x000c0010u, 0x00000000u}, /* HS */
+        {0x148u, vs_va, 0x000c0010u, 0x00000000u}, /* LS */
+    };
+    for (size_t s = 0; s < sizeof(stages) / sizeof(stages[0]); s++) {
+        uint32_t base_reg = stages[s].base_reg;
+        uint64_t s_va = stages[s].va;
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg;
+        *dw++ = (uint32_t)(s_va >> 8);
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg + 1u;
+        *dw++ = (uint32_t)(s_va >> 40);
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg + 2u;
+        *dw++ = stages[s].rsrc1;
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg + 3u;
+        *dw++ = stages[s].rsrc2;
+    }
+    *dw_ptr = dw;
+}
+
+static obs_result check_agc_primitive_draw_depth(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before depth draw allocation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *canary =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *color_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *depth_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(256) uint8_t s_host_depth_payload[0x1000];
+    static _Alignas(64) uint32_t s_host_depth_fence[16];
+    static _Alignas(64) uint32_t s_host_depth_canary[16];
+    static _Alignas(65536) uint32_t s_host_depth_color[16384];
+    static _Alignas(65536) uint32_t s_host_depth_buf[16384];
+    uint8_t *gpu_payload = s_host_depth_payload;
+    volatile uint32_t *fence = s_host_depth_fence;
+    volatile uint32_t *canary = s_host_depth_canary;
+    volatile uint32_t *color_buf = s_host_depth_color;
+    volatile uint32_t *depth_buf = s_host_depth_buf;
+#endif
+
+    obs_fault_unregister();
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL || depth_buf == NULL) {
+        return obs_skip("failed to allocate Onion memory for depth test");
+    }
+    *fence = 0x11111111u;
+
+    uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
+    for (size_t i = 0; i < 16; i++) {
+        canary[i] = 0xaaaaaaaau;
+    }
+
+    /* Initialize Color Buffer: 0x55555555 background */
+    for (size_t i = 0; i < 16384; i++) {
+        color_buf[i] = 0x55555555u;
+    }
+
+    /* Initialize Depth Buffer: 1.0f (0x3f800000 = far plane) across full 64KB macro-tile */
+    for (size_t i = 0; i < 16384; i++) {
+        depth_buf[i] = 0x3f800000u;
+    }
+
+    /*
+     * Build RDNA2 Shaders:
+     * Triangle 1 (left):  (-0.7, -0.5), (-0.1, -0.5), (-0.4, +0.5)
+     * Triangle 2 (right): (+0.1, -0.5), (+0.7, -0.5), (+0.4, +0.5)
+     *
+     * - VS 1 (0x000): Triangle 1 (left),  NDC Z =  0.0f (Screen Z = 0.5f), canary[0] = 0xbeef0001
+     * - PS 1 (0x100): Red (1.0f, 0.0f, 0.0f), canary[1] = 0xbeef0002
+     * - VS 2 (0x200): Triangle 1 (left),  NDC Z = +0.6f (Screen Z = 0.8f), canary[2] = 0xbeef0011
+     * - PS 2 (0x300): Blue (0.0f, 0.0f, 1.0f), canary[3] = 0xbeef0012
+     * - VS 3 (0x400): Triangle 2 (right), NDC Z = -0.6f (Screen Z = 0.2f), canary[4] = 0xbeef0021
+     * - PS 3 (0x500): Green (0.0f, 1.0f, 0.0f), canary[5] = 0xbeef0022
+     */
+    /* Draw 1: Triangle 1 @ 0.5f (Red) */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
+                       0xbf333333u, 0xbf000000u, 0xbdccccd0u, 0xbf000000u, 0xbeccccdcu, 0x3f000000u,
+                       0x00000000u);
+    agc_depth_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
+                       0x3f800000u, 0u, 0u);
+
+    /* Draw 2: Triangle 1 @ 0.8f (Blue, rejected by LESS vs 0.5f) */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u, 0xbeef0011u,
+                       0xbf333333u, 0xbf000000u, 0xbdccccd0u, 0xbf000000u, 0xbeccccdcu, 0x3f000000u,
+                       0x3f19999au);
+    agc_depth_build_ps((uint32_t *)(gpu_payload + 0x300), canary_gpu, 12u, 0xbeef0012u,
+                       0u, 0u, 0x3f800000u);
+
+    /* Draw 3: Triangle 2 @ 0.2f (Green, accepted by LESS vs 1.0f initial) */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x400), canary_gpu, 16u, 0xbeef0021u,
+                       0x3dccccd0u, 0xbf000000u, 0x3f333333u, 0xbf000000u, 0x3eccccdcu, 0x3f000000u,
+                       0xbf19999au);
+    agc_depth_build_ps((uint32_t *)(gpu_payload + 0x500), canary_gpu, 20u, 0xbeef0022u,
+                       0u, 0x3f800000u, 0u);
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 0x600; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+    }
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)canary + p));
+        __builtin_ia32_clflush((const void *)((const char *)fence + p));
+    }
+    for (size_t p = 0; p < 0x10000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+        __builtin_ia32_clflush((const void *)((const char *)depth_buf + p));
+    }
+#endif
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation for depth test");
+    }
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverCreateQueue", "rc-create",
+                       (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip("type 0 graphics queue creation failed; skipping depth draw");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x2000);
+
+    uint32_t *dw = (uint32_t *)probe->cur;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
+    uint64_t depth_gpu = (uint64_t)(uintptr_t)depth_buf;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+
+    /* 1. Context register setup for Color Target, Depth Target, Viewport, Rasterizer */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } ctx_regs[] = {
+        /* Color Target 0 */
+        {0x318u, 0}, /* CB_COLOR0_BASE (patched below) */
+        {0x390u, 0}, /* CB_COLOR0_BASE_EXT (patched below) */
+        {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u}, /* COLOR_8_8_8_8, LINEAR_GENERAL, UNORM */
+        {0x31du, 0x00000000u},
+        {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u}, /* 64x64 */
+        {0x3b8u, 0x08c6c000u},
+        {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u}, /* CB_NORMAL, ROP3_COPY */
+        {0x08eu, 0x0000000fu}, /* MRT0 4 components enabled */
+        {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u}, /* Blend: SRC=ONE, DST=ZERO */
+
+        /* Depth & Stencil Block Context Registers */
+        {0x000u, 0x00000000u}, /* DB_RENDER_CONTROL: default matching AgcCompositor.elf */
+        {0x200u, 0x00000016u}, /* DB_DEPTH_CONTROL: Z_ENABLE (0x2) | Z_WRITE_ENABLE (0x4) | ZFUNC_LESS (0x10) */
+        {0x201u, 0x00010000u}, /* DB_EQAA */
+        {0x203u, 0x00000000u}, /* DB_SHADER_CONTROL: LATE_Z (0x0) matching AgcCompositor.elf */
+        {0x002u, 0x00000000u}, /* DB_DEPTH_VIEW */
+        {0x005u, 0x00000000u}, /* DB_HTILE_DATA_BASE */
+        {0x007u, (63u << 16) | 63u}, /* DB_DEPTH_SIZE_XY: 64x64 */
+        {0x008u, 0x00000000u}, /* DB_DEPTH_BOUNDS_MIN */
+        {0x009u, 0x00000000u}, /* DB_DEPTH_BOUNDS_MAX */
+        {0x00au, 0x00000000u}, /* DB_STENCIL_CLEAR */
+        {0x00bu, 0x3f800000u}, /* DB_DEPTH_CLEAR: 1.0f */
+        {0x010u, 0x80000183u}, /* DB_Z_INFO: SW_MODE=24 (0x180), Z_32_FLOAT (3), ZRANGE_PRECISION (0x80000000) */
+        {0x011u, 0x20000180u}, /* DB_STENCIL_INFO */
+        {0x012u, 0},           /* DB_Z_READ_BASE (patched below) */
+        {0x013u, 0x00000000u}, /* DB_STENCIL_READ_BASE */
+        {0x014u, 0},           /* DB_Z_WRITE_BASE (patched below) */
+        {0x015u, 0x00000000u}, /* DB_STENCIL_WRITE_BASE */
+        {0x01au, 0},           /* DB_Z_READ_BASE_HI (patched below) */
+        {0x01bu, 0x00000000u}, /* DB_STENCIL_READ_BASE_HI */
+        {0x01cu, 0},           /* DB_Z_WRITE_BASE_HI (patched below) */
+        {0x01du, 0x00000000u}, /* DB_STENCIL_WRITE_BASE_HI */
+        {0x01eu, 0x00000000u}, /* DB_HTILE_DATA_BASE_HI */
+        {0x01fu, 0x00000000u}, /* DB_RMI_L2_CACHE_CONTROL */
+        {0x2afu, 0x00040000u}, /* DB_HTILE_SURFACE: PIPE_ALIGNED */
+
+        /* Rasterizer & Fixed Function */
+        {0x08cu, 0xaa99aaaau}, /* PA_SC_EDGERULE: D3D/OpenGL standard edge rule */
+        {0x1d4u, 0x000000ffu}, /* SX_PS_DOWNCONVERT_CONTROL */
+        /* NGG Primitive Type & Stages */
+        {0x291u, 0x10020040u}, /* VGT_GS_ONCHIP_CNTL: ES_VERTS=64, GS_PRIMS=64, GS_INST_PRIMS=64 */
+        {0x29bu, 0x00000000u}, /* VGT_GS_OUT_PRIM_TYPE: POINTLIST/PASSTHRU */
+        {0x2d3u, 0x00000001u}, /* GE_NGG_SUBGRP_CNTL: PRIM_AMP=1, THDS_PER_SUBGRP=0 */
+        {0x2d5u, 0x02002000u}, /* VGT_SHADER_STAGES_EN: PRIMGEN_EN | PRIMGEN_PASSTHRU_EN */
+        {0x1ffu, 0x00000040u}, /* GE_MAX_OUTPUT_PER_SUBGROUP: MAX_VERTS=64 */
+        {0x20eu, 0x00000078u}, /* PA_CL_NGG_CNTL: VERTEX_REUSE_DEPTH=30 */
+        {0x2a1u, 0x00000000u}, /* VGT_PRIMITIVEID_EN: disabled */
+        {0x2a6u, 0x00000040u}, /* VGT_DRAW_PAYLOAD_CNTL */
+        {0x2adu, 0x00000000u}, /* VGT_REUSE_OFF */
+        {0x2abu, 0x00000004u}, /* VGT_ESGS_RING_ITEMSIZE: 4 */
+        {0x2ceu, 0x00000000u}, /* VGT_GS_MAX_VERT_OUT: 0 */
+        {0x2d4u, 0x88101000u}, /* VGT_TESS_DISTRIBUTION */
+        {0x103u, 0xffffffffu}, /* VGT_MULTI_PRIM_IB_RESET_INDX */
+        /* Sample Mask & NGG Control */
+        {0x30eu, 0xffffffffu}, /* PA_SC_AA_MASK_X0Y0_X1Y0: enable all samples */
+        {0x30fu, 0xffffffffu}, /* PA_SC_AA_MASK_X0Y1_X1Y1: enable all samples */
+        {0x310u, 0x00000000u}, /* PA_SC_SHADER_CONTROL */
+        {0x314u, 0x00000202u}, /* PA_SC_NGG_MODE_CNTL: MAX_DEALLOCS=2, MAX_FPOVS=2 */
+        {0x311u, 0x01fd2002u}, /* PA_SC_BINNER_CNTL_0: DISABLE_BINNING_USE_NEW_SC */
+        {0x312u, 0x03ff0080u}, /* PA_SC_BINNER_CNTL_1 */
+        {0x313u, 0x00006000u}, /* PA_SC_CONSERVATIVE_RASTERIZATION_CNTL */
+        {0x00eu, 0x00000002u}, /* DB_DFSM_CONTROL */
+        {0x280u, 0x00080008u}, /* PA_SU_POINT_SIZE */
+        {0x281u, 0xffff0000u}, /* PA_SU_POINT_MINMAX */
+        {0x282u, 0x00000008u}, /* PA_SU_LINE_CNTL */
+        {0x2deu, 0x000001e9u}, /* PA_SU_POLY_OFFSET_DB_FMT_CNTL */
+        /* Scissors (Screen, Window, Generic, Viewport) */
+        {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u},
+        {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u},
+        {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u},
+        /* Viewport Bounds & Transform */
+        {0x0b4u, 0x00000000u}, /* ZMIN = 0.0f */
+        {0x0b5u, 0x3f800000u}, /* ZMAX = 1.0f */
+        {0x10fu, 0x42000000u}, /* XSCALE: 32.0f */
+        {0x110u, 0x42000000u}, /* XOFFSET: 32.0f */
+        {0x111u, 0x42000000u}, /* YSCALE: 32.0f */
+        {0x112u, 0x42000000u}, /* YOFFSET: 32.0f */
+        {0x113u, 0x3f000000u}, /* ZSCALE: 0.5f */
+        {0x114u, 0x3f000000u}, /* ZOFFSET: 0.5f */
+        /* Cliprect Rules */
+        {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u},
+        {0x085u, 0x20002000u},
+        /* Guardband & Viewport Transform Enable */
+        {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu},
+        {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u},
+        /* Scan Converter & Surface Setup */
+        {0x205u, 0x00000240u},
+        {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u},
+        {0x2f8u, 0x00000000u},
+        {0x2f9u, 0x0000002du},
+        /* Shader Formats & SPI PS Controls */
+        {0x1b1u, 0x00000080u},
+        {0x1c2u, 0x00000001u},
+        {0x1c3u, 0x00000004u},
+        {0x1c5u, 0x00000009u},
+        {0x1b3u, 0x00000002u},
+        {0x1b4u, 0x00000002u},
+        {0x1b5u, 0x00000001u},
+        {0x1b6u, 0x00000000u},
+        {0x1b8u, 0x01000000u},
+    };
+    for (size_t i = 0; i < sizeof(ctx_regs) / sizeof(ctx_regs[0]); i++) {
+        uint32_t reg = ctx_regs[i].reg;
+        uint32_t val = ctx_regs[i].val;
+        if (reg == 0x318u) {
+            val = (uint32_t)(color_gpu >> 8);
+        } else if (reg == 0x390u) {
+            val = (uint32_t)(color_gpu >> 40);
+        } else if (reg == 0x012u || reg == 0x014u) {
+            val = (uint32_t)(depth_gpu >> 8);
+        } else if (reg == 0x01au || reg == 0x01cu) {
+            val = (uint32_t)(depth_gpu >> 40);
+        }
+        *dw++ = 0xc0016900u;
+        *dw++ = reg;
+        *dw++ = val;
+    }
+
+    /* 2. Clear 32 SPI_PS_INPUT_CNTL registers to 0 */
+    for (uint32_t i = 0; i < 32; i++) {
+        *dw++ = 0xc0016900u;
+        *dw++ = 0x191u + i;
+        *dw++ = 0x00000000u;
+    }
+
+    /* 3. Bind initial shader stages BEFORE spi_cu_regs and UConfig */
+    agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
+
+    /* 4. SPI CU Enable masks */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } spi_cu_regs[] = {
+        {0x007u, 0x0000ffffu},
+        {0x001u, 0x00000003u},
+        {0x087u, 0x0000fffdu},
+        {0x081u, 0x00000003u},
+        {0x107u, 0xffff0000u},
+    };
+    for (size_t i = 0; i < sizeof(spi_cu_regs) / sizeof(spi_cu_regs[0]); i++) {
+        *dw++ = 0xc0017600u;
+        *dw++ = spi_cu_regs[i].reg;
+        *dw++ = spi_cu_regs[i].val;
+    }
+
+    /* 5. UConfig registers */
+    *dw++ = 0xc0002f00u; /* PACKET3_NUM_INSTANCES */
+    *dw++ = 1u;
+    *dw++ = 0xc0017900u; /* mmVGT_PRIMITIVE_TYPE */
+    *dw++ = 0x242u;
+    *dw++ = 0x4u;        /* DI_PT_TRILIST */
+    *dw++ = 0xc0017900u; /* mmGE_CNTL */
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u;
+    *dw++ = 0xc0017900u; /* mmGE_PC_ALLOC */
+    *dw++ = 0x260u;
+    *dw++ = 0x3ffu;
+
+    /*
+     * 6. Issue Depth-tested Draw Calls:
+     * Draw 1: Triangle 1 (left)  @ Screen Z = 0.5f, Red. PASSES depth test vs 1.0f initial.
+     * Draw 2: Triangle 1 (left)  @ Screen Z = 0.8f, Blue. REJECTED: 0.8f >= 0.5f. Left stays Red!
+     * Draw 3: Triangle 2 (right) @ Screen Z = 0.2f, Green. ACCEPTED: 0.2f < 1.0f. Right becomes Green!
+     */
+    /* Draw 1: Triangle 1 (left) @ 0.5f -> Red */
+    *dw++ = 0xc0012d00u; /* DRAW_INDEX_AUTO */
+    *dw++ = 3u;
+    *dw++ = 2u;
+
+    /* Flush between draws to guarantee Draw 1 DB write commits before Draw 2 test */
+    *dw++ = 0xc0004600u; /* PACKET3_EVENT_WRITE */
+    *dw++ = 16u;         /* PS_PARTIAL_FLUSH */
+    *dw++ = 0xc0004600u; /* PACKET3_EVENT_WRITE */
+    *dw++ = 42u;         /* DB_CACHE_FLUSH_AND_INV */
+
+    /* Draw 2: Triangle 1 (left) @ 0.8f -> Blue (Depth Rejection) */
+    agc_depth_bind_stages(&dw, payload_va + 0x200, payload_va + 0x300);
+    *dw++ = 0xc0002f00u; /* PACKET3_NUM_INSTANCES */
+    *dw++ = 1u;
+    *dw++ = 0xc0012d00u;
+    *dw++ = 3u;
+    *dw++ = 2u;
+
+    /* Flush between draws */
+    *dw++ = 0xc0004600u; /* PACKET3_EVENT_WRITE */
+    *dw++ = 16u;         /* PS_PARTIAL_FLUSH */
+    *dw++ = 0xc0004600u; /* PACKET3_EVENT_WRITE */
+    *dw++ = 42u;         /* DB_CACHE_FLUSH_AND_INV */
+
+    /* Draw 3: Triangle 2 (right) @ 0.2f -> Green (Depth Acceptance) */
+    agc_depth_bind_stages(&dw, payload_va + 0x400, payload_va + 0x500);
+    *dw++ = 0xc0002f00u; /* PACKET3_NUM_INSTANCES */
+    *dw++ = 1u;
+    *dw++ = 0xc0012d00u;
+    *dw++ = 3u;
+    *dw++ = 2u;
+
+    /* Flush & Fence: RELEASE_MEM with EOP event */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+    /* Trailing NOPs */
+    for (int p = 0; p < 16; p++) {
+        dw[p] = 0xffff1000u;
+    }
+    dw += 16;
+
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    uint32_t bytes_written = (uint32_t)(probe->cur - probe->begin);
+
+    obs_agc_dcb_desc desc;
+    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc.size = bytes_written / 4u;
+    desc.flags = 0u;
+    desc.pad[0] = 0u;
+    desc.pad[1] = 0u;
+    desc.pad[2] = 0u;
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+#endif
+
+    int submit_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            submit_rc = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+        obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                           "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                           "rc-submit", (uint64_t)sig, "fault-sig");
+    }
+
+    uint32_t fence_val = *fence;
+    int fence_hit = 0;
+    if (submit_rc == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            fence_val = *fence;
+            if (fence_val == 0xbeefcafeu) {
+                fence_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "fence-val",
+                       (uint64_t)fence_val, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "fence-hit",
+                       (uint64_t)fence_hit, "bool");
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)canary + p));
+    }
+    for (size_t p = 0; p < 0x10000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+        __builtin_ia32_clflush((const void *)((const char *)depth_buf + p));
+    }
+#endif
+
+    /* Canary telemetry */
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d1-vs",
+                       (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d1-ps",
+                       (uint64_t)canary[1], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d2-vs",
+                       (uint64_t)canary[2], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d2-ps",
+                       (uint64_t)canary[3], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d3-vs",
+                       (uint64_t)canary[4], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d3-ps",
+                       (uint64_t)canary[5], "val");
+
+    /* Scan color buffer to check if any pixels were modified */
+    uint32_t any_color = color_buf[0];
+    int any_color_mod = 0;
+    size_t any_mod_idx = 0;
+    for (size_t i = 0; i < 4096; i++) {
+        if (color_buf[i] != 0x55555555u) {
+            any_color_mod = 1;
+            any_color = color_buf[i];
+            any_mod_idx = i;
+            break;
+        }
+    }
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-color-mod",
+                       (uint64_t)any_color_mod, "bool");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-color-val",
+                       (uint64_t)any_color, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-color-idx",
+                       (uint64_t)any_mod_idx, "val");
+
+    /* Scan depth buffer to check if any pixels were modified */
+    uint32_t any_depth = depth_buf[0];
+    int any_depth_mod = 0;
+    size_t any_dmod_idx = 0;
+    for (size_t i = 0; i < 16384; i++) {
+        if (depth_buf[i] != 0x3f800000u) {
+            any_depth_mod = 1;
+            any_depth = depth_buf[i];
+            any_dmod_idx = i;
+            break;
+        }
+    }
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-depth-mod",
+                       (uint64_t)any_depth_mod, "bool");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-depth-val",
+                       (uint64_t)any_depth, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-depth-idx",
+                       (uint64_t)any_dmod_idx, "val");
+
+    /* Inspect Triangle 1 (left, centroid x=19, y=27) */
+    uint32_t tri1_color = color_buf[27 * 64 + 19];
+    uint32_t tri1_depth = depth_buf[agc_depth_swizzle_offset(19, 27)];
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            size_t c_idx = (size_t)((27 + dy) * 64 + (19 + dx));
+            if (color_buf[c_idx] != 0x55555555u) {
+                tri1_color = color_buf[c_idx];
+                break;
+            }
+        }
+    }
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            size_t d_idx = agc_depth_swizzle_offset((uint32_t)(19 + dx), (uint32_t)(27 + dy));
+            if (depth_buf[d_idx] != 0x3f800000u) {
+                tri1_depth = depth_buf[d_idx];
+                break;
+            }
+            size_t l_idx = (size_t)((27 + dy) * 64 + (19 + dx));
+            if (depth_buf[l_idx] != 0x3f800000u) {
+                tri1_depth = depth_buf[l_idx];
+                break;
+            }
+        }
+    }
+
+    /* Inspect Triangle 2 (right, centroid x=45, y=27) */
+    uint32_t tri2_color = color_buf[27 * 64 + 45];
+    uint32_t tri2_depth = depth_buf[agc_depth_swizzle_offset(45, 27)];
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            size_t c_idx = (size_t)((27 + dy) * 64 + (45 + dx));
+            if (color_buf[c_idx] != 0x55555555u) {
+                tri2_color = color_buf[c_idx];
+                break;
+            }
+        }
+    }
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            size_t d_idx = agc_depth_swizzle_offset((uint32_t)(45 + dx), (uint32_t)(27 + dy));
+            if (depth_buf[d_idx] != 0x3f800000u) {
+                tri2_depth = depth_buf[d_idx];
+                break;
+            }
+            size_t l_idx = (size_t)((27 + dy) * 64 + (45 + dx));
+            if (depth_buf[l_idx] != 0x3f800000u) {
+                tri2_depth = depth_buf[l_idx];
+                break;
+            }
+        }
+    }
+
+    float f1_depth = 0.0f;
+    float f2_depth = 0.0f;
+    __builtin_memcpy(&f1_depth, &tri1_depth, sizeof(float));
+    __builtin_memcpy(&f2_depth, &tri2_depth, sizeof(float));
+
+    /* Farther primitive (Draw 2 Blue @ 0.8f) was rejected: Triangle 1 MUST remain Red (0xff0000ff) @ 0.5f */
+    int reject_pass = (tri1_color == 0xff0000ffu && (tri1_depth == 0x3f000000u || (f1_depth >= 0.49f && f1_depth <= 0.51f)));
+
+    /* Nearer primitive (Draw 3 Green @ 0.2f) was accepted: Triangle 2 MUST be Green (0xff00ff00) @ 0.2f */
+    int accept_pass = (tri2_color == 0xff00ff00u && (tri2_depth == 0x3e4ccccdu || (f2_depth >= 0.19f && f2_depth <= 0.21f)));
+
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "tri1-color", (uint64_t)tri1_color, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "tri1-depth", (uint64_t)tri1_depth, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "tri2-color", (uint64_t)tri2_color, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "tri2-depth", (uint64_t)tri2_depth, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "depth-reject-pass", (uint64_t)reject_pass, "bool");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "depth-accept-pass", (uint64_t)accept_pass, "bool");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            sceAgcDriverDestroyQueue(queue);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (sig != 0) {
+        return obs_fail("fault during depth draw submit or poll");
+    }
+    if (submit_rc == 0 && fence_hit == 1 && reject_pass && accept_pass) {
+        return obs_pass();
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        if (!reject_pass) {
+            return obs_partial_value("depth rejection failed (farther primitive overwrote nearer)",
+                                     (uint64_t)tri1_color);
+        }
+        if (!accept_pass) {
+            return obs_partial_value("depth acceptance failed (nearer primitive rejected)",
+                                     (uint64_t)tri2_color);
+        }
+    }
+    if (submit_rc == 0) {
+        return obs_partial_value("fence not hit after depth draw",
+                                 (uint64_t)fence_val);
+    }
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
+}
+
+static obs_result check_agc_primitive_draw_stencil(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before stencil draw allocation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *canary =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *color_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *depth_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(256) uint8_t s_host_stencil_payload[0x1000];
+    static _Alignas(64) uint32_t s_host_stencil_fence[16];
+    static _Alignas(64) uint32_t s_host_stencil_canary[16];
+    static _Alignas(65536) uint32_t s_host_stencil_color[16384];
+    static _Alignas(65536) uint32_t s_host_stencil_buf[16384];
+    uint8_t *gpu_payload = s_host_stencil_payload;
+    volatile uint32_t *fence = s_host_stencil_fence;
+    volatile uint32_t *canary = s_host_stencil_canary;
+    volatile uint32_t *color_buf = s_host_stencil_color;
+    volatile uint32_t *depth_buf = s_host_stencil_buf;
+#endif
+
+    obs_fault_unregister();
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL || depth_buf == NULL) {
+        return obs_skip("failed to allocate Onion memory for stencil test");
+    }
+    *fence = 0x11111111u;
+
+    uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
+    for (size_t i = 0; i < 16; i++) {
+        canary[i] = 0xaaaaaaaau;
+    }
+
+    for (size_t i = 0; i < 16384; i++) {
+        color_buf[i] = 0x55555555u;
+        depth_buf[i] = 0x3f800000u; /* 1.0f */
+    }
+
+    /* Build shaders:
+     * VS 1 (0x000): Centered triangle
+     * PS 1 (0x100): Blue (0.0, 0.0, 1.0)
+     * PS 2 (0x200): Green (0.0, 1.0, 0.0)
+     */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
+                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u, 0x3f000000u,
+                       0x00000000u);
+    agc_depth_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
+                       0u, 0u, 0x3f800000u);
+    agc_depth_build_ps((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u, 0xbeef0003u,
+                       0u, 0x3f800000u, 0u);
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation for stencil test");
+    }
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverCreateQueue", "rc-create",
+                       (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip("type 0 graphics queue creation failed; skipping stencil draw");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x2000);
+
+    uint32_t *dw = (uint32_t *)probe->cur;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
+    uint64_t depth_gpu = (uint64_t)(uintptr_t)depth_buf;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+
+    /* Base context registers */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } base_ctx_stencil[] = {
+        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u}, {0x31du, 0x00000000u}, {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c000u}, {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u}, {0x08eu, 0x0000000fu}, {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u}, {0x201u, 0x00010000u}, {0x203u, 0x00000000u},
+        {0x000u, 0x00000000u}, {0x002u, 0x00000000u}, {0x007u, (63u << 16) | 63u},
+        {0x010u, 0x80000183u}, {0x011u, 0x20000180u}, /* STENCIL_8, SW_MODE=24 */
+        {0x012u, 0}, {0x014u, 0}, {0x01au, 0}, {0x01cu, 0},
+        {0x013u, 0}, {0x015u, 0}, {0x01bu, 0}, {0x01du, 0},
+        {0x2afu, 0x00040000u}, {0x08cu, 0xaa99aaaau}, {0x1d4u, 0x000000ffu},
+        {0x291u, 0x10020040u}, {0x29bu, 0x00000000u}, {0x2d3u, 0x00000001u},
+        {0x2d5u, 0x02002000u}, {0x1ffu, 0x00000040u}, {0x20eu, 0x00000078u},
+        {0x2a1u, 0x00000000u}, {0x2a6u, 0x00000040u}, {0x2adu, 0x00000000u},
+        {0x2abu, 0x00000004u}, {0x2ceu, 0x00000000u}, {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu}, {0x30fu, 0xffffffffu},
+        {0x310u, 0x00000000u}, {0x314u, 0x00000202u}, {0x311u, 0x01fd2002u},
+        {0x312u, 0x03ff0080u}, {0x313u, 0x00006000u}, {0x00eu, 0x00000002u},
+        {0x280u, 0x00080008u}, {0x281u, 0xffff0000u}, {0x282u, 0x00000008u},
+        {0x2deu, 0x000001e9u}, {0x00cu, 0x00000000u}, {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u}, {0x082u, 0x40004000u}, {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u}, {0x094u, 0x80000000u}, {0x095u, 0x40004000u},
+        {0x0b4u, 0x00000000u}, {0x0b5u, 0x3f800000u}, {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u}, {0x111u, 0x42000000u}, {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u}, {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u}, {0x085u, 0x20002000u}, {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu}, {0x207u, 0x00000000u}, {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u}, {0x2fcu, 0x3f800000u}, {0x2fdu, 0x3f800000u},
+        {0x205u, 0x00000240u}, {0x20cu, 0x00000000u}, {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u}, {0x2f8u, 0x00000000u}, {0x2f9u, 0x0000002du},
+        {0x1b1u, 0x00000080u}, {0x1c2u, 0x00000001u}, {0x1c3u, 0x00000004u},
+        {0x1c5u, 0x00000009u}, {0x1b3u, 0x00000002u}, {0x1b4u, 0x00000002u},
+        {0x1b5u, 0x00000001u}, {0x1b6u, 0x00000000u}, {0x1b8u, 0x01000000u},
+    };
+
+    for (size_t i = 0; i < sizeof(base_ctx_stencil) / sizeof(base_ctx_stencil[0]); i++) {
+        uint32_t reg = base_ctx_stencil[i].reg;
+        uint32_t val = base_ctx_stencil[i].val;
+        if (reg == 0x318u) val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u) val = (uint32_t)(color_gpu >> 40);
+        else if (reg == 0x012u || reg == 0x014u) val = (uint32_t)(depth_gpu >> 8);
+        else if (reg == 0x01au || reg == 0x01cu) val = (uint32_t)(depth_gpu >> 40);
+        else if (reg == 0x013u || reg == 0x015u) val = (uint32_t)(depth_gpu >> 8);
+        else if (reg == 0x01bu || reg == 0x01du) val = (uint32_t)(depth_gpu >> 40);
+        *dw++ = 0xc0016900u;
+        *dw++ = reg;
+        *dw++ = val;
+    }
+
+    /* Draw 1: Stencil write (ALWAYS pass, ZPASS_OP = REPLACE ref 1) */
+    *dw++ = 0xc0016900u; *dw++ = 0x200u; *dw++ = 0x0000439fu;
+    *dw++ = 0xc0016900u; *dw++ = 0x208u; *dw++ = 0x00ff0101u;
+
+    agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
+    *dw++ = 0xc0002f00u; *dw++ = 1u;
+    *dw++ = 0xc0017900u; *dw++ = 0x242u; *dw++ = 0x4u;
+    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u;
+    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu;
+    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+
+    /* Draw 2: Stencil test EQUAL ref 1 (should PASS -> write Green) */
+    *dw++ = 0xc0016900u; *dw++ = 0x200u; *dw++ = 0x0000011fu;
+    agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x200);
+    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+
+    /* Flush and release fence */
+    *dw++ = 0xc0064900u; *dw++ = 0x06603514u; *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu; *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu; *dw++ = 0u; *dw++ = 0u;
+
+    for (int p = 0; p < 16; p++) dw[p] = 0xffff1000u;
+    dw += 16;
+
+    uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
+    uint32_t bytes_written = words_written * sizeof(uint32_t);
+    probe->cur += bytes_written;
+
+    obs_agc_dcb_desc desc;
+    __builtin_memset(&desc, 0, sizeof(desc));
+    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc.size = words_written;
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+#endif
+
+    int submit_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            submit_rc = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    uint32_t fence_val = *fence;
+    int fence_hit = 0;
+    if (submit_rc == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            fence_val = *fence;
+            if (fence_val == 0xbeefcafeu) {
+                fence_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+
+    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "fence-hit",
+                       (uint64_t)fence_hit, "bool");
+    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "canary-d1-vs",
+                       (uint64_t)canary[0], "val");
+    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "canary-d1-ps",
+                       (uint64_t)canary[1], "val");
+    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "canary-d2-ps",
+                       (uint64_t)canary[2], "val");
+
+    /* Inspect triangle center (x=32, y=32) */
+    uint32_t tri_color = color_buf[32 * 64 + 32];
+    int stencil_pass = (tri_color == 0xff00ff00u); /* Green */
+
+    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "tri-color",
+                       (uint64_t)tri_color, "val");
+    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "stencil-pass",
+                       (uint64_t)stencil_pass, "bool");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+
+    if (submit_rc == 0 && fence_hit == 1 && stencil_pass) {
+        return obs_pass();
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        return obs_partial_value("stencil test failed to produce Green pixel", (uint64_t)tri_color);
+    }
+    if (submit_rc == 0) {
+        return obs_partial_value("fence not hit after stencil draw", (uint64_t)fence_val);
+    }
+    return obs_partial_value("submit dcb returned non-zero code", (uint64_t)(uint32_t)submit_rc);
+}
+
+static obs_result check_agc_primitive_draw_blend(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before blend draw allocation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *canary =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *color_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(256) uint8_t s_host_blend_payload[0x1000];
+    static _Alignas(64) uint32_t s_host_blend_fence[16];
+    static _Alignas(64) uint32_t s_host_blend_canary[16];
+    static _Alignas(65536) uint32_t s_host_blend_color[16384];
+    uint8_t *gpu_payload = s_host_blend_payload;
+    volatile uint32_t *fence = s_host_blend_fence;
+    volatile uint32_t *canary = s_host_blend_canary;
+    volatile uint32_t *color_buf = s_host_blend_color;
+#endif
+
+    obs_fault_unregister();
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL) {
+        return obs_skip("failed to allocate Onion memory for blend test");
+    }
+    *fence = 0x11111111u;
+
+    uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
+    for (size_t i = 0; i < 16; i++) {
+        canary[i] = 0xaaaaaaaau;
+    }
+
+    for (size_t i = 0; i < 16384; i++) {
+        color_buf[i] = 0x00000000u;
+    }
+
+    /* Build shaders:
+     * VS 1 (0x000): Screen center triangle
+     * PS 1 (0x100): Red (1.0, 0.0, 0.0, 1.0)
+     * PS 2 (0x200): Green (0.0, 1.0, 0.0, 0.5)
+     */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
+                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u, 0x3f000000u,
+                       0x00000000u);
+    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
+                            0x3f800000u, 0u, 0u, 0x3f800000u);
+    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u, 0xbeef0003u,
+                            0u, 0x3f800000u, 0u, 0x3f000000u);
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation for blend test");
+    }
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverCreateQueue", "rc-create",
+                       (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip("type 0 graphics queue creation failed; skipping blend draw");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x2000);
+
+    uint32_t *dw = (uint32_t *)probe->cur;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } base_ctx_blend[] = {
+        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u}, {0x31du, 0x00000000u}, {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c000u}, {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u}, {0x08eu, 0x0000000fu}, {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u}, {0x200u, 0x00000000u}, {0x08cu, 0xaa99aaaau},
+        {0x1d4u, 0x000000ffu}, {0x291u, 0x10020040u}, {0x29bu, 0x00000000u},
+        {0x2d3u, 0x00000001u}, {0x2d5u, 0x02002000u}, {0x1ffu, 0x00000040u},
+        {0x20eu, 0x00000078u}, {0x2a1u, 0x00000000u}, {0x2a6u, 0x00000040u},
+        {0x2adu, 0x00000000u}, {0x2abu, 0x00000004u}, {0x2ceu, 0x00000000u},
+        {0x2d4u, 0x88101000u}, {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu},
+        {0x30fu, 0xffffffffu}, {0x310u, 0x00000000u}, {0x314u, 0x00000202u},
+        {0x311u, 0x01fd2002u}, {0x312u, 0x03ff0080u}, {0x313u, 0x00006000u},
+        {0x00eu, 0x00000002u}, {0x280u, 0x00080008u}, {0x281u, 0xffff0000u},
+        {0x282u, 0x00000008u}, {0x2deu, 0x000001e9u}, {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u}, {0x081u, 0x80000000u}, {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u}, {0x091u, 0x40004000u}, {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u}, {0x0b4u, 0x00000000u}, {0x0b5u, 0x3f800000u},
+        {0x10fu, 0x42000000u}, {0x110u, 0x42000000u}, {0x111u, 0x42000000u},
+        {0x112u, 0x42000000u}, {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u},
+        {0x083u, 0x0000ffffu}, {0x084u, 0x00000000u}, {0x085u, 0x20002000u},
+        {0x204u, 0x00000000u}, {0x206u, 0x0000043fu}, {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u}, {0x2fbu, 0x3f800000u}, {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u}, {0x205u, 0x00000240u}, {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u}, {0x293u, 0x06020000u}, {0x2f8u, 0x00000000u},
+        {0x2f9u, 0x0000002du}, {0x1b1u, 0x00000080u}, {0x1c2u, 0x00000001u},
+        {0x1c3u, 0x00000004u}, {0x1c5u, 0x00000009u}, {0x1b3u, 0x00000002u},
+        {0x1b4u, 0x00000002u}, {0x1b5u, 0x00000001u}, {0x1b6u, 0x00000000u},
+        {0x1b8u, 0x01000000u},
+    };
+
+    for (size_t i = 0; i < sizeof(base_ctx_blend) / sizeof(base_ctx_blend[0]); i++) {
+        uint32_t reg = base_ctx_blend[i].reg;
+        uint32_t val = base_ctx_blend[i].val;
+        if (reg == 0x318u) val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u) val = (uint32_t)(color_gpu >> 40);
+        *dw++ = 0xc0016900u;
+        *dw++ = reg;
+        *dw++ = val;
+    }
+
+    /* Draw 1: Draw Red triangle (opaque background) */
+    agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
+    *dw++ = 0xc0002f00u; *dw++ = 1u;
+    *dw++ = 0xc0017900u; *dw++ = 0x242u; *dw++ = 0x4u;
+    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u;
+    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu;
+    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+
+    /* Draw 2: Enable Alpha Blending (SRC_ALPHA, ONE_MINUS_SRC_ALPHA) */
+    *dw++ = 0xc0016900u; *dw++ = 0x202u; *dw++ = 0x00cc0011u;
+    *dw++ = 0xc0016900u; *dw++ = 0x1e0u; *dw++ = 0x20110010u;
+
+    agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x200);
+    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+
+    /* Flush and release fence */
+    *dw++ = 0xc0064900u; *dw++ = 0x06603514u; *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu; *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu; *dw++ = 0u; *dw++ = 0u;
+
+    for (int p = 0; p < 16; p++) dw[p] = 0xffff1000u;
+    dw += 16;
+
+    uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
+    uint32_t bytes_written = words_written * sizeof(uint32_t);
+    probe->cur += bytes_written;
+
+    obs_agc_dcb_desc desc;
+    __builtin_memset(&desc, 0, sizeof(desc));
+    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc.size = words_written;
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+#endif
+
+    int submit_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            submit_rc = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    uint32_t fence_val = *fence;
+    int fence_hit = 0;
+    if (submit_rc == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            fence_val = *fence;
+            if (fence_val == 0xbeefcafeu) {
+                fence_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+
+    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "fence-hit",
+                       (uint64_t)fence_hit, "bool");
+    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "canary-d1-vs",
+                       (uint64_t)canary[0], "val");
+    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "canary-d1-ps",
+                       (uint64_t)canary[1], "val");
+    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "canary-d2-ps",
+                       (uint64_t)canary[2], "val");
+
+    /* Inspect triangle center (x=32, y=32) */
+    uint32_t tri_color = color_buf[32 * 64 + 32];
+    uint32_t red = (tri_color >> 16) & 0xffu;
+    uint32_t green = (tri_color >> 8) & 0xffu;
+    uint32_t blue = tri_color & 0xffu;
+
+    int blend_pass = (red >= 0x70 && red <= 0x90 && green >= 0x70 && green <= 0x90 && blue == 0);
+
+    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "tri-color",
+                       (uint64_t)tri_color, "val");
+    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "blend-pass",
+                       (uint64_t)blend_pass, "bool");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+
+    if (submit_rc == 0 && fence_hit == 1 && blend_pass) {
+        return obs_pass();
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        return obs_partial_value("blend test failed to produce expected 50/50 color", (uint64_t)tri_color);
+    }
+    if (submit_rc == 0) {
+        return obs_partial_value("fence not hit after blend draw", (uint64_t)fence_val);
+    }
+    return obs_partial_value("submit dcb returned non-zero code", (uint64_t)(uint32_t)submit_rc);
+}
+
 static obs_result check_agc_driver_resource_registration(void) {
     int q_ok = obs_address_is_callable(
         (const void *)&sceAgcDriverQueryResourceRegistrationUserMemoryRequirements);
@@ -3812,6 +5072,15 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw,
+     OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-depth", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_depth,
+     OBS_FROM_ASSUMED},
+    {"167-agc/primitive-draw-stencil", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_stencil,
+     OBS_FROM_ASSUMED},
+    {"168-agc/primitive-draw-blend", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_blend,
      OBS_FROM_ASSUMED},
     {"166-agc/shader-graphics-stages", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcCreateShader, check_agc_shader_graphics_stages,
