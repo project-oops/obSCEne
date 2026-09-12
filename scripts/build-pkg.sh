@@ -14,26 +14,18 @@ BUILD="${1:?usage: build-pkg.sh <BUILD> [TARGET]}"
 TARGET_NAME="${2:-orbis}"
 SELFISH="${SELFISH:-../selfish}"
 GEN="${GEN:-4}"
-# The title identity lives in one place, read by both this and build-native.sh (data/identity.toml),
-# so the package and the native title are the same app rather than two copies of one id that drift.
-identity="$(dirname "$0")/../data/identity.toml"
-toml_str() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\"[[:space:]]*\$/\1/p" "$identity"; }
-CONTENT_ID="${CONTENT_ID:-$(toml_str content_id)}"
-TITLE="${TITLE:-$(toml_str title)}"
+# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+app_env="$(dirname "$0")/../app.env"
+[ -f "$app_env" ] && . "$app_env"
+TITLE_CODE="${TITLE_CODE:-O00001}"
+TITLE="${TITLE:-${TITLE_NAME:-obSCEne}}"
+if [ -n "${CONTENT_ID:-}" ] && [ -z "${TITLE_ID:-}" ]; then
+    t="${CONTENT_ID#*-}"
+    TITLE_ID="${t%%_*}"
+fi
+TITLE_ID="${TITLE_ID:-ORB${TITLE_CODE}}"
+CONTENT_ID="${CONTENT_ID:-IV0002-${TITLE_ID}_00-STOREUPD00000000}"
 
-# The title id is *inside* the content id, so it is taken from there rather than written twice.
-#
-# It was hardcoded below while the content id was overridable, which is two copies of one fact
-# and only one of them moves. The licence is keyed to the content id and a package must declare
-# the matching title id, so a `CONTENT_ID=` override that did not carry through produced a
-# package the console rejects for a reason unrelated to anything being tested.
-#
-# Overriding the pair is also how a stuck title is worked around: a crashed process the console
-# will not reap holds its title id, and every install and launch against it is refused
-# (`checkExistingApp: 0x8094000c`). Building under a fresh id sidesteps that without a reboot,
-# which on a jailbroken console is an hour. (D223)
-TITLE_ID="${CONTENT_ID#*-}"
-TITLE_ID="${TITLE_ID%%_*}"
 case "$TITLE_ID" in
     ????[0-9][0-9][0-9][0-9][0-9]) ;;
     *)

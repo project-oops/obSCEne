@@ -358,11 +358,23 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "sceAgcDcbSetIndexCount"},
     {"libSceAgc", "$q88lQ+GP5Yk"},
     {"libSceAgc", "sceAgcDcbDrawIndex"},
-    /* libSceAgcDriver: current-generation GPU driver submission */
+    /* libSceAgcDriver: current-generation GPU driver submission & resource registration */
     {"libSceAgcDriver", "sceAgcDriverCreateQueue"},
     {"libSceAgcDriver", "sceAgcDriverDestroyQueue"},
     {"libSceAgcDriver", "sceAgcDriverSubmitDcb"},
     {"libSceAgcDriver", "sceAgcDriverSubmitCommandBuffer"},
+    {"libSceAgcDriver", "$AOLcoIkQDgM"},
+    {"libSceAgcDriver", "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements"},
+    {"libSceAgcDriver", "$F0Y42t-3e18"},
+    {"libSceAgcDriver", "sceAgcDriverInitResourceRegistration"},
+    {"libSceAgcDriver", "$X-Nm5KLREeg"},
+    {"libSceAgcDriver", "sceAgcDriverRegisterOwner"},
+    {"libSceAgcDriver", "$W5z4eZrjEas"},
+    {"libSceAgcDriver", "sceAgcDriverRegisterResource"},
+    {"libSceAgcDriver", "$U9ueyEhSkF4"},
+    {"libSceAgcDriver", "sceAgcDriverRegisterDefaultOwner"},
+    {"libSceAgcDriver", "$F0ZXt5q0ZTA"},
+    {"libSceAgcDriver", "sceAgcDriverGetDefaultOwner"},
 #endif
 
     /* Address-probed by the HUD (src/sysinfo.c), never called - its struct layout is

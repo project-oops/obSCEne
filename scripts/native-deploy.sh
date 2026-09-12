@@ -24,15 +24,20 @@ BUILD="${BUILD:-$HOME/obs}"
 build=1
 if [ "${1:-}" = "--deploy-only" ]; then build=0; shift; fi
 
-# The title id, from the one place it lives (data/identity.toml), derived the same way the builds do.
-cid="$(sed -n 's/^content_id_native[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' data/identity.toml)"
-appid="${TITLE_ID:-$(echo "$cid" | cut -d- -f2 | cut -d_ -f1)}"
+# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+app_env="app.env"
+[ -f "$app_env" ] && . "$app_env"
+TITLE_CODE="${TITLE_CODE:-O00001}"
+appid="${TITLE_ID:-PRO${TITLE_CODE}}"
 
 if [ "$build" = 1 ]; then
     make native BUILD="$BUILD"
 fi
 
-dir="$BUILD/native/$appid"
+dir="$BUILD/prospero/$appid"
+if [ ! -d "$dir" ] && [ -d "$BUILD/native/$appid" ]; then
+    dir="$BUILD/native/$appid"
+fi
 [ -d "$dir" ] || {
     echo "native-deploy: no title dir at $dir (build first, or drop --deploy-only)" >&2
     exit 1

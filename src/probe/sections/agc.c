@@ -183,6 +183,9 @@ static obs_result check_agc_dcb_event_write(void) {
 static obs_result check_agc_dcb_set_num_instances(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_driver_resource_registration(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -279,6 +282,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/dcb-set-num-instances", "libSceAgc", "sceAgcDcbSetNumInstances",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_num_instances,
      OBS_FROM_ASSUMED},
+    {"166-agc/driver-resource-registration", "libSceAgcDriver", "(registration)",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_driver_resource_registration, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -3612,6 +3618,150 @@ static obs_result check_agc_primitive_draw(void) {
                              (uint64_t)(uint32_t)submit_rc);
 }
 
+static obs_result check_agc_driver_resource_registration(void) {
+    int q_ok = obs_address_is_callable(
+        (const void *)&sceAgcDriverQueryResourceRegistrationUserMemoryRequirements);
+    int init_ok = obs_address_is_callable(
+        (const void *)&sceAgcDriverInitResourceRegistration);
+    int ro_ok = obs_address_is_callable(
+        (const void *)&sceAgcDriverRegisterOwner);
+    int rr_ok = obs_address_is_callable(
+        (const void *)&sceAgcDriverRegisterResource);
+
+    obs_report_measure(
+        "166-agc/driver-resource-registration",
+        "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements", "present",
+        (uint64_t)(q_ok ? 1 : 0), "bool");
+    obs_report_measure("166-agc/driver-resource-registration",
+                       "sceAgcDriverInitResourceRegistration", "present",
+                       (uint64_t)(init_ok ? 1 : 0), "bool");
+    obs_report_measure("166-agc/driver-resource-registration",
+                       "sceAgcDriverRegisterOwner", "present",
+                       (uint64_t)(ro_ok ? 1 : 0), "bool");
+    obs_report_measure("166-agc/driver-resource-registration",
+                       "sceAgcDriverRegisterResource", "present",
+                       (uint64_t)(rr_ok ? 1 : 0), "bool");
+
+    if (!q_ok && !ro_ok && !rr_ok) {
+        return obs_skip(
+            "AGC driver resource registration symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    /* 1. Query memory requirements with sentinel-prefilled out-pointer */
+    uint64_t req_size = 0xbeefcafebeefcafeULL;
+    int rc_query = -1;
+    if (q_ok) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_query =
+                sceAgcDriverQueryResourceRegistrationUserMemoryRequirements(
+                    &req_size);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(
+            "166-agc/driver-resource-registration",
+            "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements", "rc",
+            (uint64_t)(uint32_t)rc_query, "code");
+        obs_report_measure(
+            "166-agc/driver-resource-registration",
+            "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements",
+            "out-size", req_size, "size");
+    }
+
+    /* 2. RegisterOwner with sentinel-prefilled 128-byte buffer */
+    uint8_t owner_buf[128];
+    for (size_t i = 0; i < sizeof(owner_buf); i++) {
+        owner_buf[i] = 0xc7;
+    }
+    int rc_owner = -1;
+    if (ro_ok) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_owner = sceAgcDriverRegisterOwner(owner_buf);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        size_t owner_mutated = 0;
+        for (size_t i = 0; i < sizeof(owner_buf); i++) {
+            if (owner_buf[i] != 0xc7) {
+                owner_mutated++;
+            }
+        }
+        obs_report_measure("166-agc/driver-resource-registration",
+                           "sceAgcDriverRegisterOwner", "rc",
+                           (uint64_t)(uint32_t)rc_owner, "code");
+        obs_report_measure("166-agc/driver-resource-registration",
+                           "sceAgcDriverRegisterOwner", "bytes-mutated",
+                           (uint64_t)owner_mutated, "count");
+    }
+
+    /* 3. RegisterResource with dummy inputs and sentinel buffer */
+    int rc_resource = -1;
+    if (rr_ok) {
+        uint8_t dummy_res[64];
+        for (size_t i = 0; i < sizeof(dummy_res); i++) {
+            dummy_res[i] = 0xc7;
+        }
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_resource = sceAgcDriverRegisterResource(dummy_res, NULL, NULL,
+                                                       NULL, "test_resource");
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure("166-agc/driver-resource-registration",
+                           "sceAgcDriverRegisterResource", "rc",
+                           (uint64_t)(uint32_t)rc_resource, "code");
+    }
+
+    /* 4. Kernel Mapper param query after owner registration */
+    int h_kernel = obs_module_open("libkernel");
+    const void *fn_mapper = NULL;
+    if (h_kernel >= 0) {
+        fn_mapper = obs_module_symbol(h_kernel, "sceKernelMapperGetParam");
+        if (fn_mapper == NULL) {
+            fn_mapper = obs_module_symbol(h_kernel, "$1yXS+iqB3wQ");
+        }
+    }
+    if (fn_mapper != NULL) {
+        uint8_t mbuf[56];
+        for (size_t i = 0; i < sizeof(mbuf); i++) {
+            mbuf[i] = 0;
+        }
+        *(uint64_t *)(void *)mbuf = 0x38;
+        sig = OBS_FAULT_ARM(&guard);
+        int rc_mapper = -1;
+        if (sig == 0) {
+            rc_mapper = ((int (*)(void *))fn_mapper)(mbuf);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure("166-agc/driver-resource-registration",
+                           "sceKernelMapperGetParam", "rc",
+                           (uint64_t)(uint32_t)rc_mapper, "code");
+    }
+
+    /* On retail hardware, resource registration stubs return 0x8a6c9018
+     * (SCE_AGC_ERROR_RESOURCE_REGISTRATION_NOT_SUPPORTED) and query writes 0 to
+     * out-size. */
+    if (rc_query == (int)0x8a6c9018 && req_size == 0) {
+        return obs_pass();
+    }
+    if (rc_query == 0 || rc_owner == 0) {
+        return obs_pass();
+    }
+    return obs_partial_value("registration returned unexpected code",
+                             (uint64_t)(uint32_t)rc_query);
+}
+
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_agc_cb_nop, OBS_FROM_ASSUMED},
@@ -3722,6 +3872,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/dcb-set-num-instances", "libSceAgc", "sceAgcDcbSetNumInstances",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetNumInstances,
      check_agc_dcb_set_num_instances, OBS_FROM_ASSUMED},
+    {"166-agc/driver-resource-registration", "libSceAgcDriver", "(registration)",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_driver_resource_registration, OBS_FROM_ASSUMED},
 };
 #endif
 

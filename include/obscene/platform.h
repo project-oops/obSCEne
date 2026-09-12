@@ -1312,5 +1312,15 @@ OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t f
 OBS_WEAK int sceAgcDriverDestroyQueue(void *queue);
 OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb);
 OBS_WEAK int sceAgcDriverSubmitCommandBuffer(void *queue, const void *dcb);
+OBS_WEAK int sceAgcDriverQueryResourceRegistrationUserMemoryRequirements(
+    uint64_t *out_size) __asm__("$AOLcoIkQDgM");
+OBS_WEAK int sceAgcDriverInitResourceRegistration(void *state,
+                                                  uint64_t size) __asm__("$F0Y42t-3e18");
+OBS_WEAK int sceAgcDriverRegisterOwner(void *owner_desc) __asm__("$X-Nm5KLREeg");
+OBS_WEAK int sceAgcDriverRegisterResource(void *arg0, void *arg1, const void *code,
+                                          void *arg3,
+                                          const char *name) __asm__("$W5z4eZrjEas");
+OBS_WEAK int sceAgcDriverRegisterDefaultOwner(void *owner_desc) __asm__("$U9ueyEhSkF4");
+OBS_WEAK int sceAgcDriverGetDefaultOwner(void *out_owner) __asm__("$F0ZXt5q0ZTA");
 
 #endif /* OBSCENE_PLATFORM_H */

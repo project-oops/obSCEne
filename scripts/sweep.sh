@@ -69,6 +69,13 @@ outdir="$REPO/reports/hardware"
 mkdir -p "$outdir" "$REPO/build"
 TS="$(date +%Y%m%d-%H%M%S)"
 
+# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+app_env="$REPO/app.env"
+[ -f "$app_env" ] && . "$app_env"
+TITLE_CODE="${TITLE_CODE:-O00001}"
+PKG_TITLE_ID="${PKG_TITLE_ID:-ORB${TITLE_CODE}}"
+NATIVE_TITLE_ID="${NATIVE_TITLE_ID:-PRO${TITLE_CODE}}"
+
 # Linux tool for everything that connects out; Windows tool for the package install (inbound).
 LTOOL="$TT/release/obscene-tool"
 WEXE="$REPO/tool/target-win/release/obscene-tool.exe"
@@ -122,6 +129,8 @@ leg_payload() {
     fi
     [ -n "$elf" ] && [ -f "$elf" ] || { echo "sweep: no payload elf found"; return 1; }
     echo "payload elf: $elf ($(stat -c %s "$elf") bytes)"
+    ( "$LTOOL" hw close-app "$PKG_TITLE_ID" 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app "$NATIVE_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
     echo "=== SEND (elfldr) + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
@@ -172,17 +181,19 @@ leg_pkg() {
     [ -f "$REPO/build/obscene-probe-orbis.pkg" ] || { echo "sweep: no pkg found at $REPO/build/obscene-probe-orbis.pkg"; return 1; }
     local win_pkg; win_pkg="$(wslpath -w "$REPO/build/obscene-probe-orbis.pkg")"
     echo "pkg: $REPO/build/obscene-probe-orbis.pkg ($(stat -c %s "$REPO/build/obscene-probe-orbis.pkg") bytes)"
-    echo "=== close OBSC00001 & PPSA99980 + INSTALL (Windows serve, console fetches) ==="
+    echo "=== close $PKG_TITLE_ID & $NATIVE_TITLE_ID + INSTALL (Windows serve, console fetches) ==="
+    ( "$LTOOL" hw close-app "$NATIVE_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
+    ( cd /mnt/c && "$WEXE" hw close-app "$PKG_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw install "$win_pkg" --seconds 80 2>&1 | tr -d '\r' )
-    echo "=== LAUNCH OBSC00001 + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
+    echo "=== LAUNCH $PKG_TITLE_ID + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
     local tmp trun; tmp="$(mktemp)"; trun="$(mktemp)"
     "$LTOOL" hw logs --seconds "$((SECONDS_WIN + 15))" >"$tmp" 2>/dev/null &
     local reader=$!; sleep 3
     local init_bytes=0
     [ -f "$tmp" ] && init_bytes=$(stat -c %s "$tmp" 2>/dev/null || echo 0)
-    "$LTOOL" hw launch OBSC00001 --seconds "$SECONDS_WIN" >"$trun" 2>&1 &
+    "$LTOOL" hw launch "$PKG_TITLE_ID" --seconds "$SECONDS_WIN" >"$trun" 2>&1 &
     local runner=$!
     poll_and_stop "$tmp" "$reader" "$runner" "$init_bytes"
     tr -d '\r' <"$trun"; rm -f "$trun"
@@ -195,10 +206,14 @@ leg_eboot() {
     if [ "$do_build" = 1 ]; then
         echo "=== BUILD: make native (gen-5 eboot title, CORPUS=$CORPUS) ==="
         make -C "$REPO" native BUILD="$B" TOOL_TARGET="$TT" 2>&1
-        dir="$B/prospero/PPSA99980"
+        dir="$B/prospero/$NATIVE_TITLE_ID"
     else
         echo "=== skipping build (--deploy-only) ==="
-        if [ -n "${BUILD:-}" ] && [ -d "$B/prospero/PPSA99980" ]; then
+        if [ -n "${BUILD:-}" ] && [ -d "$B/prospero/$NATIVE_TITLE_ID" ]; then
+            dir="$B/prospero/$NATIVE_TITLE_ID"
+        elif [ -d "$REPO/build/prospero/$NATIVE_TITLE_ID" ]; then
+            dir="$REPO/build/prospero/$NATIVE_TITLE_ID"
+        elif [ -n "${BUILD:-}" ] && [ -d "$B/prospero/PPSA99980" ]; then
             dir="$B/prospero/PPSA99980"
         elif [ -d "$REPO/build/prospero/PPSA99980" ]; then
             dir="$REPO/build/prospero/PPSA99980"
@@ -206,19 +221,22 @@ leg_eboot() {
     fi
     [ -n "$dir" ] && [ -d "$dir" ] || { echo "sweep: no native title dir found"; return 1; }
     echo "native dir: $dir"
-    echo "=== close OBSC00001 & PPSA99980 + UPLOAD (install-native, FTP out) ==="
+    echo "=== close $PKG_TITLE_ID & $NATIVE_TITLE_ID + UPLOAD (install-native, FTP out) ==="
+    ( "$LTOOL" hw close-app "$PKG_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
+    ( cd /mnt/c && "$WEXE" hw close-app "$PKG_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app "$NATIVE_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw install-native "$dir" 2>&1 | tr -d '\r' )
     echo "waiting 20s for ShadowMountPlus to register the title..."; sleep 20
-    echo "=== LAUNCH PPSA99980 + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
+    echo "=== LAUNCH $NATIVE_TITLE_ID + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
     local tmp trun; tmp="$(mktemp)"; trun="$(mktemp)"
     "$LTOOL" hw logs --seconds "$((SECONDS_WIN + 15))" >"$tmp" 2>/dev/null &
     local reader=$!; sleep 3
     local init_bytes=0
     [ -f "$tmp" ] && init_bytes=$(stat -c %s "$tmp" 2>/dev/null || echo 0)
-    "$LTOOL" hw launch PPSA99980 --seconds "$SECONDS_WIN" >"$trun" 2>&1 &
+    "$LTOOL" hw launch "$NATIVE_TITLE_ID" --seconds "$SECONDS_WIN" >"$trun" 2>&1 &
     local runner=$!
     poll_and_stop "$tmp" "$reader" "$runner" "$init_bytes"
     tr -d '\r' <"$trun"; rm -f "$trun"

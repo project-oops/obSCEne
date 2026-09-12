@@ -32,23 +32,17 @@ set -e
 BUILD="${1:?usage: build-native.sh <BUILD> [TARGET]}"
 TARGET_NAME="${2:-prospero}"
 SELFISH="${SELFISH:-../selfish}"
-# obSCEne's own identity, read from the one place it lives (data/identity.toml). The native title has
-# its OWN id (content_id_native), distinct from the package's, so the two can be installed side by
-# side without colliding (D292). The current-generation status comes from the native registration
-# path (AppInstallTitleDir) plus param.json, not from the id's prefix or the eboot's container magic.
-#
-# The content id is the single fact; the title id is derived from it exactly as build-pkg.sh does,
-# so the two builds cannot disagree. Override CONTENT_ID for the stuck-title case (identity.toml, D223).
-identity="$(dirname "$0")/../data/identity.toml"
-toml_str() { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\(.*\)\"[[:space:]]*\$/\1/p" "$identity"; }
-# The native title has its own id (content_id_native), distinct from the package's, so the two can
-# be installed side by side without colliding. build-pkg.sh reads content_id; this reads its own.
-CONTENT_ID="${CONTENT_ID:-$(toml_str content_id_native)}"
-TITLE="${TITLE:-$(toml_str title)}"
-if [ -z "${TITLE_ID:-}" ]; then
+# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+app_env="$(dirname "$0")/../app.env"
+[ -f "$app_env" ] && . "$app_env"
+TITLE_CODE="${TITLE_CODE:-O00001}"
+TITLE="${TITLE:-${TITLE_NAME:-obSCEne}}"
+if [ -n "${CONTENT_ID:-}" ] && [ -z "${TITLE_ID:-}" ]; then
     t="${CONTENT_ID#*-}"
     TITLE_ID="${t%%_*}"
 fi
+TITLE_ID="${TITLE_ID:-PRO${TITLE_CODE}}"
+CONTENT_ID="${CONTENT_ID:-UP0000-${TITLE_ID}_00-OBSCENE000000000}"
 deeplink_arg=()
 category_arg=(--category 0)
 if [ "${NO_EBOOT:-0}" = "1" ]; then
