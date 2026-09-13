@@ -1154,7 +1154,25 @@ fn run_counts(
 fn run_guards(root: Option<&std::path::Path>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let root = root.unwrap_or_else(|| std::path::Path::new("."));
     let imports = std::fs::read_to_string(sections::find_file(root, "imports.c"))?;
-    let (problems, total) = guards::scan(&sections::find_dir(root, "sections"), &imports)?;
+    let (problems, total, orphans) =
+        guards::scan(&sections::find_dir(root, "sections"), &imports)?;
+    if !orphans.is_empty() {
+        println!(
+            "{} of {total} checks name a section that is not declared anywhere
+",
+            orphans.len()
+        );
+        for orphan in &orphans {
+            println!("  {} claims section {}", orphan.check_id, orphan.claimed);
+        }
+        println!(
+            "
+A row is tallied under the section whose table holds it, so the id is the only
+place the mismatch shows - and it does not show as a failure. Either rename the id to
+the section that holds it, or declare the section the id names."
+        );
+        return Ok(ExitCode::FAILURE);
+    }
     if problems.is_empty() {
         println!("all {total} checks guard every platform symbol they call");
         return Ok(ExitCode::SUCCESS);

@@ -6103,7 +6103,7 @@ static obs_result check_agc_primitive_cull_face(void) {
     }
     int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
     obs_fault_unregister();
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverCreateQueue",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverCreateQueue",
                        "rc-create", (uint64_t)(uint32_t)rc_create, "code");
     if (rc_create != 0 || queue == NULL) {
         return obs_skip(
@@ -6317,29 +6317,29 @@ static obs_result check_agc_primitive_cull_face(void) {
     }
 #endif
 
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "fence-hit", (uint64_t)fence_hit, "bool");
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "canary-d1-vs", (uint64_t)canary[0], "val");
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "canary-d1-ps", (uint64_t)canary[1], "val");
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "canary-d2-vs", (uint64_t)canary[2], "val");
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "canary-d2-ps", (uint64_t)canary[3], "val");
 
     /* Inspect triangle center (x=32, y=32) */
     uint32_t tri_color = color_buf[32 * 64 + 32];
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "tri-color", (uint64_t)tri_color, "val");
 
     uint32_t red = tri_color & 0xffu;
     uint32_t blue = (tri_color >> 16) & 0xffu;
 
     int cull_pass = (red >= 0xe0 && blue == 0u);
-    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+    obs_report_measure("166-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
                        "cull-pass", (uint64_t)cull_pass, "bool");
 
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
@@ -6358,6 +6358,321 @@ static obs_result check_agc_primitive_cull_face(void) {
     }
     if (submit_rc == 0) {
         return obs_partial_value("fence not hit after cull face draw",
+                                 (uint64_t)fence_val);
+    }
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
+}
+
+static obs_result check_agc_primitive_color_mask(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before color mask draw allocation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *canary =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *color_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(256) uint8_t s_host_mask_payload[0x1000];
+    static _Alignas(64) uint32_t s_host_mask_fence[16];
+    static _Alignas(64) uint32_t s_host_mask_canary[16];
+    static _Alignas(65536) uint32_t s_host_mask_color[16384];
+    uint8_t *gpu_payload = s_host_mask_payload;
+    volatile uint32_t *fence = s_host_mask_fence;
+    volatile uint32_t *canary = s_host_mask_canary;
+    volatile uint32_t *color_buf = s_host_mask_color;
+#endif
+
+    obs_fault_unregister();
+
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL) {
+        return obs_skip("failed to allocate Onion memory for color mask test");
+    }
+
+    uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
+    *fence = 0x11111111u;
+    for (size_t i = 0; i < 16; i++) {
+        canary[i] = 0xaaaaaaaau;
+    }
+
+    for (size_t i = 0; i < 16384; i++) {
+        color_buf[i] = 0x00000000u;
+    }
+
+    /* VS (0x000): Front-facing CCW triangle covering center, canary[0] = 0xbeef0001
+     * PS (0x100): Pure White (1.0, 1.0, 1.0, 1.0), canary[1] = 0xbeef0002 */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
+                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u,
+                       0x3f000000u, 0u);
+    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
+                            0x3f800000u, 0x3f800000u, 0x3f800000u, 0x3f800000u);
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation for color mask test");
+    }
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure("166-agc/primitive-color-mask", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip(
+            "type 0 graphics queue creation failed; skipping color mask draw");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x2000);
+
+    uint32_t *dw = (uint32_t *)probe->cur;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+
+    /* Base context with CB_TARGET_MASK = 0x02u (Green channel only) */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } base_ctx_mask[] = {
+        {0x318u, 0},
+        {0x390u, 0},
+        {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u},
+        {0x31du, 0x00000000u},
+        {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u},
+        {0x3b8u, 0x08c6c000u},
+        {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u},
+        {0x08eu, 0x00000002u}, /* CB_TARGET_MASK: Green channel only (bit 1) */
+        {0x08fu, 0x0000000fu}, /* CB_SHADER_MASK: All 4 components exported */
+        {0x1e0u, 0x20010001u},
+        {0x200u, 0x00000000u},
+        {0x08cu, 0xaa99aaaau},
+        {0x1d4u, 0x000000ffu},
+        {0x291u, 0x10020040u},
+        {0x29bu, 0x00000000u},
+        {0x2d3u, 0x00000001u},
+        {0x2d5u, 0x02002000u},
+        {0x1ffu, 0x00000040u},
+        {0x20eu, 0x00000078u},
+        {0x2a1u, 0x00000000u},
+        {0x2a6u, 0x00000040u},
+        {0x2adu, 0x00000000u},
+        {0x2abu, 0x00000004u},
+        {0x2ceu, 0x00000000u},
+        {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu},
+        {0x30eu, 0xffffffffu},
+        {0x30fu, 0xffffffffu},
+        {0x310u, 0x00000000u},
+        {0x314u, 0x00000202u},
+        {0x311u, 0x01fd2002u},
+        {0x312u, 0x03ff0080u},
+        {0x313u, 0x00006000u},
+        {0x00eu, 0x00000002u},
+        {0x280u, 0x00080008u},
+        {0x281u, 0xffff0000u},
+        {0x282u, 0x00000008u},
+        {0x2deu, 0x000001e9u},
+        {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u},
+        {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u},
+        {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u},
+        {0x0b4u, 0x00000000u},
+        {0x0b5u, 0x3f800000u},
+        {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u},
+        {0x111u, 0x42000000u},
+        {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u},
+        {0x114u, 0x3f000000u},
+        {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u},
+        {0x085u, 0x20002000u},
+        {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu},
+        {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u},
+        {0x205u, 0x00000240u}, /* PA_SU_SC_MODE_CNTL: no cull */
+        {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u},
+        {0x2f8u, 0x00000000u},
+        {0x2f9u, 0x0000002du},
+        {0x1b1u, 0x00000080u},
+        {0x1c2u, 0x00000001u},
+        {0x1c3u, 0x00000004u},
+        {0x1c5u, 0x00000009u},
+        {0x1b3u, 0x00000002u},
+        {0x1b4u, 0x00000002u},
+        {0x1b5u, 0x00000001u},
+        {0x1b6u, 0x00000000u},
+        {0x1b8u, 0x01000000u},
+    };
+
+    for (size_t i = 0; i < sizeof(base_ctx_mask) / sizeof(base_ctx_mask[0]); i++) {
+        uint32_t reg = base_ctx_mask[i].reg;
+        uint32_t val = base_ctx_mask[i].val;
+        if (reg == 0x318u)
+            val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u)
+            val = (uint32_t)(color_gpu >> 40);
+        *dw++ = 0xc0016900u;
+        *dw++ = reg;
+        *dw++ = val;
+    }
+
+    /* Primitive & Geometry Setup */
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u; /* NUM_INSTANCES */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x242u;
+    *dw++ = 0x4u; /* mmVGT_PRIMITIVE_TYPE: DI_PT_TRILIST */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u; /* mmGE_CNTL */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+
+    /* Draw White triangle with Green-only write mask */
+    agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
+    *dw++ = 0xc0012d00u; /* DRAW_INDEX_AUTO */
+    *dw++ = 3u;
+    *dw++ = 2u;
+
+    /* Flush and release fence */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+    for (int p = 0; p < 16; p++)
+        dw[p] = 0xffff1000u;
+    dw += 16;
+
+    uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
+    uint32_t bytes_written = words_written * sizeof(uint32_t);
+    probe->cur += bytes_written;
+
+    obs_agc_dcb_desc desc;
+    __builtin_memset(&desc, 0, sizeof(desc));
+    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc.size = words_written;
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+#endif
+
+    int submit_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            submit_rc = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    uint32_t fence_val = *fence;
+    int fence_hit = 0;
+    if (submit_rc == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            fence_val = *fence;
+            if (fence_val == 0xbeefcafeu) {
+                fence_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)canary + p));
+    }
+    for (size_t p = 0; p < 0x10000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    }
+#endif
+
+    obs_report_measure("166-agc/primitive-color-mask", "sceAgcDriverSubmitDcb",
+                       "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
+    obs_report_measure("166-agc/primitive-color-mask", "sceAgcDriverSubmitDcb",
+                       "fence-hit", (uint64_t)fence_hit, "bool");
+    obs_report_measure("166-agc/primitive-color-mask", "sceAgcDriverSubmitDcb",
+                       "canary-vs", (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-color-mask", "sceAgcDriverSubmitDcb",
+                       "canary-ps", (uint64_t)canary[1], "val");
+
+    /* Inspect triangle center (x=32, y=32) */
+    uint32_t tri_color = color_buf[32 * 64 + 32];
+    obs_report_measure("166-agc/primitive-color-mask", "sceAgcDriverSubmitDcb",
+                       "tri-color", (uint64_t)tri_color, "val");
+
+    /* RDNA2 32_ABGR: green channel is bits 8..15 */
+    uint32_t red = tri_color & 0xffu;
+    uint32_t green = (tri_color >> 8) & 0xffu;
+    uint32_t blue = (tri_color >> 16) & 0xffu;
+    uint32_t alpha = (tri_color >> 24) & 0xffu;
+
+    int mask_pass = (green >= 0xe0 && red == 0u && blue == 0u && alpha == 0u);
+    obs_report_measure("166-agc/primitive-color-mask", "sceAgcDriverSubmitDcb",
+                       "mask-pass", (uint64_t)mask_pass, "bool");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+
+    if (submit_rc == 0 && fence_hit == 1 && mask_pass) {
+        return obs_pass();
+    }
+    if (submit_rc == 0 && fence_hit == 1 && tri_color != 0x00000000u) {
+        return obs_partial_value("color mask test wrote masked channels",
+                                 (uint64_t)tri_color);
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        return obs_partial_value("color mask test drew no pixels", (uint64_t)tri_color);
+    }
+    if (submit_rc == 0) {
+        return obs_partial_value("fence not hit after color mask draw",
                                  (uint64_t)fence_val);
     }
     return obs_partial_value("submit dcb returned non-zero code",
@@ -6831,9 +7146,12 @@ static const obs_check agc_checks[] = {
     {"166-agc/primitive-draw-textured", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_draw_textured, OBS_FROM_ASSUMED},
-    {"171-agc/primitive-cull-face", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+    {"166-agc/primitive-cull-face", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_cull_face, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-color-mask", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_color_mask, OBS_FROM_ASSUMED},
     {"166-agc/shader-graphics-stages", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcCreateShader, check_agc_shader_graphics_stages,
      OBS_FROM_ASSUMED},

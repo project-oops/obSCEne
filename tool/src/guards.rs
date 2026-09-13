@@ -48,6 +48,69 @@ pub struct Unguarded {
     pub also_calls: Vec<String>,
 }
 
+/// A row whose identifier claims a section that is not declared anywhere.
+///
+/// # The bug this exists to catch
+///
+/// A check's id is `NNN-section/name`, and the harness tallies it under the section whose
+/// table it sits in. Nothing tied the two together, so five probes landed carrying
+/// `167-agc/`, `168-agc/`, `169-agc/`, `170-agc/` and `171-agc/` while the only AGC section
+/// declared is `166-agc`. They ran, and they were tallied under `166-agc`, so no report
+/// looked wrong - the ids simply described a section that does not exist. `170-agc/` was
+/// worse than cosmetic: `170-gpu-capture` is a real section, so that id collided with one.
+///
+/// # Why the rule is tree-wide and not per file
+///
+/// A section's checks may live in another section's file. `base.c` declares `010-kernel`
+/// and two of its rows sit in `os.c`'s `file_checks[]` table, which is correct and
+/// deliberate. So "the prefix must match this file" and "must match this table" are both
+/// wrong - they would reject those two rows. What holds without exception is that the
+/// prefix must name a section *something* declares. At the time this was written the tree
+/// had 54 declared sections and 54 distinct row prefixes, and the difference was empty.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Orphan {
+    /// The check's identifier, as it appears in the report.
+    pub check_id: String,
+    /// The section the prefix claims.
+    pub claimed: String,
+}
+
+/// Every section identifier declared anywhere under `sections/`.
+///
+/// Read through the `obs_section_<var>` declaration rather than guessed from the file name,
+/// for the reason `caps.rs` gives: `os.c` alone declares four.
+#[must_use]
+pub fn declared_sections(text: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    for chunk in text.split("const obs_section obs_section_").skip(1) {
+        let Some((_, after)) = chunk.split_once('"') else {
+            continue;
+        };
+        if let Some((id, _)) = after.split_once('"') {
+            out.insert(id.to_owned());
+        }
+    }
+    out
+}
+
+/// Rows whose prefix names no declared section.
+#[must_use]
+pub fn orphans(rows: &[sections::Row], declared: &BTreeSet<String>) -> Vec<Orphan> {
+    let mut out = Vec::new();
+    for row in rows {
+        let Some((claimed, _)) = row.id.split_once('/') else {
+            continue;
+        };
+        if !declared.contains(claimed) {
+            out.push(Orphan {
+                check_id: row.id.clone(),
+                claimed: claimed.to_owned(),
+            });
+        }
+    }
+    out
+}
+
 /// Every name a section could call through the platform.
 ///
 /// Read from `src/imports.c` rather than the headers: it is the file `mkmodule` validates
@@ -216,10 +279,17 @@ fn called_and_guarded(
 }
 
 /// Every unguarded call across the section files, and how many checks were examined.
-pub fn scan(sections_dir: &Path, imports_c: &str) -> std::io::Result<(Vec<Unguarded>, usize)> {
+pub fn scan(
+    sections_dir: &Path,
+    imports_c: &str,
+) -> std::io::Result<(Vec<Unguarded>, usize, Vec<Orphan>)> {
     let symbols = platform_symbols(imports_c);
     let mut problems = Vec::new();
     let mut total = 0usize;
+    // Collected across every file before any prefix is judged: a section's rows may sit in
+    // another section's file, so the set has to be whole first.
+    let mut declared = BTreeSet::new();
+    let mut all_rows = Vec::new();
 
     let mut paths: Vec<_> = std::fs::read_dir(sections_dir)?
         .filter_map(Result::ok)
@@ -230,9 +300,11 @@ pub fn scan(sections_dir: &Path, imports_c: &str) -> std::io::Result<(Vec<Unguar
 
     for path in paths {
         let text = std::fs::read_to_string(&path)?;
+        declared.extend(declared_sections(&text));
         let bodies = check_bodies(&text);
         let mut rows = sections::rows_in(&text);
         rows.sort();
+        all_rows.extend(rows.clone());
         for row in rows {
             let (check_id, declared, runner) = (row.id, row.symbol, row.runner);
             total = total.saturating_add(1);
@@ -254,7 +326,7 @@ pub fn scan(sections_dir: &Path, imports_c: &str) -> std::io::Result<(Vec<Unguar
             }
         }
     }
-    Ok((problems, total))
+    Ok((problems, total, orphans(&all_rows, &declared)))
 }
 
 #[cfg(test)]
@@ -265,6 +337,37 @@ mod tests {
         platform_symbols(
             "{\"libkernel\", \"sceKernelOpen\"},\n{\"libkernel\", \"sceKernelClose\"},",
         )
+    }
+
+    #[test]
+    fn a_prefix_naming_no_declared_section_is_an_orphan() {
+        // The shape that shipped five times: the row sits in the AGC table and the only
+        // AGC section declared is 166-agc.
+        let text = "static const obs_check t[] = {\n    {\"171-agc/cull\", \"libSceAgc\", \"sceAgcX\", OBS_CAP_NONE, OBS_CAP_NONE,\n     OBS_NO_SYMBOL, check_cull, OBS_FROM_ASSUMED},\n};\nconst obs_section obs_section_agc = {\n    \"166-agc\",\n};";
+        let found = orphans(&sections::rows_in(text), &declared_sections(text));
+        assert_eq!(found.len(), 1, "the mis-prefixed row is reported");
+        assert_eq!(found[0].claimed, "171-agc");
+    }
+
+    #[test]
+    fn a_section_declared_in_another_file_is_not_an_orphan() {
+        // base.c declares 010-kernel and two of its rows live in os.c. Judging per file or
+        // per table would reject them; the rule is tree-wide, so it must not.
+        let os_c = "static const obs_check file_checks[] = {\n    {\"010-kernel/is-stack\", \"libkernel\", \"sceKernelIsStack\", OBS_CAP_NONE, OBS_CAP_NONE,\n     OBS_NO_SYMBOL, check_is_stack, OBS_FROM_SPEC},\n};\nconst obs_section obs_section_file = {\n    \"040-file\",\n};";
+        let base_c = "const obs_section obs_section_kernel = {\n    \"010-kernel\",\n};";
+        let mut declared = declared_sections(os_c);
+        declared.extend(declared_sections(base_c));
+        assert!(
+            orphans(&sections::rows_in(os_c), &declared).is_empty(),
+            "a row whose section is declared elsewhere is fine"
+        );
+    }
+
+    #[test]
+    fn declared_sections_reads_every_section_in_a_multi_section_file() {
+        let text = "const obs_section obs_section_file = {\n    \"040-file\",\n};\nconst obs_section obs_section_time = {\n    \"050-time\",\n};";
+        let found = declared_sections(text);
+        assert!(found.contains("040-file") && found.contains("050-time"), "{found:?}");
     }
 
     #[test]
