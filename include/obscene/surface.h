@@ -299,24 +299,31 @@
  * gap, and counting it as one is the mistake that availability exists to prevent. */
 #define OBS_SURFACE_AGC(X) \
     X(sceAgcAcbAcquireMem) \
+    X(sceAgcAcbAcquireMemGetSize) \
     X(sceAgcAcbDispatchIndirect) \
     X(sceAgcAcbDmaData) \
     X(sceAgcAcbDmaDataGetSize) \
     X(sceAgcAcbEventWrite) \
+    X(sceAgcAcbJump) \
+    X(sceAgcAcbJumpGetSize) \
     X(sceAgcAcbPopMarker) \
     X(sceAgcAcbPushMarker) \
     X(sceAgcAcbResetQueue) \
     X(sceAgcAcbWaitRegMem) \
     X(sceAgcAcbWriteData) \
+    X(sceAgcCbBranch) \
+    X(sceAgcCbBranchGetSize) \
     X(sceAgcCbDispatch) \
     X(sceAgcCbNop) \
     X(sceAgcCbNopGetSize) \
+    X(sceAgcCbQueueEndOfPipeActionGetSize) \
     X(sceAgcCbReleaseMem) \
     X(sceAgcCbSetShRegisterRangeDirect) \
     X(sceAgcCbSetShRegistersDirect) \
     X(sceAgcCreatePrimState) \
     X(sceAgcCreateShader) \
     X(sceAgcDcbAcquireMem) \
+    X(sceAgcDcbAcquireMemGetSize) \
     X(sceAgcDcbDispatchIndirect) \
     X(sceAgcDcbDmaData) \
     X(sceAgcDcbDmaDataGetSize) \
@@ -324,13 +331,18 @@
     X(sceAgcDcbDrawIndexAuto) \
     X(sceAgcDcbDrawIndexIndirect) \
     X(sceAgcDcbDrawIndexIndirectGetSize) \
+    X(sceAgcDcbDrawIndexIndirectMulti) \
+    X(sceAgcDcbDrawIndexIndirectMultiGetSize) \
     X(sceAgcDcbDrawIndexOffset) \
     X(sceAgcDcbEventWrite) \
     X(sceAgcDcbGetLodStats) \
     X(sceAgcDcbGetLodStatsGetSize) \
     X(sceAgcDcbJump) \
+    X(sceAgcDcbJumpGetSize) \
     X(sceAgcDcbPopMarker) \
     X(sceAgcDcbPushMarker) \
+    X(sceAgcDcbRewind) \
+    X(sceAgcDcbRewindGetSize) \
     X(sceAgcDcbSetBaseIndirectArgs) \
     X(sceAgcDcbSetCxRegistersIndirect) \
     X(sceAgcDcbSetFlip) \

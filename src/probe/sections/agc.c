@@ -201,6 +201,39 @@ static obs_result check_agc_dcb_set_uc_register_direct_getsize(void) {
 static obs_result check_agc_dcb_jump_getsize(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_acb_acquire_mem_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_acb_dma_data_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_acb_jump_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_cb_branch_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_cb_queue_eop_action_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_acquire_mem_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_draw_index_indirect_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_draw_index_indirect_multi_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_get_lod_stats_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_rewind_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_stall_cb_parser_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 static obs_result check_agc_driver_resource_registration(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
@@ -253,8 +286,9 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_differential, OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw, OBS_FROM_ASSUMED},
-    {"166-agc/primitive-draw-depth", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
-     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_depth, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-depth", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_depth,
+     OBS_FROM_ASSUMED},
     {"166-agc/shader-graphics-stages", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_graphics_stages, OBS_FROM_ASSUMED},
     {"166-agc/shader-fused-stages", "libSceAgc", "sceAgcFuseShaderHalves", OBS_CAP_NONE,
@@ -303,8 +337,8 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_set_num_instances,
      OBS_FROM_ASSUMED},
     {"166-agc/driver-resource-registration", "libSceAgcDriver", "(registration)",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
-     check_agc_driver_resource_registration, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_resource_registration,
+     OBS_FROM_ASSUMED},
     {"166-agc/cb-nop-getsize", "libSceAgc", "sceAgcCbNopGetSize", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_nop_getsize, OBS_FROM_ASSUMED},
     {"166-agc/dcb-dma-data-getsize", "libSceAgc", "sceAgcDcbDmaDataGetSize",
@@ -318,6 +352,36 @@ static const obs_check agc_checks[] = {
      check_agc_dcb_set_uc_register_direct_getsize, OBS_FROM_ASSUMED},
     {"166-agc/dcb-jump-getsize", "libSceAgc", "sceAgcDcbJumpGetSize", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_jump_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/acb-acquire-mem-getsize", "libSceAgc", "sceAgcAcbAcquireMemGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_acb_acquire_mem_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/acb-dma-data-getsize", "libSceAgc", "sceAgcAcbDmaDataGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_acb_dma_data_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/acb-jump-getsize", "libSceAgc", "sceAgcAcbJumpGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_acb_jump_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/cb-branch-getsize", "libSceAgc", "sceAgcCbBranchGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_branch_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/cb-queue-eop-action-getsize", "libSceAgc",
+     "sceAgcCbQueueEndOfPipeActionGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_cb_queue_eop_action_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-acquire-mem-getsize", "libSceAgc", "sceAgcDcbAcquireMemGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_acquire_mem_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-index-indirect-getsize", "libSceAgc",
+     "sceAgcDcbDrawIndexIndirectGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_dcb_draw_index_indirect_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-index-indirect-multi-getsize", "libSceAgc",
+     "sceAgcDcbDrawIndexIndirectMultiGetSize", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_dcb_draw_index_indirect_multi_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-get-lod-stats-getsize", "libSceAgc", "sceAgcDcbGetLodStatsGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_get_lod_stats_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-rewind-getsize", "libSceAgc", "sceAgcDcbRewindGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_rewind_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-stall-cb-parser-getsize", "libSceAgc",
+     "sceAgcDcbStallCommandBufferParserGetSize", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_dcb_stall_cb_parser_getsize, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -3651,12 +3715,10 @@ static obs_result check_agc_primitive_draw(void) {
                              (uint64_t)(uint32_t)submit_rc);
 }
 
-static void agc_depth_build_vs(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
-                               uint32_t canary_val,
-                               uint32_t x0, uint32_t y0,
-                               uint32_t x1, uint32_t y1,
-                               uint32_t x2, uint32_t y2,
-                               uint32_t z_val) {
+static void agc_depth_build_vs(uint32_t *code, uint64_t canary_gpu,
+                               uint32_t canary_offset, uint32_t canary_val, uint32_t x0,
+                               uint32_t y0, uint32_t x1, uint32_t y1, uint32_t x2,
+                               uint32_t y2, uint32_t z_val) {
     code[0] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo (save entry exec_lo) */
     code[1] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
     code[2] = 0x00001003u;
@@ -3674,7 +3736,8 @@ static void agc_depth_build_vs(uint32_t *code, uint64_t canary_gpu, uint32_t can
     code[14] = 0x7e120201u; /* v_mov_b32 v9, s1 */
     code[15] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
     code[16] = canary_val;
-    code[17] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword v[8:9], v10, off offset */
+    code[17] = 0xdc708000u | (canary_offset &
+                              0xfffu); /* global_store_dword v[8:9], v10, off offset */
     code[18] = 0x007d0a08u;
     code[19] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
 
@@ -3719,8 +3782,9 @@ static void agc_depth_build_vs(uint32_t *code, uint64_t canary_gpu, uint32_t can
     }
 }
 
-static void agc_depth_build_ps(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
-                               uint32_t canary_val, uint32_t r, uint32_t g, uint32_t b) {
+static void agc_depth_build_ps(uint32_t *code, uint64_t canary_gpu,
+                               uint32_t canary_offset, uint32_t canary_val, uint32_t r,
+                               uint32_t g, uint32_t b) {
     code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
     code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
     code[2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
@@ -3751,8 +3815,9 @@ static void agc_depth_build_ps(uint32_t *code, uint64_t canary_gpu, uint32_t can
     }
 }
 
-static void agc_depth_build_ps_rgba(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
-                                    uint32_t canary_val, uint32_t r, uint32_t g, uint32_t b, uint32_t a) {
+static void agc_depth_build_ps_rgba(uint32_t *code, uint64_t canary_gpu,
+                                    uint32_t canary_offset, uint32_t canary_val,
+                                    uint32_t r, uint32_t g, uint32_t b, uint32_t a) {
     code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
     code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
     code[2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
@@ -3785,21 +3850,22 @@ static void agc_depth_build_ps_rgba(uint32_t *code, uint64_t canary_gpu, uint32_
 }
 
 static inline size_t agc_depth_swizzle_offset(uint32_t x, uint32_t y) {
-    static const uint32_t x_basis[7] = {0x000004u, 0x000008u, 0x000080u,
-                                        0x000100u, 0x002200u, 0x000800u,
-                                        0x008400u};
-    static const uint32_t y_basis[7] = {0x000010u, 0x000020u, 0x000040u,
-                                        0x001100u, 0x000200u, 0x000400u,
-                                        0x004800u};
+    static const uint32_t x_basis[7] = {0x000004u, 0x000008u, 0x000080u, 0x000100u,
+                                        0x002200u, 0x000800u, 0x008400u};
+    static const uint32_t y_basis[7] = {0x000010u, 0x000020u, 0x000040u, 0x001100u,
+                                        0x000200u, 0x000400u, 0x004800u};
     uint32_t bx = 0, by = 0;
     for (int b = 0; b < 7; b++) {
-        if ((x >> b) & 1u) bx ^= x_basis[b];
-        if ((y >> b) & 1u) by ^= y_basis[b];
+        if ((x >> b) & 1u)
+            bx ^= x_basis[b];
+        if ((y >> b) & 1u)
+            by ^= y_basis[b];
     }
     return (size_t)((bx >> 2) ^ (by >> 2));
 }
 
-static inline void agc_depth_bind_stages(uint32_t **dw_ptr, uint64_t vs_va, uint64_t ps_va) {
+static inline void agc_depth_bind_stages(uint32_t **dw_ptr, uint64_t vs_va,
+                                         uint64_t ps_va) {
     uint32_t *dw = *dw_ptr;
     struct {
         uint32_t base_reg;
@@ -3809,8 +3875,9 @@ static inline void agc_depth_bind_stages(uint32_t **dw_ptr, uint64_t vs_va, uint
     } stages[] = {
         {0x08u, ps_va, 0x000c0010u, 0x00000000u}, /* PS: 16 VGPRs, USER_SGPR=0 */
         {0x48u, vs_va, 0x000c0010u, 0x00000000u}, /* VS */
-        {0x88u, vs_va, 0x622c0042u, 0x00030000u}, /* GS/NGG: GS_COMP_CNT=3, ES_COMP_CNT=3, USER_SGPR=0 */
-        {0xc8u, vs_va, 0x000c0010u, 0x00000000u}, /* ES */
+        {0x88u, vs_va, 0x622c0042u,
+         0x00030000u}, /* GS/NGG: GS_COMP_CNT=3, ES_COMP_CNT=3, USER_SGPR=0 */
+        {0xc8u, vs_va, 0x000c0010u, 0x00000000u},  /* ES */
         {0x108u, vs_va, 0x000c0010u, 0x00000000u}, /* HS */
         {0x148u, vs_va, 0x000c0010u, 0x00000000u}, /* LS */
     };
@@ -3834,7 +3901,8 @@ static inline void agc_depth_bind_stages(uint32_t **dw_ptr, uint64_t vs_va, uint
 }
 
 static inline void agc_depth_bind_stages_textured(uint32_t **dw_ptr, uint64_t vs_va,
-                                                  uint64_t ps_va, uint64_t desc_table_va) {
+                                                  uint64_t ps_va,
+                                                  uint64_t desc_table_va) {
     uint32_t *dw = *dw_ptr;
     struct {
         uint32_t base_reg;
@@ -3842,10 +3910,12 @@ static inline void agc_depth_bind_stages_textured(uint32_t **dw_ptr, uint64_t vs
         uint32_t rsrc1;
         uint32_t rsrc2;
     } stages[] = {
-        {0x08u, ps_va, 0x000c0010u, 0x00000002u}, /* PS: 16 VGPRs, USER_SGPR=2 (s[0:1]) */
+        {0x08u, ps_va, 0x000c0010u,
+         0x00000002u}, /* PS: 16 VGPRs, USER_SGPR=2 (s[0:1]) */
         {0x48u, vs_va, 0x000c0010u, 0x00000000u}, /* VS */
-        {0x88u, vs_va, 0x622c0042u, 0x00030000u}, /* GS/NGG: GS_COMP_CNT=3, ES_COMP_CNT=3, USER_SGPR=0 */
-        {0xc8u, vs_va, 0x000c0010u, 0x00000000u}, /* ES */
+        {0x88u, vs_va, 0x622c0042u,
+         0x00030000u}, /* GS/NGG: GS_COMP_CNT=3, ES_COMP_CNT=3, USER_SGPR=0 */
+        {0xc8u, vs_va, 0x000c0010u, 0x00000000u},  /* ES */
         {0x108u, vs_va, 0x000c0010u, 0x00000000u}, /* HS */
         {0x148u, vs_va, 0x000c0010u, 0x00000000u}, /* LS */
     };
@@ -3876,10 +3946,9 @@ static inline void agc_depth_bind_stages_textured(uint32_t **dw_ptr, uint64_t vs
     *dw_ptr = dw;
 }
 
-static void agc_textured_build_vs(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
-                                  uint32_t canary_val,
-                                  uint32_t x0, uint32_t y0,
-                                  uint32_t x1, uint32_t y1,
+static void agc_textured_build_vs(uint32_t *code, uint64_t canary_gpu,
+                                  uint32_t canary_offset, uint32_t canary_val,
+                                  uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
                                   uint32_t x2, uint32_t y2) {
     code[0] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo (save entry exec_lo) */
     code[1] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
@@ -3935,7 +4004,8 @@ static void agc_textured_build_vs(uint32_t *code, uint64_t canary_gpu, uint32_t 
     code[43] = 0x3f000000u;
     code[44] = 0x7e0e02f2u; /* v_mov_b32 v7, 1.0f (v2 = 1.0f) */
 
-    /* Lanes 0..2: pos.z=0.0f, pos.w=1.0f; uv.z=0.0f, uv.w=0.0f; Color=(1.0f, 1.0f, 1.0f, 1.0f) */
+    /* Lanes 0..2: pos.z=0.0f, pos.w=1.0f; uv.z=0.0f, uv.w=0.0f;
+     * Color=(1.0f, 1.0f, 1.0f, 1.0f) */
     code[45] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
     code[46] = 0x7e080280u; /* v_mov_b32 v4, 0.0f (pos.z) */
     code[47] = 0x7e0a02f2u; /* v_mov_b32 v5, 1.0f (pos.w) */
@@ -3958,18 +4028,18 @@ static void agc_textured_build_vs(uint32_t *code, uint64_t canary_gpu, uint32_t 
     }
 }
 
-static void agc_textured_build_ps(uint32_t *code, uint64_t canary_gpu, uint32_t canary_offset,
-                                  uint32_t canary_val) {
-    code[ 0] = 0xbf8c0000u; /* s_waitcnt 0 */
-    code[ 1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
-    code[ 2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    code[ 3] = 0xbe8203ffu; /* s_mov_b32 s2, canary_lo */
-    code[ 4] = (uint32_t)canary_gpu;
-    code[ 5] = 0xbe8303ffu; /* s_mov_b32 s3, canary_hi */
-    code[ 6] = (uint32_t)(canary_gpu >> 32);
-    code[ 7] = 0x7e100202u; /* v_mov_b32 v8, s2 */
-    code[ 8] = 0x7e120203u; /* v_mov_b32 v9, s3 */
-    code[ 9] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
+static void agc_textured_build_ps(uint32_t *code, uint64_t canary_gpu,
+                                  uint32_t canary_offset, uint32_t canary_val) {
+    code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
+    code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+    code[2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[3] = 0xbe8203ffu; /* s_mov_b32 s2, canary_lo */
+    code[4] = (uint32_t)canary_gpu;
+    code[5] = 0xbe8303ffu; /* s_mov_b32 s3, canary_hi */
+    code[6] = (uint32_t)(canary_gpu >> 32);
+    code[7] = 0x7e100202u; /* v_mov_b32 v8, s2 */
+    code[8] = 0x7e120203u; /* v_mov_b32 v9, s3 */
+    code[9] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
     code[10] = canary_val;
     code[11] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword */
     code[12] = 0x007d0a08u;
@@ -3992,7 +4062,8 @@ static void agc_textured_build_ps(uint32_t *code, uint64_t canary_gpu, uint32_t 
     code[29] = 0xf4080300u; /* s_load_dwordx4 s[12:15], s[0:1], 0x20 */
     code[30] = 0xfa000020u;
     code[31] = 0xbf8cc07fu; /* s_waitcnt lgkmcnt(0) */
-    code[32] = 0xf09c0f08u; /* image_sample_lz v[4:7], v[2:3], s[4:11], s[12:15] dmask:0xf dim:SQ_RSRC_IMG_2D */
+    code[32] = 0xf09c0f08u; /* image_sample_lz v[4:7], v[2:3], s[4:11], s[12:15]
+                               dmask:0xf dim:SQ_RSRC_IMG_2D */
     code[33] = 0x00610402u;
     code[34] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
     code[35] = 0x10081104u; /* v_mul_f32 v4, v4, v8 (R * R) */
@@ -4044,7 +4115,8 @@ static obs_result check_agc_primitive_draw_depth(void) {
 #endif
 
     obs_fault_unregister();
-    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL || depth_buf == NULL) {
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL ||
+        depth_buf == NULL) {
         return obs_skip("failed to allocate Onion memory for depth test");
     }
     *fence = 0x11111111u;
@@ -4059,7 +4131,8 @@ static obs_result check_agc_primitive_draw_depth(void) {
         color_buf[i] = 0x55555555u;
     }
 
-    /* Initialize Depth Buffer: 1.0f (0x3f800000 = far plane) across full 64KB macro-tile */
+    /* Initialize Depth Buffer: 1.0f (0x3f800000 = far plane) across full 64KB
+     * macro-tile */
     for (size_t i = 0; i < 16384; i++) {
         depth_buf[i] = 0x3f800000u;
     }
@@ -4069,31 +4142,34 @@ static obs_result check_agc_primitive_draw_depth(void) {
      * Triangle 1 (left):  (-0.7, -0.5), (-0.1, -0.5), (-0.4, +0.5)
      * Triangle 2 (right): (+0.1, -0.5), (+0.7, -0.5), (+0.4, +0.5)
      *
-     * - VS 1 (0x000): Triangle 1 (left),  NDC Z =  0.0f (Screen Z = 0.5f), canary[0] = 0xbeef0001
+     * - VS 1 (0x000): Triangle 1 (left),  NDC Z =  0.0f (Screen Z = 0.5f), canary[0] =
+     * 0xbeef0001
      * - PS 1 (0x100): Red (1.0f, 0.0f, 0.0f), canary[1] = 0xbeef0002
-     * - VS 2 (0x200): Triangle 1 (left),  NDC Z = +0.6f (Screen Z = 0.8f), canary[2] = 0xbeef0011
+     * - VS 2 (0x200): Triangle 1 (left),  NDC Z = +0.6f (Screen Z = 0.8f), canary[2] =
+     * 0xbeef0011
      * - PS 2 (0x300): Blue (0.0f, 0.0f, 1.0f), canary[3] = 0xbeef0012
-     * - VS 3 (0x400): Triangle 2 (right), NDC Z = -0.6f (Screen Z = 0.2f), canary[4] = 0xbeef0021
+     * - VS 3 (0x400): Triangle 2 (right), NDC Z = -0.6f (Screen Z = 0.2f), canary[4] =
+     * 0xbeef0021
      * - PS 3 (0x500): Green (0.0f, 1.0f, 0.0f), canary[5] = 0xbeef0022
      */
     /* Draw 1: Triangle 1 @ 0.5f (Red) */
     agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
-                       0xbf333333u, 0xbf000000u, 0xbdccccd0u, 0xbf000000u, 0xbeccccdcu, 0x3f000000u,
-                       0x00000000u);
+                       0xbf333333u, 0xbf000000u, 0xbdccccd0u, 0xbf000000u, 0xbeccccdcu,
+                       0x3f000000u, 0x00000000u);
     agc_depth_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
                        0x3f800000u, 0u, 0u);
 
     /* Draw 2: Triangle 1 @ 0.8f (Blue, rejected by LESS vs 0.5f) */
     agc_depth_build_vs((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u, 0xbeef0011u,
-                       0xbf333333u, 0xbf000000u, 0xbdccccd0u, 0xbf000000u, 0xbeccccdcu, 0x3f000000u,
-                       0x3f19999au);
+                       0xbf333333u, 0xbf000000u, 0xbdccccd0u, 0xbf000000u, 0xbeccccdcu,
+                       0x3f000000u, 0x3f19999au);
     agc_depth_build_ps((uint32_t *)(gpu_payload + 0x300), canary_gpu, 12u, 0xbeef0012u,
                        0u, 0u, 0x3f800000u);
 
     /* Draw 3: Triangle 2 @ 0.2f (Green, accepted by LESS vs 1.0f initial) */
     agc_depth_build_vs((uint32_t *)(gpu_payload + 0x400), canary_gpu, 16u, 0xbeef0021u,
-                       0x3dccccd0u, 0xbf000000u, 0x3f333333u, 0xbf000000u, 0x3eccccdcu, 0x3f000000u,
-                       0xbf19999au);
+                       0x3dccccd0u, 0xbf000000u, 0x3f333333u, 0xbf000000u, 0x3eccccdcu,
+                       0x3f000000u, 0xbf19999au);
     agc_depth_build_ps((uint32_t *)(gpu_payload + 0x500), canary_gpu, 20u, 0xbeef0022u,
                        0u, 0x3f800000u, 0u);
 
@@ -4119,8 +4195,8 @@ static obs_result check_agc_primitive_draw_depth(void) {
     }
     int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
     obs_fault_unregister();
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverCreateQueue", "rc-create",
-                       (uint64_t)(uint32_t)rc_create, "code");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
     if (rc_create != 0 || queue == NULL) {
         return obs_skip("type 0 graphics queue creation failed; skipping depth draw");
     }
@@ -4155,39 +4231,45 @@ static obs_result check_agc_primitive_draw_depth(void) {
         {0x1e0u, 0x20010001u}, /* Blend: SRC=ONE, DST=ZERO */
 
         /* Depth & Stencil Block Context Registers */
-        {0x000u, 0x00000000u}, /* DB_RENDER_CONTROL: default matching AgcCompositor.elf */
-        {0x200u, 0x00000016u}, /* DB_DEPTH_CONTROL: Z_ENABLE (0x2) | Z_WRITE_ENABLE (0x4) | ZFUNC_LESS (0x10) */
+        {0x000u,
+         0x00000000u}, /* DB_RENDER_CONTROL: default matching AgcCompositor.elf */
+        {0x200u, 0x00000016u}, /* DB_DEPTH_CONTROL: Z_ENABLE (0x2) | Z_WRITE_ENABLE
+                                  (0x4) | ZFUNC_LESS (0x10) */
         {0x201u, 0x00010000u}, /* DB_EQAA */
-        {0x203u, 0x00000000u}, /* DB_SHADER_CONTROL: LATE_Z (0x0) matching AgcCompositor.elf */
-        {0x002u, 0x00000000u}, /* DB_DEPTH_VIEW */
-        {0x005u, 0x00000000u}, /* DB_HTILE_DATA_BASE */
+        {0x203u,
+         0x00000000u}, /* DB_SHADER_CONTROL: LATE_Z (0x0) matching AgcCompositor.elf */
+        {0x002u, 0x00000000u},       /* DB_DEPTH_VIEW */
+        {0x005u, 0x00000000u},       /* DB_HTILE_DATA_BASE */
         {0x007u, (63u << 16) | 63u}, /* DB_DEPTH_SIZE_XY: 64x64 */
-        {0x008u, 0x00000000u}, /* DB_DEPTH_BOUNDS_MIN */
-        {0x009u, 0x00000000u}, /* DB_DEPTH_BOUNDS_MAX */
-        {0x00au, 0x00000000u}, /* DB_STENCIL_CLEAR */
-        {0x00bu, 0x3f800000u}, /* DB_DEPTH_CLEAR: 1.0f */
-        {0x010u, 0x80000183u}, /* DB_Z_INFO: SW_MODE=24 (0x180), Z_32_FLOAT (3), ZRANGE_PRECISION (0x80000000) */
-        {0x011u, 0x20000180u}, /* DB_STENCIL_INFO */
-        {0x012u, 0},           /* DB_Z_READ_BASE (patched below) */
-        {0x013u, 0x00000000u}, /* DB_STENCIL_READ_BASE */
-        {0x014u, 0},           /* DB_Z_WRITE_BASE (patched below) */
-        {0x015u, 0x00000000u}, /* DB_STENCIL_WRITE_BASE */
-        {0x01au, 0},           /* DB_Z_READ_BASE_HI (patched below) */
-        {0x01bu, 0x00000000u}, /* DB_STENCIL_READ_BASE_HI */
-        {0x01cu, 0},           /* DB_Z_WRITE_BASE_HI (patched below) */
-        {0x01du, 0x00000000u}, /* DB_STENCIL_WRITE_BASE_HI */
-        {0x01eu, 0x00000000u}, /* DB_HTILE_DATA_BASE_HI */
-        {0x01fu, 0x00000000u}, /* DB_RMI_L2_CACHE_CONTROL */
-        {0x2afu, 0x00040000u}, /* DB_HTILE_SURFACE: PIPE_ALIGNED */
+        {0x008u, 0x00000000u},       /* DB_DEPTH_BOUNDS_MIN */
+        {0x009u, 0x00000000u},       /* DB_DEPTH_BOUNDS_MAX */
+        {0x00au, 0x00000000u},       /* DB_STENCIL_CLEAR */
+        {0x00bu, 0x3f800000u},       /* DB_DEPTH_CLEAR: 1.0f */
+        {0x010u, 0x80000183u},       /* DB_Z_INFO: SW_MODE=24 (0x180), Z_32_FLOAT (3),
+                                        ZRANGE_PRECISION (0x80000000) */
+        {0x011u, 0x20000180u},       /* DB_STENCIL_INFO */
+        {0x012u, 0},                 /* DB_Z_READ_BASE (patched below) */
+        {0x013u, 0x00000000u},       /* DB_STENCIL_READ_BASE */
+        {0x014u, 0},                 /* DB_Z_WRITE_BASE (patched below) */
+        {0x015u, 0x00000000u},       /* DB_STENCIL_WRITE_BASE */
+        {0x01au, 0},                 /* DB_Z_READ_BASE_HI (patched below) */
+        {0x01bu, 0x00000000u},       /* DB_STENCIL_READ_BASE_HI */
+        {0x01cu, 0},                 /* DB_Z_WRITE_BASE_HI (patched below) */
+        {0x01du, 0x00000000u},       /* DB_STENCIL_WRITE_BASE_HI */
+        {0x01eu, 0x00000000u},       /* DB_HTILE_DATA_BASE_HI */
+        {0x01fu, 0x00000000u},       /* DB_RMI_L2_CACHE_CONTROL */
+        {0x2afu, 0x00040000u},       /* DB_HTILE_SURFACE: PIPE_ALIGNED */
 
         /* Rasterizer & Fixed Function */
         {0x08cu, 0xaa99aaaau}, /* PA_SC_EDGERULE: D3D/OpenGL standard edge rule */
         {0x1d4u, 0x000000ffu}, /* SX_PS_DOWNCONVERT_CONTROL */
         /* NGG Primitive Type & Stages */
-        {0x291u, 0x10020040u}, /* VGT_GS_ONCHIP_CNTL: ES_VERTS=64, GS_PRIMS=64, GS_INST_PRIMS=64 */
+        {0x291u, 0x10020040u}, /* VGT_GS_ONCHIP_CNTL: ES_VERTS=64, GS_PRIMS=64,
+                                  GS_INST_PRIMS=64 */
         {0x29bu, 0x00000000u}, /* VGT_GS_OUT_PRIM_TYPE: POINTLIST/PASSTHRU */
         {0x2d3u, 0x00000001u}, /* GE_NGG_SUBGRP_CNTL: PRIM_AMP=1, THDS_PER_SUBGRP=0 */
-        {0x2d5u, 0x02002000u}, /* VGT_SHADER_STAGES_EN: PRIMGEN_EN | PRIMGEN_PASSTHRU_EN */
+        {0x2d5u,
+         0x02002000u}, /* VGT_SHADER_STAGES_EN: PRIMGEN_EN | PRIMGEN_PASSTHRU_EN */
         {0x1ffu, 0x00000040u}, /* GE_MAX_OUTPUT_PER_SUBGROUP: MAX_VERTS=64 */
         {0x20eu, 0x00000078u}, /* PA_CL_NGG_CNTL: VERTEX_REUSE_DEPTH=30 */
         {0x2a1u, 0x00000000u}, /* VGT_PRIMITIVEID_EN: disabled */
@@ -4290,11 +4372,8 @@ static obs_result check_agc_primitive_draw_depth(void) {
         uint32_t reg;
         uint32_t val;
     } spi_cu_regs[] = {
-        {0x007u, 0x0000ffffu},
-        {0x001u, 0x00000003u},
-        {0x087u, 0x0000fffdu},
-        {0x081u, 0x00000003u},
-        {0x107u, 0xffff0000u},
+        {0x007u, 0x0000ffffu}, {0x001u, 0x00000003u}, {0x087u, 0x0000fffdu},
+        {0x081u, 0x00000003u}, {0x107u, 0xffff0000u},
     };
     for (size_t i = 0; i < sizeof(spi_cu_regs) / sizeof(spi_cu_regs[0]); i++) {
         *dw++ = 0xc0017600u;
@@ -4317,9 +4396,10 @@ static obs_result check_agc_primitive_draw_depth(void) {
 
     /*
      * 6. Issue Depth-tested Draw Calls:
-     * Draw 1: Triangle 1 (left)  @ Screen Z = 0.5f, Red. PASSES depth test vs 1.0f initial.
-     * Draw 2: Triangle 1 (left)  @ Screen Z = 0.8f, Blue. REJECTED: 0.8f >= 0.5f. Left stays Red!
-     * Draw 3: Triangle 2 (right) @ Screen Z = 0.2f, Green. ACCEPTED: 0.2f < 1.0f. Right becomes Green!
+     * Draw 1: Triangle 1 (left)  @ Screen Z = 0.5f, Red. PASSES depth test vs 1.0f
+     * initial. Draw 2: Triangle 1 (left)  @ Screen Z = 0.8f, Blue. REJECTED: 0.8f >=
+     * 0.5f. Left stays Red! Draw 3: Triangle 2 (right) @ Screen Z = 0.2f, Green.
+     * ACCEPTED: 0.2f < 1.0f. Right becomes Green!
      */
     /* Draw 1: Triangle 1 (left) @ 0.5f -> Red */
     *dw++ = 0xc0012d00u; /* DRAW_INDEX_AUTO */
@@ -4421,10 +4501,10 @@ static obs_result check_agc_primitive_draw_depth(void) {
             }
         }
     }
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "fence-val",
-                       (uint64_t)fence_val, "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "fence-hit",
-                       (uint64_t)fence_hit, "bool");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "fence-val", (uint64_t)fence_val, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "fence-hit", (uint64_t)fence_hit, "bool");
 
 #if defined(__x86_64__)
     for (size_t p = 0; p < 64; p += 64) {
@@ -4437,18 +4517,18 @@ static obs_result check_agc_primitive_draw_depth(void) {
 #endif
 
     /* Canary telemetry */
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d1-vs",
-                       (uint64_t)canary[0], "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d1-ps",
-                       (uint64_t)canary[1], "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d2-vs",
-                       (uint64_t)canary[2], "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d2-ps",
-                       (uint64_t)canary[3], "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d3-vs",
-                       (uint64_t)canary[4], "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "canary-d3-ps",
-                       (uint64_t)canary[5], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "canary-d1-vs", (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "canary-d1-ps", (uint64_t)canary[1], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "canary-d2-vs", (uint64_t)canary[2], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "canary-d2-ps", (uint64_t)canary[3], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "canary-d3-vs", (uint64_t)canary[4], "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "canary-d3-ps", (uint64_t)canary[5], "val");
 
     /* Scan color buffer to check if any pixels were modified */
     uint32_t any_color = color_buf[0];
@@ -4462,12 +4542,12 @@ static obs_result check_agc_primitive_draw_depth(void) {
             break;
         }
     }
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-color-mod",
-                       (uint64_t)any_color_mod, "bool");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-color-val",
-                       (uint64_t)any_color, "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-color-idx",
-                       (uint64_t)any_mod_idx, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "any-color-mod", (uint64_t)any_color_mod, "bool");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "any-color-val", (uint64_t)any_color, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "any-color-idx", (uint64_t)any_mod_idx, "val");
 
     /* Scan depth buffer to check if any pixels were modified */
     uint32_t any_depth = depth_buf[0];
@@ -4481,12 +4561,12 @@ static obs_result check_agc_primitive_draw_depth(void) {
             break;
         }
     }
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-depth-mod",
-                       (uint64_t)any_depth_mod, "bool");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-depth-val",
-                       (uint64_t)any_depth, "val");
-    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb", "any-depth-idx",
-                       (uint64_t)any_dmod_idx, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "any-depth-mod", (uint64_t)any_depth_mod, "bool");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "any-depth-val", (uint64_t)any_depth, "val");
+    obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
+                       "any-depth-idx", (uint64_t)any_dmod_idx, "val");
 
     /* Inspect Triangle 1 (left, centroid x=19, y=27) */
     uint32_t tri1_color = color_buf[27 * 64 + 19];
@@ -4502,7 +4582,8 @@ static obs_result check_agc_primitive_draw_depth(void) {
     }
     for (int dy = -2; dy <= 2; dy++) {
         for (int dx = -2; dx <= 2; dx++) {
-            size_t d_idx = agc_depth_swizzle_offset((uint32_t)(19 + dx), (uint32_t)(27 + dy));
+            size_t d_idx =
+                agc_depth_swizzle_offset((uint32_t)(19 + dx), (uint32_t)(27 + dy));
             if (depth_buf[d_idx] != 0x3f800000u) {
                 tri1_depth = depth_buf[d_idx];
                 break;
@@ -4529,7 +4610,8 @@ static obs_result check_agc_primitive_draw_depth(void) {
     }
     for (int dy = -2; dy <= 2; dy++) {
         for (int dx = -2; dx <= 2; dx++) {
-            size_t d_idx = agc_depth_swizzle_offset((uint32_t)(45 + dx), (uint32_t)(27 + dy));
+            size_t d_idx =
+                agc_depth_swizzle_offset((uint32_t)(45 + dx), (uint32_t)(27 + dy));
             if (depth_buf[d_idx] != 0x3f800000u) {
                 tri2_depth = depth_buf[d_idx];
                 break;
@@ -4547,11 +4629,17 @@ static obs_result check_agc_primitive_draw_depth(void) {
     __builtin_memcpy(&f1_depth, &tri1_depth, sizeof(float));
     __builtin_memcpy(&f2_depth, &tri2_depth, sizeof(float));
 
-    /* Farther primitive (Draw 2 Blue @ 0.8f) was rejected: Triangle 1 MUST remain Red (0xff0000ff) @ 0.5f */
-    int reject_pass = (tri1_color == 0xff0000ffu && (tri1_depth == 0x3f000000u || (f1_depth >= 0.49f && f1_depth <= 0.51f)));
+    /* Farther primitive (Draw 2 Blue @ 0.8f) was rejected: Triangle 1 MUST remain Red
+     * (0xff0000ff) @ 0.5f */
+    int reject_pass =
+        (tri1_color == 0xff0000ffu &&
+         (tri1_depth == 0x3f000000u || (f1_depth >= 0.49f && f1_depth <= 0.51f)));
 
-    /* Nearer primitive (Draw 3 Green @ 0.2f) was accepted: Triangle 2 MUST be Green (0xff00ff00) @ 0.2f */
-    int accept_pass = (tri2_color == 0xff00ff00u && (tri2_depth == 0x3e4ccccdu || (f2_depth >= 0.19f && f2_depth <= 0.21f)));
+    /* Nearer primitive (Draw 3 Green @ 0.2f) was accepted: Triangle 2 MUST be Green
+     * (0xff00ff00) @ 0.2f */
+    int accept_pass =
+        (tri2_color == 0xff00ff00u &&
+         (tri2_depth == 0x3e4ccccdu || (f2_depth >= 0.19f && f2_depth <= 0.21f)));
 
     obs_report_measure("166-agc/primitive-draw-depth", "sceAgcDriverSubmitDcb",
                        "tri1-color", (uint64_t)tri1_color, "val");
@@ -4584,17 +4672,18 @@ static obs_result check_agc_primitive_draw_depth(void) {
     }
     if (submit_rc == 0 && fence_hit == 1) {
         if (!reject_pass) {
-            return obs_partial_value("depth rejection failed (farther primitive overwrote nearer)",
-                                     (uint64_t)tri1_color);
+            return obs_partial_value(
+                "depth rejection failed (farther primitive overwrote nearer)",
+                (uint64_t)tri1_color);
         }
         if (!accept_pass) {
-            return obs_partial_value("depth acceptance failed (nearer primitive rejected)",
-                                     (uint64_t)tri2_color);
+            return obs_partial_value(
+                "depth acceptance failed (nearer primitive rejected)",
+                (uint64_t)tri2_color);
         }
     }
     if (submit_rc == 0) {
-        return obs_partial_value("fence not hit after depth draw",
-                                 (uint64_t)fence_val);
+        return obs_partial_value("fence not hit after depth draw", (uint64_t)fence_val);
     }
     return obs_partial_value("submit dcb returned non-zero code",
                              (uint64_t)(uint32_t)submit_rc);
@@ -4637,7 +4726,8 @@ static obs_result check_agc_primitive_draw_stencil(void) {
 #endif
 
     obs_fault_unregister();
-    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL || depth_buf == NULL) {
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL ||
+        depth_buf == NULL) {
         return obs_skip("failed to allocate Onion memory for stencil test");
     }
     *fence = 0x11111111u;
@@ -4658,8 +4748,8 @@ static obs_result check_agc_primitive_draw_stencil(void) {
      * PS 2 (0x200): Green (0.0, 1.0, 0.0)
      */
     agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
-                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u, 0x3f000000u,
-                       0x00000000u);
+                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u,
+                       0x3f000000u, 0x00000000u);
     agc_depth_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
                        0u, 0u, 0x3f800000u);
     agc_depth_build_ps((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u, 0xbeef0003u,
@@ -4673,8 +4763,8 @@ static obs_result check_agc_primitive_draw_stencil(void) {
     }
     int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
     obs_fault_unregister();
-    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverCreateQueue", "rc-create",
-                       (uint64_t)(uint32_t)rc_create, "code");
+    obs_report_measure("166-agc/primitive-draw-stencil", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
     if (rc_create != 0 || queue == NULL) {
         return obs_skip("type 0 graphics queue creation failed; skipping stencil draw");
     }
@@ -4693,76 +4783,171 @@ static obs_result check_agc_primitive_draw_stencil(void) {
         uint32_t reg;
         uint32_t val;
     } base_ctx_stencil[] = {
-        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0x00000000u},
-        {0x31cu, 0x000180a8u}, {0x31du, 0x00000000u}, {0x31eu, 0x00000000u},
-        {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c000u}, {0x109u, 0x00000000u},
-        {0x202u, 0x00cc0010u}, {0x08eu, 0x0000000fu}, {0x08fu, 0x0000000fu},
-        {0x1e0u, 0x20010001u}, {0x201u, 0x00010000u}, {0x203u, 0x00000000u},
-        {0x000u, 0x00000000u}, {0x002u, 0x00000000u}, {0x007u, (63u << 16) | 63u},
-        {0x010u, 0x80000183u}, {0x011u, 0x20000180u}, /* STENCIL_8, SW_MODE=24 */
-        {0x012u, 0}, {0x014u, 0}, {0x01au, 0}, {0x01cu, 0},
-        {0x013u, 0}, {0x015u, 0}, {0x01bu, 0}, {0x01du, 0},
-        {0x2afu, 0x00040000u}, {0x08cu, 0xaa99aaaau}, {0x1d4u, 0x000000ffu},
-        {0x291u, 0x10020040u}, {0x29bu, 0x00000000u}, {0x2d3u, 0x00000001u},
-        {0x2d5u, 0x02002000u}, {0x1ffu, 0x00000040u}, {0x20eu, 0x00000078u},
-        {0x2a1u, 0x00000000u}, {0x2a6u, 0x00000040u}, {0x2adu, 0x00000000u},
-        {0x2abu, 0x00000004u}, {0x2ceu, 0x00000000u}, {0x2d4u, 0x88101000u},
-        {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu}, {0x30fu, 0xffffffffu},
-        {0x310u, 0x00000000u}, {0x314u, 0x00000202u}, {0x311u, 0x01fd2002u},
-        {0x312u, 0x03ff0080u}, {0x313u, 0x00006000u}, {0x00eu, 0x00000002u},
-        {0x280u, 0x00080008u}, {0x281u, 0xffff0000u}, {0x282u, 0x00000008u},
-        {0x2deu, 0x000001e9u}, {0x00cu, 0x00000000u}, {0x00du, 0x40004000u},
-        {0x081u, 0x80000000u}, {0x082u, 0x40004000u}, {0x090u, 0x80000000u},
-        {0x091u, 0x40004000u}, {0x094u, 0x80000000u}, {0x095u, 0x40004000u},
-        {0x0b4u, 0x00000000u}, {0x0b5u, 0x3f800000u}, {0x10fu, 0x42000000u},
-        {0x110u, 0x42000000u}, {0x111u, 0x42000000u}, {0x112u, 0x42000000u},
-        {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u}, {0x083u, 0x0000ffffu},
-        {0x084u, 0x00000000u}, {0x085u, 0x20002000u}, {0x204u, 0x00000000u},
-        {0x206u, 0x0000043fu}, {0x207u, 0x00000000u}, {0x2fau, 0x3f800000u},
-        {0x2fbu, 0x3f800000u}, {0x2fcu, 0x3f800000u}, {0x2fdu, 0x3f800000u},
-        {0x205u, 0x00000240u}, {0x20cu, 0x00000000u}, {0x292u, 0x00000002u},
-        {0x293u, 0x06020000u}, {0x2f8u, 0x00000000u}, {0x2f9u, 0x0000002du},
-        {0x1b1u, 0x00000080u}, {0x1c2u, 0x00000001u}, {0x1c3u, 0x00000004u},
-        {0x1c5u, 0x00000009u}, {0x1b3u, 0x00000002u}, {0x1b4u, 0x00000002u},
-        {0x1b5u, 0x00000001u}, {0x1b6u, 0x00000000u}, {0x1b8u, 0x01000000u},
+        {0x318u, 0},
+        {0x390u, 0},
+        {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u},
+        {0x31du, 0x00000000u},
+        {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u},
+        {0x3b8u, 0x08c6c000u},
+        {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u},
+        {0x08eu, 0x0000000fu},
+        {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u},
+        {0x201u, 0x00010000u},
+        {0x203u, 0x00000000u},
+        {0x000u, 0x00000000u},
+        {0x002u, 0x00000000u},
+        {0x007u, (63u << 16) | 63u},
+        {0x010u, 0x80000183u},
+        {0x011u, 0x20000180u}, /* STENCIL_8, SW_MODE=24 */
+        {0x012u, 0},
+        {0x014u, 0},
+        {0x01au, 0},
+        {0x01cu, 0},
+        {0x013u, 0},
+        {0x015u, 0},
+        {0x01bu, 0},
+        {0x01du, 0},
+        {0x2afu, 0x00040000u},
+        {0x08cu, 0xaa99aaaau},
+        {0x1d4u, 0x000000ffu},
+        {0x291u, 0x10020040u},
+        {0x29bu, 0x00000000u},
+        {0x2d3u, 0x00000001u},
+        {0x2d5u, 0x02002000u},
+        {0x1ffu, 0x00000040u},
+        {0x20eu, 0x00000078u},
+        {0x2a1u, 0x00000000u},
+        {0x2a6u, 0x00000040u},
+        {0x2adu, 0x00000000u},
+        {0x2abu, 0x00000004u},
+        {0x2ceu, 0x00000000u},
+        {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu},
+        {0x30eu, 0xffffffffu},
+        {0x30fu, 0xffffffffu},
+        {0x310u, 0x00000000u},
+        {0x314u, 0x00000202u},
+        {0x311u, 0x01fd2002u},
+        {0x312u, 0x03ff0080u},
+        {0x313u, 0x00006000u},
+        {0x00eu, 0x00000002u},
+        {0x280u, 0x00080008u},
+        {0x281u, 0xffff0000u},
+        {0x282u, 0x00000008u},
+        {0x2deu, 0x000001e9u},
+        {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u},
+        {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u},
+        {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u},
+        {0x0b4u, 0x00000000u},
+        {0x0b5u, 0x3f800000u},
+        {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u},
+        {0x111u, 0x42000000u},
+        {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u},
+        {0x114u, 0x3f000000u},
+        {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u},
+        {0x085u, 0x20002000u},
+        {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu},
+        {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u},
+        {0x205u, 0x00000240u},
+        {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u},
+        {0x2f8u, 0x00000000u},
+        {0x2f9u, 0x0000002du},
+        {0x1b1u, 0x00000080u},
+        {0x1c2u, 0x00000001u},
+        {0x1c3u, 0x00000004u},
+        {0x1c5u, 0x00000009u},
+        {0x1b3u, 0x00000002u},
+        {0x1b4u, 0x00000002u},
+        {0x1b5u, 0x00000001u},
+        {0x1b6u, 0x00000000u},
+        {0x1b8u, 0x01000000u},
     };
 
-    for (size_t i = 0; i < sizeof(base_ctx_stencil) / sizeof(base_ctx_stencil[0]); i++) {
+    for (size_t i = 0; i < sizeof(base_ctx_stencil) / sizeof(base_ctx_stencil[0]);
+         i++) {
         uint32_t reg = base_ctx_stencil[i].reg;
         uint32_t val = base_ctx_stencil[i].val;
-        if (reg == 0x318u) val = (uint32_t)(color_gpu >> 8);
-        else if (reg == 0x390u) val = (uint32_t)(color_gpu >> 40);
-        else if (reg == 0x012u || reg == 0x014u) val = (uint32_t)(depth_gpu >> 8);
-        else if (reg == 0x01au || reg == 0x01cu) val = (uint32_t)(depth_gpu >> 40);
-        else if (reg == 0x013u || reg == 0x015u) val = (uint32_t)(depth_gpu >> 8);
-        else if (reg == 0x01bu || reg == 0x01du) val = (uint32_t)(depth_gpu >> 40);
+        if (reg == 0x318u)
+            val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u)
+            val = (uint32_t)(color_gpu >> 40);
+        else if (reg == 0x012u || reg == 0x014u)
+            val = (uint32_t)(depth_gpu >> 8);
+        else if (reg == 0x01au || reg == 0x01cu)
+            val = (uint32_t)(depth_gpu >> 40);
+        else if (reg == 0x013u || reg == 0x015u)
+            val = (uint32_t)(depth_gpu >> 8);
+        else if (reg == 0x01bu || reg == 0x01du)
+            val = (uint32_t)(depth_gpu >> 40);
         *dw++ = 0xc0016900u;
         *dw++ = reg;
         *dw++ = val;
     }
 
     /* Draw 1: Stencil write (ALWAYS pass, ZPASS_OP = REPLACE ref 1) */
-    *dw++ = 0xc0016900u; *dw++ = 0x200u; *dw++ = 0x0000439fu;
-    *dw++ = 0xc0016900u; *dw++ = 0x208u; *dw++ = 0x00ff0101u;
+    *dw++ = 0xc0016900u;
+    *dw++ = 0x200u;
+    *dw++ = 0x0000439fu;
+    *dw++ = 0xc0016900u;
+    *dw++ = 0x208u;
+    *dw++ = 0x00ff0101u;
 
     agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
-    *dw++ = 0xc0002f00u; *dw++ = 1u;
-    *dw++ = 0xc0017900u; *dw++ = 0x242u; *dw++ = 0x4u;
-    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u;
-    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu;
-    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u;
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x242u;
+    *dw++ = 0x4u;
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u;
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu;
+    *dw++ = 0xc0012d00u;
+    *dw++ = 3u;
+    *dw++ = 2u;
 
     /* Draw 2: Stencil test EQUAL ref 1 (should PASS -> write Green) */
-    *dw++ = 0xc0016900u; *dw++ = 0x200u; *dw++ = 0x0000011fu;
+    *dw++ = 0xc0016900u;
+    *dw++ = 0x200u;
+    *dw++ = 0x0000011fu;
     agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x200);
-    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+    *dw++ = 0xc0012d00u;
+    *dw++ = 3u;
+    *dw++ = 2u;
 
     /* Flush and release fence */
-    *dw++ = 0xc0064900u; *dw++ = 0x06603514u; *dw++ = 0x20000000u;
-    *dw++ = (uint32_t)fence_gpu; *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xbeefcafeu; *dw++ = 0u; *dw++ = 0u;
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
 
-    for (int p = 0; p < 16; p++) dw[p] = 0xffff1000u;
+    for (int p = 0; p < 16; p++)
+        dw[p] = 0xffff1000u;
     dw += 16;
 
     uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
@@ -4812,23 +4997,23 @@ static obs_result check_agc_primitive_draw_stencil(void) {
         }
     }
 
-    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "fence-hit",
-                       (uint64_t)fence_hit, "bool");
-    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "canary-d1-vs",
-                       (uint64_t)canary[0], "val");
-    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "canary-d1-ps",
-                       (uint64_t)canary[1], "val");
-    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "canary-d2-ps",
-                       (uint64_t)canary[2], "val");
+    obs_report_measure("166-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb",
+                       "fence-hit", (uint64_t)fence_hit, "bool");
+    obs_report_measure("166-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb",
+                       "canary-d1-vs", (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb",
+                       "canary-d1-ps", (uint64_t)canary[1], "val");
+    obs_report_measure("166-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb",
+                       "canary-d2-ps", (uint64_t)canary[2], "val");
 
     /* Inspect triangle center (x=32, y=32) */
     uint32_t tri_color = color_buf[32 * 64 + 32];
     int stencil_pass = (tri_color == 0xff00ff00u); /* Green */
 
-    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "tri-color",
-                       (uint64_t)tri_color, "val");
-    obs_report_measure("167-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb", "stencil-pass",
-                       (uint64_t)stencil_pass, "bool");
+    obs_report_measure("166-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb",
+                       "tri-color", (uint64_t)tri_color, "val");
+    obs_report_measure("166-agc/primitive-draw-stencil", "sceAgcDriverSubmitDcb",
+                       "stencil-pass", (uint64_t)stencil_pass, "bool");
 
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
         sceAgcDriverDestroyQueue(queue);
@@ -4838,12 +5023,15 @@ static obs_result check_agc_primitive_draw_stencil(void) {
         return obs_pass();
     }
     if (submit_rc == 0 && fence_hit == 1) {
-        return obs_partial_value("stencil test failed to produce Green pixel", (uint64_t)tri_color);
+        return obs_partial_value("stencil test failed to produce Green pixel",
+                                 (uint64_t)tri_color);
     }
     if (submit_rc == 0) {
-        return obs_partial_value("fence not hit after stencil draw", (uint64_t)fence_val);
+        return obs_partial_value("fence not hit after stencil draw",
+                                 (uint64_t)fence_val);
     }
-    return obs_partial_value("submit dcb returned non-zero code", (uint64_t)(uint32_t)submit_rc);
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
 }
 
 static obs_result check_agc_primitive_draw_blend(void) {
@@ -4899,12 +5087,12 @@ static obs_result check_agc_primitive_draw_blend(void) {
      * PS 2 (0x200): Green (0.0, 1.0, 0.0, 0.5)
      */
     agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
-                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u, 0x3f000000u,
-                       0x00000000u);
-    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
-                            0x3f800000u, 0u, 0u, 0x3f800000u);
-    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u, 0xbeef0003u,
-                            0u, 0x3f800000u, 0u, 0x3f000000u);
+                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u,
+                       0x3f000000u, 0x00000000u);
+    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u,
+                            0xbeef0002u, 0x3f800000u, 0u, 0u, 0x3f800000u);
+    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u,
+                            0xbeef0003u, 0u, 0x3f800000u, 0u, 0x3f000000u);
 
     void *queue = NULL;
     sig = OBS_FAULT_ARM(&guard);
@@ -4914,8 +5102,8 @@ static obs_result check_agc_primitive_draw_blend(void) {
     }
     int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
     obs_fault_unregister();
-    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverCreateQueue", "rc-create",
-                       (uint64_t)(uint32_t)rc_create, "code");
+    obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
     if (rc_create != 0 || queue == NULL) {
         return obs_skip("type 0 graphics queue creation failed; skipping blend draw");
     }
@@ -4932,41 +5120,97 @@ static obs_result check_agc_primitive_draw_blend(void) {
         uint32_t reg;
         uint32_t val;
     } base_ctx_blend[] = {
-        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0x00000000u},
-        {0x31cu, 0x000180a8u}, {0x31du, 0x00000000u}, {0x31eu, 0x00000000u},
-        {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c000u}, {0x109u, 0x00000000u},
-        {0x202u, 0x00cc0010u}, {0x08eu, 0x0000000fu}, {0x08fu, 0x0000000fu},
-        {0x1e0u, 0x20010001u}, {0x200u, 0x00000000u}, {0x08cu, 0xaa99aaaau},
-        {0x1d4u, 0x000000ffu}, {0x291u, 0x10020040u}, {0x29bu, 0x00000000u},
-        {0x2d3u, 0x00000001u}, {0x2d5u, 0x02002000u}, {0x1ffu, 0x00000040u},
-        {0x20eu, 0x00000078u}, {0x2a1u, 0x00000000u}, {0x2a6u, 0x00000040u},
-        {0x2adu, 0x00000000u}, {0x2abu, 0x00000004u}, {0x2ceu, 0x00000000u},
-        {0x2d4u, 0x88101000u}, {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu},
-        {0x30fu, 0xffffffffu}, {0x310u, 0x00000000u}, {0x314u, 0x00000202u},
-        {0x311u, 0x01fd2002u}, {0x312u, 0x03ff0080u}, {0x313u, 0x00006000u},
-        {0x00eu, 0x00000002u}, {0x280u, 0x00080008u}, {0x281u, 0xffff0000u},
-        {0x282u, 0x00000008u}, {0x2deu, 0x000001e9u}, {0x00cu, 0x00000000u},
-        {0x00du, 0x40004000u}, {0x081u, 0x80000000u}, {0x082u, 0x40004000u},
-        {0x090u, 0x80000000u}, {0x091u, 0x40004000u}, {0x094u, 0x80000000u},
-        {0x095u, 0x40004000u}, {0x0b4u, 0x00000000u}, {0x0b5u, 0x3f800000u},
-        {0x10fu, 0x42000000u}, {0x110u, 0x42000000u}, {0x111u, 0x42000000u},
-        {0x112u, 0x42000000u}, {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u},
-        {0x083u, 0x0000ffffu}, {0x084u, 0x00000000u}, {0x085u, 0x20002000u},
-        {0x204u, 0x00000000u}, {0x206u, 0x0000043fu}, {0x207u, 0x00000000u},
-        {0x2fau, 0x3f800000u}, {0x2fbu, 0x3f800000u}, {0x2fcu, 0x3f800000u},
-        {0x2fdu, 0x3f800000u}, {0x205u, 0x00000240u}, {0x20cu, 0x00000000u},
-        {0x292u, 0x00000002u}, {0x293u, 0x06020000u}, {0x2f8u, 0x00000000u},
-        {0x2f9u, 0x0000002du}, {0x1b1u, 0x00000080u}, {0x1c2u, 0x00000001u},
-        {0x1c3u, 0x00000004u}, {0x1c5u, 0x00000009u}, {0x1b3u, 0x00000002u},
-        {0x1b4u, 0x00000002u}, {0x1b5u, 0x00000001u}, {0x1b6u, 0x00000000u},
+        {0x318u, 0},
+        {0x390u, 0},
+        {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u},
+        {0x31du, 0x00000000u},
+        {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u},
+        {0x3b8u, 0x08c6c000u},
+        {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u},
+        {0x08eu, 0x0000000fu},
+        {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u},
+        {0x200u, 0x00000000u},
+        {0x08cu, 0xaa99aaaau},
+        {0x1d4u, 0x000000ffu},
+        {0x291u, 0x10020040u},
+        {0x29bu, 0x00000000u},
+        {0x2d3u, 0x00000001u},
+        {0x2d5u, 0x02002000u},
+        {0x1ffu, 0x00000040u},
+        {0x20eu, 0x00000078u},
+        {0x2a1u, 0x00000000u},
+        {0x2a6u, 0x00000040u},
+        {0x2adu, 0x00000000u},
+        {0x2abu, 0x00000004u},
+        {0x2ceu, 0x00000000u},
+        {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu},
+        {0x30eu, 0xffffffffu},
+        {0x30fu, 0xffffffffu},
+        {0x310u, 0x00000000u},
+        {0x314u, 0x00000202u},
+        {0x311u, 0x01fd2002u},
+        {0x312u, 0x03ff0080u},
+        {0x313u, 0x00006000u},
+        {0x00eu, 0x00000002u},
+        {0x280u, 0x00080008u},
+        {0x281u, 0xffff0000u},
+        {0x282u, 0x00000008u},
+        {0x2deu, 0x000001e9u},
+        {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u},
+        {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u},
+        {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u},
+        {0x0b4u, 0x00000000u},
+        {0x0b5u, 0x3f800000u},
+        {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u},
+        {0x111u, 0x42000000u},
+        {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u},
+        {0x114u, 0x3f000000u},
+        {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u},
+        {0x085u, 0x20002000u},
+        {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu},
+        {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u},
+        {0x205u, 0x00000240u},
+        {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u},
+        {0x2f8u, 0x00000000u},
+        {0x2f9u, 0x0000002du},
+        {0x1b1u, 0x00000080u},
+        {0x1c2u, 0x00000001u},
+        {0x1c3u, 0x00000004u},
+        {0x1c5u, 0x00000009u},
+        {0x1b3u, 0x00000002u},
+        {0x1b4u, 0x00000002u},
+        {0x1b5u, 0x00000001u},
+        {0x1b6u, 0x00000000u},
         {0x1b8u, 0x01000000u},
     };
 
     for (size_t i = 0; i < sizeof(base_ctx_blend) / sizeof(base_ctx_blend[0]); i++) {
         uint32_t reg = base_ctx_blend[i].reg;
         uint32_t val = base_ctx_blend[i].val;
-        if (reg == 0x318u) val = (uint32_t)(color_gpu >> 8);
-        else if (reg == 0x390u) val = (uint32_t)(color_gpu >> 40);
+        if (reg == 0x318u)
+            val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u)
+            val = (uint32_t)(color_gpu >> 40);
         *dw++ = 0xc0016900u;
         *dw++ = reg;
         *dw++ = val;
@@ -4974,25 +5218,46 @@ static obs_result check_agc_primitive_draw_blend(void) {
 
     /* Draw 1: Draw Red triangle (opaque background) */
     agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
-    *dw++ = 0xc0002f00u; *dw++ = 1u;
-    *dw++ = 0xc0017900u; *dw++ = 0x242u; *dw++ = 0x4u;
-    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u;
-    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu;
-    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u;
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x242u;
+    *dw++ = 0x4u;
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u;
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu;
+    *dw++ = 0xc0012d00u;
+    *dw++ = 3u;
+    *dw++ = 2u;
 
     /* Draw 2: Enable Alpha Blending (SRC_ALPHA, ONE_MINUS_SRC_ALPHA) */
-    *dw++ = 0xc0016900u; *dw++ = 0x202u; *dw++ = 0x00cc0011u;
-    *dw++ = 0xc0016900u; *dw++ = 0x1e0u; *dw++ = 0x20110010u;
+    *dw++ = 0xc0016900u;
+    *dw++ = 0x202u;
+    *dw++ = 0x00cc0011u;
+    *dw++ = 0xc0016900u;
+    *dw++ = 0x1e0u;
+    *dw++ = 0x20110010u;
 
     agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x200);
-    *dw++ = 0xc0012d00u; *dw++ = 3u; *dw++ = 2u;
+    *dw++ = 0xc0012d00u;
+    *dw++ = 3u;
+    *dw++ = 2u;
 
     /* Flush and release fence */
-    *dw++ = 0xc0064900u; *dw++ = 0x06603514u; *dw++ = 0x20000000u;
-    *dw++ = (uint32_t)fence_gpu; *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xbeefcafeu; *dw++ = 0u; *dw++ = 0u;
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
 
-    for (int p = 0; p < 16; p++) dw[p] = 0xffff1000u;
+    for (int p = 0; p < 16; p++)
+        dw[p] = 0xffff1000u;
     dw += 16;
 
     uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
@@ -5042,14 +5307,14 @@ static obs_result check_agc_primitive_draw_blend(void) {
         }
     }
 
-    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "fence-hit",
-                       (uint64_t)fence_hit, "bool");
-    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "canary-d1-vs",
-                       (uint64_t)canary[0], "val");
-    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "canary-d1-ps",
-                       (uint64_t)canary[1], "val");
-    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "canary-d2-ps",
-                       (uint64_t)canary[2], "val");
+    obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb",
+                       "fence-hit", (uint64_t)fence_hit, "bool");
+    obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb",
+                       "canary-d1-vs", (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb",
+                       "canary-d1-ps", (uint64_t)canary[1], "val");
+    obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb",
+                       "canary-d2-ps", (uint64_t)canary[2], "val");
 
     /* Inspect triangle center (x=32, y=32) */
     uint32_t tri_color = color_buf[32 * 64 + 32];
@@ -5057,12 +5322,13 @@ static obs_result check_agc_primitive_draw_blend(void) {
     uint32_t green = (tri_color >> 8) & 0xffu;
     uint32_t blue = tri_color & 0xffu;
 
-    int blend_pass = (red >= 0x70 && red <= 0x90 && green >= 0x70 && green <= 0x90 && blue == 0);
+    int blend_pass =
+        (red >= 0x70 && red <= 0x90 && green >= 0x70 && green <= 0x90 && blue == 0);
 
-    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "tri-color",
-                       (uint64_t)tri_color, "val");
-    obs_report_measure("168-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb", "blend-pass",
-                       (uint64_t)blend_pass, "bool");
+    obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb",
+                       "tri-color", (uint64_t)tri_color, "val");
+    obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb",
+                       "blend-pass", (uint64_t)blend_pass, "bool");
 
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
         sceAgcDriverDestroyQueue(queue);
@@ -5072,12 +5338,14 @@ static obs_result check_agc_primitive_draw_blend(void) {
         return obs_pass();
     }
     if (submit_rc == 0 && fence_hit == 1) {
-        return obs_partial_value("blend test failed to produce expected 50/50 color", (uint64_t)tri_color);
+        return obs_partial_value("blend test failed to produce expected 50/50 color",
+                                 (uint64_t)tri_color);
     }
     if (submit_rc == 0) {
         return obs_partial_value("fence not hit after blend draw", (uint64_t)fence_val);
     }
-    return obs_partial_value("submit dcb returned non-zero code", (uint64_t)(uint32_t)submit_rc);
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
 }
 
 static obs_result check_agc_primitive_draw_indexed(void) {
@@ -5117,7 +5385,8 @@ static obs_result check_agc_primitive_draw_indexed(void) {
 #endif
 
     obs_fault_unregister();
-    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL || index_buf == NULL) {
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL ||
+        index_buf == NULL) {
         return obs_skip("failed to allocate Onion memory for indexed draw test");
     }
     *fence = 0x11111111u;
@@ -5141,10 +5410,10 @@ static obs_result check_agc_primitive_draw_indexed(void) {
      * PS (0x100): Cyan color (0.0, 1.0, 1.0, 1.0)
      */
     agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
-                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u, 0x3f000000u,
-                       0x00000000u);
-    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
-                            0u, 0x3f800000u, 0x3f800000u, 0x3f800000u);
+                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u,
+                       0x3f000000u, 0x00000000u);
+    agc_depth_build_ps_rgba((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u,
+                            0xbeef0002u, 0u, 0x3f800000u, 0x3f800000u, 0x3f800000u);
 
     void *queue = NULL;
     sig = OBS_FAULT_ARM(&guard);
@@ -5154,8 +5423,8 @@ static obs_result check_agc_primitive_draw_indexed(void) {
     }
     int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
     obs_fault_unregister();
-    obs_report_measure("169-agc/primitive-draw-indexed", "sceAgcDriverCreateQueue", "rc-create",
-                       (uint64_t)(uint32_t)rc_create, "code");
+    obs_report_measure("166-agc/primitive-draw-indexed", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
     if (rc_create != 0 || queue == NULL) {
         return obs_skip("type 0 graphics queue creation failed; skipping indexed draw");
     }
@@ -5173,41 +5442,98 @@ static obs_result check_agc_primitive_draw_indexed(void) {
         uint32_t reg;
         uint32_t val;
     } base_ctx_indexed[] = {
-        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0x00000000u},
-        {0x31cu, 0x000180a8u}, {0x31du, 0x00000000u}, {0x31eu, 0x00000000u},
-        {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c000u}, {0x109u, 0x00000000u},
-        {0x202u, 0x00cc0010u}, {0x08eu, 0x0000000fu}, {0x08fu, 0x0000000fu},
-        {0x1e0u, 0x20010001u}, {0x200u, 0x00000000u}, {0x08cu, 0xaa99aaaau},
-        {0x1d4u, 0x000000ffu}, {0x291u, 0x10020040u}, {0x29bu, 0x00000000u},
-        {0x2d3u, 0x00000001u}, {0x2d5u, 0x02002000u}, {0x1ffu, 0x00000040u},
-        {0x20eu, 0x00000078u}, {0x2a1u, 0x00000000u}, {0x2a6u, 0x00000040u},
-        {0x2adu, 0x00000000u}, {0x2abu, 0x00000004u}, {0x2ceu, 0x00000000u},
-        {0x2d4u, 0x88101000u}, {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu},
-        {0x30fu, 0xffffffffu}, {0x310u, 0x00000000u}, {0x314u, 0x00000202u},
-        {0x311u, 0x01fd2002u}, {0x312u, 0x03ff0080u}, {0x313u, 0x00006000u},
-        {0x00eu, 0x00000002u}, {0x280u, 0x00080008u}, {0x281u, 0xffff0000u},
-        {0x282u, 0x00000008u}, {0x2deu, 0x000001e9u}, {0x00cu, 0x00000000u},
-        {0x00du, 0x40004000u}, {0x081u, 0x80000000u}, {0x082u, 0x40004000u},
-        {0x090u, 0x80000000u}, {0x091u, 0x40004000u}, {0x094u, 0x80000000u},
-        {0x095u, 0x40004000u}, {0x0b4u, 0x00000000u}, {0x0b5u, 0x3f800000u},
-        {0x10fu, 0x42000000u}, {0x110u, 0x42000000u}, {0x111u, 0x42000000u},
-        {0x112u, 0x42000000u}, {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u},
-        {0x083u, 0x0000ffffu}, {0x084u, 0x00000000u}, {0x085u, 0x20002000u},
-        {0x204u, 0x00000000u}, {0x206u, 0x0000043fu}, {0x207u, 0x00000000u},
-        {0x2fau, 0x3f800000u}, {0x2fbu, 0x3f800000u}, {0x2fcu, 0x3f800000u},
-        {0x2fdu, 0x3f800000u}, {0x205u, 0x00000240u}, {0x20cu, 0x00000000u},
-        {0x292u, 0x00000002u}, {0x293u, 0x06020000u}, {0x2f8u, 0x00000000u},
-        {0x2f9u, 0x0000002du}, {0x1b1u, 0x00000080u}, {0x1c2u, 0x00000001u},
-        {0x1c3u, 0x00000004u}, {0x1c5u, 0x00000009u}, {0x1b3u, 0x00000002u},
-        {0x1b4u, 0x00000002u}, {0x1b5u, 0x00000001u}, {0x1b6u, 0x00000000u},
+        {0x318u, 0},
+        {0x390u, 0},
+        {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u},
+        {0x31du, 0x00000000u},
+        {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u},
+        {0x3b8u, 0x08c6c000u},
+        {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u},
+        {0x08eu, 0x0000000fu},
+        {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u},
+        {0x200u, 0x00000000u},
+        {0x08cu, 0xaa99aaaau},
+        {0x1d4u, 0x000000ffu},
+        {0x291u, 0x10020040u},
+        {0x29bu, 0x00000000u},
+        {0x2d3u, 0x00000001u},
+        {0x2d5u, 0x02002000u},
+        {0x1ffu, 0x00000040u},
+        {0x20eu, 0x00000078u},
+        {0x2a1u, 0x00000000u},
+        {0x2a6u, 0x00000040u},
+        {0x2adu, 0x00000000u},
+        {0x2abu, 0x00000004u},
+        {0x2ceu, 0x00000000u},
+        {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu},
+        {0x30eu, 0xffffffffu},
+        {0x30fu, 0xffffffffu},
+        {0x310u, 0x00000000u},
+        {0x314u, 0x00000202u},
+        {0x311u, 0x01fd2002u},
+        {0x312u, 0x03ff0080u},
+        {0x313u, 0x00006000u},
+        {0x00eu, 0x00000002u},
+        {0x280u, 0x00080008u},
+        {0x281u, 0xffff0000u},
+        {0x282u, 0x00000008u},
+        {0x2deu, 0x000001e9u},
+        {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u},
+        {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u},
+        {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u},
+        {0x0b4u, 0x00000000u},
+        {0x0b5u, 0x3f800000u},
+        {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u},
+        {0x111u, 0x42000000u},
+        {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u},
+        {0x114u, 0x3f000000u},
+        {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u},
+        {0x085u, 0x20002000u},
+        {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu},
+        {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u},
+        {0x205u, 0x00000240u},
+        {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u},
+        {0x2f8u, 0x00000000u},
+        {0x2f9u, 0x0000002du},
+        {0x1b1u, 0x00000080u},
+        {0x1c2u, 0x00000001u},
+        {0x1c3u, 0x00000004u},
+        {0x1c5u, 0x00000009u},
+        {0x1b3u, 0x00000002u},
+        {0x1b4u, 0x00000002u},
+        {0x1b5u, 0x00000001u},
+        {0x1b6u, 0x00000000u},
         {0x1b8u, 0x01000000u},
     };
 
-    for (size_t i = 0; i < sizeof(base_ctx_indexed) / sizeof(base_ctx_indexed[0]); i++) {
+    for (size_t i = 0; i < sizeof(base_ctx_indexed) / sizeof(base_ctx_indexed[0]);
+         i++) {
         uint32_t reg = base_ctx_indexed[i].reg;
         uint32_t val = base_ctx_indexed[i].val;
-        if (reg == 0x318u) val = (uint32_t)(color_gpu >> 8);
-        else if (reg == 0x390u) val = (uint32_t)(color_gpu >> 40);
+        if (reg == 0x318u)
+            val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u)
+            val = (uint32_t)(color_gpu >> 40);
         *dw++ = 0xc0016900u;
         *dw++ = reg;
         *dw++ = val;
@@ -5217,10 +5543,17 @@ static obs_result check_agc_primitive_draw_indexed(void) {
     agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
 
     /* Primitive & Geometry Control */
-    *dw++ = 0xc0002f00u; *dw++ = 1u; /* NUM_INSTANCES */
-    *dw++ = 0xc0017900u; *dw++ = 0x242u; *dw++ = 0x4u; /* mmVGT_PRIMITIVE_TYPE: DI_PT_TRILIST */
-    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u; /* mmGE_CNTL */
-    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u; /* NUM_INSTANCES */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x242u;
+    *dw++ = 0x4u; /* mmVGT_PRIMITIVE_TYPE: DI_PT_TRILIST */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u; /* mmGE_CNTL */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
 
     /* Index Type: 16-bit indices */
     *dw++ = 0xc0002a00u; /* PACKET3_INDEX_TYPE */
@@ -5231,15 +5564,21 @@ static obs_result check_agc_primitive_draw_indexed(void) {
     *dw++ = 3u;          /* max_size (index buffer count) */
     *dw++ = (uint32_t)index_gpu;
     *dw++ = (uint32_t)(index_gpu >> 32);
-    *dw++ = 3u;          /* index_count */
-    *dw++ = 2u;          /* initiator: DI_SRC_SEL_DMA */
+    *dw++ = 3u; /* index_count */
+    *dw++ = 2u; /* initiator: DI_SRC_SEL_DMA */
 
     /* Flush and release fence */
-    *dw++ = 0xc0064900u; *dw++ = 0x06603514u; *dw++ = 0x20000000u;
-    *dw++ = (uint32_t)fence_gpu; *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xbeefcafeu; *dw++ = 0u; *dw++ = 0u;
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
 
-    for (int p = 0; p < 16; p++) dw[p] = 0xffff1000u;
+    for (int p = 0; p < 16; p++)
+        dw[p] = 0xffff1000u;
     dw += 16;
 
     uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
@@ -5299,19 +5638,19 @@ static obs_result check_agc_primitive_draw_indexed(void) {
     }
 #endif
 
-    obs_report_measure("169-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb", "rc-submit",
-                       (uint64_t)(uint32_t)submit_rc, "code");
-    obs_report_measure("169-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb", "fence-hit",
-                       (uint64_t)fence_hit, "bool");
-    obs_report_measure("169-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb", "canary-vs",
-                       (uint64_t)canary[0], "val");
-    obs_report_measure("169-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb", "canary-ps",
-                       (uint64_t)canary[1], "val");
+    obs_report_measure("166-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb",
+                       "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
+    obs_report_measure("166-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb",
+                       "fence-hit", (uint64_t)fence_hit, "bool");
+    obs_report_measure("166-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb",
+                       "canary-vs", (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb",
+                       "canary-ps", (uint64_t)canary[1], "val");
 
     /* Inspect triangle center (x=32, y=32) */
     uint32_t tri_color = color_buf[32 * 64 + 32];
-    obs_report_measure("169-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb", "tri-color",
-                       (uint64_t)tri_color, "val");
+    obs_report_measure("166-agc/primitive-draw-indexed", "sceAgcDriverSubmitDcb",
+                       "tri-color", (uint64_t)tri_color, "val");
 
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
         sceAgcDriverDestroyQueue(queue);
@@ -5321,12 +5660,15 @@ static obs_result check_agc_primitive_draw_indexed(void) {
         return obs_pass();
     }
     if (submit_rc == 0 && fence_hit == 1) {
-        return obs_partial_value("indexed draw executed but pixels unmodified", (uint64_t)tri_color);
+        return obs_partial_value("indexed draw executed but pixels unmodified",
+                                 (uint64_t)tri_color);
     }
     if (submit_rc == 0) {
-        return obs_partial_value("fence not hit after indexed draw", (uint64_t)fence_val);
+        return obs_partial_value("fence not hit after indexed draw",
+                                 (uint64_t)fence_val);
     }
-    return obs_partial_value("submit dcb returned non-zero code", (uint64_t)(uint32_t)submit_rc);
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
 }
 
 static obs_result check_agc_primitive_draw_textured(void) {
@@ -5366,7 +5708,8 @@ static obs_result check_agc_primitive_draw_textured(void) {
 #endif
 
     obs_fault_unregister();
-    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL || tex_buf == NULL) {
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL ||
+        tex_buf == NULL) {
         return obs_skip("failed to allocate Onion memory for textured draw test");
     }
     *fence = 0x11111111u;
@@ -5386,24 +5729,29 @@ static obs_result check_agc_primitive_draw_textured(void) {
     }
 
     /* Build shaders:
-     * VS (0x000): Screen center triangle, exports Color (1,1,1,1) in param0, UVs in param1
-     * PS (0x100): Samples texture from descriptor table at s[0:1], multiplies with color, exports to mrt0
+     * VS (0x000): Screen center triangle, exports Color (1,1,1,1) in param0, UVs in
+     * param1 PS (0x100): Samples texture from descriptor table at s[0:1], multiplies
+     * with color, exports to mrt0
      */
-    agc_textured_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
-                          0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u, 0x3f000000u);
-    agc_textured_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u);
+    agc_textured_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u,
+                          0xbeef0001u, 0xbf000000u, 0xbf000000u, 0x3f000000u,
+                          0xbf000000u, 0x00000000u, 0x3f000000u);
+    agc_textured_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u,
+                          0xbeef0002u);
 
     /* Populate descriptor table at gpu_payload + 0x200 */
     uint32_t *dt = (uint32_t *)(gpu_payload + 0x200);
-    for (int i = 0; i < 16; i++) dt[i] = 0u;
+    for (int i = 0; i < 16; i++)
+        dt[i] = 0u;
     uint64_t tex_gpu = (uint64_t)(uintptr_t)tex_buf;
     uint32_t w = 16u, h = 16u;
     dt[0] = (uint32_t)(tex_gpu & 0xffffffffu);
-    dt[1] = (uint32_t)((tex_gpu >> 32) & 0xfffffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
+    dt[1] =
+        (uint32_t)((tex_gpu >> 32) & 0xfffffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
     dt[2] = (((w - 1u) >> 2) & 0x3fffu) | (((h - 1u) & 0x3fffu) << 14) | (1u << 31);
-    dt[3] = 0x90000688u; /* SQ_RSRC_IMG_2D, linear, RGBA swizzle */
-    dt[8] = 0u;          /* WRAP_REPEAT */
-    dt[9] = 0x00fff000u; /* MAX_LOD */
+    dt[3] = 0x90000688u;              /* SQ_RSRC_IMG_2D, linear, RGBA swizzle */
+    dt[8] = 0u;                       /* WRAP_REPEAT */
+    dt[9] = 0x00fff000u;              /* MAX_LOD */
     dt[10] = (1u << 20) | (1u << 22); /* mag_filter=linear, min_filter=linear */
     dt[11] = 0u;
 
@@ -5415,10 +5763,11 @@ static obs_result check_agc_primitive_draw_textured(void) {
     }
     int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
     obs_fault_unregister();
-    obs_report_measure("170-agc/primitive-draw-textured", "sceAgcDriverCreateQueue", "rc-create",
-                       (uint64_t)(uint32_t)rc_create, "code");
+    obs_report_measure("166-agc/primitive-draw-textured", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
     if (rc_create != 0 || queue == NULL) {
-        return obs_skip("type 0 graphics queue creation failed; skipping textured draw");
+        return obs_skip(
+            "type 0 graphics queue creation failed; skipping textured draw");
     }
 
     obs_agc_cb_probe *probe = get_agc_probe();
@@ -5433,35 +5782,84 @@ static obs_result check_agc_primitive_draw_textured(void) {
         uint32_t reg;
         uint32_t val;
     } base_ctx_textured[] = {
-        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0x00000000u},
-        {0x31cu, 0x000180a8u}, {0x31du, 0x00000000u}, {0x31eu, 0x00000000u},
-        {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c000u}, {0x109u, 0x00000000u},
-        {0x202u, 0x00cc0010u}, {0x08eu, 0x0000000fu}, {0x08fu, 0x0000000fu},
-        {0x1e0u, 0x20010001u}, {0x200u, 0x00000000u}, {0x08cu, 0xaa99aaaau},
-        {0x1d4u, 0x000000ffu}, {0x291u, 0x10020040u}, {0x29bu, 0x00000000u},
-        {0x2d3u, 0x00000001u}, {0x2d5u, 0x02002000u}, {0x1ffu, 0x00000040u},
-        {0x20eu, 0x00000078u}, {0x2a1u, 0x00000000u}, {0x2a6u, 0x00000040u},
-        {0x2adu, 0x00000000u}, {0x2abu, 0x00000004u}, {0x2ceu, 0x00000000u},
-        {0x2d4u, 0x88101000u}, {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu},
-        {0x30fu, 0xffffffffu}, {0x310u, 0x00000000u}, {0x314u, 0x00000202u},
-        {0x311u, 0x01fd2002u}, {0x312u, 0x03ff0080u}, {0x313u, 0x00006000u},
-        {0x00eu, 0x00000002u}, {0x280u, 0x00080008u}, {0x281u, 0xffff0000u},
-        {0x282u, 0x00000008u}, {0x2deu, 0x000001e9u}, {0x00cu, 0x00000000u},
-        {0x00du, 0x40004000u}, {0x081u, 0x80000000u}, {0x082u, 0x40004000u},
-        {0x090u, 0x80000000u}, {0x091u, 0x40004000u}, {0x094u, 0x80000000u},
-        {0x095u, 0x40004000u}, {0x0b4u, 0x00000000u}, {0x0b5u, 0x3f800000u},
-        {0x10fu, 0x42000000u}, {0x110u, 0x42000000u}, {0x111u, 0x42000000u},
-        {0x112u, 0x42000000u}, {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u},
-        {0x083u, 0x0000ffffu}, {0x084u, 0x00000000u}, {0x085u, 0x20002000u},
-        {0x204u, 0x00000000u}, {0x206u, 0x0000043fu}, {0x207u, 0x00000000u},
-        {0x2fau, 0x3f800000u}, {0x2fbu, 0x3f800000u}, {0x2fcu, 0x3f800000u},
-        {0x2fdu, 0x3f800000u}, {0x205u, 0x00000240u}, {0x20cu, 0x00000000u},
-        {0x292u, 0x00000002u}, {0x293u, 0x06020000u}, {0x2f8u, 0x00000000u},
+        {0x318u, 0},
+        {0x390u, 0},
+        {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u},
+        {0x31du, 0x00000000u},
+        {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u},
+        {0x3b8u, 0x08c6c000u},
+        {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u},
+        {0x08eu, 0x0000000fu},
+        {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u},
+        {0x200u, 0x00000000u},
+        {0x08cu, 0xaa99aaaau},
+        {0x1d4u, 0x000000ffu},
+        {0x291u, 0x10020040u},
+        {0x29bu, 0x00000000u},
+        {0x2d3u, 0x00000001u},
+        {0x2d5u, 0x02002000u},
+        {0x1ffu, 0x00000040u},
+        {0x20eu, 0x00000078u},
+        {0x2a1u, 0x00000000u},
+        {0x2a6u, 0x00000040u},
+        {0x2adu, 0x00000000u},
+        {0x2abu, 0x00000004u},
+        {0x2ceu, 0x00000000u},
+        {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu},
+        {0x30eu, 0xffffffffu},
+        {0x30fu, 0xffffffffu},
+        {0x310u, 0x00000000u},
+        {0x314u, 0x00000202u},
+        {0x311u, 0x01fd2002u},
+        {0x312u, 0x03ff0080u},
+        {0x313u, 0x00006000u},
+        {0x00eu, 0x00000002u},
+        {0x280u, 0x00080008u},
+        {0x281u, 0xffff0000u},
+        {0x282u, 0x00000008u},
+        {0x2deu, 0x000001e9u},
+        {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u},
+        {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u},
+        {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u},
+        {0x0b4u, 0x00000000u},
+        {0x0b5u, 0x3f800000u},
+        {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u},
+        {0x111u, 0x42000000u},
+        {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u},
+        {0x114u, 0x3f000000u},
+        {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u},
+        {0x085u, 0x20002000u},
+        {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu},
+        {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u},
+        {0x205u, 0x00000240u},
+        {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u},
+        {0x2f8u, 0x00000000u},
         {0x2f9u, 0x0000002du},
         /* Interpolation and parameter export controls: */
         {0x191u, 0x00000000u}, /* SPI_PS_INPUT_CNTL_0: Offset 0, smooth (Color) */
         {0x192u, 0x00000001u}, /* SPI_PS_INPUT_CNTL_1: Offset 1, smooth (UV) */
-        {0x1b1u, 0x00000001u}, /* SPI_VS_OUT_CONFIG: 2 PC Exports (param0, param1), NO_PC_EXPORT=0 */
+        {0x1b1u, 0x00000001u}, /* SPI_VS_OUT_CONFIG: 2 PC Exports (param0, param1),
+                                  NO_PC_EXPORT=0 */
         {0x1c2u, 0x00000001u}, /* SPI_SHADER_IDX_FORMAT: IDX0 = 1COMP */
         {0x1c3u, 0x00000004u}, /* SPI_SHADER_POS_FORMAT: POS0 = 4COMP */
         {0x1c5u, 0x00000009u}, /* SPI_SHADER_COL_FORMAT: COL0 = 32_ABGR */
@@ -5472,11 +5870,14 @@ static obs_result check_agc_primitive_draw_textured(void) {
         {0x1b8u, 0x01000000u}, /* SPI_BARYC_CNTL: FRONT_FACE_ALL_BITS */
     };
 
-    for (size_t i = 0; i < sizeof(base_ctx_textured) / sizeof(base_ctx_textured[0]); i++) {
+    for (size_t i = 0; i < sizeof(base_ctx_textured) / sizeof(base_ctx_textured[0]);
+         i++) {
         uint32_t reg = base_ctx_textured[i].reg;
         uint32_t val = base_ctx_textured[i].val;
-        if (reg == 0x318u) val = (uint32_t)(color_gpu >> 8);
-        else if (reg == 0x390u) val = (uint32_t)(color_gpu >> 40);
+        if (reg == 0x318u)
+            val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u)
+            val = (uint32_t)(color_gpu >> 40);
         *dw++ = 0xc0016900u;
         *dw++ = reg;
         *dw++ = val;
@@ -5489,13 +5890,21 @@ static obs_result check_agc_primitive_draw_textured(void) {
     }
 
     /* Shader stages */
-    agc_depth_bind_stages_textured(&dw, payload_va + 0x000, payload_va + 0x100, payload_va + 0x200);
+    agc_depth_bind_stages_textured(&dw, payload_va + 0x000, payload_va + 0x100,
+                                   payload_va + 0x200);
 
     /* Primitive & Geometry Control */
-    *dw++ = 0xc0002f00u; *dw++ = 1u; /* NUM_INSTANCES */
-    *dw++ = 0xc0017900u; *dw++ = 0x242u; *dw++ = 0x4u; /* mmVGT_PRIMITIVE_TYPE: DI_PT_TRILIST */
-    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u; /* mmGE_CNTL */
-    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u; /* NUM_INSTANCES */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x242u;
+    *dw++ = 0x4u; /* mmVGT_PRIMITIVE_TYPE: DI_PT_TRILIST */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u; /* mmGE_CNTL */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
 
     /* Draw: DRAW_INDEX_AUTO */
     *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO */
@@ -5503,11 +5912,17 @@ static obs_result check_agc_primitive_draw_textured(void) {
     *dw++ = 2u;          /* initiator: DI_SRC_SEL_DMA */
 
     /* Flush and release fence */
-    *dw++ = 0xc0064900u; *dw++ = 0x06603514u; *dw++ = 0x20000000u;
-    *dw++ = (uint32_t)fence_gpu; *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xbeefcafeu; *dw++ = 0u; *dw++ = 0u;
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
 
-    for (int p = 0; p < 16; p++) dw[p] = 0xffff1000u;
+    for (int p = 0; p < 16; p++)
+        dw[p] = 0xffff1000u;
     dw += 16;
 
     uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
@@ -5569,19 +5984,19 @@ static obs_result check_agc_primitive_draw_textured(void) {
     }
 #endif
 
-    obs_report_measure("170-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb", "rc-submit",
-                       (uint64_t)(uint32_t)submit_rc, "code");
-    obs_report_measure("170-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb", "fence-hit",
-                       (uint64_t)fence_hit, "bool");
-    obs_report_measure("170-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb", "canary-vs",
-                       (uint64_t)canary[0], "val");
-    obs_report_measure("170-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb", "canary-ps",
-                       (uint64_t)canary[1], "val");
+    obs_report_measure("166-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb",
+                       "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
+    obs_report_measure("166-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb",
+                       "fence-hit", (uint64_t)fence_hit, "bool");
+    obs_report_measure("166-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb",
+                       "canary-vs", (uint64_t)canary[0], "val");
+    obs_report_measure("166-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb",
+                       "canary-ps", (uint64_t)canary[1], "val");
 
     /* Inspect triangle center (x=32, y=32) */
     uint32_t tri_color = color_buf[32 * 64 + 32];
-    obs_report_measure("170-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb", "tri-color",
-                       (uint64_t)tri_color, "val");
+    obs_report_measure("166-agc/primitive-draw-textured", "sceAgcDriverSubmitDcb",
+                       "tri-color", (uint64_t)tri_color, "val");
 
     uint32_t red = tri_color & 0xffu;
     uint32_t green = (tri_color >> 8) & 0xffu;
@@ -5591,35 +6006,375 @@ static obs_result check_agc_primitive_draw_textured(void) {
         sceAgcDriverDestroyQueue(queue);
     }
 
-    if (submit_rc == 0 && fence_hit == 1 && (red >= 0xe0 && green <= 0x10 && blue >= 0xe0)) {
+    if (submit_rc == 0 && fence_hit == 1 &&
+        (red >= 0xe0 && green <= 0x10 && blue >= 0xe0)) {
         return obs_pass();
     }
     if (submit_rc == 0 && fence_hit == 1 && tri_color != 0x00000000u) {
         return obs_pass();
     }
     if (submit_rc == 0 && fence_hit == 1) {
-        return obs_partial_value("textured draw executed but pixels unmodified", (uint64_t)tri_color);
+        return obs_partial_value("textured draw executed but pixels unmodified",
+                                 (uint64_t)tri_color);
     }
     if (submit_rc == 0) {
-        return obs_partial_value("fence not hit after textured draw", (uint64_t)fence_val);
+        return obs_partial_value("fence not hit after textured draw",
+                                 (uint64_t)fence_val);
     }
-    return obs_partial_value("submit dcb returned non-zero code", (uint64_t)(uint32_t)submit_rc);
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
+}
+
+static obs_result check_agc_primitive_cull_face(void) {
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before cull face draw allocation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *canary =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *color_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(256) uint8_t s_host_cull_payload[0x1000];
+    static _Alignas(64) uint32_t s_host_cull_fence[16];
+    static _Alignas(64) uint32_t s_host_cull_canary[16];
+    static _Alignas(65536) uint32_t s_host_cull_color[16384];
+    uint8_t *gpu_payload = s_host_cull_payload;
+    volatile uint32_t *fence = s_host_cull_fence;
+    volatile uint32_t *canary = s_host_cull_canary;
+    volatile uint32_t *color_buf = s_host_cull_color;
+#endif
+
+    obs_fault_unregister();
+    if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL) {
+        return obs_skip("failed to allocate Onion memory for cull face test");
+    }
+    *fence = 0x11111111u;
+
+    uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
+    for (size_t i = 0; i < 16; i++) {
+        canary[i] = 0xaaaaaaaau;
+    }
+
+    for (size_t i = 0; i < 16384; i++) {
+        color_buf[i] = 0x00000000u;
+    }
+
+    /* Build shaders:
+     * Draw 1 (Front-facing CCW):
+     * VS (0x000): CCW triangle {(-0.5,-0.5), (0.5,-0.5), (0,0.5)}, canary[0] =
+     * 0xbeef0001 PS (0x100): Pure Red (1.0, 0.0, 0.0, 1.0), canary[1] = 0xbeef0002
+     *
+     * Draw 2 (Back-facing CW):
+     * VS (0x200): CW triangle {(-0.5,-0.5), (0,0.5), (0.5,-0.5)}, canary[2] =
+     * 0xbeef0011 PS (0x300): Pure Blue (0.0, 0.0, 1.0, 1.0), canary[3] = 0xbeef0012
+     */
+    /* Draw 1: Front-facing CCW */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u, 0xbeef0001u,
+                       0xbf000000u, 0xbf000000u, 0x3f000000u, 0xbf000000u, 0x00000000u,
+                       0x3f000000u, 0u);
+    agc_depth_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u, 0xbeef0002u,
+                       0x3f800000u, 0u, 0u);
+
+    /* Draw 2: Back-facing CW */
+    agc_depth_build_vs((uint32_t *)(gpu_payload + 0x200), canary_gpu, 8u, 0xbeef0011u,
+                       0xbf000000u, 0xbf000000u, 0x00000000u, 0x3f000000u, 0x3f000000u,
+                       0xbf000000u, 0u);
+    agc_depth_build_ps((uint32_t *)(gpu_payload + 0x300), canary_gpu, 12u, 0xbeef0012u,
+                       0u, 0u, 0x3f800000u);
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation for cull face test");
+    }
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverCreateQueue",
+                       "rc-create", (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip(
+            "type 0 graphics queue creation failed; skipping cull face draw");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x2000);
+
+    uint32_t *dw = (uint32_t *)probe->cur;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+
+    /* Base context with PA_SU_SC_MODE_CNTL configured for CULL_BACK (bit 1 = 1, FACE =
+     * 0) */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } base_ctx_cull[] = {
+        {0x318u, 0},
+        {0x390u, 0},
+        {0x31bu, 0x00000000u},
+        {0x31cu, 0x000180a8u},
+        {0x31du, 0x00000000u},
+        {0x31eu, 0x00000000u},
+        {0x3b0u, (63u << 14) | 63u},
+        {0x3b8u, 0x08c6c000u},
+        {0x109u, 0x00000000u},
+        {0x202u, 0x00cc0010u},
+        {0x08eu, 0x0000000fu},
+        {0x08fu, 0x0000000fu},
+        {0x1e0u, 0x20010001u},
+        {0x200u, 0x00000000u},
+        {0x08cu, 0xaa99aaaau},
+        {0x1d4u, 0x000000ffu},
+        {0x291u, 0x10020040u},
+        {0x29bu, 0x00000000u},
+        {0x2d3u, 0x00000001u},
+        {0x2d5u, 0x02002000u},
+        {0x1ffu, 0x00000040u},
+        {0x20eu, 0x00000078u},
+        {0x2a1u, 0x00000000u},
+        {0x2a6u, 0x00000040u},
+        {0x2adu, 0x00000000u},
+        {0x2abu, 0x00000004u},
+        {0x2ceu, 0x00000000u},
+        {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu},
+        {0x30eu, 0xffffffffu},
+        {0x30fu, 0xffffffffu},
+        {0x310u, 0x00000000u},
+        {0x314u, 0x00000202u},
+        {0x311u, 0x01fd2002u},
+        {0x312u, 0x03ff0080u},
+        {0x313u, 0x00006000u},
+        {0x00eu, 0x00000002u},
+        {0x280u, 0x00080008u},
+        {0x281u, 0xffff0000u},
+        {0x282u, 0x00000008u},
+        {0x2deu, 0x000001e9u},
+        {0x00cu, 0x00000000u},
+        {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u},
+        {0x082u, 0x40004000u},
+        {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u},
+        {0x094u, 0x80000000u},
+        {0x095u, 0x40004000u},
+        {0x0b4u, 0x00000000u},
+        {0x0b5u, 0x3f800000u},
+        {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u},
+        {0x111u, 0x42000000u},
+        {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u},
+        {0x114u, 0x3f000000u},
+        {0x083u, 0x0000ffffu},
+        {0x084u, 0x00000000u},
+        {0x085u, 0x20002000u},
+        {0x204u, 0x00000000u},
+        {0x206u, 0x0000043fu},
+        {0x207u, 0x00000000u},
+        {0x2fau, 0x3f800000u},
+        {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u},
+        {0x2fdu, 0x3f800000u},
+        /* PA_SU_SC_MODE_CNTL: CULL_BACK (bit 1=1), FACE=0 (CCW front), POLY=triangles
+         */
+        {0x205u, 0x00000242u},
+        {0x20cu, 0x00000000u},
+        {0x292u, 0x00000002u},
+        {0x293u, 0x06020000u},
+        {0x2f8u, 0x00000000u},
+        {0x2f9u, 0x0000002du},
+        {0x1b1u, 0x00000080u},
+        {0x1c2u, 0x00000001u},
+        {0x1c3u, 0x00000004u},
+        {0x1c5u, 0x00000009u},
+        {0x1b3u, 0x00000002u},
+        {0x1b4u, 0x00000002u},
+        {0x1b5u, 0x00000001u},
+        {0x1b6u, 0x00000000u},
+        {0x1b8u, 0x01000000u},
+    };
+
+    for (size_t i = 0; i < sizeof(base_ctx_cull) / sizeof(base_ctx_cull[0]); i++) {
+        uint32_t reg = base_ctx_cull[i].reg;
+        uint32_t val = base_ctx_cull[i].val;
+        if (reg == 0x318u)
+            val = (uint32_t)(color_gpu >> 8);
+        else if (reg == 0x390u)
+            val = (uint32_t)(color_gpu >> 40);
+        *dw++ = 0xc0016900u;
+        *dw++ = reg;
+        *dw++ = val;
+    }
+
+    /* Primitive & Geometry Setup */
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u; /* NUM_INSTANCES */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x242u;
+    *dw++ = 0x4u; /* mmVGT_PRIMITIVE_TYPE: DI_PT_TRILIST */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u; /* mmGE_CNTL */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+
+    /* Draw 1: Front-facing CCW triangle (Red) -> should PASS culling */
+    agc_depth_bind_stages(&dw, payload_va + 0x000, payload_va + 0x100);
+    *dw++ = 0xc0012d00u; /* DRAW_INDEX_AUTO */
+    *dw++ = 3u;
+    *dw++ = 2u;
+
+    /* Draw 2: Back-facing CW triangle (Blue) -> should be CULLED by hardware */
+    agc_depth_bind_stages(&dw, payload_va + 0x200, payload_va + 0x300);
+    *dw++ = 0xc0012d00u; /* DRAW_INDEX_AUTO */
+    *dw++ = 3u;
+    *dw++ = 2u;
+
+    /* Flush and release fence */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+    for (int p = 0; p < 16; p++)
+        dw[p] = 0xffff1000u;
+    dw += 16;
+
+    uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
+    uint32_t bytes_written = words_written * sizeof(uint32_t);
+    probe->cur += bytes_written;
+
+    obs_agc_dcb_desc desc;
+    __builtin_memset(&desc, 0, sizeof(desc));
+    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc.size = words_written;
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+#endif
+
+    int submit_rc = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            submit_rc = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    uint32_t fence_val = *fence;
+    int fence_hit = 0;
+    if (submit_rc == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            fence_val = *fence;
+            if (fence_val == 0xbeefcafeu) {
+                fence_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)canary + p));
+    }
+    for (size_t p = 0; p < 0x10000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    }
+#endif
+
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "fence-hit", (uint64_t)fence_hit, "bool");
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "canary-d1-vs", (uint64_t)canary[0], "val");
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "canary-d1-ps", (uint64_t)canary[1], "val");
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "canary-d2-vs", (uint64_t)canary[2], "val");
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "canary-d2-ps", (uint64_t)canary[3], "val");
+
+    /* Inspect triangle center (x=32, y=32) */
+    uint32_t tri_color = color_buf[32 * 64 + 32];
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "tri-color", (uint64_t)tri_color, "val");
+
+    uint32_t red = tri_color & 0xffu;
+    uint32_t blue = (tri_color >> 16) & 0xffu;
+
+    int cull_pass = (red >= 0xe0 && blue == 0u);
+    obs_report_measure("171-agc/primitive-cull-face", "sceAgcDriverSubmitDcb",
+                       "cull-pass", (uint64_t)cull_pass, "bool");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+
+    if (submit_rc == 0 && fence_hit == 1 && cull_pass) {
+        return obs_pass();
+    }
+    if (submit_rc == 0 && fence_hit == 1 && tri_color != 0x00000000u) {
+        return obs_partial_value("cull face test drew pixels but wrong color",
+                                 (uint64_t)tri_color);
+    }
+    if (submit_rc == 0 && fence_hit == 1) {
+        return obs_partial_value("cull face test drew no pixels", (uint64_t)tri_color);
+    }
+    if (submit_rc == 0) {
+        return obs_partial_value("fence not hit after cull face draw",
+                                 (uint64_t)fence_val);
+    }
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc);
 }
 
 static obs_result check_agc_driver_resource_registration(void) {
     int q_ok = obs_address_is_callable(
         (const void *)&sceAgcDriverQueryResourceRegistrationUserMemoryRequirements);
-    int init_ok = obs_address_is_callable(
-        (const void *)&sceAgcDriverInitResourceRegistration);
-    int ro_ok = obs_address_is_callable(
-        (const void *)&sceAgcDriverRegisterOwner);
-    int rr_ok = obs_address_is_callable(
-        (const void *)&sceAgcDriverRegisterResource);
+    int init_ok =
+        obs_address_is_callable((const void *)&sceAgcDriverInitResourceRegistration);
+    int ro_ok = obs_address_is_callable((const void *)&sceAgcDriverRegisterOwner);
+    int rr_ok = obs_address_is_callable((const void *)&sceAgcDriverRegisterResource);
 
-    obs_report_measure(
-        "166-agc/driver-resource-registration",
-        "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements", "present",
-        (uint64_t)(q_ok ? 1 : 0), "bool");
+    obs_report_measure("166-agc/driver-resource-registration",
+                       "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements",
+                       "present", (uint64_t)(q_ok ? 1 : 0), "bool");
     obs_report_measure("166-agc/driver-resource-registration",
                        "sceAgcDriverInitResourceRegistration", "present",
                        (uint64_t)(init_ok ? 1 : 0), "bool");
@@ -5631,8 +6386,7 @@ static obs_result check_agc_driver_resource_registration(void) {
                        (uint64_t)(rr_ok ? 1 : 0), "bool");
 
     if (!q_ok && !ro_ok && !rr_ok) {
-        return obs_skip(
-            "AGC driver resource registration symbols not callable");
+        return obs_skip("AGC driver resource registration symbols not callable");
     }
 
     obs_jmp_buf guard;
@@ -5645,8 +6399,7 @@ static obs_result check_agc_driver_resource_registration(void) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             rc_query =
-                sceAgcDriverQueryResourceRegistrationUserMemoryRequirements(
-                    &req_size);
+                sceAgcDriverQueryResourceRegistrationUserMemoryRequirements(&req_size);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -5657,8 +6410,8 @@ static obs_result check_agc_driver_resource_registration(void) {
             (uint64_t)(uint32_t)rc_query, "code");
         obs_report_measure(
             "166-agc/driver-resource-registration",
-            "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements",
-            "out-size", req_size, "size");
+            "sceAgcDriverQueryResourceRegistrationUserMemoryRequirements", "out-size",
+            req_size, "size");
     }
 
     /* 2. RegisterOwner with sentinel-prefilled 128-byte buffer */
@@ -5698,8 +6451,8 @@ static obs_result check_agc_driver_resource_registration(void) {
         }
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_resource = sceAgcDriverRegisterResource(dummy_res, NULL, NULL,
-                                                       NULL, "test_resource");
+            rc_resource = sceAgcDriverRegisterResource(dummy_res, NULL, NULL, NULL,
+                                                       "test_resource");
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -5750,16 +6503,16 @@ static obs_result check_agc_driver_resource_registration(void) {
                              (uint64_t)(uint32_t)rc_query);
 }
 
-/* A `*GetSize` sibling, called with the generic six-register signature for the same reason
- * the builders are: the arity is not established here. */
+/* A `*GetSize` sibling, called with the generic six-register signature for the same
+ * reason the builders are: the arity is not established here. */
 typedef uint64_t (*agc_getsize_fn)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
                                    uint64_t);
 
 /* Resolve a name through the loader, falling back to the weak import.
  *
  * The fallback is not redundant. `agc_resolve` needs module enumeration or dlsym and a
- * payload leg has neither, so a check that only resolved by name would skip on a delivery
- * shape that can otherwise reach this. */
+ * payload leg has neither, so a check that only resolved by name would skip on a
+ * delivery shape that can otherwise reach this. */
 static const void *agc_resolve_or_weak(const char *name, const void *weak) {
     const void *fn = agc_resolve(name);
     if (fn == NULL && obs_address_is_callable(weak)) {
@@ -5772,19 +6525,19 @@ static const void *agc_resolve_or_weak(const char *name, const void *weak) {
  *
  * # Why the pair, and why neither number is asserted
  *
- * `GetSize` is what the guest asks before it reserves room; the builder then writes into
- * that reservation. Two independent reimplementations disagree about several of these
- * counts, and one of them records why: its payloads are its own encoding rather than the
- * hardware packet. Writing either figure in here as the expectation would fit the
- * instrument to a borrowed answer - the failure principle 3 already names one level down.
- * A check that asserts a copied number and passes has established only that it was copied
- * correctly.
+ * `GetSize` is what the guest asks before it reserves room; the builder then writes
+ * into that reservation. Two independent reimplementations disagree about several of
+ * these counts, and one of them records why: its payloads are its own encoding rather
+ * than the hardware packet. Writing either figure in here as the expectation would fit
+ * the instrument to a borrowed answer - the failure principle 3 already names one level
+ * down. A check that asserts a copied number and passes has established only that it
+ * was copied correctly.
  *
- * What is knowable without any prior figure is the relationship: a reservation that does
- * not cover the write is a fault whoever is right about the size. That is the only thing
- * judged here, and it is this project's own reasoning rather than anybody's value - so the
- * check stays `assumed` while the measurements it emits are what a hardware run turns into
- * `hardware`. (D331)
+ * What is knowable without any prior figure is the relationship: a reservation that
+ * does not cover the write is a fault whoever is right about the size. That is the only
+ * thing judged here, and it is this project's own reasoning rather than anybody's value
+ * - so the check stays `assumed` while the measurements it emits are what a hardware
+ * run turns into `hardware`. (D331)
  */
 static obs_result agc_getsize_pair(const char *id, const char *builder_name,
                                    const char *getsize_name, const void *builder_fn,
@@ -5796,9 +6549,9 @@ static obs_result agc_getsize_pair(const char *id, const char *builder_name,
     uint32_t reserved = (uint32_t)raw;
     obs_report_measure(id, getsize_name, "getsize-arg", arg, "val");
     obs_report_measure(id, getsize_name, "getsize", (uint64_t)reserved, "bytes");
-    /* The return width is not established either, so the high half is reported rather than
-     * discarded: a non-zero high half means this is not a 32-bit byte count and every
-     * dword figure derived from it is wrong. */
+    /* The return width is not established either, so the high half is reported rather
+     * than discarded: a non-zero high half means this is not a 32-bit byte count and
+     * every dword figure derived from it is wrong. */
     obs_report_measure(id, getsize_name, "getsize-high32", raw >> 32, "val");
     if ((reserved & 3u) == 0u) {
         obs_report_measure(id, getsize_name, "getsize-dwords",
@@ -5844,10 +6597,10 @@ static obs_result check_agc_cb_nop_getsize(void) {
     if (g == NULL) {
         return obs_skip("libSceAgc is not loaded or sceAgcCbNopGetSize not found");
     }
-    /* Swept rather than read once. This one takes a count, so a single reading cannot tell
-     * a constant from a function of its argument - and which it is decides whether a
-     * translator may cache the answer. The sweep records the curve and asserts no shape
-     * for it. */
+    /* Swept rather than read once. This one takes a count, so a single reading cannot
+     * tell a constant from a function of its argument - and which it is decides whether
+     * a translator may cache the answer. The sweep records the curve and asserts no
+     * shape for it. */
     static const uint64_t args[] = {0, 1, 2, 4, 8};
     for (unsigned int i = 0; i < OBS_COUNT(args); i++) {
         uint64_t v = ((agc_getsize_fn)g)(args[i], 0, 0, 0, 0, 0);
@@ -5898,6 +6651,117 @@ static obs_result check_agc_dcb_jump_getsize(void) {
         agc_resolve_or_weak("sceAgcDcbJump", (const void *)&sceAgcDcbJump),
         agc_resolve_or_weak("sceAgcDcbJumpGetSize",
                             (const void *)&sceAgcDcbJumpGetSize),
+        0);
+}
+
+static obs_result check_agc_acb_acquire_mem_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/acb-acquire-mem-getsize", "sceAgcAcbAcquireMem",
+        "sceAgcAcbAcquireMemGetSize",
+        agc_resolve_or_weak("sceAgcAcbAcquireMem", (const void *)&sceAgcAcbAcquireMem),
+        agc_resolve_or_weak("sceAgcAcbAcquireMemGetSize",
+                            (const void *)&sceAgcAcbAcquireMemGetSize),
+        0);
+}
+
+static obs_result check_agc_acb_dma_data_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/acb-dma-data-getsize", "sceAgcAcbDmaData", "sceAgcAcbDmaDataGetSize",
+        agc_resolve_or_weak("sceAgcAcbDmaData", (const void *)&sceAgcAcbDmaData),
+        agc_resolve_or_weak("sceAgcAcbDmaDataGetSize",
+                            (const void *)&sceAgcAcbDmaDataGetSize),
+        0);
+}
+
+static obs_result check_agc_acb_jump_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/acb-jump-getsize", "sceAgcAcbJump", "sceAgcAcbJumpGetSize",
+        agc_resolve_or_weak("sceAgcAcbJump", (const void *)&sceAgcAcbJump),
+        agc_resolve_or_weak("sceAgcAcbJumpGetSize",
+                            (const void *)&sceAgcAcbJumpGetSize),
+        0);
+}
+
+static obs_result check_agc_cb_branch_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/cb-branch-getsize", "sceAgcCbBranch", "sceAgcCbBranchGetSize",
+        agc_resolve_or_weak("sceAgcCbBranch", (const void *)&sceAgcCbBranch),
+        agc_resolve_or_weak("sceAgcCbBranchGetSize",
+                            (const void *)&sceAgcCbBranchGetSize),
+        0);
+}
+
+static obs_result check_agc_cb_queue_eop_action_getsize(void) {
+    /* No attested builder, so only the reservation is read: the helper reports a
+     * partial rather than inventing a write to compare against. */
+    return agc_getsize_pair(
+        "166-agc/cb-queue-eop-action-getsize", "(none)",
+        "sceAgcCbQueueEndOfPipeActionGetSize", NULL,
+        agc_resolve_or_weak("sceAgcCbQueueEndOfPipeActionGetSize",
+                            (const void *)&sceAgcCbQueueEndOfPipeActionGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_acquire_mem_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-acquire-mem-getsize", "sceAgcDcbAcquireMem",
+        "sceAgcDcbAcquireMemGetSize",
+        agc_resolve_or_weak("sceAgcDcbAcquireMem", (const void *)&sceAgcDcbAcquireMem),
+        agc_resolve_or_weak("sceAgcDcbAcquireMemGetSize",
+                            (const void *)&sceAgcDcbAcquireMemGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_draw_index_indirect_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-draw-index-indirect-getsize", "sceAgcDcbDrawIndexIndirect",
+        "sceAgcDcbDrawIndexIndirectGetSize",
+        agc_resolve_or_weak("sceAgcDcbDrawIndexIndirect",
+                            (const void *)&sceAgcDcbDrawIndexIndirect),
+        agc_resolve_or_weak("sceAgcDcbDrawIndexIndirectGetSize",
+                            (const void *)&sceAgcDcbDrawIndexIndirectGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_draw_index_indirect_multi_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-draw-index-indirect-multi-getsize",
+        "sceAgcDcbDrawIndexIndirectMulti", "sceAgcDcbDrawIndexIndirectMultiGetSize",
+        agc_resolve_or_weak("sceAgcDcbDrawIndexIndirectMulti",
+                            (const void *)&sceAgcDcbDrawIndexIndirectMulti),
+        agc_resolve_or_weak("sceAgcDcbDrawIndexIndirectMultiGetSize",
+                            (const void *)&sceAgcDcbDrawIndexIndirectMultiGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_get_lod_stats_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-get-lod-stats-getsize", "sceAgcDcbGetLodStats",
+        "sceAgcDcbGetLodStatsGetSize",
+        agc_resolve_or_weak("sceAgcDcbGetLodStats",
+                            (const void *)&sceAgcDcbGetLodStats),
+        agc_resolve_or_weak("sceAgcDcbGetLodStatsGetSize",
+                            (const void *)&sceAgcDcbGetLodStatsGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_rewind_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-rewind-getsize", "sceAgcDcbRewind", "sceAgcDcbRewindGetSize",
+        agc_resolve_or_weak("sceAgcDcbRewind", (const void *)&sceAgcDcbRewind),
+        agc_resolve_or_weak("sceAgcDcbRewindGetSize",
+                            (const void *)&sceAgcDcbRewindGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_stall_cb_parser_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-stall-cb-parser-getsize", "sceAgcDcbStallCommandBufferParser",
+        "sceAgcDcbStallCommandBufferParserGetSize",
+        agc_resolve_or_weak("sceAgcDcbStallCommandBufferParser",
+                            (const void *)&sceAgcDcbStallCommandBufferParser),
+        agc_resolve_or_weak("sceAgcDcbStallCommandBufferParserGetSize",
+                            (const void *)&sceAgcDcbStallCommandBufferParserGetSize),
         0);
 }
 
@@ -5952,21 +6816,24 @@ static const obs_check agc_checks[] = {
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw,
      OBS_FROM_ASSUMED},
-    {"166-agc/primitive-draw-depth", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_depth,
-     OBS_FROM_ASSUMED},
-    {"167-agc/primitive-draw-stencil", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_stencil,
-     OBS_FROM_ASSUMED},
-    {"168-agc/primitive-draw-blend", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_blend,
-     OBS_FROM_ASSUMED},
-    {"169-agc/primitive-draw-indexed", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_indexed,
-     OBS_FROM_ASSUMED},
-    {"170-agc/primitive-draw-textured", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw_textured,
-     OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-depth", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_draw_depth, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-stencil", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_draw_stencil, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-blend", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_draw_blend, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-indexed", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_draw_indexed, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-textured", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_draw_textured, OBS_FROM_ASSUMED},
+    {"171-agc/primitive-cull-face", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_cull_face, OBS_FROM_ASSUMED},
     {"166-agc/shader-graphics-stages", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcCreateShader, check_agc_shader_graphics_stages,
      OBS_FROM_ASSUMED},
@@ -6027,8 +6894,8 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDcbSetNumInstances,
      check_agc_dcb_set_num_instances, OBS_FROM_ASSUMED},
     {"166-agc/driver-resource-registration", "libSceAgcDriver", "(registration)",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
-     check_agc_driver_resource_registration, OBS_FROM_ASSUMED},
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_resource_registration,
+     OBS_FROM_ASSUMED},
     {"166-agc/cb-nop-getsize", "libSceAgc", "sceAgcCbNopGetSize", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_nop_getsize, OBS_FROM_ASSUMED},
     {"166-agc/dcb-dma-data-getsize", "libSceAgc", "sceAgcDcbDmaDataGetSize",
@@ -6042,6 +6909,36 @@ static const obs_check agc_checks[] = {
      check_agc_dcb_set_uc_register_direct_getsize, OBS_FROM_ASSUMED},
     {"166-agc/dcb-jump-getsize", "libSceAgc", "sceAgcDcbJumpGetSize", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_jump_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/acb-acquire-mem-getsize", "libSceAgc", "sceAgcAcbAcquireMemGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_acb_acquire_mem_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/acb-dma-data-getsize", "libSceAgc", "sceAgcAcbDmaDataGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_acb_dma_data_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/acb-jump-getsize", "libSceAgc", "sceAgcAcbJumpGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_acb_jump_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/cb-branch-getsize", "libSceAgc", "sceAgcCbBranchGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_branch_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/cb-queue-eop-action-getsize", "libSceAgc",
+     "sceAgcCbQueueEndOfPipeActionGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_cb_queue_eop_action_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-acquire-mem-getsize", "libSceAgc", "sceAgcDcbAcquireMemGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_acquire_mem_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-index-indirect-getsize", "libSceAgc",
+     "sceAgcDcbDrawIndexIndirectGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_dcb_draw_index_indirect_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-draw-index-indirect-multi-getsize", "libSceAgc",
+     "sceAgcDcbDrawIndexIndirectMultiGetSize", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_dcb_draw_index_indirect_multi_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-get-lod-stats-getsize", "libSceAgc", "sceAgcDcbGetLodStatsGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_get_lod_stats_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-rewind-getsize", "libSceAgc", "sceAgcDcbRewindGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_rewind_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-stall-cb-parser-getsize", "libSceAgc",
+     "sceAgcDcbStallCommandBufferParserGetSize", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_dcb_stall_cb_parser_getsize, OBS_FROM_ASSUMED},
 };
 #endif
 

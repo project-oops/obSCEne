@@ -341,8 +341,8 @@ mod tests {
     /// A field outside its vocabulary names the axis it failed, so the fix is obvious.
     #[test]
     fn an_unknown_field_says_which_axis_it_failed() {
-        let error =
-            parse_name("obscene-probe-hardware-prospero-superuser-bigapp.log").expect_err("refused");
+        let error = parse_name("obscene-probe-hardware-prospero-superuser-bigapp.log")
+            .expect_err("refused");
         assert!(error.contains("privilege"), "{error}");
         assert!(error.contains("root"), "the allowed set is listed: {error}");
     }

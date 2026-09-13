@@ -1256,19 +1256,19 @@ OBS_WEAK uint64_t sceAgcDcbResetQueue(void *arg0, uint64_t arg1, uint64_t arg2,
                                       uint64_t arg3, uint64_t arg4, uint64_t arg5);
 /* The `*GetSize` siblings.
  *
- * What the library says a builder will consume, asked *before* the builder is called. The
- * guest reserves that many bytes and the builder then writes into the reservation, so the
- * two are one contract and neither number is knowable here in advance - see
+ * What the library says a builder will consume, asked *before* the builder is called.
+ * The guest reserves that many bytes and the builder then writes into the reservation,
+ * so the two are one contract and neither number is knowable here in advance - see
  * `166-agc/<builder>-getsize` and D331.
  *
- * Declared with the generic six-register signature for the same reason the builders above
- * are: the arity is not established, and System V AMD64 makes a call with six register
- * arguments safe for any arity <= 6. A narrower declaration would assert an argument count
- * nobody here has measured.
+ * Declared with the generic six-register signature for the same reason the builders
+ * above are: the arity is not established, and System V AMD64 makes a call with six
+ * register arguments safe for any arity <= 6. A narrower declaration would assert an
+ * argument count nobody here has measured.
  *
- * The labels are the identifiers the loader resolves. Each was derived from the name with
- * `obscene-tool nid` and then checked against `data/mined-names.txt`, which agrees on all
- * four from five independent sources.
+ * The labels are the identifiers the loader resolves. Each was derived from the name
+ * with `obscene-tool nid` and then checked against `data/mined-names.txt`, which agrees
+ * on all four from five independent sources.
  */
 OBS_WEAK uint64_t sceAgcCbNopGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
                                      uint64_t arg3, uint64_t arg4,
@@ -1286,13 +1286,84 @@ OBS_WEAK uint64_t sceAgcDcbSetUcRegisterDirectGetSize(
 /* The jump pair. Two independent reimplementations disagree on this builder's dword
  * count, and one of them explains its extra dword as a predication slot another call
  * writes into the packet afterwards. That makes it the cheapest live disagreement the
- * reservation-versus-write invariant can settle, so it is the first pair added after the
- * original four (D331). */
+ * reservation-versus-write invariant can settle, so it is the first pair added after
+ * the original four (D331). */
 OBS_WEAK uint64_t sceAgcDcbJump(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
                                 uint64_t arg4, uint64_t arg5) __asm__("$xSAR0LTcRKM");
 OBS_WEAK uint64_t sceAgcDcbJumpGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
                                        uint64_t arg3, uint64_t arg4,
                                        uint64_t arg5) __asm__("$VEGu4dixjUg");
+/* The ten builders whose reservation is measured against their write, and the eleven
+ * `*GetSize` siblings. Generic six-register declarations: the arity of none of these is
+ * established, and System V AMD64 makes a six-register call safe for any arity <= 6.
+ * Every label was derived with `obscene-tool nid` and agrees with data/mined-names.txt.
+ * `sceAgcCbQueueEndOfPipeAction` has no attested builder, so only its size is read.
+ * (D331) */
+OBS_WEAK uint64_t sceAgcAcbAcquireMem(void *arg0, uint64_t arg1, uint64_t arg2,
+                                      uint64_t arg3, uint64_t arg4,
+                                      uint64_t arg5) __asm__("$KT-hTp-Ch14");
+OBS_WEAK uint64_t sceAgcAcbDmaData(void *arg0, uint64_t arg1, uint64_t arg2,
+                                   uint64_t arg3, uint64_t arg4,
+                                   uint64_t arg5) __asm__("$-RnpfpxIhec");
+OBS_WEAK uint64_t sceAgcAcbJump(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
+                                uint64_t arg4, uint64_t arg5) __asm__("$e1DFTg+Sd8U");
+OBS_WEAK uint64_t sceAgcCbBranch(void *arg0, uint64_t arg1, uint64_t arg2,
+                                 uint64_t arg3, uint64_t arg4,
+                                 uint64_t arg5) __asm__("$w1KFAHVqpaU");
+OBS_WEAK uint64_t sceAgcDcbAcquireMem(void *arg0, uint64_t arg1, uint64_t arg2,
+                                      uint64_t arg3, uint64_t arg4,
+                                      uint64_t arg5) __asm__("$57labkp+rSQ");
+OBS_WEAK uint64_t sceAgcDcbDrawIndexIndirect(void *arg0, uint64_t arg1, uint64_t arg2,
+                                             uint64_t arg3, uint64_t arg4,
+                                             uint64_t arg5) __asm__("$t1vNu082-jM");
+OBS_WEAK uint64_t
+sceAgcDcbDrawIndexIndirectMulti(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
+                                uint64_t arg4, uint64_t arg5) __asm__("$ypVBz4uPKcQ");
+OBS_WEAK uint64_t sceAgcDcbGetLodStats(void *arg0, uint64_t arg1, uint64_t arg2,
+                                       uint64_t arg3, uint64_t arg4,
+                                       uint64_t arg5) __asm__("$vuSXe69VILM");
+OBS_WEAK uint64_t sceAgcDcbRewind(void *arg0, uint64_t arg1, uint64_t arg2,
+                                  uint64_t arg3, uint64_t arg4,
+                                  uint64_t arg5) __asm__("$zfcxg-ewMK8");
+OBS_WEAK uint64_t sceAgcDcbStallCommandBufferParser(
+    void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5) __asm__("$u2T2DiA5hRI");
+OBS_WEAK uint64_t sceAgcAcbAcquireMemGetSize(uint64_t arg0, uint64_t arg1,
+                                             uint64_t arg2, uint64_t arg3,
+                                             uint64_t arg4,
+                                             uint64_t arg5) __asm__("$ewobAQeMo5k");
+OBS_WEAK uint64_t sceAgcAcbDmaDataGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                          uint64_t arg3, uint64_t arg4,
+                                          uint64_t arg5) __asm__("$M0ttm8h7SKA");
+OBS_WEAK uint64_t sceAgcAcbJumpGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                       uint64_t arg3, uint64_t arg4,
+                                       uint64_t arg5) __asm__("$b-oySn+G2tE");
+OBS_WEAK uint64_t sceAgcCbBranchGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                        uint64_t arg3, uint64_t arg4,
+                                        uint64_t arg5) __asm__("$uZW-mqsxkrM");
+OBS_WEAK uint64_t sceAgcCbQueueEndOfPipeActionGetSize(
+    uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5) __asm__("$hL7C0IRpWZI");
+OBS_WEAK uint64_t sceAgcDcbAcquireMemGetSize(uint64_t arg0, uint64_t arg1,
+                                             uint64_t arg2, uint64_t arg3,
+                                             uint64_t arg4,
+                                             uint64_t arg5) __asm__("$-vnlTPPXPrw");
+OBS_WEAK uint64_t sceAgcDcbDrawIndexIndirectGetSize(
+    uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5) __asm__("$mStuvI0zOtc");
+OBS_WEAK uint64_t sceAgcDcbDrawIndexIndirectMultiGetSize(
+    uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5) __asm__("$r98I08t+LOg");
+OBS_WEAK uint64_t sceAgcDcbGetLodStatsGetSize(uint64_t arg0, uint64_t arg1,
+                                              uint64_t arg2, uint64_t arg3,
+                                              uint64_t arg4,
+                                              uint64_t arg5) __asm__("$rUuVjyR+Rd4");
+OBS_WEAK uint64_t sceAgcDcbRewindGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                         uint64_t arg3, uint64_t arg4,
+                                         uint64_t arg5) __asm__("$QIXCsbipds0");
+OBS_WEAK uint64_t sceAgcDcbStallCommandBufferParserGetSize(
+    uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5) __asm__("$+u6dKSLWM2o");
 OBS_WEAK int sceAgcInit(void *state, uint32_t version) __asm__("$23LRUSvYu1M");
 OBS_WEAK int sceAgcGetIsTrinityMode(uint8_t *out_is_trinity) __asm__("$BfBDZGbti7A");
 OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
@@ -1353,8 +1424,9 @@ OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb);
 OBS_WEAK int sceAgcDriverSubmitCommandBuffer(void *queue, const void *dcb);
 OBS_WEAK int sceAgcDriverQueryResourceRegistrationUserMemoryRequirements(
     uint64_t *out_size) __asm__("$AOLcoIkQDgM");
-OBS_WEAK int sceAgcDriverInitResourceRegistration(void *state,
-                                                  uint64_t size) __asm__("$F0Y42t-3e18");
+OBS_WEAK int
+sceAgcDriverInitResourceRegistration(void *state,
+                                     uint64_t size) __asm__("$F0Y42t-3e18");
 OBS_WEAK int sceAgcDriverRegisterOwner(void *owner_desc) __asm__("$X-Nm5KLREeg");
 OBS_WEAK int sceAgcDriverRegisterResource(void *arg0, void *arg1, const void *code,
                                           void *arg3,

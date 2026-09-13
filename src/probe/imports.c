@@ -358,7 +358,8 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "sceAgcDcbSetIndexCount"},
     {"libSceAgc", "$q88lQ+GP5Yk"},
     {"libSceAgc", "sceAgcDcbDrawIndex"},
-    /* libSceAgcDriver: current-generation GPU driver submission & resource registration */
+    /* libSceAgcDriver: current-generation GPU driver submission & resource registration
+     */
     {"libSceAgcDriver", "sceAgcDriverCreateQueue"},
     {"libSceAgcDriver", "sceAgcDriverDestroyQueue"},
     {"libSceAgcDriver", "sceAgcDriverSubmitDcb"},
@@ -479,6 +480,27 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "$aP1Ki9G3++4"},
     {"libSceAgc", "$xSAR0LTcRKM"},
     {"libSceAgc", "$VEGu4dixjUg"},
+    {"libSceAgc", "$+u6dKSLWM2o"},
+    {"libSceAgc", "$-RnpfpxIhec"},
+    {"libSceAgc", "$-vnlTPPXPrw"},
+    {"libSceAgc", "$57labkp+rSQ"},
+    {"libSceAgc", "$KT-hTp-Ch14"},
+    {"libSceAgc", "$M0ttm8h7SKA"},
+    {"libSceAgc", "$QIXCsbipds0"},
+    {"libSceAgc", "$b-oySn+G2tE"},
+    {"libSceAgc", "$e1DFTg+Sd8U"},
+    {"libSceAgc", "$ewobAQeMo5k"},
+    {"libSceAgc", "$hL7C0IRpWZI"},
+    {"libSceAgc", "$mStuvI0zOtc"},
+    {"libSceAgc", "$r98I08t+LOg"},
+    {"libSceAgc", "$rUuVjyR+Rd4"},
+    {"libSceAgc", "$t1vNu082-jM"},
+    {"libSceAgc", "$u2T2DiA5hRI"},
+    {"libSceAgc", "$uZW-mqsxkrM"},
+    {"libSceAgc", "$vuSXe69VILM"},
+    {"libSceAgc", "$w1KFAHVqpaU"},
+    {"libSceAgc", "$ypVBz4uPKcQ"},
+    {"libSceAgc", "$zfcxg-ewMK8"},
 
     /* ---- declared inside a section file rather than in platform.h ---------------
      *
