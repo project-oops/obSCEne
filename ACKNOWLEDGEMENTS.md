@@ -187,7 +187,16 @@ what.
   two of ours were swapped (D036); `src/loader/runtimeLinker.cpp` gave the relocation
   types it accepts and how it treats an unresolved weak import; `src/libs/libC.cpp` and
   `src/libs/libKernel.cpp` gave which output functions it implements and where each one
-  sends its bytes (D037).
+  sends its bytes (D037). Its `libs/` registration tables were read again for D331, where
+  the point was which `*GetSize` functions exist and that two implementations disagree about
+  their values - not what any value is.
+
+- **prosper** (<https://github.com/mattias800/prosper>), a current-generation compatibility
+  layer. Its status documents named the `*GetSize` family as an ABI contract with the
+  guest's own reservation, and recorded that its own counts are its encoding rather than the
+  hardware packet - which is the argument for asking the platform instead of copying either
+  answer (D331). Read as prose. **The repository grants no licence**, so nothing could have
+  been taken from it even had this project wanted to, and nothing was.
 
 Nothing was copied. What came back is a handful of integers, a list of which functions
 exist, and an understanding of two failure paths - all of it re-implemented here from

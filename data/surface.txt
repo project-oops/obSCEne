@@ -484,6 +484,7 @@ sceAgcAcbWaitRegMem
 sceAgcAcbWriteData
 sceAgcCbDispatch
 sceAgcCbNop
+sceAgcCbNopGetSize
 sceAgcCbReleaseMem
 sceAgcCbSetShRegisterRangeDirect
 sceAgcCbSetShRegistersDirect
@@ -502,6 +503,7 @@ sceAgcDcbEventWrite
 sceAgcDcbGetLodStats
 sceAgcDcbGetLodStatsGetSize
 sceAgcDcbJump
+sceAgcDcbJumpGetSize
 sceAgcDcbPopMarker
 sceAgcDcbPushMarker
 sceAgcDcbSetBaseIndirectArgs
@@ -514,6 +516,8 @@ sceAgcDcbSetIndexSize
 sceAgcDcbSetNumInstances
 sceAgcDcbSetPredication
 sceAgcDcbSetShRegistersIndirect
+sceAgcDcbSetUcRegisterDirect
+sceAgcDcbSetUcRegisterDirectGetSize
 sceAgcDcbSetUcRegistersIndirect
 sceAgcDcbStallCommandBufferParser
 sceAgcDcbStallCommandBufferParserGetSize

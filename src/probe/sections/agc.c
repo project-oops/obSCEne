@@ -186,6 +186,21 @@ static obs_result check_agc_dcb_event_write(void) {
 static obs_result check_agc_dcb_set_num_instances(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_cb_nop_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_dma_data_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_set_index_count_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_set_uc_register_direct_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_dcb_jump_getsize(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 static obs_result check_agc_driver_resource_registration(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
@@ -290,6 +305,19 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-resource-registration", "libSceAgcDriver", "(registration)",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_resource_registration, OBS_FROM_ASSUMED},
+    {"166-agc/cb-nop-getsize", "libSceAgc", "sceAgcCbNopGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_nop_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-dma-data-getsize", "libSceAgc", "sceAgcDcbDmaDataGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_dma_data_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-count-getsize", "libSceAgc",
+     "sceAgcDcbSetIndexCountGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_dcb_set_index_count_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-uc-register-direct-getsize", "libSceAgc",
+     "sceAgcDcbSetUcRegisterDirectGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_dcb_set_uc_register_direct_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-jump-getsize", "libSceAgc", "sceAgcDcbJumpGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_jump_getsize, OBS_FROM_ASSUMED},
 };
 #else
 
@@ -5271,6 +5299,157 @@ static obs_result check_agc_driver_resource_registration(void) {
                              (uint64_t)(uint32_t)rc_query);
 }
 
+/* A `*GetSize` sibling, called with the generic six-register signature for the same reason
+ * the builders are: the arity is not established here. */
+typedef uint64_t (*agc_getsize_fn)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
+                                   uint64_t);
+
+/* Resolve a name through the loader, falling back to the weak import.
+ *
+ * The fallback is not redundant. `agc_resolve` needs module enumeration or dlsym and a
+ * payload leg has neither, so a check that only resolved by name would skip on a delivery
+ * shape that can otherwise reach this. */
+static const void *agc_resolve_or_weak(const char *name, const void *weak) {
+    const void *fn = agc_resolve(name);
+    if (fn == NULL && obs_address_is_callable(weak)) {
+        fn = weak;
+    }
+    return fn;
+}
+
+/* A builder and its `*GetSize` sibling, measured together.
+ *
+ * # Why the pair, and why neither number is asserted
+ *
+ * `GetSize` is what the guest asks before it reserves room; the builder then writes into
+ * that reservation. Two independent reimplementations disagree about several of these
+ * counts, and one of them records why: its payloads are its own encoding rather than the
+ * hardware packet. Writing either figure in here as the expectation would fit the
+ * instrument to a borrowed answer - the failure principle 3 already names one level down.
+ * A check that asserts a copied number and passes has established only that it was copied
+ * correctly.
+ *
+ * What is knowable without any prior figure is the relationship: a reservation that does
+ * not cover the write is a fault whoever is right about the size. That is the only thing
+ * judged here, and it is this project's own reasoning rather than anybody's value - so the
+ * check stays `assumed` while the measurements it emits are what a hardware run turns into
+ * `hardware`. (D331)
+ */
+static obs_result agc_getsize_pair(const char *id, const char *builder_name,
+                                   const char *getsize_name, const void *builder_fn,
+                                   const void *getsize_fn, uint64_t arg) {
+    if (getsize_fn == NULL) {
+        return obs_skip("libSceAgc is not loaded or the GetSize sibling is absent");
+    }
+    uint64_t raw = ((agc_getsize_fn)getsize_fn)(arg, 0, 0, 0, 0, 0);
+    uint32_t reserved = (uint32_t)raw;
+    obs_report_measure(id, getsize_name, "getsize-arg", arg, "val");
+    obs_report_measure(id, getsize_name, "getsize", (uint64_t)reserved, "bytes");
+    /* The return width is not established either, so the high half is reported rather than
+     * discarded: a non-zero high half means this is not a 32-bit byte count and every
+     * dword figure derived from it is wrong. */
+    obs_report_measure(id, getsize_name, "getsize-high32", raw >> 32, "val");
+    if ((reserved & 3u) == 0u) {
+        obs_report_measure(id, getsize_name, "getsize-dwords",
+                           (uint64_t)(reserved / 4u), "dwords");
+    }
+
+    if (builder_fn == NULL) {
+        return obs_partial_value("the reservation was read; the builder is absent",
+                                 (uint64_t)reserved);
+    }
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer probe");
+    }
+    agc_cb_prepare(probe, 0);
+    uint64_t rc =
+        ((agc_cb_fn)builder_fn)(&probe->begin, arg, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    if (!agc_cb_guard_intact(probe)) {
+        return obs_fail("the builder wrote past the end of its command buffer");
+    }
+    if (probe->cur < probe->begin || probe->cur > probe->end) {
+        return obs_fail("the builder left the writer pointer outside the buffer");
+    }
+    uint64_t advanced = probe->cur - probe->begin;
+    unsigned int written = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
+    obs_report_measure(id, builder_name, "rc", rc, "rc");
+    obs_report_measure(id, builder_name, "bytes-advanced", advanced, "bytes");
+    obs_report_measure(id, builder_name, "bytes-written", (uint64_t)written, "bytes");
+
+    if (advanced == 0 && written == 0) {
+        return obs_partial_value("the reservation was read; the builder wrote nothing",
+                                 (uint64_t)reserved);
+    }
+    if ((uint64_t)reserved < advanced) {
+        return obs_fail_code("the builder advanced past its own reservation", advanced);
+    }
+    return obs_pass_value((uint64_t)reserved);
+}
+
+static obs_result check_agc_cb_nop_getsize(void) {
+    const void *g =
+        agc_resolve_or_weak("sceAgcCbNopGetSize", (const void *)&sceAgcCbNopGetSize);
+    if (g == NULL) {
+        return obs_skip("libSceAgc is not loaded or sceAgcCbNopGetSize not found");
+    }
+    /* Swept rather than read once. This one takes a count, so a single reading cannot tell
+     * a constant from a function of its argument - and which it is decides whether a
+     * translator may cache the answer. The sweep records the curve and asserts no shape
+     * for it. */
+    static const uint64_t args[] = {0, 1, 2, 4, 8};
+    for (unsigned int i = 0; i < OBS_COUNT(args); i++) {
+        uint64_t v = ((agc_getsize_fn)g)(args[i], 0, 0, 0, 0, 0);
+        obs_report_measure("166-agc/cb-nop-getsize", "sceAgcCbNopGetSize", "sweep-arg",
+                           args[i], "val");
+        obs_report_measure("166-agc/cb-nop-getsize", "sceAgcCbNopGetSize", "sweep",
+                           (uint64_t)(uint32_t)v, "bytes");
+    }
+    return agc_getsize_pair(
+        "166-agc/cb-nop-getsize", "sceAgcCbNop", "sceAgcCbNopGetSize",
+        agc_resolve_or_weak("sceAgcCbNop", (const void *)&sceAgcCbNop), g, 1);
+}
+
+static obs_result check_agc_dcb_dma_data_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-dma-data-getsize", "sceAgcDcbDmaData", "sceAgcDcbDmaDataGetSize",
+        agc_resolve_or_weak("sceAgcDcbDmaData", (const void *)&sceAgcDcbDmaData),
+        agc_resolve_or_weak("sceAgcDcbDmaDataGetSize",
+                            (const void *)&sceAgcDcbDmaDataGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_set_index_count_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-set-index-count-getsize", "sceAgcDcbSetIndexCount",
+        "sceAgcDcbSetIndexCountGetSize",
+        agc_resolve_or_weak("sceAgcDcbSetIndexCount",
+                            (const void *)&sceAgcDcbSetIndexCount),
+        agc_resolve_or_weak("sceAgcDcbSetIndexCountGetSize",
+                            (const void *)&sceAgcDcbSetIndexCountGetSize),
+        3);
+}
+
+static obs_result check_agc_dcb_set_uc_register_direct_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-set-uc-register-direct-getsize", "sceAgcDcbSetUcRegisterDirect",
+        "sceAgcDcbSetUcRegisterDirectGetSize",
+        agc_resolve_or_weak("sceAgcDcbSetUcRegisterDirect",
+                            (const void *)&sceAgcDcbSetUcRegisterDirect),
+        agc_resolve_or_weak("sceAgcDcbSetUcRegisterDirectGetSize",
+                            (const void *)&sceAgcDcbSetUcRegisterDirectGetSize),
+        0);
+}
+
+static obs_result check_agc_dcb_jump_getsize(void) {
+    return agc_getsize_pair(
+        "166-agc/dcb-jump-getsize", "sceAgcDcbJump", "sceAgcDcbJumpGetSize",
+        agc_resolve_or_weak("sceAgcDcbJump", (const void *)&sceAgcDcbJump),
+        agc_resolve_or_weak("sceAgcDcbJumpGetSize",
+                            (const void *)&sceAgcDcbJumpGetSize),
+        0);
+}
+
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_agc_cb_nop, OBS_FROM_ASSUMED},
@@ -5396,6 +5575,19 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-resource-registration", "libSceAgcDriver", "(registration)",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_resource_registration, OBS_FROM_ASSUMED},
+    {"166-agc/cb-nop-getsize", "libSceAgc", "sceAgcCbNopGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cb_nop_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-dma-data-getsize", "libSceAgc", "sceAgcDcbDmaDataGetSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_dma_data_getsize,
+     OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-index-count-getsize", "libSceAgc",
+     "sceAgcDcbSetIndexCountGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_dcb_set_index_count_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-set-uc-register-direct-getsize", "libSceAgc",
+     "sceAgcDcbSetUcRegisterDirectGetSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_agc_dcb_set_uc_register_direct_getsize, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-jump-getsize", "libSceAgc", "sceAgcDcbJumpGetSize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_jump_getsize, OBS_FROM_ASSUMED},
 };
 #endif
 

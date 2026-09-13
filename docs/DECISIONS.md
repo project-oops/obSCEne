@@ -312,19 +312,19 @@ principles six weeks later.
 | ⚪ | D291 | [native deploy uploads the title dir to a scan root via prosperous](decisions/D291-native-deploy-uploads-the-title-dir.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D292 | [the native title gets its own id, distinct from the package](decisions/D292-the-native-title-gets-its-own-id.md) | unrecorded | ~2026-09-01..09-02 |
 | ⚪ | D293 | [a real ps5 native title uses the 4F 15 3D 1D eboot, so `native` defaults to it](decisions/D293-ps5-native-titles-use-the-4f153d1d-eboot.md) | unrecorded | ~2026-09-01..09-02 |
-| ⚪ | D294 | [SceShellUI restart recovers from VSH UI softlocks](decisions/D294-sceshellui-restart-recovers-from-vsh-ui-softlocks.md) | unrecorded | 2026-09-02 |
-| ⚪ | D295 | [Dynamic module resolution for non-essential libraries](decisions/D295-dynamic-module-resolution-for-non-essential-libraries.md) | unrecorded | 2026-09-02 |
-| ⚪ | D296 | [Four-tier privilege model and module categorization](decisions/D296-four-tier-privilege-model-and-module-categorization.md) | unrecorded | 2026-09-02 |
-| ⚪ | D297 | [External SDK Version Dictionary and Targeted SDK Builds in SELFish and obSCEne](decisions/D297-external-sdk-dictionary-and-targeted-sdk-builds.md) | unrecorded | 2026-09-02 |
-| ⚪ | D298 | [PT_SCE_PROCPARAM and PT_SCE_MODULE_PARAM Contracts on PS5 Native](decisions/D298-pt-sce-procparam-and-module-param-contracts.md) | unrecorded | 2026-09-02 |
-| ⚪ | D299 | [Reproducible Process Parameter Audit in 048-selfaudit](decisions/D299-reproducible-procparam-audit-in-048-selfaudit.md) | unrecorded | 2026-09-02 |
+| ⚪ | D294 | [SceShellUI restart recovers from VSH UI softlocks](decisions/D294-sceshellui-restart-recovers-from-vsh-ui-softlocks.md) | unrecorded | 2026-09-02 |
+| ⚪ | D295 | [Dynamic module resolution for non-essential libraries](decisions/D295-dynamic-module-resolution-for-non-essential-libraries.md) | unrecorded | 2026-09-02 |
+| ⚪ | D296 | [Four-tier privilege model and module categorization](decisions/D296-four-tier-privilege-model-and-module-categorization.md) | unrecorded | 2026-09-02 |
+| ⚪ | D297 | [External SDK Version Dictionary and Targeted SDK Builds in SELFish and obSCEne](decisions/D297-external-sdk-dictionary-and-targeted-sdk-builds.md) | unrecorded | 2026-09-02 |
+| ⚪ | D298 | [PT_SCE_PROCPARAM and PT_SCE_MODULE_PARAM Contracts on PS5 Native](decisions/D298-pt-sce-procparam-and-module-param-contracts.md) | unrecorded | 2026-09-02 |
+| ⚪ | D299 | [Reproducible Process Parameter Audit in 048-selfaudit](decisions/D299-reproducible-procparam-audit-in-048-selfaudit.md) | unrecorded | 2026-09-02 |
 | 🟢 | D300 | [Porthole encoder self-resolution: loading VENC sysmodule and export table traversal](decisions/D300-porthole-encoder-self-resolution.md) | decided | 2026-09-03 |
-| ⚪ | D301 | [Application Category, Privilege Tiers, and Display Arbitration on PS5 Native](decisions/D301-application-category-privilege-tiers-and-display-arbitration.md) | unrecorded | 2026-09-03 |
-| ⚪ | D302 | [The conformance matrix - one capture per launch shape, named for the shape](decisions/D302-the-conformance-matrix-and-its-naming.md) | unrecorded | 2026-09-03 |
+| ⚪ | D301 | [Application Category, Privilege Tiers, and Display Arbitration on PS5 Native](decisions/D301-application-category-privilege-tiers-and-display-arbitration.md) | unrecorded | 2026-09-03 |
+| ⚪ | D302 | [The conformance matrix - one capture per launch shape, named for the shape](decisions/D302-the-conformance-matrix-and-its-naming.md) | unrecorded | 2026-09-03 |
 | 🟡 | D303 | [a scalar out-parameter is poisoned, not zeroed](decisions/D303-a-scalar-out-parameter-is-poisoned-not-zeroed.md) | assumed | 2026-09-03 |
 | 🟢 | D314 | [the decision gate checks the log this repository actually has](decisions/D314-the-decision-gate-checks-the-log-it-has.md) | decided | 2026-09-03 |
 | 🟢 | D315 | [a document beside a Makefile means that Makefile](decisions/D315-a-document-beside-a-makefile-means-that-makefile.md) | decided | 2026-09-03 |
-| 🟢 | D316 | [Porthole input injection via Ghostpad Virtual Device Interface (VDI)](decisions/D316-porthole-input-injection-and-ghostpad-vdi.md) | decided | 2026-09-03 |
+| 🟢 | D316 | [Porthole input injection via Ghostpad Virtual Device Interface (VDI)](decisions/D316-porthole-input-injection-and-ghostpad-vdi.md) | decided | 2026-09-03 |
 | 🟢 | D317 | [Porthole video pipeline reusing oops-sdk display and direct memory](decisions/D317-porthole-video-pipeline-reusing-oops-sdk.md) | decided | 2026-09-03 |
 | 🟢 | D320 | [the orbistoun backlog is generated and tiered by what blocks it](decisions/D320-the-orbistoun-backlog-is-generated-and-tiered.md) | decided | 2026-09-03 |
 | 🟡 | D321 | [the encoding and bounds probes poll rather than wait, and resolve by name](decisions/D321-poll-not-wait-and-resolve-by-name-for-the-blocked-premises.md) | assumed | 2026-09-07 |
@@ -337,6 +337,7 @@ principles six weeks later.
 | 🟡 | D328 | [a pending status, and peripheral probes that wait for their input rather than failing](decisions/D328-a-pending-status-and-behavioural-peripheral-probes.md) | assumed | 2026-09-08 |
 | 🟡 | D329 | [a network section for Porthole, and a record for "I could not look"](decisions/D329-a-network-section-for-porthole-and-a-resolution-record.md) | assumed | 2026-09-08 |
 | 🟢 | D330 | [Audio format selectors, mouse stubs in unsigned payloads, and POSIX sockets for Porthole](decisions/D330-audio-format-selector-mouse-in-payload-and-posix-sockets.md) | decided | 2026-09-08 |
+| 🟢 | D331 | [The `*GetSize` family is measured against its own builder, not against a borrowed number](decisions/D331-the-getsize-family-is-measured-against-its-own-builder.md) | decided | 2026-09-12 |
 
 | | meaning |
 |---|---|

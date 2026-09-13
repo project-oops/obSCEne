@@ -473,6 +473,12 @@ static const obs_import obs_platform_imports[] = {
     /* libSceAgc pre-encoded imports */
     {"libSceAgc", "$aJf+j5yntiU"},
     {"libSceAgc", "$tSBxhAPyytQ"},
+    {"libSceAgc", "$t7PlZ9nt5Lc"},
+    {"libSceAgc", "$2ccJz9LQI+w"},
+    {"libSceAgc", "$mljzuGDZRQ4"},
+    {"libSceAgc", "$aP1Ki9G3++4"},
+    {"libSceAgc", "$xSAR0LTcRKM"},
+    {"libSceAgc", "$VEGu4dixjUg"},
 
     /* ---- declared inside a section file rather than in platform.h ---------------
      *

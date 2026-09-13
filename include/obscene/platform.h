@@ -1254,6 +1254,45 @@ OBS_WEAK uint64_t sceAgcDcbWaitRegMem(void *arg0, uint64_t arg1, uint64_t arg2,
                                       uint64_t arg3, uint64_t arg4, uint64_t arg5);
 OBS_WEAK uint64_t sceAgcDcbResetQueue(void *arg0, uint64_t arg1, uint64_t arg2,
                                       uint64_t arg3, uint64_t arg4, uint64_t arg5);
+/* The `*GetSize` siblings.
+ *
+ * What the library says a builder will consume, asked *before* the builder is called. The
+ * guest reserves that many bytes and the builder then writes into the reservation, so the
+ * two are one contract and neither number is knowable here in advance - see
+ * `166-agc/<builder>-getsize` and D331.
+ *
+ * Declared with the generic six-register signature for the same reason the builders above
+ * are: the arity is not established, and System V AMD64 makes a call with six register
+ * arguments safe for any arity <= 6. A narrower declaration would assert an argument count
+ * nobody here has measured.
+ *
+ * The labels are the identifiers the loader resolves. Each was derived from the name with
+ * `obscene-tool nid` and then checked against `data/mined-names.txt`, which agrees on all
+ * four from five independent sources.
+ */
+OBS_WEAK uint64_t sceAgcCbNopGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                     uint64_t arg3, uint64_t arg4,
+                                     uint64_t arg5) __asm__("$t7PlZ9nt5Lc");
+OBS_WEAK uint64_t sceAgcDcbDmaDataGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                          uint64_t arg3, uint64_t arg4,
+                                          uint64_t arg5) __asm__("$2ccJz9LQI+w");
+OBS_WEAK uint64_t sceAgcDcbSetIndexCountGetSize(uint64_t arg0, uint64_t arg1,
+                                                uint64_t arg2, uint64_t arg3,
+                                                uint64_t arg4,
+                                                uint64_t arg5) __asm__("$mljzuGDZRQ4");
+OBS_WEAK uint64_t sceAgcDcbSetUcRegisterDirectGetSize(
+    uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5) __asm__("$aP1Ki9G3++4");
+/* The jump pair. Two independent reimplementations disagree on this builder's dword
+ * count, and one of them explains its extra dword as a predication slot another call
+ * writes into the packet afterwards. That makes it the cheapest live disagreement the
+ * reservation-versus-write invariant can settle, so it is the first pair added after the
+ * original four (D331). */
+OBS_WEAK uint64_t sceAgcDcbJump(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
+                                uint64_t arg4, uint64_t arg5) __asm__("$xSAR0LTcRKM");
+OBS_WEAK uint64_t sceAgcDcbJumpGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                       uint64_t arg3, uint64_t arg4,
+                                       uint64_t arg5) __asm__("$VEGu4dixjUg");
 OBS_WEAK int sceAgcInit(void *state, uint32_t version) __asm__("$23LRUSvYu1M");
 OBS_WEAK int sceAgcGetIsTrinityMode(uint8_t *out_is_trinity) __asm__("$BfBDZGbti7A");
 OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
