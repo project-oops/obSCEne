@@ -7,7 +7,7 @@
  *
  * Declared exactly as surface.h declares its own: `const char`, so only the
  * address can ever be read. The type system forbidding the call is what makes a
- * census of 34,929 symbols safe to hold at all.
+ * census of 34,850 symbols safe to hold at all.
  */
 
 #ifndef OBSCENE_CORPUS_H
@@ -1096,69 +1096,21 @@
     X(sceAcm_IFFT) \
     X(sceAcm_Panner)
 
-/* libSceAgc: 31 symbols, 31 callable. */
+/* libSceAgc: 7 symbols, 7 callable. */
 #define OBS_CORPUS_0008_LIBSCEAGC(X) \
-    X(sceAgcAcbAcquireMemGetSize) \
-    X(sceAgcAcbJump) \
-    X(sceAgcAcbJumpGetSize) \
     X(sceAgcAddPrimStateRegisters) \
-    X(sceAgcCbBranch) \
-    X(sceAgcCbBranchGetSize) \
-    X(sceAgcCbNopGetSize) \
-    X(sceAgcCbQueueEndOfPipeActionGetSize) \
-    X(sceAgcCreateInterpolantMapping) \
-    X(sceAgcDcbAcquireMemGetSize) \
-    X(sceAgcDcbCondExec) \
-    X(sceAgcDcbDrawIndexIndirectMulti) \
-    X(sceAgcDcbDrawIndexIndirectMultiGetSize) \
-    X(sceAgcDcbDrawIndirect) \
-    X(sceAgcDcbJumpGetSize) \
-    X(sceAgcDcbRewind) \
-    X(sceAgcDcbRewindGetSize) \
-    X(sceAgcDcbSetCfRegisterRangeDirect) \
-    X(sceAgcDcbSetCxRegisterDirect) \
-    X(sceAgcDcbSetUcRegisterDirect) \
-    X(sceAgcDcbSetUcRegisterDirectGetSize) \
     X(sceAgcDriverUnknown_KRzWekV120) \
     X(sceAgcDriverUnregisterAllResourcesForOwner) \
     X(sceAgcDriverUnregisterOwnerAndResources) \
-    X(sceAgcFuseShaderHalves) \
     X(sceAgcGetDataPacketPayloadAddress) \
-    X(sceAgcGetFusedShaderSize) \
-    X(sceAgcGetIsTrinityMode) \
-    X(sceAgcInit) \
     X(sceAgcRewindPatchSetRewindState) \
     X(sceAgcUnknownQj7QZpgr9Uw)
 #define OBS_CORPUS_CALLABLE_0008_LIBSCEAGC(X) \
-    X(sceAgcAcbAcquireMemGetSize) \
-    X(sceAgcAcbJump) \
-    X(sceAgcAcbJumpGetSize) \
     X(sceAgcAddPrimStateRegisters) \
-    X(sceAgcCbBranch) \
-    X(sceAgcCbBranchGetSize) \
-    X(sceAgcCbNopGetSize) \
-    X(sceAgcCbQueueEndOfPipeActionGetSize) \
-    X(sceAgcCreateInterpolantMapping) \
-    X(sceAgcDcbAcquireMemGetSize) \
-    X(sceAgcDcbCondExec) \
-    X(sceAgcDcbDrawIndexIndirectMulti) \
-    X(sceAgcDcbDrawIndexIndirectMultiGetSize) \
-    X(sceAgcDcbDrawIndirect) \
-    X(sceAgcDcbJumpGetSize) \
-    X(sceAgcDcbRewind) \
-    X(sceAgcDcbRewindGetSize) \
-    X(sceAgcDcbSetCfRegisterRangeDirect) \
-    X(sceAgcDcbSetCxRegisterDirect) \
-    X(sceAgcDcbSetUcRegisterDirect) \
-    X(sceAgcDcbSetUcRegisterDirectGetSize) \
     X(sceAgcDriverUnknown_KRzWekV120) \
     X(sceAgcDriverUnregisterAllResourcesForOwner) \
     X(sceAgcDriverUnregisterOwnerAndResources) \
-    X(sceAgcFuseShaderHalves) \
     X(sceAgcGetDataPacketPayloadAddress) \
-    X(sceAgcGetFusedShaderSize) \
-    X(sceAgcGetIsTrinityMode) \
-    X(sceAgcInit) \
     X(sceAgcRewindPatchSetRewindState) \
     X(sceAgcUnknownQj7QZpgr9Uw)
 
@@ -2074,30 +2026,8 @@
     X(sceAudiodReportSetEnableFlag) \
     X(sceAudiodReportUnregisterHandler)
 
-/* libSceAudiodec: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0029_LIBSCEAUDIODEC(X) \
-    X(sceAudiodecClearContext) \
-    X(sceAudiodecCreateDecoder) \
-    X(sceAudiodecDecode) \
-    X(sceAudiodecDecode2) \
-    X(sceAudiodecDecode2WithPriority) \
-    X(sceAudiodecDecodeWithPriority) \
-    X(sceAudiodecDeleteDecoder) \
-    X(sceAudiodecInitLibrary) \
-    X(sceAudiodecTermLibrary)
-#define OBS_CORPUS_CALLABLE_0029_LIBSCEAUDIODEC(X) \
-    X(sceAudiodecClearContext) \
-    X(sceAudiodecCreateDecoder) \
-    X(sceAudiodecDecode) \
-    X(sceAudiodecDecode2) \
-    X(sceAudiodecDecode2WithPriority) \
-    X(sceAudiodecDecodeWithPriority) \
-    X(sceAudiodecDeleteDecoder) \
-    X(sceAudiodecInitLibrary) \
-    X(sceAudiodecTermLibrary)
-
 /* libSceAudiodecCpu: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0030_LIBSCEAUDIODECCPU(X) \
+#define OBS_CORPUS_0029_LIBSCEAUDIODECCPU(X) \
     X(sceAudiodecCpuClearContext) \
     X(sceAudiodecCpuDecode) \
     X(sceAudiodecCpuInitDecoder) \
@@ -2106,7 +2036,7 @@
     X(sceAudiodecCpuInternalInitDecoder) \
     X(sceAudiodecCpuInternalQueryMemSize) \
     X(sceAudiodecCpuQueryMemSize)
-#define OBS_CORPUS_CALLABLE_0030_LIBSCEAUDIODECCPU(X) \
+#define OBS_CORPUS_CALLABLE_0029_LIBSCEAUDIODECCPU(X) \
     X(sceAudiodecCpuClearContext) \
     X(sceAudiodecCpuDecode) \
     X(sceAudiodecCpuInitDecoder) \
@@ -2117,69 +2047,69 @@
     X(sceAudiodecCpuQueryMemSize)
 
 /* libSceAudiodecCpuAlac: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0031_LIBSCEAUDIODECCPUALAC(X) \
+#define OBS_CORPUS_0030_LIBSCEAUDIODECCPUALAC(X) \
     X(audiodeccpuinternal_core_ops_alac2)
-#define OBS_CORPUS_CALLABLE_0031_LIBSCEAUDIODECCPUALAC(X) \
+#define OBS_CORPUS_CALLABLE_0030_LIBSCEAUDIODECCPUALAC(X) \
     /* none */
 
 /* libSceAudiodecCpuDdp: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0032_LIBSCEAUDIODECCPUDDP(X) \
+#define OBS_CORPUS_0031_LIBSCEAUDIODECCPUDDP(X) \
     X(audiodeccpuinternal_core_ops_ddp)
-#define OBS_CORPUS_CALLABLE_0032_LIBSCEAUDIODECCPUDDP(X) \
+#define OBS_CORPUS_CALLABLE_0031_LIBSCEAUDIODECCPUDDP(X) \
     /* none */
 
 /* libSceAudiodecCpuDts: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0033_LIBSCEAUDIODECCPUDTS(X) \
+#define OBS_CORPUS_0032_LIBSCEAUDIODECCPUDTS(X) \
     X(audiodeccpuinternal_core_ops_dts)
-#define OBS_CORPUS_CALLABLE_0033_LIBSCEAUDIODECCPUDTS(X) \
+#define OBS_CORPUS_CALLABLE_0032_LIBSCEAUDIODECCPUDTS(X) \
     /* none */
 
 /* libSceAudiodecCpuDtsHdLbr: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0034_LIBSCEAUDIODECCPUDTSHDLBR(X) \
+#define OBS_CORPUS_0033_LIBSCEAUDIODECCPUDTSHDLBR(X) \
     X(audiodeccpuinternal_core_ops_dts_hd_lbr)
-#define OBS_CORPUS_CALLABLE_0034_LIBSCEAUDIODECCPUDTSHDLBR(X) \
+#define OBS_CORPUS_CALLABLE_0033_LIBSCEAUDIODECCPUDTSHDLBR(X) \
     /* none */
 
 /* libSceAudiodecCpuDtsHdMa: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0035_LIBSCEAUDIODECCPUDTSHDMA(X) \
+#define OBS_CORPUS_0034_LIBSCEAUDIODECCPUDTSHDMA(X) \
     X(audiodeccpuinternal_core_ops_dts_hd_ma)
-#define OBS_CORPUS_CALLABLE_0035_LIBSCEAUDIODECCPUDTSHDMA(X) \
+#define OBS_CORPUS_CALLABLE_0034_LIBSCEAUDIODECCPUDTSHDMA(X) \
     /* none */
 
 /* libSceAudiodecCpuFlac: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0036_LIBSCEAUDIODECCPUFLAC(X) \
+#define OBS_CORPUS_0035_LIBSCEAUDIODECCPUFLAC(X) \
     X(audiodeccpuinternal_core_ops_flac2)
-#define OBS_CORPUS_CALLABLE_0036_LIBSCEAUDIODECCPUFLAC(X) \
+#define OBS_CORPUS_CALLABLE_0035_LIBSCEAUDIODECCPUFLAC(X) \
     /* none */
 
 /* libSceAudiodecCpuHevag: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0037_LIBSCEAUDIODECCPUHEVAG(X) \
+#define OBS_CORPUS_0036_LIBSCEAUDIODECCPUHEVAG(X) \
     X(audiodeccpuinternal_core_ops_hevag2)
-#define OBS_CORPUS_CALLABLE_0037_LIBSCEAUDIODECCPUHEVAG(X) \
+#define OBS_CORPUS_CALLABLE_0036_LIBSCEAUDIODECCPUHEVAG(X) \
     /* none */
 
 /* libSceAudiodecCpuLpcm: 2 symbols, 0 callable. */
-#define OBS_CORPUS_0038_LIBSCEAUDIODECCPULPCM(X) \
+#define OBS_CORPUS_0037_LIBSCEAUDIODECCPULPCM(X) \
     X(audiodeccpuinternal_core_ops_lpcm_bd2) \
     X(audiodeccpuinternal_core_ops_lpcm_dvd2)
-#define OBS_CORPUS_CALLABLE_0038_LIBSCEAUDIODECCPULPCM(X) \
+#define OBS_CORPUS_CALLABLE_0037_LIBSCEAUDIODECCPULPCM(X) \
     /* none */
 
 /* libSceAudiodecCpuM4aac: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0039_LIBSCEAUDIODECCPUM4AAC(X) \
+#define OBS_CORPUS_0038_LIBSCEAUDIODECCPUM4AAC(X) \
     X(audiodeccpuinternal_core_ops_m4aac2)
-#define OBS_CORPUS_CALLABLE_0039_LIBSCEAUDIODECCPUM4AAC(X) \
+#define OBS_CORPUS_CALLABLE_0038_LIBSCEAUDIODECCPUM4AAC(X) \
     /* none */
 
 /* libSceAutoMounterClient: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0040_LIBSCEAUTOMOUNTERCLIENT(X) \
+#define OBS_CORPUS_0039_LIBSCEAUTOMOUNTERCLIENT(X) \
     X(sceAutoMounterClientGetUsbDeviceInfo) \
     X(sceAutoMounterClientGetUsbDeviceList) \
     X(sceAutoMounterClientInit) \
     X(sceAutoMounterClientRegisterCallback) \
     X(sceAutoMounterClientTerm) \
     X(sceAutoMounterClientUnregisterCallback)
-#define OBS_CORPUS_CALLABLE_0040_LIBSCEAUTOMOUNTERCLIENT(X) \
+#define OBS_CORPUS_CALLABLE_0039_LIBSCEAUTOMOUNTERCLIENT(X) \
     X(sceAutoMounterClientGetUsbDeviceInfo) \
     X(sceAutoMounterClientGetUsbDeviceList) \
     X(sceAutoMounterClientInit) \
@@ -2188,7 +2118,7 @@
     X(sceAutoMounterClientUnregisterCallback)
 
 /* libSceAvPlayer: 28 symbols, 28 callable. */
-#define OBS_CORPUS_0041_LIBSCEAVPLAYER(X) \
+#define OBS_CORPUS_0040_LIBSCEAVPLAYER(X) \
     X(sceAvPlayerAddSource) \
     X(sceAvPlayerAddSourceEx) \
     X(sceAvPlayerChangeStream) \
@@ -2217,7 +2147,7 @@
     X(sceAvPlayerStop) \
     X(sceAvPlayerStreamCount) \
     X(sceAvPlayerVprintf)
-#define OBS_CORPUS_CALLABLE_0041_LIBSCEAVPLAYER(X) \
+#define OBS_CORPUS_CALLABLE_0040_LIBSCEAVPLAYER(X) \
     X(sceAvPlayerAddSource) \
     X(sceAvPlayerAddSourceEx) \
     X(sceAvPlayerChangeStream) \
@@ -2248,7 +2178,7 @@
     X(sceAvPlayerVprintf)
 
 /* libSceAvPlayerStreaming: 33 symbols, 33 callable. */
-#define OBS_CORPUS_0042_LIBSCEAVPLAYERSTREAMING(X) \
+#define OBS_CORPUS_0041_LIBSCEAVPLAYERSTREAMING(X) \
     X(MvpHttpAbort) \
     X(MvpHttpDeInit) \
     X(MvpHttpGet) \
@@ -2282,7 +2212,7 @@
     X(sceTsSetStartingBW) \
     X(sceTsStartFileStreaming) \
     X(sceTsStopFileStreaming)
-#define OBS_CORPUS_CALLABLE_0042_LIBSCEAVPLAYERSTREAMING(X) \
+#define OBS_CORPUS_CALLABLE_0041_LIBSCEAVPLAYERSTREAMING(X) \
     X(MvpHttpAbort) \
     X(MvpHttpDeInit) \
     X(MvpHttpGet) \
@@ -2318,7 +2248,7 @@
     X(sceTsStopFileStreaming)
 
 /* libSceAvSetting: 75 symbols, 75 callable. */
-#define OBS_CORPUS_0043_LIBSCEAVSETTING(X) \
+#define OBS_CORPUS_0042_LIBSCEAVSETTING(X) \
     X(sceAvSettingAddCallbacks) \
     X(sceAvSettingAddCallbacksForLnc) \
     X(sceAvSettingAddCallbacksForSocialScreen) \
@@ -2394,7 +2324,7 @@
     X(sceAvSettingSimulateProcessOutputModeArbitration_) \
     X(sceAvSettingTerm) \
     X(sceAvSettingWaitCallback)
-#define OBS_CORPUS_CALLABLE_0043_LIBSCEAVSETTING(X) \
+#define OBS_CORPUS_CALLABLE_0042_LIBSCEAVSETTING(X) \
     X(sceAvSettingAddCallbacks) \
     X(sceAvSettingAddCallbacksForLnc) \
     X(sceAvSettingAddCallbacksForSocialScreen) \
@@ -2472,14 +2402,14 @@
     X(sceAvSettingWaitCallback)
 
 /* libSceAvSettingDebug: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0044_LIBSCEAVSETTINGDEBUG(X) \
+#define OBS_CORPUS_0043_LIBSCEAVSETTINGDEBUG(X) \
     X(sceAvSettingDebugAddCallbacks) \
     X(sceAvSettingDebugClearDiagCommand) \
     X(sceAvSettingDebugGetDetailedHdcpStatus) \
     X(sceAvSettingDebugSetDiagState) \
     X(sceAvSettingDebugSetHdmiMonitorInfo) \
     X(sceAvSettingDebugSetProcessAttribute)
-#define OBS_CORPUS_CALLABLE_0044_LIBSCEAVSETTINGDEBUG(X) \
+#define OBS_CORPUS_CALLABLE_0043_LIBSCEAVSETTINGDEBUG(X) \
     X(sceAvSettingDebugAddCallbacks) \
     X(sceAvSettingDebugClearDiagCommand) \
     X(sceAvSettingDebugGetDetailedHdcpStatus) \
@@ -2488,7 +2418,7 @@
     X(sceAvSettingDebugSetProcessAttribute)
 
 /* libSceAvcap: 21 symbols, 21 callable. */
-#define OBS_CORPUS_0045_LIBSCEAVCAP(X) \
+#define OBS_CORPUS_0044_LIBSCEAVCAP(X) \
     X(sceVshAvcapClose) \
     X(sceVshAvcapCreateSyncer) \
     X(sceVshAvcapDeleteSyncer) \
@@ -2510,7 +2440,7 @@
     X(sceVshAvcapStop) \
     X(sceVshAvcapTerm) \
     X(sceVshAvcapUpdateSyncer)
-#define OBS_CORPUS_CALLABLE_0045_LIBSCEAVCAP(X) \
+#define OBS_CORPUS_CALLABLE_0044_LIBSCEAVCAP(X) \
     X(sceVshAvcapClose) \
     X(sceVshAvcapCreateSyncer) \
     X(sceVshAvcapDeleteSyncer) \
@@ -2534,7 +2464,7 @@
     X(sceVshAvcapUpdateSyncer)
 
 /* libSceBackupRestoreUtil: 16 symbols, 16 callable. */
-#define OBS_CORPUS_0046_LIBSCEBACKUPRESTOREUTIL(X) \
+#define OBS_CORPUS_0045_LIBSCEBACKUPRESTOREUTIL(X) \
     X(sceBackupRestoreUtilBackupData) \
     X(sceBackupRestoreUtilCancelBackupData) \
     X(sceBackupRestoreUtilCancelGetRequiredSize) \
@@ -2551,7 +2481,7 @@
     X(sceBackupRestoreUtilPrepareBackup) \
     X(sceBackupRestoreUtilRestoreData) \
     X(sceBackupRestoreUtilTerminate)
-#define OBS_CORPUS_CALLABLE_0046_LIBSCEBACKUPRESTOREUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0045_LIBSCEBACKUPRESTOREUTIL(X) \
     X(sceBackupRestoreUtilBackupData) \
     X(sceBackupRestoreUtilCancelBackupData) \
     X(sceBackupRestoreUtilCancelGetRequiredSize) \
@@ -2570,7 +2500,7 @@
     X(sceBackupRestoreUtilTerminate)
 
 /* libSceBeisobmf: 18 symbols, 18 callable. */
-#define OBS_CORPUS_0047_LIBSCEBEISOBMF(X) \
+#define OBS_CORPUS_0046_LIBSCEBEISOBMF(X) \
     X(isobmf_box_getchildbox) \
     X(isobmf_box_getdiskoffset) \
     X(isobmf_box_getflags32b) \
@@ -2589,7 +2519,7 @@
     X(isobmf_decoder_next_disk_offset) \
     X(isobmf_decoder_query) \
     X(isobmf_memmanager_set)
-#define OBS_CORPUS_CALLABLE_0047_LIBSCEBEISOBMF(X) \
+#define OBS_CORPUS_CALLABLE_0046_LIBSCEBEISOBMF(X) \
     X(isobmf_box_getchildbox) \
     X(isobmf_box_getdiskoffset) \
     X(isobmf_box_getflags32b) \
@@ -2610,7 +2540,7 @@
     X(isobmf_memmanager_set)
 
 /* libSceBemp2sys: 31 symbols, 31 callable. */
-#define OBS_CORPUS_0048_LIBSCEBEMP2SYS(X) \
+#define OBS_CORPUS_0047_LIBSCEBEMP2SYS(X) \
     X(bemp2sys_logprintf_getlevel) \
     X(bemp2sys_logprintf_setfunc) \
     X(bemp2sys_logprintf_setlevel) \
@@ -2642,7 +2572,7 @@
     X(bemp2sys_tsfilter_init) \
     X(bemp2sys_tsfilter_release) \
     X(bemp2sys_tsfilter_sendmessage)
-#define OBS_CORPUS_CALLABLE_0048_LIBSCEBEMP2SYS(X) \
+#define OBS_CORPUS_CALLABLE_0047_LIBSCEBEMP2SYS(X) \
     X(bemp2sys_logprintf_getlevel) \
     X(bemp2sys_logprintf_setfunc) \
     X(bemp2sys_logprintf_setlevel) \
@@ -2676,7 +2606,7 @@
     X(bemp2sys_tsfilter_sendmessage)
 
 /* libSceBgft: 104 symbols, 104 callable. */
-#define OBS_CORPUS_0049_LIBSCEBGFT(X) \
+#define OBS_CORPUS_0048_LIBSCEBGFT(X) \
     X(sceBgftServiceDownloadFindActivePatchTask) \
     X(sceBgftServiceDownloadFindActivePupTask) \
     X(sceBgftServiceDownloadFindTaskByContentId) \
@@ -2781,7 +2711,7 @@
     X(sceBgftServiceIntUploadUnregisterTaskAll) \
     X(sceBgftServiceSyncCall) \
     X(sceBgftServiceTerm)
-#define OBS_CORPUS_CALLABLE_0049_LIBSCEBGFT(X) \
+#define OBS_CORPUS_CALLABLE_0048_LIBSCEBGFT(X) \
     X(sceBgftServiceDownloadFindActivePatchTask) \
     X(sceBgftServiceDownloadFindActivePupTask) \
     X(sceBgftServiceDownloadFindTaskByContentId) \
@@ -2888,7 +2818,7 @@
     X(sceBgftServiceTerm)
 
 /* libSceBluetoothHid: 17 symbols, 17 callable. */
-#define OBS_CORPUS_0050_LIBSCEBLUETOOTHHID(X) \
+#define OBS_CORPUS_0049_LIBSCEBLUETOOTHHID(X) \
     X(sceBluetoothHidDebugGetVersion) \
     X(sceBluetoothHidDisconnectDevice) \
     X(sceBluetoothHidGetDeviceInfo) \
@@ -2906,7 +2836,7 @@
     X(sceBluetoothHidThreadParamInitialize) \
     X(sceBluetoothHidUnregisterCallback) \
     X(sceBluetoothHidUnregisterDevice)
-#define OBS_CORPUS_CALLABLE_0050_LIBSCEBLUETOOTHHID(X) \
+#define OBS_CORPUS_CALLABLE_0049_LIBSCEBLUETOOTHHID(X) \
     X(sceBluetoothHidDebugGetVersion) \
     X(sceBluetoothHidDisconnectDevice) \
     X(sceBluetoothHidGetDeviceInfo) \
@@ -2926,7 +2856,7 @@
     X(sceBluetoothHidUnregisterDevice)
 
 /* libSceCamera: 76 symbols, 76 callable. */
-#define OBS_CORPUS_0051_LIBSCECAMERA(X) \
+#define OBS_CORPUS_0050_LIBSCECAMERA(X) \
     X(sceCameraAccGetData) \
     X(sceCameraAudioClose) \
     X(sceCameraAudioGetData) \
@@ -3003,7 +2933,7 @@
     X(sceCameraStartByHandle) \
     X(sceCameraStop) \
     X(sceCameraStopByHandle)
-#define OBS_CORPUS_CALLABLE_0051_LIBSCECAMERA(X) \
+#define OBS_CORPUS_CALLABLE_0050_LIBSCECAMERA(X) \
     X(sceCameraAccGetData) \
     X(sceCameraAudioClose) \
     X(sceCameraAudioGetData) \
@@ -3082,7 +3012,7 @@
     X(sceCameraStopByHandle)
 
 /* libSceCdlgUtilServer: 15 symbols, 14 callable. */
-#define OBS_CORPUS_0052_LIBSCECDLGUTILSERVER(X) \
+#define OBS_CORPUS_0051_LIBSCECDLGUTILSERVER(X) \
     X(_ZN3sce16CommonDialogUtil6Server13setFinishDataEPvm) \
     X(_ZN3sce16CommonDialogUtil6Server6setRunEPvm) \
     X(_ZN3sce16CommonDialogUtil6Server9setFinishEv) \
@@ -3098,7 +3028,7 @@
     X(_ZNK3sce16CommonDialogUtil6Server9getUserIdEv) \
     X(_ZNK3sce16CommonDialogUtil6Server9isSetDataEv) \
     X(_ZTVN3sce16CommonDialogUtil6ServerE)
-#define OBS_CORPUS_CALLABLE_0052_LIBSCECDLGUTILSERVER(X) \
+#define OBS_CORPUS_CALLABLE_0051_LIBSCECDLGUTILSERVER(X) \
     X(_ZN3sce16CommonDialogUtil6Server13setFinishDataEPvm) \
     X(_ZN3sce16CommonDialogUtil6Server6setRunEPvm) \
     X(_ZN3sce16CommonDialogUtil6Server9setFinishEv) \
@@ -3115,7 +3045,7 @@
     X(_ZNK3sce16CommonDialogUtil6Server9isSetDataEv)
 
 /* libSceCes: 273 symbols, 273 callable. */
-#define OBS_CORPUS_0053_LIBSCECES(X) \
+#define OBS_CORPUS_0052_LIBSCECES(X) \
     X(sceCesBig5ToUcs2) \
     X(sceCesBig5ToUtf16) \
     X(sceCesBig5ToUtf16be) \
@@ -3389,7 +3319,7 @@
     X(sceCesUtf8ToSJis) \
     X(sceCesUtf8ToSbc) \
     X(sceCesUtf8ToUhc)
-#define OBS_CORPUS_CALLABLE_0053_LIBSCECES(X) \
+#define OBS_CORPUS_CALLABLE_0052_LIBSCECES(X) \
     X(sceCesBig5ToUcs2) \
     X(sceCesBig5ToUtf16) \
     X(sceCesBig5ToUtf16be) \
@@ -3665,7 +3595,7 @@
     X(sceCesUtf8ToUhc)
 
 /* libSceClSysCallWrapper: 70 symbols, 70 callable. */
-#define OBS_CORPUS_0054_LIBSCECLSYSCALLWRAPPER(X) \
+#define OBS_CORPUS_0053_LIBSCECLSYSCALLWRAPPER(X) \
     X(sceClAudiodecCreateDecoder) \
     X(sceClAudiodecDecode) \
     X(sceClAudiodecDeleteDecoder) \
@@ -3736,7 +3666,7 @@
     X(sceClSslGetSerialNumber) \
     X(sceClSslInit) \
     X(sceClSslTerm)
-#define OBS_CORPUS_CALLABLE_0054_LIBSCECLSYSCALLWRAPPER(X) \
+#define OBS_CORPUS_CALLABLE_0053_LIBSCECLSYSCALLWRAPPER(X) \
     X(sceClAudiodecCreateDecoder) \
     X(sceClAudiodecDecode) \
     X(sceClAudiodecDeleteDecoder) \
@@ -3809,7 +3739,7 @@
     X(sceClSslTerm)
 
 /* libSceCommonDialog: 29 symbols, 28 callable. */
-#define OBS_CORPUS_0055_LIBSCECOMMONDIALOG(X) \
+#define OBS_CORPUS_0054_LIBSCECOMMONDIALOG(X) \
     X(Func_0FF577E4E8457883) \
     X(Func_41716C2CE379416C) \
     X(Func_483A427D8F6E0748) \
@@ -3839,7 +3769,7 @@
     X(_ZNK3sce16CommonDialogUtil6Client9getResultEv) \
     X(_ZTVN3sce16CommonDialogUtil6ClientE) \
     X(sceCommonDialogIsUsed)
-#define OBS_CORPUS_CALLABLE_0055_LIBSCECOMMONDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0054_LIBSCECOMMONDIALOG(X) \
     X(Func_0FF577E4E8457883) \
     X(Func_41716C2CE379416C) \
     X(Func_483A427D8F6E0748) \
@@ -3870,7 +3800,7 @@
     X(sceCommonDialogIsUsed)
 
 /* libSceCompanionHttpd: 17 symbols, 17 callable. */
-#define OBS_CORPUS_0056_LIBSCECOMPANIONHTTPD(X) \
+#define OBS_CORPUS_0055_LIBSCECOMPANIONHTTPD(X) \
     X(sceCompanionHttpdAddHeader) \
     X(sceCompanionHttpdGet2ndScreenStatus) \
     X(sceCompanionHttpdGetEvent) \
@@ -3888,7 +3818,7 @@
     X(sceCompanionHttpdTerminate) \
     X(sceCompanionHttpdUnregisterRequestBodyReceptionCallback) \
     X(sceCompanionHttpdUnregisterRequestCallback)
-#define OBS_CORPUS_CALLABLE_0056_LIBSCECOMPANIONHTTPD(X) \
+#define OBS_CORPUS_CALLABLE_0055_LIBSCECOMPANIONHTTPD(X) \
     X(sceCompanionHttpdAddHeader) \
     X(sceCompanionHttpdGet2ndScreenStatus) \
     X(sceCompanionHttpdGetEvent) \
@@ -3908,13 +3838,13 @@
     X(sceCompanionHttpdUnregisterRequestCallback)
 
 /* libSceCompanionUtil: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0057_LIBSCECOMPANIONUTIL(X) \
+#define OBS_CORPUS_0056_LIBSCECOMPANIONUTIL(X) \
     X(sceCompanionUtilGetEvent) \
     X(sceCompanionUtilGetRemoteOskEvent) \
     X(sceCompanionUtilInitialize) \
     X(sceCompanionUtilOptParamInitialize) \
     X(sceCompanionUtilTerminate)
-#define OBS_CORPUS_CALLABLE_0057_LIBSCECOMPANIONUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0056_LIBSCECOMPANIONUTIL(X) \
     X(sceCompanionUtilGetEvent) \
     X(sceCompanionUtilGetRemoteOskEvent) \
     X(sceCompanionUtilInitialize) \
@@ -3922,7 +3852,7 @@
     X(sceCompanionUtilTerminate)
 
 /* libSceComposite: 69 symbols, 69 callable. */
-#define OBS_CORPUS_0058_LIBSCECOMPOSITE(X) \
+#define OBS_CORPUS_0057_LIBSCECOMPOSITE(X) \
     X(sceCompositorAllocateIndex) \
     X(sceCompositorCheckCrash) \
     X(sceCompositorCommandGpuPerfBegin) \
@@ -3992,7 +3922,7 @@
     X(sceCompsoitorGetGpuClock) \
     X(sceCompsoitorGetProcessRenderingTime) \
     X(sceCompsoitorGetRenderingTime)
-#define OBS_CORPUS_CALLABLE_0058_LIBSCECOMPOSITE(X) \
+#define OBS_CORPUS_CALLABLE_0057_LIBSCECOMPOSITE(X) \
     X(sceCompositorAllocateIndex) \
     X(sceCompositorCheckCrash) \
     X(sceCompositorCommandGpuPerfBegin) \
@@ -4064,7 +3994,7 @@
     X(sceCompsoitorGetRenderingTime)
 
 /* libSceContentBinder: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0059_LIBSCECONTENTBINDER(X) \
+#define OBS_CORPUS_0058_LIBSCECONTENTBINDER(X) \
     X(sceContentBinderEnd) \
     X(sceContentBinderGetNumOfDifference) \
     X(sceContentBinderInitialize) \
@@ -4073,7 +4003,7 @@
     X(sceContentBinderSearchDifference) \
     X(sceContentBinderStart) \
     X(sceContentBinderTerminate)
-#define OBS_CORPUS_CALLABLE_0059_LIBSCECONTENTBINDER(X) \
+#define OBS_CORPUS_CALLABLE_0058_LIBSCECONTENTBINDER(X) \
     X(sceContentBinderEnd) \
     X(sceContentBinderGetNumOfDifference) \
     X(sceContentBinderInitialize) \
@@ -4084,19 +4014,19 @@
     X(sceContentBinderTerminate)
 
 /* libSceContentDelete: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0060_LIBSCECONTENTDELETE(X) \
+#define OBS_CORPUS_0059_LIBSCECONTENTDELETE(X) \
     X(sceContentDeleteById) \
     X(sceContentDeleteByPath) \
     X(sceContentDeleteInitialize) \
     X(sceContentDeleteTerminate)
-#define OBS_CORPUS_CALLABLE_0060_LIBSCECONTENTDELETE(X) \
+#define OBS_CORPUS_CALLABLE_0059_LIBSCECONTENTDELETE(X) \
     X(sceContentDeleteById) \
     X(sceContentDeleteByPath) \
     X(sceContentDeleteInitialize) \
     X(sceContentDeleteTerminate)
 
 /* libSceContentExport: 14 symbols, 14 callable. */
-#define OBS_CORPUS_0061_LIBSCECONTENTEXPORT(X) \
+#define OBS_CORPUS_0060_LIBSCECONTENTEXPORT(X) \
     X(sceContentExportCancel) \
     X(sceContentExportFinish) \
     X(sceContentExportFromData) \
@@ -4111,7 +4041,7 @@
     X(sceContentExportStart) \
     X(sceContentExportTerm) \
     X(sceContentExportValidateContents)
-#define OBS_CORPUS_CALLABLE_0061_LIBSCECONTENTEXPORT(X) \
+#define OBS_CORPUS_CALLABLE_0060_LIBSCECONTENTEXPORT(X) \
     X(sceContentExportCancel) \
     X(sceContentExportFinish) \
     X(sceContentExportFromData) \
@@ -4128,7 +4058,7 @@
     X(sceContentExportValidateContents)
 
 /* libSceContentSearch: 15 symbols, 15 callable. */
-#define OBS_CORPUS_0062_LIBSCECONTENTSEARCH(X) \
+#define OBS_CORPUS_0061_LIBSCECONTENTSEARCH(X) \
     X(sceContentSearchCloseMetadata) \
     X(sceContentSearchGetApplicationLastUpdateId) \
     X(sceContentSearchGetContentLastUpdateId) \
@@ -4144,7 +4074,7 @@
     X(sceContentSearchSearchApplication) \
     X(sceContentSearchSearchContent) \
     X(sceContentSearchTerm)
-#define OBS_CORPUS_CALLABLE_0062_LIBSCECONTENTSEARCH(X) \
+#define OBS_CORPUS_CALLABLE_0061_LIBSCECONTENTSEARCH(X) \
     X(sceContentSearchCloseMetadata) \
     X(sceContentSearchGetApplicationLastUpdateId) \
     X(sceContentSearchGetContentLastUpdateId) \
@@ -4162,15 +4092,15 @@
     X(sceContentSearchTerm)
 
 /* libSceConvertKeycode: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0063_LIBSCECONVERTKEYCODE(X) \
+#define OBS_CORPUS_0062_LIBSCECONVERTKEYCODE(X) \
     X(sceConvertKeycodeGetCharacter) \
     X(sceConvertKeycodeGetVirtualKeycode)
-#define OBS_CORPUS_CALLABLE_0063_LIBSCECONVERTKEYCODE(X) \
+#define OBS_CORPUS_CALLABLE_0062_LIBSCECONVERTKEYCODE(X) \
     X(sceConvertKeycodeGetCharacter) \
     X(sceConvertKeycodeGetVirtualKeycode)
 
 /* libSceCoreIPC: 132 symbols, 132 callable. */
-#define OBS_CORPUS_0064_LIBSCECOREIPC(X) \
+#define OBS_CORPUS_0063_LIBSCECOREIPC(X) \
     X(WTFCrash) \
     X(WTFReportAssertionFailure) \
     X(_ZN3WTF10StringImpl7destroyEPS0_) \
@@ -4303,7 +4233,7 @@
     X(_ZThn8_N6WebKit12ChildProcessD1Ev) \
     X(_ZThn8_N6WebKit17ChildProcessProxyD0Ev) \
     X(_ZThn8_N6WebKit17ChildProcessProxyD1Ev)
-#define OBS_CORPUS_CALLABLE_0064_LIBSCECOREIPC(X) \
+#define OBS_CORPUS_CALLABLE_0063_LIBSCECOREIPC(X) \
     X(WTFCrash) \
     X(WTFReportAssertionFailure) \
     X(_ZN3WTF10StringImpl7destroyEPS0_) \
@@ -4438,7 +4368,7 @@
     X(_ZThn8_N6WebKit17ChildProcessProxyD1Ev)
 
 /* libSceCoredump: 14 symbols, 14 callable. */
-#define OBS_CORPUS_0065_LIBSCECOREDUMP(X) \
+#define OBS_CORPUS_0064_LIBSCECOREDUMP(X) \
     X(sceCoredumpAttachMemoryRegion) \
     X(sceCoredumpAttachMemoryRegionAsUserFile) \
     X(sceCoredumpAttachUserFile) \
@@ -4453,7 +4383,7 @@
     X(sceCoredumpSetUserDataType) \
     X(sceCoredumpUnregisterCoredumpHandler) \
     X(sceCoredumpWriteUserData)
-#define OBS_CORPUS_CALLABLE_0065_LIBSCECOREDUMP(X) \
+#define OBS_CORPUS_CALLABLE_0064_LIBSCECOREDUMP(X) \
     X(sceCoredumpAttachMemoryRegion) \
     X(sceCoredumpAttachMemoryRegionAsUserFile) \
     X(sceCoredumpAttachUserFile) \
@@ -4470,15 +4400,15 @@
     X(sceCoredumpWriteUserData)
 
 /* libSceCoredump_debug: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0066_LIBSCECOREDUMP_DEBUG(X) \
+#define OBS_CORPUS_0065_LIBSCECOREDUMP_DEBUG(X) \
     X(sceCoredumpDebugForceCoredumpOnAppClose) \
     X(sceCoredumpDebugTriggerCoredump)
-#define OBS_CORPUS_CALLABLE_0066_LIBSCECOREDUMP_DEBUG(X) \
+#define OBS_CORPUS_CALLABLE_0065_LIBSCECOREDUMP_DEBUG(X) \
     X(sceCoredumpDebugForceCoredumpOnAppClose) \
     X(sceCoredumpDebugTriggerCoredump)
 
 /* libSceCustomMusicCore: 18 symbols, 18 callable. */
-#define OBS_CORPUS_0067_LIBSCECUSTOMMUSICCORE(X) \
+#define OBS_CORPUS_0066_LIBSCECUSTOMMUSICCORE(X) \
     X(sceCustomMusicCoreBgmClose) \
     X(sceCustomMusicCoreBgmOpen) \
     X(sceCustomMusicCoreBgmOpen2) \
@@ -4497,7 +4427,7 @@
     X(sceCustomMusicCoreStartOperation) \
     X(sceCustomMusicCoreStartOperation2) \
     X(sceCustomMusicCoreStopOperation)
-#define OBS_CORPUS_CALLABLE_0067_LIBSCECUSTOMMUSICCORE(X) \
+#define OBS_CORPUS_CALLABLE_0066_LIBSCECUSTOMMUSICCORE(X) \
     X(sceCustomMusicCoreBgmClose) \
     X(sceCustomMusicCoreBgmOpen) \
     X(sceCustomMusicCoreBgmOpen2) \
@@ -4518,17 +4448,17 @@
     X(sceCustomMusicCoreStopOperation)
 
 /* libSceCustomMusicService: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0068_LIBSCECUSTOMMUSICSERVICE(X) \
+#define OBS_CORPUS_0067_LIBSCECUSTOMMUSICSERVICE(X) \
     X(sceCustomMusicServiceInitialize) \
     X(sceCustomMusicServiceSendRequest) \
     X(sceCustomMusicServiceTerminate)
-#define OBS_CORPUS_CALLABLE_0068_LIBSCECUSTOMMUSICSERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0067_LIBSCECUSTOMMUSICSERVICE(X) \
     X(sceCustomMusicServiceInitialize) \
     X(sceCustomMusicServiceSendRequest) \
     X(sceCustomMusicServiceTerminate)
 
 /* libSceDataTransfer: 48 symbols, 48 callable. */
-#define OBS_CORPUS_0069_LIBSCEDATATRANSFER(X) \
+#define OBS_CORPUS_0068_LIBSCEDATATRANSFER(X) \
     X(sceDataTransferHostAbort) \
     X(sceDataTransferHostLaunch) \
     X(sceDataTransferHostNotifyEasySignInReady) \
@@ -4577,7 +4507,7 @@
     X(sceDataTransferTargetRequestStartTransfer) \
     X(sceDataTransferTargetRequestTransferSpeed) \
     X(sceDataTransferTerminate)
-#define OBS_CORPUS_CALLABLE_0069_LIBSCEDATATRANSFER(X) \
+#define OBS_CORPUS_CALLABLE_0068_LIBSCEDATATRANSFER(X) \
     X(sceDataTransferHostAbort) \
     X(sceDataTransferHostLaunch) \
     X(sceDataTransferHostNotifyEasySignInReady) \
@@ -4628,38 +4558,38 @@
     X(sceDataTransferTerminate)
 
 /* libSceDbRecoveryClient: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0070_LIBSCEDBRECOVERYCLIENT(X) \
+#define OBS_CORPUS_0069_LIBSCEDBRECOVERYCLIENT(X) \
     X(DbRecoveryGetRecoverDbStatus) \
     X(DbRecoveryRecoverDb)
-#define OBS_CORPUS_CALLABLE_0070_LIBSCEDBRECOVERYCLIENT(X) \
+#define OBS_CORPUS_CALLABLE_0069_LIBSCEDBRECOVERYCLIENT(X) \
     X(DbRecoveryGetRecoverDbStatus) \
     X(DbRecoveryRecoverDb)
 
 /* libSceDbgAddressSanitizer: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0071_LIBSCEDBGADDRESSSANITIZER(X) \
+#define OBS_CORPUS_0070_LIBSCEDBGADDRESSSANITIZER(X) \
     X(__asan_destroy_fake_stack) \
     X(__sanitizer_finish_switch_fiber) \
     X(__sanitizer_start_switch_fiber)
-#define OBS_CORPUS_CALLABLE_0071_LIBSCEDBGADDRESSSANITIZER(X) \
+#define OBS_CORPUS_CALLABLE_0070_LIBSCEDBGADDRESSSANITIZER(X) \
     X(__asan_destroy_fake_stack) \
     X(__sanitizer_finish_switch_fiber) \
     X(__sanitizer_start_switch_fiber)
 
 /* libSceDbgAudioOut: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0072_LIBSCEDBGAUDIOOUT(X) \
+#define OBS_CORPUS_0071_LIBSCEDBGAUDIOOUT(X) \
     X(sceAudioOutSetSystemDebugState)
-#define OBS_CORPUS_CALLABLE_0072_LIBSCEDBGAUDIOOUT(X) \
+#define OBS_CORPUS_CALLABLE_0071_LIBSCEDBGAUDIOOUT(X) \
     X(sceAudioOutSetSystemDebugState)
 
 /* libSceDbgKeyboard: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0073_LIBSCEDBGKEYBOARD(X) \
+#define OBS_CORPUS_0072_LIBSCEDBGKEYBOARD(X) \
     X(sceDbgKeyboardClose) \
     X(sceDbgKeyboardGetKey2Char) \
     X(sceDbgKeyboardInit) \
     X(sceDbgKeyboardOpen) \
     X(sceDbgKeyboardRead) \
     X(sceDbgKeyboardReadState)
-#define OBS_CORPUS_CALLABLE_0073_LIBSCEDBGKEYBOARD(X) \
+#define OBS_CORPUS_CALLABLE_0072_LIBSCEDBGKEYBOARD(X) \
     X(sceDbgKeyboardClose) \
     X(sceDbgKeyboardGetKey2Char) \
     X(sceDbgKeyboardInit) \
@@ -4668,35 +4598,35 @@
     X(sceDbgKeyboardReadState)
 
 /* libSceDbgPlayGo: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0074_LIBSCEDBGPLAYGO(X) \
+#define OBS_CORPUS_0073_LIBSCEDBGPLAYGO(X) \
     X(sceDbgPlayGoRequestNextChunk) \
     X(sceDbgPlayGoSnapshot)
-#define OBS_CORPUS_CALLABLE_0074_LIBSCEDBGPLAYGO(X) \
+#define OBS_CORPUS_CALLABLE_0073_LIBSCEDBGPLAYGO(X) \
     X(sceDbgPlayGoRequestNextChunk) \
     X(sceDbgPlayGoSnapshot)
 
 /* libSceDbgVideoOut: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0075_LIBSCEDBGVIDEOOUT(X) \
+#define OBS_CORPUS_0074_LIBSCEDBGVIDEOOUT(X) \
     X(sceDbgVideoOutAddOutputModeVr60Privilege) \
     X(sceDbgVideoOutAddProcessAttribute) \
     X(sceDbgVideoOutRemoveProcessAttribute)
-#define OBS_CORPUS_CALLABLE_0075_LIBSCEDBGVIDEOOUT(X) \
+#define OBS_CORPUS_CALLABLE_0074_LIBSCEDBGVIDEOOUT(X) \
     X(sceDbgVideoOutAddOutputModeVr60Privilege) \
     X(sceDbgVideoOutAddProcessAttribute) \
     X(sceDbgVideoOutRemoveProcessAttribute)
 
 /* libSceDeci4h: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0076_LIBSCEDECI4H(X) \
+#define OBS_CORPUS_0075_LIBSCEDECI4H(X) \
     X(sceDeci4hCreateHostProcessAndWait) \
     X(sceDeci4hOpen) \
     X(sceDeci4hRead)
-#define OBS_CORPUS_CALLABLE_0076_LIBSCEDECI4H(X) \
+#define OBS_CORPUS_CALLABLE_0075_LIBSCEDECI4H(X) \
     X(sceDeci4hCreateHostProcessAndWait) \
     X(sceDeci4hOpen) \
     X(sceDeci4hRead)
 
 /* libSceDepth: 38 symbols, 38 callable. */
-#define OBS_CORPUS_0077_LIBSCEDEPTH(X) \
+#define OBS_CORPUS_0076_LIBSCEDEPTH(X) \
     X(_sceDepthCalcHeteroAdjustParam) \
     X(_sceDepthHeadCandidateTrackerGetInformation) \
     X(_sceDepthHeadCandidateTrackerSetInformation) \
@@ -4735,7 +4665,7 @@
     X(sceDepthUpdate) \
     X(sceDepthValidateCurrentCalibrationData) \
     X(sceDepthWaitAndExecutePostProcess)
-#define OBS_CORPUS_CALLABLE_0077_LIBSCEDEPTH(X) \
+#define OBS_CORPUS_CALLABLE_0076_LIBSCEDEPTH(X) \
     X(_sceDepthCalcHeteroAdjustParam) \
     X(_sceDepthHeadCandidateTrackerGetInformation) \
     X(_sceDepthHeadCandidateTrackerSetInformation) \
@@ -4776,13 +4706,13 @@
     X(sceDepthWaitAndExecutePostProcess)
 
 /* libSceDeviceService: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0078_LIBSCEDEVICESERVICE(X) \
+#define OBS_CORPUS_0077_LIBSCEDEVICESERVICE(X) \
     X(sceDeviceServiceGetEventState) \
     X(sceDeviceServiceGetGeneration) \
     X(sceDeviceServiceInitialize) \
     X(sceDeviceServiceQueryDeviceInfo_) \
     X(sceDeviceServiceTerminate)
-#define OBS_CORPUS_CALLABLE_0078_LIBSCEDEVICESERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0077_LIBSCEDEVICESERVICE(X) \
     X(sceDeviceServiceGetEventState) \
     X(sceDeviceServiceGetGeneration) \
     X(sceDeviceServiceInitialize) \
@@ -4790,7 +4720,7 @@
     X(sceDeviceServiceTerminate)
 
 /* libSceDipsw: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0079_LIBSCEDIPSW(X) \
+#define OBS_CORPUS_0078_LIBSCEDIPSW(X) \
     X(sceKernelCheckDipsw) \
     X(sceKernelInitializeDipsw) \
     X(sceKernelIsAssistMode) \
@@ -4800,7 +4730,7 @@
     X(sceKernelSetDipsw) \
     X(sceKernelUnsetDipsw) \
     X(sceKernelWriteDipswData)
-#define OBS_CORPUS_CALLABLE_0079_LIBSCEDIPSW(X) \
+#define OBS_CORPUS_CALLABLE_0078_LIBSCEDIPSW(X) \
     X(sceKernelCheckDipsw) \
     X(sceKernelInitializeDipsw) \
     X(sceKernelIsAssistMode) \
@@ -4812,15 +4742,15 @@
     X(sceKernelWriteDipswData)
 
 /* libSceDiscId: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0080_LIBSCEDISCID(X) \
+#define OBS_CORPUS_0079_LIBSCEDISCID(X) \
     X(sceDiscIdGet) \
     X(sceDiscIdGet2)
-#define OBS_CORPUS_CALLABLE_0080_LIBSCEDISCID(X) \
+#define OBS_CORPUS_CALLABLE_0079_LIBSCEDISCID(X) \
     X(sceDiscIdGet) \
     X(sceDiscIdGet2)
 
 /* libSceDiscMap: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0081_LIBSCEDISCMAP(X) \
+#define OBS_CORPUS_0080_LIBSCEDISCMAP(X) \
     X(Func_7C980FFB0AA27E7A) \
     X(Func_8A828CAEE7EDD5E9) \
     X(Func_E7EBCE96E92F91F8) \
@@ -4828,7 +4758,7 @@
     X(sceDiscMapIsRequestOnHDD) \
     X(sceDiscMapUnknownFJgP) \
     X(sceDiscMapUnknownIoKM)
-#define OBS_CORPUS_CALLABLE_0081_LIBSCEDISCMAP(X) \
+#define OBS_CORPUS_CALLABLE_0080_LIBSCEDISCMAP(X) \
     X(Func_7C980FFB0AA27E7A) \
     X(Func_8A828CAEE7EDD5E9) \
     X(Func_E7EBCE96E92F91F8) \
@@ -4838,27 +4768,27 @@
     X(sceDiscMapUnknownIoKM)
 
 /* libSceDiscMapForVsh: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0082_LIBSCEDISCMAPFORVSH(X) \
+#define OBS_CORPUS_0081_LIBSCEDISCMAPFORVSH(X) \
     X(sceDiscMapBitmapInfoServerStart) \
     X(sceDiscMapBitmapInfoServerStop)
-#define OBS_CORPUS_CALLABLE_0082_LIBSCEDISCMAPFORVSH(X) \
+#define OBS_CORPUS_CALLABLE_0081_LIBSCEDISCMAPFORVSH(X) \
     X(sceDiscMapBitmapInfoServerStart) \
     X(sceDiscMapBitmapInfoServerStop)
 
 /* libSceDseehx: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0083_LIBSCEDSEEHX(X) \
+#define OBS_CORPUS_0082_LIBSCEDSEEHX(X) \
     X(sceDseehxConvert) \
     X(sceDseehxExtInit) \
     X(sceDseehxFlush) \
     X(sceDseehxInit)
-#define OBS_CORPUS_CALLABLE_0083_LIBSCEDSEEHX(X) \
+#define OBS_CORPUS_CALLABLE_0082_LIBSCEDSEEHX(X) \
     X(sceDseehxConvert) \
     X(sceDseehxExtInit) \
     X(sceDseehxFlush) \
     X(sceDseehxInit)
 
 /* libSceDtcpIp: 22 symbols, 22 callable. */
-#define OBS_CORPUS_0084_LIBSCEDTCPIP(X) \
+#define OBS_CORPUS_0083_LIBSCEDTCPIP(X) \
     X(sceDtcpIpActivateAsync) \
     X(sceDtcpIpAddHeader) \
     X(sceDtcpIpByteSeekAsync) \
@@ -4881,7 +4811,7 @@
     X(sceDtcpIpTermAuthAsync) \
     X(sceDtcpIpTimeSeekAsync) \
     X(sceDtcpIpWaitAsync)
-#define OBS_CORPUS_CALLABLE_0084_LIBSCEDTCPIP(X) \
+#define OBS_CORPUS_CALLABLE_0083_LIBSCEDTCPIP(X) \
     X(sceDtcpIpActivateAsync) \
     X(sceDtcpIpAddHeader) \
     X(sceDtcpIpByteSeekAsync) \
@@ -4906,7 +4836,7 @@
     X(sceDtcpIpWaitAsync)
 
 /* libSceDtsEnc: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0085_LIBSCEDTSENC(X) \
+#define OBS_CORPUS_0084_LIBSCEDTSENC(X) \
     X(sceDtsEncCreateEncoder) \
     X(sceDtsEncDeleteEncoder) \
     X(sceDtsEncEncode) \
@@ -4914,7 +4844,7 @@
     X(sceDtsEncFlush) \
     X(sceDtsEncIsEncoding) \
     X(sceDtsEncWaitEncode)
-#define OBS_CORPUS_CALLABLE_0085_LIBSCEDTSENC(X) \
+#define OBS_CORPUS_CALLABLE_0084_LIBSCEDTSENC(X) \
     X(sceDtsEncCreateEncoder) \
     X(sceDtsEncDeleteEncoder) \
     X(sceDtsEncEncode) \
@@ -4924,7 +4854,7 @@
     X(sceDtsEncWaitEncode)
 
 /* libSceEditMp4: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0086_LIBSCEEDITMP4(X) \
+#define OBS_CORPUS_0085_LIBSCEEDITMP4(X) \
     X(sceEditMp4Abort) \
     X(sceEditMp4Edit) \
     X(sceEditMp4GetStatus) \
@@ -4934,7 +4864,7 @@
     X(sceEditMp4SetFinishCallback) \
     X(sceEditMp4Terminate) \
     X(sceEditMp4Unite)
-#define OBS_CORPUS_CALLABLE_0086_LIBSCEEDITMP4(X) \
+#define OBS_CORPUS_CALLABLE_0085_LIBSCEEDITMP4(X) \
     X(sceEditMp4Abort) \
     X(sceEditMp4Edit) \
     X(sceEditMp4GetStatus) \
@@ -4946,7 +4876,7 @@
     X(sceEditMp4Unite)
 
 /* libSceErrorDialog: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0087_LIBSCEERRORDIALOG(X) \
+#define OBS_CORPUS_0086_LIBSCEERRORDIALOG(X) \
     X(sceErrorDialogClose) \
     X(sceErrorDialogGetStatus) \
     X(sceErrorDialogInitialize) \
@@ -4955,7 +4885,7 @@
     X(sceErrorDialogOpenWithReport) \
     X(sceErrorDialogTerminate) \
     X(sceErrorDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0087_LIBSCEERRORDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0086_LIBSCEERRORDIALOG(X) \
     X(sceErrorDialogClose) \
     X(sceErrorDialogGetStatus) \
     X(sceErrorDialogInitialize) \
@@ -4966,7 +4896,7 @@
     X(sceErrorDialogUpdateStatus)
 
 /* libSceFacebook.Yoga: 129 symbols, 129 callable. */
-#define OBS_CORPUS_0088_LIBSCEFACEBOOK_YOGA(X) \
+#define OBS_CORPUS_0087_LIBSCEFACEBOOK_YOGA(X) \
     X(YGAlignToString) \
     X(YGConfigFree) \
     X(YGConfigGetInstanceCount) \
@@ -5096,7 +5026,7 @@
     X(YGSetMemoryFuncs) \
     X(YGUnitToString) \
     X(YGWrapToString)
-#define OBS_CORPUS_CALLABLE_0088_LIBSCEFACEBOOK_YOGA(X) \
+#define OBS_CORPUS_CALLABLE_0087_LIBSCEFACEBOOK_YOGA(X) \
     X(YGAlignToString) \
     X(YGConfigFree) \
     X(YGConfigGetInstanceCount) \
@@ -5228,7 +5158,7 @@
     X(YGWrapToString)
 
 /* libSceFiber: 21 symbols, 20 callable. */
-#define OBS_CORPUS_0089_LIBSCEFIBER(X) \
+#define OBS_CORPUS_0088_LIBSCEFIBER(X) \
     X(_sceFiberAttachContextAndRun) \
     X(_sceFiberAttachContextAndSwitch) \
     X(_sceFiberGetThreadFramePointerAddress) \
@@ -5250,7 +5180,7 @@
     X(sceFiberStopContextSizeCheck) \
     X(sceFiberSwitch) \
     X(sceFiberSwitchImpl)
-#define OBS_CORPUS_CALLABLE_0089_LIBSCEFIBER(X) \
+#define OBS_CORPUS_CALLABLE_0088_LIBSCEFIBER(X) \
     X(_sceFiberAttachContextAndRun) \
     X(_sceFiberAttachContextAndSwitch) \
     X(_sceFiberGetThreadFramePointerAddress) \
@@ -5273,7 +5203,7 @@
     X(sceFiberSwitchImpl)
 
 /* libSceFios2: 173 symbols, 173 callable. */
-#define OBS_CORPUS_0090_LIBSCEFIOS2(X) \
+#define OBS_CORPUS_0089_LIBSCEFIOS2(X) \
     X(sceFiosArchiveGetDecompressorThreadCount) \
     X(sceFiosArchiveGetMountBufferSize) \
     X(sceFiosArchiveGetMountBufferSizeSync) \
@@ -5447,7 +5377,7 @@
     X(sceFiosTraceTimestamp) \
     X(sceFiosUpdateParameters) \
     X(sceFiosVprintf)
-#define OBS_CORPUS_CALLABLE_0090_LIBSCEFIOS2(X) \
+#define OBS_CORPUS_CALLABLE_0089_LIBSCEFIOS2(X) \
     X(sceFiosArchiveGetDecompressorThreadCount) \
     X(sceFiosArchiveGetMountBufferSize) \
     X(sceFiosArchiveGetMountBufferSizeSync) \
@@ -5623,19 +5553,19 @@
     X(sceFiosVprintf)
 
 /* libSceFios2_debug: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0091_LIBSCEFIOS2_DEBUG(X) \
+#define OBS_CORPUS_0090_LIBSCEFIOS2_DEBUG(X) \
     X(sceFiosDebugSetProfileCallback) \
     X(sceFiosDebugSetTraceMask) \
     X(sceFiosDebugStatisticsPrint) \
     X(sceFiosDebugStatisticsReset)
-#define OBS_CORPUS_CALLABLE_0091_LIBSCEFIOS2_DEBUG(X) \
+#define OBS_CORPUS_CALLABLE_0090_LIBSCEFIOS2_DEBUG(X) \
     X(sceFiosDebugSetProfileCallback) \
     X(sceFiosDebugSetTraceMask) \
     X(sceFiosDebugStatisticsPrint) \
     X(sceFiosDebugStatisticsReset)
 
 /* libSceFont: 229 symbols, 229 callable. */
-#define OBS_CORPUS_0092_LIBSCEFONT(X) \
+#define OBS_CORPUS_0091_LIBSCEFONT(X) \
     X(Func_00F4D778F1C88CB3) \
     X(Func_03C650025FBB0DE7) \
     X(Func_07EAB8A163B27E1A) \
@@ -5865,7 +5795,7 @@
     X(sceFontWritingRefersRenderStep) \
     X(sceFontWritingRefersRenderStepCharacter) \
     X(sceFontWritingSetMaskInvisible)
-#define OBS_CORPUS_CALLABLE_0092_LIBSCEFONT(X) \
+#define OBS_CORPUS_CALLABLE_0091_LIBSCEFONT(X) \
     X(Func_00F4D778F1C88CB3) \
     X(Func_03C650025FBB0DE7) \
     X(Func_07EAB8A163B27E1A) \
@@ -6097,7 +6027,7 @@
     X(sceFontWritingSetMaskInvisible)
 
 /* libSceFontFt: 21 symbols, 21 callable. */
-#define OBS_CORPUS_0093_LIBSCEFONTFT(X) \
+#define OBS_CORPUS_0092_LIBSCEFONTFT(X) \
     X(sceFontFtInitAliases) \
     X(sceFontFtSetAliasFont) \
     X(sceFontFtSetAliasPath) \
@@ -6119,7 +6049,7 @@
     X(sceFontSelectGlyphsFt) \
     X(sceFontSelectLibraryFt) \
     X(sceFontSelectRendererFt)
-#define OBS_CORPUS_CALLABLE_0093_LIBSCEFONTFT(X) \
+#define OBS_CORPUS_CALLABLE_0092_LIBSCEFONTFT(X) \
     X(sceFontFtInitAliases) \
     X(sceFontFtSetAliasFont) \
     X(sceFontFtSetAliasPath) \
@@ -6143,7 +6073,7 @@
     X(sceFontSelectRendererFt)
 
 /* libSceFreeType: 403 symbols, 365 callable. */
-#define OBS_CORPUS_0094_LIBSCEFREETYPE(X) \
+#define OBS_CORPUS_0093_LIBSCEFREETYPE(X) \
     X(FTA_Add_Module) \
     X(FTA_Add_Module_autofitter) \
     X(FTA_Add_Module_bdf) \
@@ -6547,7 +6477,7 @@
     X(tt_cmap8_class_rec) \
     X(tt_driver_class) \
     X(winfnt_driver_class)
-#define OBS_CORPUS_CALLABLE_0094_LIBSCEFREETYPE(X) \
+#define OBS_CORPUS_CALLABLE_0093_LIBSCEFREETYPE(X) \
     X(FTA_Add_Module) \
     X(FTA_Add_Module_autofitter) \
     X(FTA_Add_Module_bdf) \
@@ -6915,7 +6845,7 @@
     X(ft_validator_run)
 
 /* libSceFsInternalForVsh: 131 symbols, 131 callable. */
-#define OBS_CORPUS_0095_LIBSCEFSINTERNALFORVSH(X) \
+#define OBS_CORPUS_0094_LIBSCEFSINTERNALFORVSH(X) \
     X(sceBdSchedCancelBackgroundCopyRequest) \
     X(sceBdSchedCancelPrioritizedBackgroundCopyRequest) \
     X(sceBdSchedConfigure) \
@@ -7047,7 +6977,7 @@
     X(sceFsUmountLwfsCompat) \
     X(sceFsUmountSaveData) \
     X(sceFsUmountTrophyData)
-#define OBS_CORPUS_CALLABLE_0095_LIBSCEFSINTERNALFORVSH(X) \
+#define OBS_CORPUS_CALLABLE_0094_LIBSCEFSINTERNALFORVSH(X) \
     X(sceBdSchedCancelBackgroundCopyRequest) \
     X(sceBdSchedCancelPrioritizedBackgroundCopyRequest) \
     X(sceBdSchedConfigure) \
@@ -7181,7 +7111,7 @@
     X(sceFsUmountTrophyData)
 
 /* libSceGLSlimServerVSH: 213 symbols, 213 callable. */
-#define OBS_CORPUS_0096_LIBSCEGLSLIMSERVERVSH(X) \
+#define OBS_CORPUS_0095_LIBSCEGLSLIMSERVERVSH(X) \
     X(eglBindAPI) \
     X(eglBindTexImage) \
     X(eglChooseConfig) \
@@ -7395,7 +7325,7 @@
     X(sceSlimglServerWaitRenderThread) \
     X(sceSlimglStartServer) \
     X(sceSlimglSupportServerProcess)
-#define OBS_CORPUS_CALLABLE_0096_LIBSCEGLSLIMSERVERVSH(X) \
+#define OBS_CORPUS_CALLABLE_0095_LIBSCEGLSLIMSERVERVSH(X) \
     X(eglBindAPI) \
     X(eglBindTexImage) \
     X(eglChooseConfig) \
@@ -7611,7 +7541,7 @@
     X(sceSlimglSupportServerProcess)
 
 /* libSceGLSlimVSH: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0097_LIBSCEGLSLIMVSH(X) \
+#define OBS_CORPUS_0096_LIBSCEGLSLIMVSH(X) \
     X(sceSlimglClientLiveTimeout) \
     X(sceSlimglClientMonitorServerEnd) \
     X(sceSlimglClientMonitorServerStart) \
@@ -7619,7 +7549,7 @@
     X(sceSlimglClientStartIPC) \
     X(sceSlimglIPCEnd) \
     X(sceSlimglIPCSetup)
-#define OBS_CORPUS_CALLABLE_0097_LIBSCEGLSLIMVSH(X) \
+#define OBS_CORPUS_CALLABLE_0096_LIBSCEGLSLIMVSH(X) \
     X(sceSlimglClientLiveTimeout) \
     X(sceSlimglClientMonitorServerEnd) \
     X(sceSlimglClientMonitorServerStart) \
@@ -7629,7 +7559,7 @@
     X(sceSlimglIPCSetup)
 
 /* libSceGameCustomDataDialog: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0098_LIBSCEGAMECUSTOMDATADIALOG(X) \
+#define OBS_CORPUS_0097_LIBSCEGAMECUSTOMDATADIALOG(X) \
     X(sceGameCustomDataDialogClose) \
     X(sceGameCustomDataDialogGetResult) \
     X(sceGameCustomDataDialogGetResultA) \
@@ -7639,7 +7569,7 @@
     X(sceGameCustomDataDialogOpenA) \
     X(sceGameCustomDataDialogTerminate) \
     X(sceGameCustomDataDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0098_LIBSCEGAMECUSTOMDATADIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0097_LIBSCEGAMECUSTOMDATADIALOG(X) \
     X(sceGameCustomDataDialogClose) \
     X(sceGameCustomDataDialogGetResult) \
     X(sceGameCustomDataDialogGetResultA) \
@@ -7651,7 +7581,7 @@
     X(sceGameCustomDataDialogUpdateStatus)
 
 /* libSceGameLiveStreaming: 45 symbols, 45 callable. */
-#define OBS_CORPUS_0099_LIBSCEGAMELIVESTREAMING(X) \
+#define OBS_CORPUS_0098_LIBSCEGAMELIVESTREAMING(X) \
     X(sceGameLiveStreamingApplySocialFeedbackMessageFilter) \
     X(sceGameLiveStreamingCheckCallback) \
     X(sceGameLiveStreamingClearPresetSocialFeedbackCommands) \
@@ -7697,7 +7627,7 @@
     X(sceGameLiveStreamingStopSocialFeedbackMessageFiltering) \
     X(sceGameLiveStreamingTerminate) \
     X(sceGameLiveStreamingUnregisterCallback)
-#define OBS_CORPUS_CALLABLE_0099_LIBSCEGAMELIVESTREAMING(X) \
+#define OBS_CORPUS_CALLABLE_0098_LIBSCEGAMELIVESTREAMING(X) \
     X(sceGameLiveStreamingApplySocialFeedbackMessageFilter) \
     X(sceGameLiveStreamingCheckCallback) \
     X(sceGameLiveStreamingClearPresetSocialFeedbackCommands) \
@@ -7745,21 +7675,21 @@
     X(sceGameLiveStreamingUnregisterCallback)
 
 /* libSceGameLiveStreaming_debug: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0100_LIBSCEGAMELIVESTREAMING_DEBUG(X) \
+#define OBS_CORPUS_0099_LIBSCEGAMELIVESTREAMING_DEBUG(X) \
     X(sceGameLiveStreamingStartDebugBroadcast) \
     X(sceGameLiveStreamingStopDebugBroadcast)
-#define OBS_CORPUS_CALLABLE_0100_LIBSCEGAMELIVESTREAMING_DEBUG(X) \
+#define OBS_CORPUS_CALLABLE_0099_LIBSCEGAMELIVESTREAMING_DEBUG(X) \
     X(sceGameLiveStreamingStartDebugBroadcast) \
     X(sceGameLiveStreamingStopDebugBroadcast)
 
 /* libSceGameRight: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0101_LIBSCEGAMERIGHT(X) \
+#define OBS_CORPUS_0100_LIBSCEGAMERIGHT(X) \
     X(sceGameRightGetLogoPngImage) \
     X(sceGameRightGetLogoPngImageSizeInBytes) \
     X(sceGameRightGetString) \
     X(sceGameRightGetStringSizeInBytes) \
     X(sceGameRightGetVersion)
-#define OBS_CORPUS_CALLABLE_0101_LIBSCEGAMERIGHT(X) \
+#define OBS_CORPUS_CALLABLE_0100_LIBSCEGAMERIGHT(X) \
     X(sceGameRightGetLogoPngImage) \
     X(sceGameRightGetLogoPngImageSizeInBytes) \
     X(sceGameRightGetString) \
@@ -7767,14 +7697,14 @@
     X(sceGameRightGetVersion)
 
 /* libSceGameUpdate: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0102_LIBSCEGAMEUPDATE(X) \
+#define OBS_CORPUS_0101_LIBSCEGAMEUPDATE(X) \
     X(sceGameUpdateAbortRequest) \
     X(sceGameUpdateCheck) \
     X(sceGameUpdateCreateRequest) \
     X(sceGameUpdateDeleteRequest) \
     X(sceGameUpdateInitialize) \
     X(sceGameUpdateTerminate)
-#define OBS_CORPUS_CALLABLE_0102_LIBSCEGAMEUPDATE(X) \
+#define OBS_CORPUS_CALLABLE_0101_LIBSCEGAMEUPDATE(X) \
     X(sceGameUpdateAbortRequest) \
     X(sceGameUpdateCheck) \
     X(sceGameUpdateCreateRequest) \
@@ -7783,27 +7713,27 @@
     X(sceGameUpdateTerminate)
 
 /* libSceGic: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0103_LIBSCEGIC(X) \
+#define OBS_CORPUS_0102_LIBSCEGIC(X) \
     X(sceGicGetValue)
-#define OBS_CORPUS_CALLABLE_0103_LIBSCEGIC(X) \
+#define OBS_CORPUS_CALLABLE_0102_LIBSCEGIC(X) \
     X(sceGicGetValue)
 
 /* libSceGnmDebugModuleReset: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0104_LIBSCEGNMDEBUGMODULERESET(X) \
+#define OBS_CORPUS_0103_LIBSCEGNMDEBUGMODULERESET(X) \
     X(sceGnmDebugModuleReset)
-#define OBS_CORPUS_CALLABLE_0104_LIBSCEGNMDEBUGMODULERESET(X) \
+#define OBS_CORPUS_CALLABLE_0103_LIBSCEGNMDEBUGMODULERESET(X) \
     X(sceGnmDebugModuleReset)
 
 /* libSceGnmDebugReset: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0105_LIBSCEGNMDEBUGRESET(X) \
+#define OBS_CORPUS_0104_LIBSCEGNMDEBUGRESET(X) \
     X(Func_C4C328B7CF3B4171) \
     X(sceGnmDebugReset)
-#define OBS_CORPUS_CALLABLE_0105_LIBSCEGNMDEBUGRESET(X) \
+#define OBS_CORPUS_CALLABLE_0104_LIBSCEGNMDEBUGRESET(X) \
     X(Func_C4C328B7CF3B4171) \
     X(sceGnmDebugReset)
 
 /* libSceGnmDriver: 220 symbols, 220 callable. */
-#define OBS_CORPUS_0106_LIBSCEGNMDRIVER(X) \
+#define OBS_CORPUS_0105_LIBSCEGNMDRIVER(X) \
     X(Func_063D065A2D6359C3) \
     X(Func_0CABACAFB258429D) \
     X(Func_150CF336FC2E99A3) \
@@ -8024,7 +7954,7 @@
     X(sceRazorCaptureImmediate) \
     X(sceRazorCaptureSinceLastFlip) \
     X(sceRazorIsLoaded)
-#define OBS_CORPUS_CALLABLE_0106_LIBSCEGNMDRIVER(X) \
+#define OBS_CORPUS_CALLABLE_0105_LIBSCEGNMDRIVER(X) \
     X(Func_063D065A2D6359C3) \
     X(Func_0CABACAFB258429D) \
     X(Func_150CF336FC2E99A3) \
@@ -8247,15 +8177,15 @@
     X(sceRazorIsLoaded)
 
 /* libSceGnmDriverCompat: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0107_LIBSCEGNMDRIVERCOMPAT(X) \
+#define OBS_CORPUS_0106_LIBSCEGNMDRIVERCOMPAT(X) \
     X(sceGnmDrawInitToDefaultContextStateInternalCommand) \
     X(sceGnmDrawInitToDefaultContextStateInternalSize)
-#define OBS_CORPUS_CALLABLE_0107_LIBSCEGNMDRIVERCOMPAT(X) \
+#define OBS_CORPUS_CALLABLE_0106_LIBSCEGNMDRIVERCOMPAT(X) \
     X(sceGnmDrawInitToDefaultContextStateInternalCommand) \
     X(sceGnmDrawInitToDefaultContextStateInternalSize)
 
 /* libSceGnmDriverResourceRegistration: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0108_LIBSCEGNMDRIVERRESOURCEREGISTRATION(X) \
+#define OBS_CORPUS_0107_LIBSCEGNMDRIVERRESOURCEREGISTRATION(X) \
     X(Func_1C43886B16EE5530) \
     X(Func_81037019ECCD0E01) \
     X(Func_BFB41C057478F0BF) \
@@ -8264,7 +8194,7 @@
     X(sceGnmFindResources) \
     X(sceGnmGetResourceRegistrationBuffers) \
     X(sceGnmRegisterOwnerForSystem)
-#define OBS_CORPUS_CALLABLE_0108_LIBSCEGNMDRIVERRESOURCEREGISTRATION(X) \
+#define OBS_CORPUS_CALLABLE_0107_LIBSCEGNMDRIVERRESOURCEREGISTRATION(X) \
     X(Func_1C43886B16EE5530) \
     X(Func_81037019ECCD0E01) \
     X(Func_BFB41C057478F0BF) \
@@ -8275,7 +8205,7 @@
     X(sceGnmRegisterOwnerForSystem)
 
 /* libSceGnmDriver_sys: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0109_LIBSCEGNMDRIVER_SYS(X) \
+#define OBS_CORPUS_0108_LIBSCEGNMDRIVER_SYS(X) \
     X(sceGnmInitialize) \
     X(sceGnmSysClose) \
     X(sceGnmSysEnableSubmitDone45Exception) \
@@ -8287,7 +8217,7 @@
     X(sceGnmSysSubmitFlipHandleProxy) \
     X(sceGnmValidateAndSubmitCommandBuffers) \
     X(sceGnmValidateSubmitAndFlipCommandBuffers)
-#define OBS_CORPUS_CALLABLE_0109_LIBSCEGNMDRIVER_SYS(X) \
+#define OBS_CORPUS_CALLABLE_0108_LIBSCEGNMDRIVER_SYS(X) \
     X(sceGnmInitialize) \
     X(sceGnmSysClose) \
     X(sceGnmSysEnableSubmitDone45Exception) \
@@ -8301,7 +8231,7 @@
     X(sceGnmValidateSubmitAndFlipCommandBuffers)
 
 /* libSceGvMp4Parser: 837 symbols, 772 callable. */
-#define OBS_CORPUS_0110_LIBSCEGVMP4PARSER(X) \
+#define OBS_CORPUS_0109_LIBSCEGVMP4PARSER(X) \
     X(MsvUpdaterInfo) \
     X(_Z12DbgPrintDumpPvj) \
     X(_ZN10MsvUpdater10InitializeEv) \
@@ -9139,7 +9069,7 @@
     X(_ZTv0_n40_N12Mp4Retriever8seekFileElb) \
     X(_ZTv0_n48_N13MsvMetaEditor8openFileEPKc) \
     X(_ZTv0_n48_N25MmsFileUpdaterFsOperation8openFileEPKc)
-#define OBS_CORPUS_CALLABLE_0110_LIBSCEGVMP4PARSER(X) \
+#define OBS_CORPUS_CALLABLE_0109_LIBSCEGVMP4PARSER(X) \
     X(_Z12DbgPrintDumpPvj) \
     X(_ZN10MsvUpdater10InitializeEv) \
     X(_ZN10MsvUpdater11getFileSizeEmPl) \
@@ -9914,7 +9844,7 @@
     X(_ZTv0_n48_N25MmsFileUpdaterFsOperation8openFileEPKc)
 
 /* libSceHidControl: 21 symbols, 21 callable. */
-#define OBS_CORPUS_0111_LIBSCEHIDCONTROL(X) \
+#define OBS_CORPUS_0110_LIBSCEHIDCONTROL(X) \
     X(sceHidControlConnectHandle) \
     X(sceHidControlConnectPort) \
     X(sceHidControlDisconnectDevice) \
@@ -9936,7 +9866,7 @@
     X(sceHidControlSetProcessFocus) \
     X(sceHidControlSetRevokeList) \
     X(sceHidControlSetUserColor)
-#define OBS_CORPUS_CALLABLE_0111_LIBSCEHIDCONTROL(X) \
+#define OBS_CORPUS_CALLABLE_0110_LIBSCEHIDCONTROL(X) \
     X(sceHidControlConnectHandle) \
     X(sceHidControlConnectPort) \
     X(sceHidControlDisconnectDevice) \
@@ -9960,7 +9890,7 @@
     X(sceHidControlSetUserColor)
 
 /* libSceHmd: 197 symbols, 197 callable. */
-#define OBS_CORPUS_0112_LIBSCEHMD(X) \
+#define OBS_CORPUS_0111_LIBSCEHMD(X) \
     X(Func_202D0D1A687FCD2F) \
     X(Func_358DBF818A3D8A12) \
     X(Func_5CCBADA76FE8F40E) \
@@ -10158,7 +10088,7 @@
     X(sceHmdReprojectionUnsetCallback) \
     X(sceHmdReprojectionUnsetDisplayBuffers) \
     X(sceHmdTerminate)
-#define OBS_CORPUS_CALLABLE_0112_LIBSCEHMD(X) \
+#define OBS_CORPUS_CALLABLE_0111_LIBSCEHMD(X) \
     X(Func_202D0D1A687FCD2F) \
     X(Func_358DBF818A3D8A12) \
     X(Func_5CCBADA76FE8F40E) \
@@ -10358,19 +10288,19 @@
     X(sceHmdTerminate)
 
 /* libSceHmdDistortion: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0113_LIBSCEHMDDISTORTION(X) \
+#define OBS_CORPUS_0112_LIBSCEHMDDISTORTION(X) \
     X(Func_B26430EA74FC3DC0) \
     X(sceHmdDistortionGetCompoundEyeCorrectionCommand) \
     X(sceHmdDistortionInitialize) \
     X(sceHmdDistortionSetOutputMinColor)
-#define OBS_CORPUS_CALLABLE_0113_LIBSCEHMDDISTORTION(X) \
+#define OBS_CORPUS_CALLABLE_0112_LIBSCEHMDDISTORTION(X) \
     X(Func_B26430EA74FC3DC0) \
     X(sceHmdDistortionGetCompoundEyeCorrectionCommand) \
     X(sceHmdDistortionInitialize) \
     X(sceHmdDistortionSetOutputMinColor)
 
 /* libSceHmdSetupDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0114_LIBSCEHMDSETUPDIALOG(X) \
+#define OBS_CORPUS_0113_LIBSCEHMDSETUPDIALOG(X) \
     X(sceHmdSetupDialogClose) \
     X(sceHmdSetupDialogGetResult) \
     X(sceHmdSetupDialogGetStatus) \
@@ -10378,7 +10308,7 @@
     X(sceHmdSetupDialogOpen) \
     X(sceHmdSetupDialogTerminate) \
     X(sceHmdSetupDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0114_LIBSCEHMDSETUPDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0113_LIBSCEHMDSETUPDIALOG(X) \
     X(sceHmdSetupDialogClose) \
     X(sceHmdSetupDialogGetResult) \
     X(sceHmdSetupDialogGetStatus) \
@@ -10388,7 +10318,7 @@
     X(sceHmdSetupDialogUpdateStatus)
 
 /* libSceHttp: 115 symbols, 115 callable. */
-#define OBS_CORPUS_0115_LIBSCEHTTP(X) \
+#define OBS_CORPUS_0114_LIBSCEHTTP(X) \
     X(sceHttpAbortRequest) \
     X(sceHttpAbortRequestForce) \
     X(sceHttpAbortWaitRequest) \
@@ -10504,7 +10434,7 @@
     X(sceHttpsSetSslCallback) \
     X(sceHttpsSetSslVersion) \
     X(sceHttpsUnloadCert)
-#define OBS_CORPUS_CALLABLE_0115_LIBSCEHTTP(X) \
+#define OBS_CORPUS_CALLABLE_0114_LIBSCEHTTP(X) \
     X(sceHttpAbortRequest) \
     X(sceHttpAbortRequestForce) \
     X(sceHttpAbortWaitRequest) \
@@ -10622,7 +10552,7 @@
     X(sceHttpsUnloadCert)
 
 /* libSceHttp2: 55 symbols, 55 callable. */
-#define OBS_CORPUS_0116_LIBSCEHTTP2(X) \
+#define OBS_CORPUS_0115_LIBSCEHTTP2(X) \
     X(sceHttp2AbortRequest) \
     X(sceHttp2AddCookie) \
     X(sceHttp2AddRequestHeader) \
@@ -10678,7 +10608,7 @@
     X(sceHttp2SslEnableOption) \
     X(sceHttp2Term) \
     X(sceHttp2WaitAsync)
-#define OBS_CORPUS_CALLABLE_0116_LIBSCEHTTP2(X) \
+#define OBS_CORPUS_CALLABLE_0115_LIBSCEHTTP2(X) \
     X(sceHttp2AbortRequest) \
     X(sceHttp2AddCookie) \
     X(sceHttp2AddRequestHeader) \
@@ -10736,7 +10666,7 @@
     X(sceHttp2WaitAsync)
 
 /* libSceHttpCache: 19 symbols, 19 callable. */
-#define OBS_CORPUS_0117_LIBSCEHTTPCACHE(X) \
+#define OBS_CORPUS_0116_LIBSCEHTTPCACHE(X) \
     X(sceHttpCacheClear) \
     X(sceHttpCacheClearAll) \
     X(sceHttpCacheCompleteRequest) \
@@ -10756,7 +10686,7 @@
     X(sceHttpCacheSystemShutdown) \
     X(sceHttpCacheSystemTerm) \
     X(sceHttpCacheTerm)
-#define OBS_CORPUS_CALLABLE_0117_LIBSCEHTTPCACHE(X) \
+#define OBS_CORPUS_CALLABLE_0116_LIBSCEHTTPCACHE(X) \
     X(sceHttpCacheClear) \
     X(sceHttpCacheClearAll) \
     X(sceHttpCacheCompleteRequest) \
@@ -10778,17 +10708,17 @@
     X(sceHttpCacheTerm)
 
 /* libSceHubAppUtil: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0118_LIBSCEHUBAPPUTIL(X) \
+#define OBS_CORPUS_0117_LIBSCEHUBAPPUTIL(X) \
     X(sceHubAppUtilDeeplinkToLiveDetailView) \
     X(sceHubAppUtilDeeplinkToPSSubscriptions) \
     X(sceHubAppUtilGetInstallationStatus)
-#define OBS_CORPUS_CALLABLE_0118_LIBSCEHUBAPPUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0117_LIBSCEHUBAPPUTIL(X) \
     X(sceHubAppUtilDeeplinkToLiveDetailView) \
     X(sceHubAppUtilDeeplinkToPSSubscriptions) \
     X(sceHubAppUtilGetInstallationStatus)
 
 /* libSceIduUtil: 51 symbols, 51 callable. */
-#define OBS_CORPUS_0119_LIBSCEIDUUTIL(X) \
+#define OBS_CORPUS_0118_LIBSCEIDUUTIL(X) \
     X(sceIduUtilClearAllSchedules) \
     X(sceIduUtilDeleteSaveData) \
     X(sceIduUtilDisablePriorityDownloads) \
@@ -10840,7 +10770,7 @@
     X(sceIduUtilTerminate) \
     X(sceIduUtilUninstallApp) \
     X(sceIduUtilUpdateSelf)
-#define OBS_CORPUS_CALLABLE_0119_LIBSCEIDUUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0118_LIBSCEIDUUTIL(X) \
     X(sceIduUtilClearAllSchedules) \
     X(sceIduUtilDeleteSaveData) \
     X(sceIduUtilDisablePriorityDownloads) \
@@ -10894,7 +10824,7 @@
     X(sceIduUtilUpdateSelf)
 
 /* libSceImageUtil: 170 symbols, 160 callable. */
-#define OBS_CORPUS_0120_LIBSCEIMAGEUTIL(X) \
+#define OBS_CORPUS_0119_LIBSCEIMAGEUTIL(X) \
     X(__dso_handle) \
     X(jcopy_block_row) \
     X(jcopy_sample_rows) \
@@ -11065,7 +10995,7 @@
     X(jpeg_write_tables) \
     X(jround_up) \
     X(jzero_far)
-#define OBS_CORPUS_CALLABLE_0120_LIBSCEIMAGEUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0119_LIBSCEIMAGEUTIL(X) \
     X(jcopy_block_row) \
     X(jcopy_sample_rows) \
     X(jdiv_round_up) \
@@ -11228,7 +11158,7 @@
     X(jzero_far)
 
 /* libSceIme: 54 symbols, 54 callable. */
-#define OBS_CORPUS_0121_LIBSCEIME(X) \
+#define OBS_CORPUS_0120_LIBSCEIME(X) \
     X(FinalizeImeModule) \
     X(InitializeImeModule) \
     X(sceImeCheckFilterText) \
@@ -11283,7 +11213,7 @@
     X(sceImeVshUpdate) \
     X(sceImeVshUpdateContext) \
     X(sceImeVshUpdateContext2)
-#define OBS_CORPUS_CALLABLE_0121_LIBSCEIME(X) \
+#define OBS_CORPUS_CALLABLE_0120_LIBSCEIME(X) \
     X(FinalizeImeModule) \
     X(InitializeImeModule) \
     X(sceImeCheckFilterText) \
@@ -11340,7 +11270,7 @@
     X(sceImeVshUpdateContext2)
 
 /* libSceImeBackend: 27 symbols, 27 callable. */
-#define OBS_CORPUS_0122_LIBSCEIMEBACKEND(X) \
+#define OBS_CORPUS_0121_LIBSCEIMEBACKEND(X) \
     X(sceImeBackendAllConfirm) \
     X(sceImeBackendAllDeleteConvertString) \
     X(sceImeBackendBackspaceCharacter) \
@@ -11368,7 +11298,7 @@
     X(sceImeBackendReset) \
     X(sceImeBackendSetConvertMode) \
     X(sceImeBackendTemporalConfirm)
-#define OBS_CORPUS_CALLABLE_0122_LIBSCEIMEBACKEND(X) \
+#define OBS_CORPUS_CALLABLE_0121_LIBSCEIMEBACKEND(X) \
     X(sceImeBackendAllConfirm) \
     X(sceImeBackendAllDeleteConvertString) \
     X(sceImeBackendBackspaceCharacter) \
@@ -11398,7 +11328,7 @@
     X(sceImeBackendTemporalConfirm)
 
 /* libSceImeDialog: 13 symbols, 13 callable. */
-#define OBS_CORPUS_0123_LIBSCEIMEDIALOG(X) \
+#define OBS_CORPUS_0122_LIBSCEIMEDIALOG(X) \
     X(sceImeDialogAbort) \
     X(sceImeDialogForTestFunction) \
     X(sceImeDialogForceClose) \
@@ -11412,7 +11342,7 @@
     X(sceImeDialogInitInternal3) \
     X(sceImeDialogSetPanelPosition) \
     X(sceImeDialogTerm)
-#define OBS_CORPUS_CALLABLE_0123_LIBSCEIMEDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0122_LIBSCEIMEDIALOG(X) \
     X(sceImeDialogAbort) \
     X(sceImeDialogForTestFunction) \
     X(sceImeDialogForceClose) \
@@ -11428,13 +11358,13 @@
     X(sceImeDialogTerm)
 
 /* libSceInjectedBundle: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0124_LIBSCEINJECTEDBUNDLE(X) \
+#define OBS_CORPUS_0123_LIBSCEINJECTEDBUNDLE(X) \
     X(WKBundleInitialize)
-#define OBS_CORPUS_CALLABLE_0124_LIBSCEINJECTEDBUNDLE(X) \
+#define OBS_CORPUS_CALLABLE_0123_LIBSCEINJECTEDBUNDLE(X) \
     X(WKBundleInitialize)
 
 /* libSceInvitationDialog: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0125_LIBSCEINVITATIONDIALOG(X) \
+#define OBS_CORPUS_0124_LIBSCEINVITATIONDIALOG(X) \
     X(sceInvitationDialogClose) \
     X(sceInvitationDialogGetResult) \
     X(sceInvitationDialogGetResultA) \
@@ -11444,7 +11374,7 @@
     X(sceInvitationDialogOpenA) \
     X(sceInvitationDialogTerminate) \
     X(sceInvitationDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0125_LIBSCEINVITATIONDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0124_LIBSCEINVITATIONDIALOG(X) \
     X(sceInvitationDialogClose) \
     X(sceInvitationDialogGetResult) \
     X(sceInvitationDialogGetResultA) \
@@ -11456,7 +11386,7 @@
     X(sceInvitationDialogUpdateStatus)
 
 /* libSceIpmi: 150 symbols, 141 callable. */
-#define OBS_CORPUS_0126_LIBSCEIPMI(X) \
+#define OBS_CORPUS_0125_LIBSCEIPMI(X) \
     X(_Z10getIpcPathiiPKciPc) \
     X(_Z12getIpcPathExiiiPKciPc) \
     X(_Z14getIpmiMessageiPvPmmPj) \
@@ -11607,7 +11537,7 @@
     X(_ZTVN4IPMI7SessionE) \
     X(module_start) \
     X(module_stop)
-#define OBS_CORPUS_CALLABLE_0126_LIBSCEIPMI(X) \
+#define OBS_CORPUS_CALLABLE_0125_LIBSCEIPMI(X) \
     X(_Z10getIpcPathiiPKciPc) \
     X(_Z12getIpcPathExiiiPKciPc) \
     X(_Z14getIpmiMessageiPvPmmPj) \
@@ -11751,13 +11681,13 @@
     X(_ZNK4IPMI6Server6Config29estimateTempWorkingMemorySizeEv)
 
 /* libSceIpmiDbg: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0127_LIBSCEIPMIDBG(X) \
+#define OBS_CORPUS_0126_LIBSCEIPMIDBG(X) \
     X(sceIpmiMgrGetIpcBlockerPid) \
     X(sceIpmiMgrGetIpcBlockerPidByAppId) \
     X(sceIpmiMgrPauseDump) \
     X(sceIpmiMgrRaiseExceptionToPid) \
     X(sceIpmiMgrStartDump)
-#define OBS_CORPUS_CALLABLE_0127_LIBSCEIPMIDBG(X) \
+#define OBS_CORPUS_CALLABLE_0126_LIBSCEIPMIDBG(X) \
     X(sceIpmiMgrGetIpcBlockerPid) \
     X(sceIpmiMgrGetIpcBlockerPidByAppId) \
     X(sceIpmiMgrPauseDump) \
@@ -11765,7 +11695,7 @@
     X(sceIpmiMgrStartDump)
 
 /* libSceJitBridge: 21 symbols, 19 callable. */
-#define OBS_CORPUS_0128_LIBSCEJITBRIDGE(X) \
+#define OBS_CORPUS_0127_LIBSCEJITBRIDGE(X) \
     X(_ZN19JITSharedDataMemory11shared_freeEPv) \
     X(_ZN19JITSharedDataMemory13shared_callocEmm) \
     X(_ZN19JITSharedDataMemory13shared_mallocEm) \
@@ -11787,7 +11717,7 @@
     X(_ZN9JITBridge22initializeFromCompilerEPKcPPcPKNS_11RestartDataE) \
     X(_ZN9JITBridge8shutdownEb) \
     X(_ZNK9JITBridge20sharedMemoryAreaSizeEv)
-#define OBS_CORPUS_CALLABLE_0128_LIBSCEJITBRIDGE(X) \
+#define OBS_CORPUS_CALLABLE_0127_LIBSCEJITBRIDGE(X) \
     X(_ZN19JITSharedDataMemory11shared_freeEPv) \
     X(_ZN19JITSharedDataMemory13shared_callocEmm) \
     X(_ZN19JITSharedDataMemory13shared_mallocEm) \
@@ -11809,14 +11739,14 @@
     X(_ZNK9JITBridge20sharedMemoryAreaSizeEv)
 
 /* libSceJpegDec: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0129_LIBSCEJPEGDEC(X) \
+#define OBS_CORPUS_0128_LIBSCEJPEGDEC(X) \
     X(sceJpegDecCreate) \
     X(sceJpegDecDecode) \
     X(sceJpegDecDecodeWithInputControl) \
     X(sceJpegDecDelete) \
     X(sceJpegDecParseHeader) \
     X(sceJpegDecQueryMemorySize)
-#define OBS_CORPUS_CALLABLE_0129_LIBSCEJPEGDEC(X) \
+#define OBS_CORPUS_CALLABLE_0128_LIBSCEJPEGDEC(X) \
     X(sceJpegDecCreate) \
     X(sceJpegDecDecode) \
     X(sceJpegDecDecodeWithInputControl) \
@@ -11825,19 +11755,19 @@
     X(sceJpegDecQueryMemorySize)
 
 /* libSceJpegEnc: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0130_LIBSCEJPEGENC(X) \
+#define OBS_CORPUS_0129_LIBSCEJPEGENC(X) \
     X(sceJpegEncCreate) \
     X(sceJpegEncDelete) \
     X(sceJpegEncEncode) \
     X(sceJpegEncQueryMemorySize)
-#define OBS_CORPUS_CALLABLE_0130_LIBSCEJPEGENC(X) \
+#define OBS_CORPUS_CALLABLE_0129_LIBSCEJPEGENC(X) \
     X(sceJpegEncCreate) \
     X(sceJpegEncDelete) \
     X(sceJpegEncEncode) \
     X(sceJpegEncQueryMemorySize)
 
 /* libSceJpegParser: 95 symbols, 85 callable. */
-#define OBS_CORPUS_0131_LIBSCEJPEGPARSER(X) \
+#define OBS_CORPUS_0130_LIBSCEJPEGPARSER(X) \
     X(_ZN23sceMetadataReaderWriter10jpegParser18jpegParserFinalizeEv) \
     X(_ZN23sceMetadataReaderWriter10jpegParser20jpegParserInitializeEv) \
     X(_ZN23sceMetadataReaderWriter10jpegParser22jpegParserReadMetadataERKSsRKNS_8MetadataERS3_) \
@@ -11933,7 +11863,7 @@
     X(_ZTVN8meta_gen12JpegPromoterE) \
     X(_ZTVN8meta_gen13JpegRetrieverE) \
     X(_ZTVN8meta_gen13TiffRetrieverE)
-#define OBS_CORPUS_CALLABLE_0131_LIBSCEJPEGPARSER(X) \
+#define OBS_CORPUS_CALLABLE_0130_LIBSCEJPEGPARSER(X) \
     X(_ZN23sceMetadataReaderWriter10jpegParser18jpegParserFinalizeEv) \
     X(_ZN23sceMetadataReaderWriter10jpegParser20jpegParserInitializeEv) \
     X(_ZN23sceMetadataReaderWriter10jpegParser22jpegParserReadMetadataERKSsRKNS_8MetadataERS3_) \
@@ -12021,7 +11951,7 @@
     X(_ZN8meta_gen17CommonFsOperationD2Ev)
 
 /* libSceJsc: 98 symbols, 97 callable. */
-#define OBS_CORPUS_0132_LIBSCEJSC(X) \
+#define OBS_CORPUS_0131_LIBSCEJSC(X) \
     X(JSCheckScriptSyntax) \
     X(JSClassCreate) \
     X(JSClassRelease) \
@@ -12120,7 +12050,7 @@
     X(JSWeakObjectMapRemove) \
     X(JSWeakObjectMapSet) \
     X(kJSClassDefinitionEmpty)
-#define OBS_CORPUS_CALLABLE_0132_LIBSCEJSC(X) \
+#define OBS_CORPUS_CALLABLE_0131_LIBSCEJSC(X) \
     X(JSCheckScriptSyntax) \
     X(JSClassCreate) \
     X(JSClassRelease) \
@@ -12220,13 +12150,13 @@
     X(JSWeakObjectMapSet)
 
 /* libSceJscCompiler: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0133_LIBSCEJSCCOMPILER(X) \
+#define OBS_CORPUS_0132_LIBSCEJSCCOMPILER(X) \
     X(compile)
-#define OBS_CORPUS_CALLABLE_0133_LIBSCEJSCCOMPILER(X) \
+#define OBS_CORPUS_CALLABLE_0132_LIBSCEJSCCOMPILER(X) \
     X(compile)
 
 /* libSceJson: 116 symbols, 108 callable. */
-#define OBS_CORPUS_0134_LIBSCEJSON(X) \
+#define OBS_CORPUS_0133_LIBSCEJSON(X) \
     X(_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE) \
     X(_ZN3sce4Json11Initializer10initializeEPKNS0_14InitParameter2E) \
     X(_ZN3sce4Json11Initializer27setGlobalNullAccessCallbackEPFRKNS0_5ValueENS0_9ValueTypeEPS3_PvES7_) \
@@ -12343,7 +12273,7 @@
     X(_ZNK3sce4Json5ValueixERKSbIcSt11char_traitsIcENS0_8StlAllocIcEEE) \
     X(_ZNK3sce4Json5ValueixEm) \
     X(_ZNK3sce4Json6String5c_strEv)
-#define OBS_CORPUS_CALLABLE_0134_LIBSCEJSON(X) \
+#define OBS_CORPUS_CALLABLE_0133_LIBSCEJSON(X) \
     X(_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE) \
     X(_ZN3sce4Json11Initializer10initializeEPKNS0_14InitParameter2E) \
     X(_ZN3sce4Json11Initializer27setGlobalNullAccessCallbackEPFRKNS0_5ValueENS0_9ValueTypeEPS3_PvES7_) \
@@ -12454,7 +12384,7 @@
     X(_ZNK3sce4Json6String5c_strEv)
 
 /* libSceJson2: 137 symbols, 136 callable. */
-#define OBS_CORPUS_0135_LIBSCEJSON2(X) \
+#define OBS_CORPUS_0134_LIBSCEJSON2(X) \
     X(_ZN3sce4Json11Initializer24setAllocatorInfoCallBackEPFviNS0_9ValueTypeEPvES3_) \
     X(_ZN3sce4Json11Initializer28setGlobalSpecialFloatHandlerEPFKNS0_5ValueENS0_12FunctionTypeEdPS3_PvPbES6_) \
     X(_ZN3sce4Json11Initializer28setGlobalTypeMismatchHandlerEPFRKNS0_5ValueENS0_9ValueTypeEPS3_S6_PvES7_) \
@@ -12592,7 +12522,7 @@
     X(_ZNK3sce4Json6String8capacityEv) \
     X(_ZNK3sce4Json6StringeqEPKc) \
     X(_ZNK3sce4Json6StringeqERKS1_)
-#define OBS_CORPUS_CALLABLE_0135_LIBSCEJSON2(X) \
+#define OBS_CORPUS_CALLABLE_0134_LIBSCEJSON2(X) \
     X(_ZN3sce4Json11Initializer24setAllocatorInfoCallBackEPFviNS0_9ValueTypeEPvES3_) \
     X(_ZN3sce4Json11Initializer28setGlobalSpecialFloatHandlerEPFKNS0_5ValueENS0_12FunctionTypeEdPS3_PvPbES6_) \
     X(_ZN3sce4Json11Initializer28setGlobalTypeMismatchHandlerEPFRKNS0_5ValueENS0_9ValueTypeEPS3_S6_PvES7_) \
@@ -12731,15 +12661,15 @@
     X(_ZNK3sce4Json6StringeqERKS1_)
 
 /* libSceKbEmulate: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0136_LIBSCEKBEMULATE(X) \
+#define OBS_CORPUS_0135_LIBSCEKBEMULATE(X) \
     X(sceKeyboardPadEmulateClose) \
     X(sceKeyboardPadEmulateOpen)
-#define OBS_CORPUS_CALLABLE_0136_LIBSCEKBEMULATE(X) \
+#define OBS_CORPUS_CALLABLE_0135_LIBSCEKBEMULATE(X) \
     X(sceKeyboardPadEmulateClose) \
     X(sceKeyboardPadEmulateOpen)
 
 /* libSceKeyboard: 12 symbols, 12 callable. */
-#define OBS_CORPUS_0137_LIBSCEKEYBOARD(X) \
+#define OBS_CORPUS_0136_LIBSCEKEYBOARD(X) \
     X(sceKeyboardConnectPort) \
     X(sceKeyboardDebugGetDeviceId) \
     X(sceKeyboardDeviceOpen) \
@@ -12752,7 +12682,7 @@
     X(sceKeyboardRead) \
     X(sceKeyboardSetProcessFocus) \
     X(sceKeyboardSetProcessPrivilege)
-#define OBS_CORPUS_CALLABLE_0137_LIBSCEKEYBOARD(X) \
+#define OBS_CORPUS_CALLABLE_0136_LIBSCEKEYBOARD(X) \
     X(sceKeyboardConnectPort) \
     X(sceKeyboardDebugGetDeviceId) \
     X(sceKeyboardDeviceOpen) \
@@ -12767,7 +12697,7 @@
     X(sceKeyboardSetProcessPrivilege)
 
 /* libSceLibcInternal: 2978 symbols, 2231 callable. */
-#define OBS_CORPUS_0138_LIBSCELIBCINTERNAL(X) \
+#define OBS_CORPUS_0137_LIBSCELIBCINTERNAL(X) \
     X(Need_sceLibcInternal) \
     X(_Assert) \
     X(_Atan) \
@@ -15746,7 +15676,7 @@
     X(y1f) \
     X(yn) \
     X(ynf)
-#define OBS_CORPUS_CALLABLE_0138_LIBSCELIBCINTERNAL(X) \
+#define OBS_CORPUS_CALLABLE_0137_LIBSCELIBCINTERNAL(X) \
     X(_Assert) \
     X(_Atan) \
     X(_Atomic_compare_exchange_strong) \
@@ -17980,13 +17910,13 @@
     X(ynf)
 
 /* libSceLibcInternalExt: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0139_LIBSCELIBCINTERNALEXT(X) \
+#define OBS_CORPUS_0138_LIBSCELIBCINTERNALEXT(X) \
     X(sceLibcHeapGetTraceInfo)
-#define OBS_CORPUS_CALLABLE_0139_LIBSCELIBCINTERNALEXT(X) \
+#define OBS_CORPUS_CALLABLE_0138_LIBSCELIBCINTERNALEXT(X) \
     X(sceLibcHeapGetTraceInfo)
 
 /* libSceLibreSSL: 357 symbols, 357 callable. */
-#define OBS_CORPUS_0140_LIBSCELIBRESSL(X) \
+#define OBS_CORPUS_0139_LIBSCELIBRESSL(X) \
     X(AES_cfb128_encrypt) \
     X(AES_ecb_encrypt) \
     X(AES_set_encrypt_key) \
@@ -18344,7 +18274,7 @@
     X(sk_pop) \
     X(sk_pop_free) \
     X(sk_value)
-#define OBS_CORPUS_CALLABLE_0140_LIBSCELIBRESSL(X) \
+#define OBS_CORPUS_CALLABLE_0139_LIBSCELIBRESSL(X) \
     X(AES_cfb128_encrypt) \
     X(AES_ecb_encrypt) \
     X(AES_set_encrypt_key) \
@@ -18704,7 +18634,7 @@
     X(sk_value)
 
 /* libSceLibreSSl3: 132 symbols, 132 callable. */
-#define OBS_CORPUS_0141_LIBSCELIBRESSL3(X) \
+#define OBS_CORPUS_0140_LIBSCELIBRESSL3(X) \
     X(AES_cbc_encrypt) \
     X(AES_ctr128_encrypt) \
     X(AES_decrypt) \
@@ -18837,7 +18767,7 @@
     X(d2i_RSAPublicKey_bio) \
     X(d2i_X509_bio) \
     X(o2i_ECPublicKey)
-#define OBS_CORPUS_CALLABLE_0141_LIBSCELIBRESSL3(X) \
+#define OBS_CORPUS_CALLABLE_0140_LIBSCELIBRESSL3(X) \
     X(AES_cbc_encrypt) \
     X(AES_ctr128_encrypt) \
     X(AES_decrypt) \
@@ -18972,7 +18902,7 @@
     X(o2i_ECPublicKey)
 
 /* libSceLncUtil: 84 symbols, 84 callable. */
-#define OBS_CORPUS_0142_LIBSCELNCUTIL(X) \
+#define OBS_CORPUS_0141_LIBSCELNCUTIL(X) \
     X(sceLncUtilAcquireCpuBudgetOfExtraAudioDevices) \
     X(sceLncUtilAcquireCpuBudgetOfImeForBigApp) \
     X(sceLncUtilAcquireCpuBudgetOfInGameStore) \
@@ -19057,7 +18987,7 @@
     X(sceLncUtilUnregisterCdlgSharedMemoryName) \
     X(sceLncUtilUnregisterDaemon) \
     X(sceLncUtilUnregisterShellUI)
-#define OBS_CORPUS_CALLABLE_0142_LIBSCELNCUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0141_LIBSCELNCUTIL(X) \
     X(sceLncUtilAcquireCpuBudgetOfExtraAudioDevices) \
     X(sceLncUtilAcquireCpuBudgetOfImeForBigApp) \
     X(sceLncUtilAcquireCpuBudgetOfInGameStore) \
@@ -19144,7 +19074,7 @@
     X(sceLncUtilUnregisterShellUI)
 
 /* libSceLoginDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0143_LIBSCELOGINDIALOG(X) \
+#define OBS_CORPUS_0142_LIBSCELOGINDIALOG(X) \
     X(sceLoginDialogClose) \
     X(sceLoginDialogGetResult) \
     X(sceLoginDialogGetStatus) \
@@ -19152,7 +19082,7 @@
     X(sceLoginDialogOpen) \
     X(sceLoginDialogTerminate) \
     X(sceLoginDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0143_LIBSCELOGINDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0142_LIBSCELOGINDIALOG(X) \
     X(sceLoginDialogClose) \
     X(sceLoginDialogGetResult) \
     X(sceLoginDialogGetStatus) \
@@ -19162,7 +19092,7 @@
     X(sceLoginDialogUpdateStatus)
 
 /* libSceLoginMgrServer: 29 symbols, 29 callable. */
-#define OBS_CORPUS_0144_LIBSCELOGINMGRSERVER(X) \
+#define OBS_CORPUS_0143_LIBSCELOGINMGRSERVER(X) \
     X(sceLoginMgrServerCheckSafetyNoticeShown) \
     X(sceLoginMgrServerCheckTutorialShown) \
     X(sceLoginMgrServerClearMorpheusRequiredUserId) \
@@ -19192,7 +19122,7 @@
     X(sceLoginMgrServerSetSharePlayMode) \
     X(sceLoginMgrServerTerminate) \
     X(sceLoginMgrServerUpdateUserIdRalatedToPadUniqueId)
-#define OBS_CORPUS_CALLABLE_0144_LIBSCELOGINMGRSERVER(X) \
+#define OBS_CORPUS_CALLABLE_0143_LIBSCELOGINMGRSERVER(X) \
     X(sceLoginMgrServerCheckSafetyNoticeShown) \
     X(sceLoginMgrServerCheckTutorialShown) \
     X(sceLoginMgrServerClearMorpheusRequiredUserId) \
@@ -19224,17 +19154,17 @@
     X(sceLoginMgrServerUpdateUserIdRalatedToPadUniqueId)
 
 /* libSceLoginService: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0145_LIBSCELOGINSERVICE(X) \
+#define OBS_CORPUS_0144_LIBSCELOGINSERVICE(X) \
     X(sceLoginServiceInitialize) \
     X(sceLoginServiceRequestDevices) \
     X(sceLoginServiceTerminate)
-#define OBS_CORPUS_CALLABLE_0145_LIBSCELOGINSERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0144_LIBSCELOGINSERVICE(X) \
     X(sceLoginServiceInitialize) \
     X(sceLoginServiceRequestDevices) \
     X(sceLoginServiceTerminate)
 
 /* libSceM4aacEnc: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0146_LIBSCEM4AACENC(X) \
+#define OBS_CORPUS_0145_LIBSCEM4AACENC(X) \
     X(sceM4aacEncClearContext) \
     X(sceM4aacEncCreateEncoder) \
     X(sceM4aacEncDeleteEncoder) \
@@ -19242,7 +19172,7 @@
     X(sceM4aacEncEncodeWithPriority) \
     X(sceM4aacEncFlush) \
     X(sceM4aacEncFlushWithPriority)
-#define OBS_CORPUS_CALLABLE_0146_LIBSCEM4AACENC(X) \
+#define OBS_CORPUS_CALLABLE_0145_LIBSCEM4AACENC(X) \
     X(sceM4aacEncClearContext) \
     X(sceM4aacEncCreateEncoder) \
     X(sceM4aacEncDeleteEncoder) \
@@ -19252,7 +19182,7 @@
     X(sceM4aacEncFlushWithPriority)
 
 /* libSceManxWtf: 14 symbols, 14 callable. */
-#define OBS_CORPUS_0147_LIBSCEMANXWTF(X) \
+#define OBS_CORPUS_0146_LIBSCEMANXWTF(X) \
     X(_ZN4Manx11RunLoopImpl4initEv) \
     X(_ZN4Manx27monotonicallyIncreasingTimeEv) \
     X(_ZN4Manx6System19setVirtualRangeNameEPvmPKc) \
@@ -19267,7 +19197,7 @@
     X(pa_push_marker) \
     X(pa_set_functions) \
     X(pa_sync)
-#define OBS_CORPUS_CALLABLE_0147_LIBSCEMANXWTF(X) \
+#define OBS_CORPUS_CALLABLE_0146_LIBSCEMANXWTF(X) \
     X(_ZN4Manx11RunLoopImpl4initEv) \
     X(_ZN4Manx27monotonicallyIncreasingTimeEv) \
     X(_ZN4Manx6System19setVirtualRangeNameEPvmPKc) \
@@ -19284,7 +19214,7 @@
     X(pa_sync)
 
 /* libSceMarlin: 38 symbols, 38 callable. */
-#define OBS_CORPUS_0148_LIBSCEMARLIN(X) \
+#define OBS_CORPUS_0147_LIBSCEMARLIN(X) \
     X(goby_CheckLicense) \
     X(goby_CheckPersonality) \
     X(goby_DeleteLink) \
@@ -19323,7 +19253,7 @@
     X(nsnp_InitSession) \
     X(nsnp_InitTrack) \
     X(nsnp_SetLicense)
-#define OBS_CORPUS_CALLABLE_0148_LIBSCEMARLIN(X) \
+#define OBS_CORPUS_CALLABLE_0147_LIBSCEMARLIN(X) \
     X(goby_CheckLicense) \
     X(goby_CheckPersonality) \
     X(goby_DeleteLink) \
@@ -19364,7 +19294,7 @@
     X(nsnp_SetLicense)
 
 /* libSceMbus: 117 symbols, 117 callable. */
-#define OBS_CORPUS_0149_LIBSCEMBUS(X) \
+#define OBS_CORPUS_0148_LIBSCEMBUS(X) \
     X(sceMbusAcquireControl) \
     X(sceMbusAcquireControlList) \
     X(sceMbusAcquireControlWithState) \
@@ -19482,7 +19412,7 @@
     X(sceMbusUnregisterDriver) \
     X(sceMbusUserLogin) \
     X(sceMbusUserLogout)
-#define OBS_CORPUS_CALLABLE_0149_LIBSCEMBUS(X) \
+#define OBS_CORPUS_CALLABLE_0148_LIBSCEMBUS(X) \
     X(sceMbusAcquireControl) \
     X(sceMbusAcquireControlList) \
     X(sceMbusAcquireControlWithState) \
@@ -19602,7 +19532,7 @@
     X(sceMbusUserLogout)
 
 /* libSceMbusDebug: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0150_LIBSCEMBUSDEBUG(X) \
+#define OBS_CORPUS_0149_LIBSCEMBUSDEBUG(X) \
     X(sceMbusDebugDisableBgmForShellUi) \
     X(sceMbusDebugGetDeviceInfo) \
     X(sceMbusDebugGetInternalInfo) \
@@ -19610,7 +19540,7 @@
     X(sceMbusDebugReenableBgmForShellUi) \
     X(sceMbusDebugRemoveCameraAppModuleFocus) \
     X(sceMbusDebugSetCameraAppModuleFocus)
-#define OBS_CORPUS_CALLABLE_0150_LIBSCEMBUSDEBUG(X) \
+#define OBS_CORPUS_CALLABLE_0149_LIBSCEMBUSDEBUG(X) \
     X(sceMbusDebugDisableBgmForShellUi) \
     X(sceMbusDebugGetDeviceInfo) \
     X(sceMbusDebugGetInternalInfo) \
@@ -19620,7 +19550,7 @@
     X(sceMbusDebugSetCameraAppModuleFocus)
 
 /* libSceMetadataReaderWriter: 124 symbols, 117 callable. */
-#define OBS_CORPUS_0151_LIBSCEMETADATAREADERWRITER(X) \
+#define OBS_CORPUS_0150_LIBSCEMETADATAREADERWRITER(X) \
     X(_ZN23sceMetadataReaderWriter10ParserInfoC1ERKS0_) \
     X(_ZN23sceMetadataReaderWriter10ParserInfoC2ERKS0_) \
     X(_ZN23sceMetadataReaderWriter10ParserInfoD2Ev) \
@@ -19745,7 +19675,7 @@
     X(_ZNK23sceMetadataReaderWriter8Metadata9dumpValueEv) \
     X(_ZTVN23sceMetadataReaderWriter7StorageE) \
     X(_ZTVN23sceMetadataReaderWriter8MetadataE)
-#define OBS_CORPUS_CALLABLE_0151_LIBSCEMETADATAREADERWRITER(X) \
+#define OBS_CORPUS_CALLABLE_0150_LIBSCEMETADATAREADERWRITER(X) \
     X(_ZN23sceMetadataReaderWriter10ParserInfoC1ERKS0_) \
     X(_ZN23sceMetadataReaderWriter10ParserInfoC2ERKS0_) \
     X(_ZN23sceMetadataReaderWriter10ParserInfoD2Ev) \
@@ -19865,7 +19795,7 @@
     X(_ZNK23sceMetadataReaderWriter8Metadata9dumpValueEv)
 
 /* libSceMouse: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0152_LIBSCEMOUSE(X) \
+#define OBS_CORPUS_0151_LIBSCEMOUSE(X) \
     X(sceMouseConnectPort) \
     X(sceMouseDebugGetDeviceId) \
     X(sceMouseDeviceOpen) \
@@ -19877,7 +19807,7 @@
     X(sceMouseSetPointerSpeed) \
     X(sceMouseSetProcessFocus) \
     X(sceMouseSetProcessPrivilege)
-#define OBS_CORPUS_CALLABLE_0152_LIBSCEMOUSE(X) \
+#define OBS_CORPUS_CALLABLE_0151_LIBSCEMOUSE(X) \
     X(sceMouseConnectPort) \
     X(sceMouseDebugGetDeviceId) \
     X(sceMouseDeviceOpen) \
@@ -19891,7 +19821,7 @@
     X(sceMouseSetProcessPrivilege)
 
 /* libSceMove: 21 symbols, 21 callable. */
-#define OBS_CORPUS_0153_LIBSCEMOVE(X) \
+#define OBS_CORPUS_0152_LIBSCEMOVE(X) \
     X(sceMoveClose) \
     X(sceMoveGetBluetoothAddress) \
     X(sceMoveGetCalibrationInfo) \
@@ -19913,7 +19843,7 @@
     X(sceMoveSetVibration) \
     X(sceMoveTerm) \
     X(sceMoveWriteCalibrationInfo)
-#define OBS_CORPUS_CALLABLE_0153_LIBSCEMOVE(X) \
+#define OBS_CORPUS_CALLABLE_0152_LIBSCEMOVE(X) \
     X(sceMoveClose) \
     X(sceMoveGetBluetoothAddress) \
     X(sceMoveGetCalibrationInfo) \
@@ -19937,7 +19867,7 @@
     X(sceMoveWriteCalibrationInfo)
 
 /* libSceMoveTracker: 18 symbols, 18 callable. */
-#define OBS_CORPUS_0154_LIBSCEMOVETRACKER(X) \
+#define OBS_CORPUS_0153_LIBSCEMOVETRACKER(X) \
     X(sceMoveTrackerCalibrateReset) \
     X(sceMoveTrackerCalibrateYaw) \
     X(sceMoveTrackerCameraUpdate) \
@@ -19956,7 +19886,7 @@
     X(sceMoveTrackerRecordStart) \
     X(sceMoveTrackerRecordStop) \
     X(sceMoveTrackerTerm)
-#define OBS_CORPUS_CALLABLE_0154_LIBSCEMOVETRACKER(X) \
+#define OBS_CORPUS_CALLABLE_0153_LIBSCEMOVETRACKER(X) \
     X(sceMoveTrackerCalibrateReset) \
     X(sceMoveTrackerCalibrateYaw) \
     X(sceMoveTrackerCameraUpdate) \
@@ -19977,14 +19907,14 @@
     X(sceMoveTrackerTerm)
 
 /* libSceMsgDialog: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0155_LIBSCEMSGDIALOG(X) \
+#define OBS_CORPUS_0154_LIBSCEMSGDIALOG(X) \
     X(sceMsgDialogClose) \
     X(sceMsgDialogGetResult) \
     X(sceMsgDialogGetStatus) \
     X(sceMsgDialogProgressBarInc) \
     X(sceMsgDialogProgressBarSetMsg) \
     X(sceMsgDialogProgressBarSetValue)
-#define OBS_CORPUS_CALLABLE_0155_LIBSCEMSGDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0154_LIBSCEMSGDIALOG(X) \
     X(sceMsgDialogClose) \
     X(sceMsgDialogGetResult) \
     X(sceMsgDialogGetStatus) \
@@ -19993,7 +19923,7 @@
     X(sceMsgDialogProgressBarSetValue)
 
 /* libSceMusicCoreServerClient: 31 symbols, 31 callable. */
-#define OBS_CORPUS_0156_LIBSCEMUSICCORESERVERCLIENT(X) \
+#define OBS_CORPUS_0155_LIBSCEMUSICCORESERVERCLIENT(X) \
     X(sceMusicCoreServerForceKillCurrentCore) \
     X(sceMusicCoreServerGetCoreInfo) \
     X(sceMusicCoreServerGetEvent) \
@@ -20025,7 +19955,7 @@
     X(sceMusicCoreServerSetTrack) \
     X(sceMusicCoreServerSetTrackList) \
     X(sceMusicCoreServerTerminate)
-#define OBS_CORPUS_CALLABLE_0156_LIBSCEMUSICCORESERVERCLIENT(X) \
+#define OBS_CORPUS_CALLABLE_0155_LIBSCEMUSICCORESERVERCLIENT(X) \
     X(sceMusicCoreServerForceKillCurrentCore) \
     X(sceMusicCoreServerGetCoreInfo) \
     X(sceMusicCoreServerGetEvent) \
@@ -20059,7 +19989,7 @@
     X(sceMusicCoreServerTerminate)
 
 /* libSceMusicCoreServerClientJsEx: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0157_LIBSCEMUSICCORESERVERCLIENTJSEX(X) \
+#define OBS_CORPUS_0156_LIBSCEMUSICCORESERVERCLIENTJSEX(X) \
     X(sceMusicCoreServerCheckCoreStatus) \
     X(sceMusicCoreServerRegistEventCallback) \
     X(sceMusicCoreServerTriggerEvent) \
@@ -20067,7 +19997,7 @@
     X(sceMusicCoreServerTryLoadCore) \
     X(sceMusicCoreServerUnregistEventCallback) \
     X(sceMusicCoreServerUpdateSpWakeupAuthorityList)
-#define OBS_CORPUS_CALLABLE_0157_LIBSCEMUSICCORESERVERCLIENTJSEX(X) \
+#define OBS_CORPUS_CALLABLE_0156_LIBSCEMUSICCORESERVERCLIENTJSEX(X) \
     X(sceMusicCoreServerCheckCoreStatus) \
     X(sceMusicCoreServerRegistEventCallback) \
     X(sceMusicCoreServerTriggerEvent) \
@@ -20077,7 +20007,7 @@
     X(sceMusicCoreServerUpdateSpWakeupAuthorityList)
 
 /* libSceMusicPlayerService: 32 symbols, 32 callable. */
-#define OBS_CORPUS_0158_LIBSCEMUSICPLAYERSERVICE(X) \
+#define OBS_CORPUS_0157_LIBSCEMUSICPLAYERSERVICE(X) \
     X(sceMusicPlayerServiceBeginTransaction) \
     X(sceMusicPlayerServiceCreateTrackList) \
     X(sceMusicPlayerServiceEndTransaction) \
@@ -20110,7 +20040,7 @@
     X(sceMusicPlayerServiceStop) \
     X(sceMusicPlayerServiceTerminate) \
     X(sceMusicPlayerServiceUnpause)
-#define OBS_CORPUS_CALLABLE_0158_LIBSCEMUSICPLAYERSERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0157_LIBSCEMUSICPLAYERSERVICE(X) \
     X(sceMusicPlayerServiceBeginTransaction) \
     X(sceMusicPlayerServiceCreateTrackList) \
     X(sceMusicPlayerServiceEndTransaction) \
@@ -20145,15 +20075,15 @@
     X(sceMusicPlayerServiceUnpause)
 
 /* libSceNKWeb: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0159_LIBSCENKWEB(X) \
+#define OBS_CORPUS_0158_LIBSCENKWEB(X) \
     X(sceNKWebInitialize) \
     X(sceNKWebTerminate)
-#define OBS_CORPUS_CALLABLE_0159_LIBSCENKWEB(X) \
+#define OBS_CORPUS_CALLABLE_0158_LIBSCENKWEB(X) \
     X(sceNKWebInitialize) \
     X(sceNKWebTerminate)
 
 /* libSceNKWebKit: 15999 symbols, 14102 callable. */
-#define OBS_CORPUS_0160_LIBSCENKWEBKIT(X) \
+#define OBS_CORPUS_0159_LIBSCENKWEBKIT(X) \
     X(JSContextGroupAddHeapFinalizer) \
     X(JSContextGroupAddMarkingConstraint) \
     X(JSContextGroupClearExecutionTimeLimit) \
@@ -36153,7 +36083,7 @@
     X(g_opcodeMap) \
     X(g_opcodeMapWide16) \
     X(g_opcodeMapWide32)
-#define OBS_CORPUS_CALLABLE_0160_LIBSCENKWEBKIT(X) \
+#define OBS_CORPUS_CALLABLE_0159_LIBSCENKWEBKIT(X) \
     X(JSContextGroupAddHeapFinalizer) \
     X(JSContextGroupAddMarkingConstraint) \
     X(JSContextGroupClearExecutionTimeLimit) \
@@ -50257,8 +50187,8 @@
     X(_ZThn96_NK7WebCore22HTMLFormControlElement12willValidateEv) \
     X(eglPigletMemoryInfoSCE)
 
-/* libSceNKWebKitRequirements: 584 symbols, 582 callable. */
-#define OBS_CORPUS_0161_LIBSCENKWEBKITREQUIREMENTS(X) \
+/* libSceNKWebKitRequirements: 583 symbols, 581 callable. */
+#define OBS_CORPUS_0160_LIBSCENKWEBKITREQUIREMENTS(X) \
     X(FcCharSetAddChar) \
     X(FcCharSetCreate) \
     X(FcCharSetDestroy) \
@@ -50553,7 +50483,6 @@
     X(inflateEnd) \
     X(inflateInit2_) \
     X(inflateReset) \
-    X(mkstemp) \
     X(png_create_info_struct) \
     X(png_create_read_struct) \
     X(png_destroy_read_struct) \
@@ -50843,7 +50772,7 @@
     X(xmlStrdup) \
     X(xmlStrndup) \
     X(xmlSwitchEncoding)
-#define OBS_CORPUS_CALLABLE_0161_LIBSCENKWEBKITREQUIREMENTS(X) \
+#define OBS_CORPUS_CALLABLE_0160_LIBSCENKWEBKITREQUIREMENTS(X) \
     X(FcCharSetAddChar) \
     X(FcCharSetCreate) \
     X(FcCharSetDestroy) \
@@ -51138,7 +51067,6 @@
     X(inflateEnd) \
     X(inflateInit2_) \
     X(inflateReset) \
-    X(mkstemp) \
     X(png_create_info_struct) \
     X(png_create_read_struct) \
     X(png_destroy_read_struct) \
@@ -51427,8 +51355,8 @@
     X(xmlStrndup) \
     X(xmlSwitchEncoding)
 
-/* libSceNet: 205 symbols, 197 callable. */
-#define OBS_CORPUS_0162_LIBSCENET(X) \
+/* libSceNet: 204 symbols, 196 callable. */
+#define OBS_CORPUS_0161_LIBSCENET(X) \
     X(Func_0E707A589F751C68) \
     X(in6addr_any) \
     X(in6addr_loopback) \
@@ -51596,7 +51524,6 @@
     X(sceNetSetDns6InfoToKernel) \
     X(sceNetSetDnsInfo) \
     X(sceNetSetDnsInfoToKernel) \
-    X(sceNetSetsockopt) \
     X(sceNetShowIfconfig) \
     X(sceNetShowIfconfigForBuffer) \
     X(sceNetShowIfconfigWithMemory) \
@@ -51634,7 +51561,7 @@
     X(sce_net_in6addr_linklocal_allrouters) \
     X(sce_net_in6addr_loopback) \
     X(sce_net_in6addr_nodelocal_allnodes)
-#define OBS_CORPUS_CALLABLE_0162_LIBSCENET(X) \
+#define OBS_CORPUS_CALLABLE_0161_LIBSCENET(X) \
     X(Func_0E707A589F751C68) \
     X(sceNetAddrConfig6GetInfo) \
     X(sceNetAddrConfig6Start) \
@@ -51800,7 +51727,6 @@
     X(sceNetSetDns6InfoToKernel) \
     X(sceNetSetDnsInfo) \
     X(sceNetSetDnsInfoToKernel) \
-    X(sceNetSetsockopt) \
     X(sceNetShowIfconfig) \
     X(sceNetShowIfconfigForBuffer) \
     X(sceNetShowIfconfigWithMemory) \
@@ -51834,7 +51760,7 @@
     X(sceSslGetCaCerts)
 
 /* libSceNetApctl: 14 symbols, 14 callable. */
-#define OBS_CORPUS_0163_LIBSCENETAPCTL(X) \
+#define OBS_CORPUS_0162_LIBSCENETAPCTL(X) \
     X(sceNetApctlCheckCallback) \
     X(sceNetApctlClearEvent) \
     X(sceNetApctlGetInfo) \
@@ -51849,7 +51775,7 @@
     X(sceNetApctlStop) \
     X(sceNetApctlTerm) \
     X(sceNetApctlUnregisterCallback)
-#define OBS_CORPUS_CALLABLE_0163_LIBSCENETAPCTL(X) \
+#define OBS_CORPUS_CALLABLE_0162_LIBSCENETAPCTL(X) \
     X(sceNetApctlCheckCallback) \
     X(sceNetApctlClearEvent) \
     X(sceNetApctlGetInfo) \
@@ -51866,7 +51792,7 @@
     X(sceNetApctlUnregisterCallback)
 
 /* libSceNetBwe: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0164_LIBSCENETBWE(X) \
+#define OBS_CORPUS_0163_LIBSCENETBWE(X) \
     X(sceNetBweCheckCallbackIpcInt) \
     X(sceNetBweClearEventIpcInt) \
     X(sceNetBweFinishInternetConnectionTestIpcInt) \
@@ -51876,7 +51802,7 @@
     X(sceNetBweStartInternetConnectionTestBandwidthTestIpcInt) \
     X(sceNetBweStartInternetConnectionTestIpcInt) \
     X(sceNetBweUnregisterCallbackIpcInt)
-#define OBS_CORPUS_CALLABLE_0164_LIBSCENETBWE(X) \
+#define OBS_CORPUS_CALLABLE_0163_LIBSCENETBWE(X) \
     X(sceNetBweCheckCallbackIpcInt) \
     X(sceNetBweClearEventIpcInt) \
     X(sceNetBweFinishInternetConnectionTestIpcInt) \
@@ -51888,7 +51814,7 @@
     X(sceNetBweUnregisterCallbackIpcInt)
 
 /* libSceNetCtl: 51 symbols, 51 callable. */
-#define OBS_CORPUS_0165_LIBSCENETCTL(X) \
+#define OBS_CORPUS_0164_LIBSCENETCTL(X) \
     X(Func_D8DCB6973537A3DC) \
     X(sceNetCtlCheckCallback) \
     X(sceNetCtlCheckCallbackForLibIpcInt) \
@@ -51940,7 +51866,7 @@
     X(sceNetCtlUnregisterCallbackV6) \
     X(sceNetCtlUnregisterCallbackV6IpcInt) \
     X(sceNetCtlUnsetStunWithPaddingFlagIpcInt)
-#define OBS_CORPUS_CALLABLE_0165_LIBSCENETCTL(X) \
+#define OBS_CORPUS_CALLABLE_0164_LIBSCENETCTL(X) \
     X(Func_D8DCB6973537A3DC) \
     X(sceNetCtlCheckCallback) \
     X(sceNetCtlCheckCallbackForLibIpcInt) \
@@ -51994,7 +51920,7 @@
     X(sceNetCtlUnsetStunWithPaddingFlagIpcInt)
 
 /* libSceNetCtlAp: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0166_LIBSCENETCTLAP(X) \
+#define OBS_CORPUS_0165_LIBSCENETCTLAP(X) \
     X(sceNetCtlApCheckCallback) \
     X(sceNetCtlApClearEvent) \
     X(sceNetCtlApGetConnectInfo) \
@@ -52006,7 +51932,7 @@
     X(sceNetCtlApStop) \
     X(sceNetCtlApTerm) \
     X(sceNetCtlApUnregisterCallback)
-#define OBS_CORPUS_CALLABLE_0166_LIBSCENETCTLAP(X) \
+#define OBS_CORPUS_CALLABLE_0165_LIBSCENETCTLAP(X) \
     X(sceNetCtlApCheckCallback) \
     X(sceNetCtlApClearEvent) \
     X(sceNetCtlApGetConnectInfo) \
@@ -52020,7 +51946,7 @@
     X(sceNetCtlApUnregisterCallback)
 
 /* libSceNetCtlApDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0167_LIBSCENETCTLAPDIALOG(X) \
+#define OBS_CORPUS_0166_LIBSCENETCTLAPDIALOG(X) \
     X(sceNetCtlApDialogClose) \
     X(sceNetCtlApDialogGetResult) \
     X(sceNetCtlApDialogGetStatus) \
@@ -52028,7 +51954,7 @@
     X(sceNetCtlApDialogOpen) \
     X(sceNetCtlApDialogTerminate) \
     X(sceNetCtlApDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0167_LIBSCENETCTLAPDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0166_LIBSCENETCTLAPDIALOG(X) \
     X(sceNetCtlApDialogClose) \
     X(sceNetCtlApDialogGetResult) \
     X(sceNetCtlApDialogGetStatus) \
@@ -52038,7 +51964,7 @@
     X(sceNetCtlApDialogUpdateStatus)
 
 /* libSceNetCtlApIpcInt: 16 symbols, 16 callable. */
-#define OBS_CORPUS_0168_LIBSCENETCTLAPIPCINT(X) \
+#define OBS_CORPUS_0167_LIBSCENETCTLAPIPCINT(X) \
     X(sceNetCtlApAppInitWpaKey) \
     X(sceNetCtlApAppInitWpaKeyForQa) \
     X(sceNetCtlApAppStartWithRetry) \
@@ -52055,7 +51981,7 @@
     X(sceNetCtlApRpStartWithRetry) \
     X(sceNetCtlApRpStop) \
     X(sceNetCtlApRpUnregisterCallback)
-#define OBS_CORPUS_CALLABLE_0168_LIBSCENETCTLAPIPCINT(X) \
+#define OBS_CORPUS_CALLABLE_0167_LIBSCENETCTLAPIPCINT(X) \
     X(sceNetCtlApAppInitWpaKey) \
     X(sceNetCtlApAppInitWpaKeyForQa) \
     X(sceNetCtlApAppStartWithRetry) \
@@ -52074,27 +52000,27 @@
     X(sceNetCtlApRpUnregisterCallback)
 
 /* libSceNetCtlForNpToolkit: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0169_LIBSCENETCTLFORNPTOOLKIT(X) \
+#define OBS_CORPUS_0168_LIBSCENETCTLFORNPTOOLKIT(X) \
     X(sceNetCtlCheckCallbackForNpToolkit) \
     X(sceNetCtlClearEventForNpToolkit) \
     X(sceNetCtlRegisterCallbackForNpToolkit) \
     X(sceNetCtlUnregisterCallbackForNpToolkit)
-#define OBS_CORPUS_CALLABLE_0169_LIBSCENETCTLFORNPTOOLKIT(X) \
+#define OBS_CORPUS_CALLABLE_0168_LIBSCENETCTLFORNPTOOLKIT(X) \
     X(sceNetCtlCheckCallbackForNpToolkit) \
     X(sceNetCtlClearEventForNpToolkit) \
     X(sceNetCtlRegisterCallbackForNpToolkit) \
     X(sceNetCtlUnregisterCallbackForNpToolkit)
 
 /* libSceNetDebug: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0170_LIBSCENETDEBUG(X) \
+#define OBS_CORPUS_0169_LIBSCENETDEBUG(X) \
     X(sceNetEmulationGet) \
     X(sceNetEmulationSet)
-#define OBS_CORPUS_CALLABLE_0170_LIBSCENETDEBUG(X) \
+#define OBS_CORPUS_CALLABLE_0169_LIBSCENETDEBUG(X) \
     X(sceNetEmulationGet) \
     X(sceNetEmulationSet)
 
 /* libSceNgs2: 66 symbols, 66 callable. */
-#define OBS_CORPUS_0171_LIBSCENGS2(X) \
+#define OBS_CORPUS_0170_LIBSCENGS2(X) \
     X(sceNgs2CalcWaveformBlock) \
     X(sceNgs2CustomRackGetModuleInfo) \
     X(sceNgs2FftInit) \
@@ -52161,7 +52087,7 @@
     X(sceNgs2VoiceGetStateFlags) \
     X(sceNgs2VoiceQueryInfo) \
     X(sceNgs2VoiceRunCommands)
-#define OBS_CORPUS_CALLABLE_0171_LIBSCENGS2(X) \
+#define OBS_CORPUS_CALLABLE_0170_LIBSCENGS2(X) \
     X(sceNgs2CalcWaveformBlock) \
     X(sceNgs2CustomRackGetModuleInfo) \
     X(sceNgs2FftInit) \
@@ -52230,17 +52156,17 @@
     X(sceNgs2VoiceRunCommands)
 
 /* libSceNpAppLauncher: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0172_LIBSCENPAPPLAUNCHER(X) \
+#define OBS_CORPUS_0171_LIBSCENPAPPLAUNCHER(X) \
     X(sceNpAppLauncherInitialize) \
     X(sceNpAppLauncherLaunchApp) \
     X(sceNpAppLauncherTerminate)
-#define OBS_CORPUS_CALLABLE_0172_LIBSCENPAPPLAUNCHER(X) \
+#define OBS_CORPUS_CALLABLE_0171_LIBSCENPAPPLAUNCHER(X) \
     X(sceNpAppLauncherInitialize) \
     X(sceNpAppLauncherLaunchApp) \
     X(sceNpAppLauncherTerminate)
 
 /* libSceNpAuth: 13 symbols, 13 callable. */
-#define OBS_CORPUS_0173_LIBSCENPAUTH(X) \
+#define OBS_CORPUS_0172_LIBSCENPAUTH(X) \
     X(sceNpAuthAbortRequest) \
     X(sceNpAuthCreateAsyncRequest) \
     X(sceNpAuthCreateRequest) \
@@ -52254,7 +52180,7 @@
     X(sceNpAuthPollAsync) \
     X(sceNpAuthSetTimeout) \
     X(sceNpAuthWaitAsync)
-#define OBS_CORPUS_CALLABLE_0173_LIBSCENPAUTH(X) \
+#define OBS_CORPUS_CALLABLE_0172_LIBSCENPAUTH(X) \
     X(sceNpAuthAbortRequest) \
     X(sceNpAuthCreateAsyncRequest) \
     X(sceNpAuthCreateRequest) \
@@ -52270,7 +52196,7 @@
     X(sceNpAuthWaitAsync)
 
 /* libSceNpCommerce: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0174_LIBSCENPCOMMERCE(X) \
+#define OBS_CORPUS_0173_LIBSCENPCOMMERCE(X) \
     X(sceNpCommerceDialogClose) \
     X(sceNpCommerceDialogGetResult) \
     X(sceNpCommerceDialogGetStatus) \
@@ -52282,7 +52208,7 @@
     X(sceNpCommerceHidePsStoreIcon) \
     X(sceNpCommerceSetPsStoreIconLayout) \
     X(sceNpCommerceShowPsStoreIcon)
-#define OBS_CORPUS_CALLABLE_0174_LIBSCENPCOMMERCE(X) \
+#define OBS_CORPUS_CALLABLE_0173_LIBSCENPCOMMERCE(X) \
     X(sceNpCommerceDialogClose) \
     X(sceNpCommerceDialogGetResult) \
     X(sceNpCommerceDialogGetStatus) \
@@ -52296,7 +52222,7 @@
     X(sceNpCommerceShowPsStoreIcon)
 
 /* libSceNpCommon: 1052 symbols, 1044 callable. */
-#define OBS_CORPUS_0175_LIBSCENPCOMMON(X) \
+#define OBS_CORPUS_0174_LIBSCENPCOMMON(X) \
     X(_Z20sceNpIpcGetIpcClientv) \
     X(_ZN3sce2np10CancelLock3EndEPKciS3_) \
     X(_ZN3sce2np10CancelLock5BeginEPNS0_6HandleEPKciS5_) \
@@ -53349,7 +53275,7 @@
     X(sceNpWaitSema) \
     X(sceNpXmlParse) \
     X(sceNpXmlParseInit)
-#define OBS_CORPUS_CALLABLE_0175_LIBSCENPCOMMON(X) \
+#define OBS_CORPUS_CALLABLE_0174_LIBSCENPCOMMON(X) \
     X(_Z20sceNpIpcGetIpcClientv) \
     X(_ZN3sce2np10CancelLock3EndEPKciS3_) \
     X(_ZN3sce2np10CancelLock5BeginEPNS0_6HandleEPKciS5_) \
@@ -54396,13 +54322,13 @@
     X(sceNpXmlParseInit)
 
 /* libSceNpCppWebApi: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0176_LIBSCENPCPPWEBAPI(X) \
+#define OBS_CORPUS_0175_LIBSCENPCPPWEBAPI(X) \
     X(_ZN3sce2Np9CppWebApi6Common10initializeERKNS2_10InitParamsERNS2_10LibContextE)
-#define OBS_CORPUS_CALLABLE_0176_LIBSCENPCPPWEBAPI(X) \
+#define OBS_CORPUS_CALLABLE_0175_LIBSCENPCPPWEBAPI(X) \
     X(_ZN3sce2Np9CppWebApi6Common10initializeERKNS2_10InitParamsERNS2_10LibContextE)
 
 /* libSceNpEntitlementAccess: 22 symbols, 22 callable. */
-#define OBS_CORPUS_0177_LIBSCENPENTITLEMENTACCESS(X) \
+#define OBS_CORPUS_0176_LIBSCENPENTITLEMENTACCESS(X) \
     X(sceNpEntitlementAccessAbortRequest) \
     X(sceNpEntitlementAccessDeleteRequest) \
     X(sceNpEntitlementAccessGenerateTransactionId) \
@@ -54425,7 +54351,7 @@
     X(sceNpEntitlementAccessRequestServiceEntitlementInfoList) \
     X(sceNpEntitlementAccessRequestUnifiedEntitlementInfo) \
     X(sceNpEntitlementAccessRequestUnifiedEntitlementInfoList)
-#define OBS_CORPUS_CALLABLE_0177_LIBSCENPENTITLEMENTACCESS(X) \
+#define OBS_CORPUS_CALLABLE_0176_LIBSCENPENTITLEMENTACCESS(X) \
     X(sceNpEntitlementAccessAbortRequest) \
     X(sceNpEntitlementAccessDeleteRequest) \
     X(sceNpEntitlementAccessGenerateTransactionId) \
@@ -54450,7 +54376,7 @@
     X(sceNpEntitlementAccessRequestUnifiedEntitlementInfoList)
 
 /* libSceNpFriendListDialog: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0178_LIBSCENPFRIENDLISTDIALOG(X) \
+#define OBS_CORPUS_0177_LIBSCENPFRIENDLISTDIALOG(X) \
     X(sceNpFriendListDialogClose) \
     X(sceNpFriendListDialogGetResult) \
     X(sceNpFriendListDialogGetResultA) \
@@ -54460,7 +54386,7 @@
     X(sceNpFriendListDialogOpenA) \
     X(sceNpFriendListDialogTerminate) \
     X(sceNpFriendListDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0178_LIBSCENPFRIENDLISTDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0177_LIBSCENPFRIENDLISTDIALOG(X) \
     X(sceNpFriendListDialogClose) \
     X(sceNpFriendListDialogGetResult) \
     X(sceNpFriendListDialogGetResultA) \
@@ -54472,7 +54398,7 @@
     X(sceNpFriendListDialogUpdateStatus)
 
 /* libSceNpGameIntent: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0179_LIBSCENPGAMEINTENT(X) \
+#define OBS_CORPUS_0178_LIBSCENPGAMEINTENT(X) \
     X(sceNpGameIntentGetPropertyValueString) \
     X(sceNpGameIntentInitialize) \
     X(sceNpGameIntentLaunchApp) \
@@ -54480,7 +54406,7 @@
     X(sceNpGameIntentNotifyAppLaunched) \
     X(sceNpGameIntentReceiveIntent) \
     X(sceNpGameIntentTerminate)
-#define OBS_CORPUS_CALLABLE_0179_LIBSCENPGAMEINTENT(X) \
+#define OBS_CORPUS_CALLABLE_0178_LIBSCENPGAMEINTENT(X) \
     X(sceNpGameIntentGetPropertyValueString) \
     X(sceNpGameIntentInitialize) \
     X(sceNpGameIntentLaunchApp) \
@@ -54490,7 +54416,7 @@
     X(sceNpGameIntentTerminate)
 
 /* libSceNpGriefReport: 32 symbols, 32 callable. */
-#define OBS_CORPUS_0180_LIBSCENPGRIEFREPORT(X) \
+#define OBS_CORPUS_0179_LIBSCENPGRIEFREPORT(X) \
     X(sceNpGriefReportAbortTransaction) \
     X(sceNpGriefReportCdAbortRequest) \
     X(sceNpGriefReportCdBaseDataInit) \
@@ -54523,7 +54449,7 @@
     X(sceNpGriefReportWriteReportItem2) \
     X(sceNpGriefReportWriteTemporaryFile) \
     X(sceNpGriefReportWriteTextChatFile)
-#define OBS_CORPUS_CALLABLE_0180_LIBSCENPGRIEFREPORT(X) \
+#define OBS_CORPUS_CALLABLE_0179_LIBSCENPGRIEFREPORT(X) \
     X(sceNpGriefReportAbortTransaction) \
     X(sceNpGriefReportCdAbortRequest) \
     X(sceNpGriefReportCdBaseDataInit) \
@@ -54558,7 +54484,7 @@
     X(sceNpGriefReportWriteTextChatFile)
 
 /* libSceNpManager: 478 symbols, 478 callable. */
-#define OBS_CORPUS_0181_LIBSCENPMANAGER(X) \
+#define OBS_CORPUS_0180_LIBSCENPMANAGER(X) \
     X(_ZN3sce2np10NpOnlineId13GetNpOnlineIdERKNS0_4UserEP13SceNpOnlineId) \
     X(_ZN3sce2np10NpOnlineId13GetNpOnlineIdERKNS0_4UserEPS1_) \
     X(_ZN3sce2np10NpOnlineId13GetNpOnlineIdEiP13SceNpOnlineId) \
@@ -55037,7 +54963,7 @@
     X(sceNpUnregisterStateCallback) \
     X(sceNpUnregisterStateCallbackA) \
     X(sceNpWaitAsync)
-#define OBS_CORPUS_CALLABLE_0181_LIBSCENPMANAGER(X) \
+#define OBS_CORPUS_CALLABLE_0180_LIBSCENPMANAGER(X) \
     X(_ZN3sce2np10NpOnlineId13GetNpOnlineIdERKNS0_4UserEP13SceNpOnlineId) \
     X(_ZN3sce2np10NpOnlineId13GetNpOnlineIdERKNS0_4UserEPS1_) \
     X(_ZN3sce2np10NpOnlineId13GetNpOnlineIdEiP13SceNpOnlineId) \
@@ -55518,15 +55444,15 @@
     X(sceNpWaitAsync)
 
 /* libSceNpManagerForToolkit: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0182_LIBSCENPMANAGERFORTOOLKIT(X) \
+#define OBS_CORPUS_0181_LIBSCENPMANAGERFORTOOLKIT(X) \
     X(sceNpRegisterStateCallbackForToolkit) \
     X(sceNpUnregisterStateCallbackForToolkit)
-#define OBS_CORPUS_CALLABLE_0182_LIBSCENPMANAGERFORTOOLKIT(X) \
+#define OBS_CORPUS_CALLABLE_0181_LIBSCENPMANAGERFORTOOLKIT(X) \
     X(sceNpRegisterStateCallbackForToolkit) \
     X(sceNpUnregisterStateCallbackForToolkit)
 
 /* libSceNpMatching2: 69 symbols, 69 callable. */
-#define OBS_CORPUS_0183_LIBSCENPMATCHING2(X) \
+#define OBS_CORPUS_0182_LIBSCENPMATCHING2(X) \
     X(sceNpMatching2AbortContextStart) \
     X(sceNpMatching2ContextStart) \
     X(sceNpMatching2ContextStop) \
@@ -55596,7 +55522,7 @@
     X(sceNpMatching2SignalingGetPort) \
     X(sceNpMatching2SignalingSetPort) \
     X(sceNpMatching2Terminate)
-#define OBS_CORPUS_CALLABLE_0183_LIBSCENPMATCHING2(X) \
+#define OBS_CORPUS_CALLABLE_0182_LIBSCENPMATCHING2(X) \
     X(sceNpMatching2AbortContextStart) \
     X(sceNpMatching2ContextStart) \
     X(sceNpMatching2ContextStop) \
@@ -55668,19 +55594,19 @@
     X(sceNpMatching2Terminate)
 
 /* libSceNpPartner001: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0184_LIBSCENPPARTNER001(X) \
+#define OBS_CORPUS_0183_LIBSCENPPARTNER001(X) \
     X(sceNpEAAccessInitialize) \
     X(sceNpEAAccessTerminate) \
     X(sceNpHasEAAccessSubscription) \
     X(sceNpHasEAAccessSubscriptionAbortRequest)
-#define OBS_CORPUS_CALLABLE_0184_LIBSCENPPARTNER001(X) \
+#define OBS_CORPUS_CALLABLE_0183_LIBSCENPPARTNER001(X) \
     X(sceNpEAAccessInitialize) \
     X(sceNpEAAccessTerminate) \
     X(sceNpHasEAAccessSubscription) \
     X(sceNpHasEAAccessSubscriptionAbortRequest)
 
 /* libSceNpParty: 26 symbols, 26 callable. */
-#define OBS_CORPUS_0185_LIBSCENPPARTY(X) \
+#define OBS_CORPUS_0184_LIBSCENPPARTY(X) \
     X(sceNpPartyCheckCallback) \
     X(sceNpPartyCreate) \
     X(sceNpPartyCreateA) \
@@ -55707,7 +55633,7 @@
     X(sceNpPartyShowInvitationListA) \
     X(sceNpPartyTerminate) \
     X(sceNpPartyUnregisterPrivateHandler)
-#define OBS_CORPUS_CALLABLE_0185_LIBSCENPPARTY(X) \
+#define OBS_CORPUS_CALLABLE_0184_LIBSCENPPARTY(X) \
     X(sceNpPartyCheckCallback) \
     X(sceNpPartyCreate) \
     X(sceNpPartyCreateA) \
@@ -55736,7 +55662,7 @@
     X(sceNpPartyUnregisterPrivateHandler)
 
 /* libSceNpProfileDialog: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0186_LIBSCENPPROFILEDIALOG(X) \
+#define OBS_CORPUS_0185_LIBSCENPPROFILEDIALOG(X) \
     X(sceNpProfileDialogClose) \
     X(sceNpProfileDialogGetResult) \
     X(sceNpProfileDialogGetStatus) \
@@ -55745,7 +55671,7 @@
     X(sceNpProfileDialogOpenA) \
     X(sceNpProfileDialogTerminate) \
     X(sceNpProfileDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0186_LIBSCENPPROFILEDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0185_LIBSCENPPROFILEDIALOG(X) \
     X(sceNpProfileDialogClose) \
     X(sceNpProfileDialogGetResult) \
     X(sceNpProfileDialogGetStatus) \
@@ -55756,7 +55682,7 @@
     X(sceNpProfileDialogUpdateStatus)
 
 /* libSceNpRemotePlaySessionSignaling: 14 symbols, 14 callable. */
-#define OBS_CORPUS_0187_LIBSCENPREMOTEPLAYSESSIONSIGNALING(X) \
+#define OBS_CORPUS_0186_LIBSCENPREMOTEPLAYSESSIONSIGNALING(X) \
     X(sceNpRemotePlaySessionSignalingAbortConnection) \
     X(sceNpRemotePlaySessionSignalingCreateJoinSession) \
     X(sceNpRemotePlaySessionSignalingEstablishConnection) \
@@ -55771,7 +55697,7 @@
     X(sceNpRemotePlaySessionSignalingManualUdpJoinSession) \
     X(sceNpRemotePlaySessionSignalingSetCustomProperty) \
     X(sceNpRemotePlaySessionSignalingTerminate)
-#define OBS_CORPUS_CALLABLE_0187_LIBSCENPREMOTEPLAYSESSIONSIGNALING(X) \
+#define OBS_CORPUS_CALLABLE_0186_LIBSCENPREMOTEPLAYSESSIONSIGNALING(X) \
     X(sceNpRemotePlaySessionSignalingAbortConnection) \
     X(sceNpRemotePlaySessionSignalingCreateJoinSession) \
     X(sceNpRemotePlaySessionSignalingEstablishConnection) \
@@ -55788,7 +55714,7 @@
     X(sceNpRemotePlaySessionSignalingTerminate)
 
 /* libSceNpScore: 51 symbols, 51 callable. */
-#define OBS_CORPUS_0188_LIBSCENPSCORE(X) \
+#define OBS_CORPUS_0187_LIBSCENPSCORE(X) \
     X(sceNpScoreAbortRequest) \
     X(sceNpScoreCensorComment) \
     X(sceNpScoreCensorCommentAsync) \
@@ -55840,7 +55766,7 @@
     X(sceNpScoreSetThreadParam) \
     X(sceNpScoreSetTimeout) \
     X(sceNpScoreWaitAsync)
-#define OBS_CORPUS_CALLABLE_0188_LIBSCENPSCORE(X) \
+#define OBS_CORPUS_CALLABLE_0187_LIBSCENPSCORE(X) \
     X(sceNpScoreAbortRequest) \
     X(sceNpScoreCensorComment) \
     X(sceNpScoreCensorCommentAsync) \
@@ -55894,7 +55820,7 @@
     X(sceNpScoreWaitAsync)
 
 /* libSceNpSessionSignaling: 30 symbols, 30 callable. */
-#define OBS_CORPUS_0189_LIBSCENPSESSIONSIGNALING(X) \
+#define OBS_CORPUS_0188_LIBSCENPSESSIONSIGNALING(X) \
     X(sceNpSessionSignalingActivateSession) \
     X(sceNpSessionSignalingActivateUser) \
     X(sceNpSessionSignalingCreateContext) \
@@ -55925,7 +55851,7 @@
     X(sceNpSessionSignalingRequestPrepare) \
     X(sceNpSessionSignalingSetCustomProperty) \
     X(sceNpSessionSignalingTerminate)
-#define OBS_CORPUS_CALLABLE_0189_LIBSCENPSESSIONSIGNALING(X) \
+#define OBS_CORPUS_CALLABLE_0188_LIBSCENPSESSIONSIGNALING(X) \
     X(sceNpSessionSignalingActivateSession) \
     X(sceNpSessionSignalingActivateUser) \
     X(sceNpSessionSignalingCreateContext) \
@@ -55958,7 +55884,7 @@
     X(sceNpSessionSignalingTerminate)
 
 /* libSceNpSignaling: 24 symbols, 24 callable. */
-#define OBS_CORPUS_0190_LIBSCENPSIGNALING(X) \
+#define OBS_CORPUS_0189_LIBSCENPSIGNALING(X) \
     X(sceNpSignalingActivateConnection) \
     X(sceNpSignalingActivateConnectionA) \
     X(sceNpSignalingCancelPeerNetInfo) \
@@ -55983,7 +55909,7 @@
     X(sceNpSignalingSetContextOption) \
     X(sceNpSignalingTerminate) \
     X(sceNpSignalingTerminateConnection)
-#define OBS_CORPUS_CALLABLE_0190_LIBSCENPSIGNALING(X) \
+#define OBS_CORPUS_CALLABLE_0189_LIBSCENPSIGNALING(X) \
     X(sceNpSignalingActivateConnection) \
     X(sceNpSignalingActivateConnectionA) \
     X(sceNpSignalingCancelPeerNetInfo) \
@@ -56010,7 +55936,7 @@
     X(sceNpSignalingTerminateConnection)
 
 /* libSceNpSns: 20 symbols, 20 callable. */
-#define OBS_CORPUS_0191_LIBSCENPSNS(X) \
+#define OBS_CORPUS_0190_LIBSCENPSNS(X) \
     X(sceNpSnsFacebookAbortRequest) \
     X(sceNpSnsFacebookCreateRequest) \
     X(sceNpSnsFacebookDeleteRequest) \
@@ -56031,7 +55957,7 @@
     X(sceNpSnsIntYtGetAccessToken) \
     X(sceNpSnsIntYtGetTitleAccessToken) \
     X(sceNpSnsIntYtRefreshMasterToken)
-#define OBS_CORPUS_CALLABLE_0191_LIBSCENPSNS(X) \
+#define OBS_CORPUS_CALLABLE_0190_LIBSCENPSNS(X) \
     X(sceNpSnsFacebookAbortRequest) \
     X(sceNpSnsFacebookCreateRequest) \
     X(sceNpSnsFacebookDeleteRequest) \
@@ -56054,7 +55980,7 @@
     X(sceNpSnsIntYtRefreshMasterToken)
 
 /* libSceNpSnsDailymotionDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0192_LIBSCENPSNSDAILYMOTIONDIALOG(X) \
+#define OBS_CORPUS_0191_LIBSCENPSNSDAILYMOTIONDIALOG(X) \
     X(sceNpSnsDailymotionDialogClose) \
     X(sceNpSnsDailymotionDialogGetResult) \
     X(sceNpSnsDailymotionDialogGetStatus) \
@@ -56062,7 +55988,7 @@
     X(sceNpSnsDailymotionDialogOpen) \
     X(sceNpSnsDailymotionDialogTerminate) \
     X(sceNpSnsDailymotionDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0192_LIBSCENPSNSDAILYMOTIONDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0191_LIBSCENPSNSDAILYMOTIONDIALOG(X) \
     X(sceNpSnsDailymotionDialogClose) \
     X(sceNpSnsDailymotionDialogGetResult) \
     X(sceNpSnsDailymotionDialogGetStatus) \
@@ -56072,7 +55998,7 @@
     X(sceNpSnsDailymotionDialogUpdateStatus)
 
 /* libSceNpSnsFacebookDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0193_LIBSCENPSNSFACEBOOKDIALOG(X) \
+#define OBS_CORPUS_0192_LIBSCENPSNSFACEBOOKDIALOG(X) \
     X(sceNpSnsFacebookDialogClose) \
     X(sceNpSnsFacebookDialogGetResult) \
     X(sceNpSnsFacebookDialogGetStatus) \
@@ -56080,7 +56006,7 @@
     X(sceNpSnsFacebookDialogOpen) \
     X(sceNpSnsFacebookDialogTerminate) \
     X(sceNpSnsFacebookDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0193_LIBSCENPSNSFACEBOOKDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0192_LIBSCENPSNSFACEBOOKDIALOG(X) \
     X(sceNpSnsFacebookDialogClose) \
     X(sceNpSnsFacebookDialogGetResult) \
     X(sceNpSnsFacebookDialogGetStatus) \
@@ -56090,19 +56016,19 @@
     X(sceNpSnsFacebookDialogUpdateStatus)
 
 /* libSceNpSnsTwitch: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0194_LIBSCENPSNSTWITCH(X) \
+#define OBS_CORPUS_0193_LIBSCENPSNSTWITCH(X) \
     X(sceNpSnsTwitchAbortRequest) \
     X(sceNpSnsTwitchCreateRequest) \
     X(sceNpSnsTwitchDeleteRequest) \
     X(sceNpSnsTwitchGetAccessToken)
-#define OBS_CORPUS_CALLABLE_0194_LIBSCENPSNSTWITCH(X) \
+#define OBS_CORPUS_CALLABLE_0193_LIBSCENPSNSTWITCH(X) \
     X(sceNpSnsTwitchAbortRequest) \
     X(sceNpSnsTwitchCreateRequest) \
     X(sceNpSnsTwitchDeleteRequest) \
     X(sceNpSnsTwitchGetAccessToken)
 
 /* libSceNpSnsTwitchDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0195_LIBSCENPSNSTWITCHDIALOG(X) \
+#define OBS_CORPUS_0194_LIBSCENPSNSTWITCHDIALOG(X) \
     X(sceNpSnsTwitchDialogClose) \
     X(sceNpSnsTwitchDialogGetResult) \
     X(sceNpSnsTwitchDialogGetStatus) \
@@ -56110,7 +56036,7 @@
     X(sceNpSnsTwitchDialogOpen) \
     X(sceNpSnsTwitchDialogTerminate) \
     X(sceNpSnsTwitchDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0195_LIBSCENPSNSTWITCHDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0194_LIBSCENPSNSTWITCHDIALOG(X) \
     X(sceNpSnsTwitchDialogClose) \
     X(sceNpSnsTwitchDialogGetResult) \
     X(sceNpSnsTwitchDialogGetStatus) \
@@ -56120,19 +56046,19 @@
     X(sceNpSnsTwitchDialogUpdateStatus)
 
 /* libSceNpSnsYouTube: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0196_LIBSCENPSNSYOUTUBE(X) \
+#define OBS_CORPUS_0195_LIBSCENPSNSYOUTUBE(X) \
     X(sceNpSnsYouTubeAbortRequest) \
     X(sceNpSnsYouTubeCreateRequest) \
     X(sceNpSnsYouTubeDeleteRequest) \
     X(sceNpSnsYouTubeGetAccessToken)
-#define OBS_CORPUS_CALLABLE_0196_LIBSCENPSNSYOUTUBE(X) \
+#define OBS_CORPUS_CALLABLE_0195_LIBSCENPSNSYOUTUBE(X) \
     X(sceNpSnsYouTubeAbortRequest) \
     X(sceNpSnsYouTubeCreateRequest) \
     X(sceNpSnsYouTubeDeleteRequest) \
     X(sceNpSnsYouTubeGetAccessToken)
 
 /* libSceNpSnsYouTubeDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0197_LIBSCENPSNSYOUTUBEDIALOG(X) \
+#define OBS_CORPUS_0196_LIBSCENPSNSYOUTUBEDIALOG(X) \
     X(sceNpSnsYouTubeDialogClose) \
     X(sceNpSnsYouTubeDialogGetResult) \
     X(sceNpSnsYouTubeDialogGetStatus) \
@@ -56140,7 +56066,7 @@
     X(sceNpSnsYouTubeDialogOpen) \
     X(sceNpSnsYouTubeDialogTerminate) \
     X(sceNpSnsYouTubeDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0197_LIBSCENPSNSYOUTUBEDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0196_LIBSCENPSNSYOUTUBEDIALOG(X) \
     X(sceNpSnsYouTubeDialogClose) \
     X(sceNpSnsYouTubeDialogGetResult) \
     X(sceNpSnsYouTubeDialogGetStatus) \
@@ -56150,7 +56076,7 @@
     X(sceNpSnsYouTubeDialogUpdateStatus)
 
 /* libSceNpTrophy: 86 symbols, 86 callable. */
-#define OBS_CORPUS_0198_LIBSCENPTROPHY(X) \
+#define OBS_CORPUS_0197_LIBSCENPTROPHY(X) \
     X(Func_149656DA81D41C59) \
     X(Func_9F80071876FFA5F6) \
     X(Func_F8EF6F5350A91990) \
@@ -56237,7 +56163,7 @@
     X(sceNpTrophySystemRemoveUserData) \
     X(sceNpTrophySystemSetDbgParam) \
     X(sceNpTrophySystemSetDbgParamInt)
-#define OBS_CORPUS_CALLABLE_0198_LIBSCENPTROPHY(X) \
+#define OBS_CORPUS_CALLABLE_0197_LIBSCENPTROPHY(X) \
     X(Func_149656DA81D41C59) \
     X(Func_9F80071876FFA5F6) \
     X(Func_F8EF6F5350A91990) \
@@ -56326,7 +56252,7 @@
     X(sceNpTrophySystemSetDbgParamInt)
 
 /* libSceNpTrophy2: 12 symbols, 12 callable. */
-#define OBS_CORPUS_0199_LIBSCENPTROPHY2(X) \
+#define OBS_CORPUS_0198_LIBSCENPTROPHY2(X) \
     X(sceNpTrophy2AbortHandle) \
     X(sceNpTrophy2CreateContext) \
     X(sceNpTrophy2CreateHandle) \
@@ -56339,7 +56265,7 @@
     X(sceNpTrophy2RegisterUnlockCallback) \
     X(sceNpTrophy2ShowTrophyList) \
     X(sceNpTrophy2UnregisterUnlockCallback)
-#define OBS_CORPUS_CALLABLE_0199_LIBSCENPTROPHY2(X) \
+#define OBS_CORPUS_CALLABLE_0198_LIBSCENPTROPHY2(X) \
     X(sceNpTrophy2AbortHandle) \
     X(sceNpTrophy2CreateContext) \
     X(sceNpTrophy2CreateHandle) \
@@ -56354,7 +56280,7 @@
     X(sceNpTrophy2UnregisterUnlockCallback)
 
 /* libSceNpTus: 142 symbols, 142 callable. */
-#define OBS_CORPUS_0200_LIBSCENPTUS(X) \
+#define OBS_CORPUS_0199_LIBSCENPTUS(X) \
     X(sceNpTssCreateNpTitleCtx) \
     X(sceNpTssCreateNpTitleCtxA) \
     X(sceNpTssGetData) \
@@ -56497,7 +56423,7 @@
     X(sceNpTusTryAndSetVariableVUser) \
     X(sceNpTusTryAndSetVariableVUserAsync) \
     X(sceNpTusWaitAsync)
-#define OBS_CORPUS_CALLABLE_0200_LIBSCENPTUS(X) \
+#define OBS_CORPUS_CALLABLE_0199_LIBSCENPTUS(X) \
     X(sceNpTssCreateNpTitleCtx) \
     X(sceNpTssCreateNpTitleCtxA) \
     X(sceNpTssGetData) \
@@ -56642,7 +56568,7 @@
     X(sceNpTusWaitAsync)
 
 /* libSceNpUniversalDataSystem: 63 symbols, 63 callable. */
-#define OBS_CORPUS_0201_LIBSCENPUNIVERSALDATASYSTEM(X) \
+#define OBS_CORPUS_0200_LIBSCENPUNIVERSALDATASYSTEM(X) \
     X(sceNpUniversalDataSystemAbortHandle) \
     X(sceNpUniversalDataSystemCreateContext) \
     X(sceNpUniversalDataSystemCreateEvent) \
@@ -56706,7 +56632,7 @@
     X(sceNpUniversalDataSystemPostRecordData) \
     X(sceNpUniversalDataSystemRegisterContext) \
     X(sceNpUniversalDataSystemTerminate)
-#define OBS_CORPUS_CALLABLE_0201_LIBSCENPUNIVERSALDATASYSTEM(X) \
+#define OBS_CORPUS_CALLABLE_0200_LIBSCENPUNIVERSALDATASYSTEM(X) \
     X(sceNpUniversalDataSystemAbortHandle) \
     X(sceNpUniversalDataSystemCreateContext) \
     X(sceNpUniversalDataSystemCreateEvent) \
@@ -56772,7 +56698,7 @@
     X(sceNpUniversalDataSystemTerminate)
 
 /* libSceNpUtility: 101 symbols, 101 callable. */
-#define OBS_CORPUS_0202_LIBSCENPUTILITY(X) \
+#define OBS_CORPUS_0201_LIBSCENPUTILITY(X) \
     X(sceNpAppInfoIntAbortRequest) \
     X(sceNpAppInfoIntCheckAvailability) \
     X(sceNpAppInfoIntCheckAvailabilityA) \
@@ -56874,7 +56800,7 @@
     X(sceNpWordFilterSanitizeComment) \
     X(sceNpWordFilterSetTimeout) \
     X(sceNpWordFilterWaitAsync)
-#define OBS_CORPUS_CALLABLE_0202_LIBSCENPUTILITY(X) \
+#define OBS_CORPUS_CALLABLE_0201_LIBSCENPUTILITY(X) \
     X(sceNpAppInfoIntAbortRequest) \
     X(sceNpAppInfoIntCheckAvailability) \
     X(sceNpAppInfoIntCheckAvailabilityA) \
@@ -56978,7 +56904,7 @@
     X(sceNpWordFilterWaitAsync)
 
 /* libSceNpWebApi: 101 symbols, 101 callable. */
-#define OBS_CORPUS_0203_LIBSCENPWEBAPI(X) \
+#define OBS_CORPUS_0202_LIBSCENPWEBAPI(X) \
     X(Func_064C4ED1EDBEB9E8) \
     X(Func_0783955D4E9563DA) \
     X(Func_1A6D77F3FD8323A8) \
@@ -57080,7 +57006,7 @@
     X(sceNpWebApiUnregisterServicePushEventCallback) \
     X(sceNpWebApiUtilityParseNpId) \
     X(sceNpWebApiVshInitialize)
-#define OBS_CORPUS_CALLABLE_0203_LIBSCENPWEBAPI(X) \
+#define OBS_CORPUS_CALLABLE_0202_LIBSCENPWEBAPI(X) \
     X(Func_064C4ED1EDBEB9E8) \
     X(Func_0783955D4E9563DA) \
     X(Func_1A6D77F3FD8323A8) \
@@ -57184,7 +57110,7 @@
     X(sceNpWebApiVshInitialize)
 
 /* libSceNpWebApi2: 39 symbols, 39 callable. */
-#define OBS_CORPUS_0204_LIBSCENPWEBAPI2(X) \
+#define OBS_CORPUS_0203_LIBSCENPWEBAPI2(X) \
     X(Func_A9A31C5F6FBA6620) \
     X(sceNpWebApi2AbortRequest) \
     X(sceNpWebApi2AddHttpRequestHeader) \
@@ -57224,7 +57150,7 @@
     X(sceNpWebApi2SetMultipartContentType) \
     X(sceNpWebApi2SetRequestTimeout) \
     X(sceNpWebApi2Terminate)
-#define OBS_CORPUS_CALLABLE_0204_LIBSCENPWEBAPI2(X) \
+#define OBS_CORPUS_CALLABLE_0203_LIBSCENPWEBAPI2(X) \
     X(Func_A9A31C5F6FBA6620) \
     X(sceNpWebApi2AbortRequest) \
     X(sceNpWebApi2AddHttpRequestHeader) \
@@ -57266,23 +57192,23 @@
     X(sceNpWebApi2Terminate)
 
 /* libSceNpWebApi2AsyncRestricted: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0205_LIBSCENPWEBAPI2ASYNCRESTRICTED(X) \
+#define OBS_CORPUS_0204_LIBSCENPWEBAPI2ASYNCRESTRICTED(X) \
     X(Func_03D22863300D2B73) \
     X(Func_97296F7578AAD541) \
     X(Func_E0DF39A36F087DB9)
-#define OBS_CORPUS_CALLABLE_0205_LIBSCENPWEBAPI2ASYNCRESTRICTED(X) \
+#define OBS_CORPUS_CALLABLE_0204_LIBSCENPWEBAPI2ASYNCRESTRICTED(X) \
     X(Func_03D22863300D2B73) \
     X(Func_97296F7578AAD541) \
     X(Func_E0DF39A36F087DB9)
 
 /* libSceOpenPsId: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0206_LIBSCEOPENPSID(X) \
+#define OBS_CORPUS_0205_LIBSCEOPENPSID(X) \
     X(sceKernelGetOpenPsId)
-#define OBS_CORPUS_CALLABLE_0206_LIBSCEOPENPSID(X) \
+#define OBS_CORPUS_CALLABLE_0205_LIBSCEOPENPSID(X) \
     X(sceKernelGetOpenPsId)
 
 /* libSceOpusCeltDec: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0207_LIBSCEOPUSCELTDEC(X) \
+#define OBS_CORPUS_0206_LIBSCEOPUSCELTDEC(X) \
     X(sceOpusCeltDecCreate) \
     X(sceOpusCeltDecCtl) \
     X(sceOpusCeltDecDecode) \
@@ -57291,7 +57217,7 @@
     X(sceOpusCeltDecDecodeWithPriority) \
     X(sceOpusCeltDecDestroy) \
     X(sceOpusCeltDecGetSize)
-#define OBS_CORPUS_CALLABLE_0207_LIBSCEOPUSCELTDEC(X) \
+#define OBS_CORPUS_CALLABLE_0206_LIBSCEOPUSCELTDEC(X) \
     X(sceOpusCeltDecCreate) \
     X(sceOpusCeltDecCtl) \
     X(sceOpusCeltDecDecode) \
@@ -57302,7 +57228,7 @@
     X(sceOpusCeltDecGetSize)
 
 /* libSceOpusCeltEnc: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0208_LIBSCEOPUSCELTENC(X) \
+#define OBS_CORPUS_0207_LIBSCEOPUSCELTENC(X) \
     X(sceOpusCeltEncCreate) \
     X(sceOpusCeltEncCtl) \
     X(sceOpusCeltEncDestroy) \
@@ -57311,7 +57237,7 @@
     X(sceOpusCeltEncEncodeFloatWithPriority) \
     X(sceOpusCeltEncEncodeWithPriority) \
     X(sceOpusCeltEncGetSize)
-#define OBS_CORPUS_CALLABLE_0208_LIBSCEOPUSCELTENC(X) \
+#define OBS_CORPUS_CALLABLE_0207_LIBSCEOPUSCELTENC(X) \
     X(sceOpusCeltEncCreate) \
     X(sceOpusCeltEncCtl) \
     X(sceOpusCeltEncDestroy) \
@@ -57322,7 +57248,7 @@
     X(sceOpusCeltEncGetSize)
 
 /* libSceOpusDec: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0209_LIBSCEOPUSDEC(X) \
+#define OBS_CORPUS_0208_LIBSCEOPUSDEC(X) \
     X(sceOpusDecCreate) \
     X(sceOpusDecCtl) \
     X(sceOpusDecDecode) \
@@ -57334,7 +57260,7 @@
     X(sceOpusDecDecodeWithPriorityAndTimeout) \
     X(sceOpusDecDestroy) \
     X(sceOpusDecGetSize)
-#define OBS_CORPUS_CALLABLE_0209_LIBSCEOPUSDEC(X) \
+#define OBS_CORPUS_CALLABLE_0208_LIBSCEOPUSDEC(X) \
     X(sceOpusDecCreate) \
     X(sceOpusDecCtl) \
     X(sceOpusDecDecode) \
@@ -57348,7 +57274,7 @@
     X(sceOpusDecGetSize)
 
 /* libSceOpusSilkEnc: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0210_LIBSCEOPUSSILKENC(X) \
+#define OBS_CORPUS_0209_LIBSCEOPUSSILKENC(X) \
     X(sceOpusSilkEncCreate) \
     X(sceOpusSilkEncCtl) \
     X(sceOpusSilkEncDestroy) \
@@ -57360,7 +57286,7 @@
     X(sceOpusSilkEncEncodeWithPriority) \
     X(sceOpusSilkEncEncodeWithPriorityAndTimeout) \
     X(sceOpusSilkEncGetSize)
-#define OBS_CORPUS_CALLABLE_0210_LIBSCEOPUSSILKENC(X) \
+#define OBS_CORPUS_CALLABLE_0209_LIBSCEOPUSSILKENC(X) \
     X(sceOpusSilkEncCreate) \
     X(sceOpusSilkEncCtl) \
     X(sceOpusSilkEncDestroy) \
@@ -57374,7 +57300,7 @@
     X(sceOpusSilkEncGetSize)
 
 /* libSceOrbisCompat: 366 symbols, 365 callable. */
-#define OBS_CORPUS_0211_LIBSCEORBISCOMPAT(X) \
+#define OBS_CORPUS_0210_LIBSCEORBISCOMPAT(X) \
     X(ShCompile) \
     X(ShConstructCompiler) \
     X(ShDestruct) \
@@ -57741,7 +57667,7 @@
     X(gp_set_functions) \
     X(gp_trace) \
     X(inflateInit_)
-#define OBS_CORPUS_CALLABLE_0211_LIBSCEORBISCOMPAT(X) \
+#define OBS_CORPUS_CALLABLE_0210_LIBSCEORBISCOMPAT(X) \
     X(ShCompile) \
     X(ShConstructCompiler) \
     X(ShDestruct) \
@@ -58109,13 +58035,13 @@
     X(inflateInit_)
 
 /* libSceOrbisCompatForVideoService: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0212_LIBSCEORBISCOMPATFORVIDEOSERVICE(X) \
+#define OBS_CORPUS_0211_LIBSCEORBISCOMPATFORVIDEOSERVICE(X) \
     X(_ZN4Manx7RunLoop8finalizeEv)
-#define OBS_CORPUS_CALLABLE_0212_LIBSCEORBISCOMPATFORVIDEOSERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0211_LIBSCEORBISCOMPATFORVIDEOSERVICE(X) \
     X(_ZN4Manx7RunLoop8finalizeEv)
 
 /* libScePad: 72 symbols, 72 callable. */
-#define OBS_CORPUS_0213_LIBSCEPAD(X) \
+#define OBS_CORPUS_0212_LIBSCEPAD(X) \
     X(Func_298D21481F94C9FA) \
     X(Func_51E514BCD3A05CA5) \
     X(Func_89C9237E393DA243) \
@@ -58188,7 +58114,7 @@
     X(scePadVirtualDeviceDisableButtonRemapping) \
     X(scePadVirtualDeviceGetRemoteSetting) \
     X(scePadVirtualDeviceInsertData)
-#define OBS_CORPUS_CALLABLE_0213_LIBSCEPAD(X) \
+#define OBS_CORPUS_CALLABLE_0212_LIBSCEPAD(X) \
     X(Func_298D21481F94C9FA) \
     X(Func_51E514BCD3A05CA5) \
     X(Func_89C9237E393DA243) \
@@ -58263,14 +58189,14 @@
     X(scePadVirtualDeviceInsertData)
 
 /* libScePadTracker: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0214_LIBSCEPADTRACKER(X) \
+#define OBS_CORPUS_0213_LIBSCEPADTRACKER(X) \
     X(scePadTrackerCalibrate) \
     X(scePadTrackerGetWorkingMemorySize) \
     X(scePadTrackerInit) \
     X(scePadTrackerReadState) \
     X(scePadTrackerTerm) \
     X(scePadTrackerUpdate)
-#define OBS_CORPUS_CALLABLE_0214_LIBSCEPADTRACKER(X) \
+#define OBS_CORPUS_CALLABLE_0213_LIBSCEPADTRACKER(X) \
     X(scePadTrackerCalibrate) \
     X(scePadTrackerGetWorkingMemorySize) \
     X(scePadTrackerInit) \
@@ -58279,7 +58205,7 @@
     X(scePadTrackerUpdate)
 
 /* libScePatchCheckerClient: 16 symbols, 16 callable. */
-#define OBS_CORPUS_0215_LIBSCEPATCHCHECKERCLIENT(X) \
+#define OBS_CORPUS_0214_LIBSCEPATCHCHECKERCLIENT(X) \
     X(scePatchCheckerCancel) \
     X(scePatchCheckerCheckPatch) \
     X(scePatchCheckerClearCache) \
@@ -58296,7 +58222,7 @@
     X(scePatchCheckerSetFakeCache) \
     X(scePatchCheckerTerminate) \
     X(scePatchCheckerUpdateAppdbForEap)
-#define OBS_CORPUS_CALLABLE_0215_LIBSCEPATCHCHECKERCLIENT(X) \
+#define OBS_CORPUS_CALLABLE_0214_LIBSCEPATCHCHECKERCLIENT(X) \
     X(scePatchCheckerCancel) \
     X(scePatchCheckerCheckPatch) \
     X(scePatchCheckerClearCache) \
@@ -58315,7 +58241,7 @@
     X(scePatchCheckerUpdateAppdbForEap)
 
 /* libScePerf: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0216_LIBSCEPERF(X) \
+#define OBS_CORPUS_0215_LIBSCEPERF(X) \
     X(sceRazorCpuFiberLogNameChange) \
     X(sceRazorCpuFiberSwitch) \
     X(sceRazorCpuInit) \
@@ -58325,7 +58251,7 @@
     X(sceRazorCpuStartCapture) \
     X(sceRazorCpuStopCapture) \
     X(sceRazorCpuSync)
-#define OBS_CORPUS_CALLABLE_0216_LIBSCEPERF(X) \
+#define OBS_CORPUS_CALLABLE_0215_LIBSCEPERF(X) \
     X(sceRazorCpuFiberLogNameChange) \
     X(sceRazorCpuFiberSwitch) \
     X(sceRazorCpuInit) \
@@ -58337,7 +58263,7 @@
     X(sceRazorCpuSync)
 
 /* libScePigletv2VSH: 140 symbols, 140 callable. */
-#define OBS_CORPUS_0217_LIBSCEPIGLETV2VSH(X) \
+#define OBS_CORPUS_0216_LIBSCEPIGLETV2VSH(X) \
     X(_OrbisTextureImage2DCanvas) \
     X(eglCopyBuffers) \
     X(eglCreatePixmapSurface) \
@@ -58478,7 +58404,7 @@
     X(scePigletReleaseVideoMemory) \
     X(scePigletSetConfiguration) \
     X(scePigletSetShaderCacheConfiguration)
-#define OBS_CORPUS_CALLABLE_0217_LIBSCEPIGLETV2VSH(X) \
+#define OBS_CORPUS_CALLABLE_0216_LIBSCEPIGLETV2VSH(X) \
     X(_OrbisTextureImage2DCanvas) \
     X(eglCopyBuffers) \
     X(eglCreatePixmapSurface) \
@@ -58621,7 +58547,7 @@
     X(scePigletSetShaderCacheConfiguration)
 
 /* libScePlayGo: 15 symbols, 15 callable. */
-#define OBS_CORPUS_0218_LIBSCEPLAYGO(X) \
+#define OBS_CORPUS_0217_LIBSCEPLAYGO(X) \
     X(scePlayGoClose) \
     X(scePlayGoGetChunkId) \
     X(scePlayGoGetEta) \
@@ -58637,7 +58563,7 @@
     X(scePlayGoSetLanguageMask) \
     X(scePlayGoSetToDoList) \
     X(scePlayGoTerminate)
-#define OBS_CORPUS_CALLABLE_0218_LIBSCEPLAYGO(X) \
+#define OBS_CORPUS_CALLABLE_0217_LIBSCEPLAYGO(X) \
     X(scePlayGoClose) \
     X(scePlayGoGetChunkId) \
     X(scePlayGoGetEta) \
@@ -58655,7 +58581,7 @@
     X(scePlayGoTerminate)
 
 /* libScePlayGoDev: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0219_LIBSCEPLAYGODEV(X) \
+#define OBS_CORPUS_0218_LIBSCEPLAYGODEV(X) \
     X(_Z21scePlayGoDevTerminatev) \
     X(_Z22scePlayGoDevInitializeP21ScePlayGoDevInitParam) \
     X(_Z25scePlayGoEmuFsEnableChunktPt) \
@@ -58664,7 +58590,7 @@
     X(_Z28scePlayGoDevReleaseHashTablev) \
     X(_Z34scePlayGoEmuFsLoadChunkMappingInfoPvmS_mt) \
     X(_Z35scePlayGoDevGenerateKernelHashTablePPvPmS0_S1_)
-#define OBS_CORPUS_CALLABLE_0219_LIBSCEPLAYGODEV(X) \
+#define OBS_CORPUS_CALLABLE_0218_LIBSCEPLAYGODEV(X) \
     X(_Z21scePlayGoDevTerminatev) \
     X(_Z22scePlayGoDevInitializeP21ScePlayGoDevInitParam) \
     X(_Z25scePlayGoEmuFsEnableChunktPt) \
@@ -58675,7 +58601,7 @@
     X(_Z35scePlayGoDevGenerateKernelHashTablePPvPmS0_S1_)
 
 /* libScePlayGoDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0220_LIBSCEPLAYGODIALOG(X) \
+#define OBS_CORPUS_0219_LIBSCEPLAYGODIALOG(X) \
     X(scePlayGoDialogClose) \
     X(scePlayGoDialogGetResult) \
     X(scePlayGoDialogGetStatus) \
@@ -58683,7 +58609,7 @@
     X(scePlayGoDialogOpen) \
     X(scePlayGoDialogTerminate) \
     X(scePlayGoDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0220_LIBSCEPLAYGODIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0219_LIBSCEPLAYGODIALOG(X) \
     X(scePlayGoDialogClose) \
     X(scePlayGoDialogGetResult) \
     X(scePlayGoDialogGetStatus) \
@@ -58693,7 +58619,7 @@
     X(scePlayGoDialogUpdateStatus)
 
 /* libScePlayReady: 56 symbols, 56 callable. */
-#define OBS_CORPUS_0221_LIBSCEPLAYREADY(X) \
+#define OBS_CORPUS_0220_LIBSCEPLAYREADY(X) \
     X(htopdw) \
     X(htopqw) \
     X(htopw) \
@@ -58750,7 +58676,7 @@
     X(scePlayReadyReaderDecrypt) \
     X(scePlayReadyReset) \
     X(scePlayReadyStoreCleanup)
-#define OBS_CORPUS_CALLABLE_0221_LIBSCEPLAYREADY(X) \
+#define OBS_CORPUS_CALLABLE_0220_LIBSCEPLAYREADY(X) \
     X(htopdw) \
     X(htopqw) \
     X(htopw) \
@@ -58809,7 +58735,7 @@
     X(scePlayReadyStoreCleanup)
 
 /* libScePlayReady2: 16 symbols, 16 callable. */
-#define OBS_CORPUS_0222_LIBSCEPLAYREADY2(X) \
+#define OBS_CORPUS_0221_LIBSCEPLAYREADY2(X) \
     X(scePlayReadyBufferInitWithData) \
     X(scePlayReadyCloneDecryptContext) \
     X(scePlayReadyDebugPrintf) \
@@ -58826,7 +58752,7 @@
     X(scePlayReadyReaderFreeOpaqueContent) \
     X(scePlayReadyReaderRetrieveOpaqueContent) \
     X(scePlayReadyReinitialize)
-#define OBS_CORPUS_CALLABLE_0222_LIBSCEPLAYREADY2(X) \
+#define OBS_CORPUS_CALLABLE_0221_LIBSCEPLAYREADY2(X) \
     X(scePlayReadyBufferInitWithData) \
     X(scePlayReadyCloneDecryptContext) \
     X(scePlayReadyDebugPrintf) \
@@ -58845,7 +58771,7 @@
     X(scePlayReadyReinitialize)
 
 /* libScePlayerInvitationDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0223_LIBSCEPLAYERINVITATIONDIALOG(X) \
+#define OBS_CORPUS_0222_LIBSCEPLAYERINVITATIONDIALOG(X) \
     X(scePlayerInvitationDialogClose) \
     X(scePlayerInvitationDialogGetResult) \
     X(scePlayerInvitationDialogGetStatus) \
@@ -58853,7 +58779,7 @@
     X(scePlayerInvitationDialogOpen) \
     X(scePlayerInvitationDialogTerminate) \
     X(scePlayerInvitationDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0223_LIBSCEPLAYERINVITATIONDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0222_LIBSCEPLAYERINVITATIONDIALOG(X) \
     X(scePlayerInvitationDialogClose) \
     X(scePlayerInvitationDialogGetResult) \
     X(scePlayerInvitationDialogGetStatus) \
@@ -58863,14 +58789,14 @@
     X(scePlayerInvitationDialogUpdateStatus)
 
 /* libScePngDec: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0224_LIBSCEPNGDEC(X) \
+#define OBS_CORPUS_0223_LIBSCEPNGDEC(X) \
     X(scePngDecCreate) \
     X(scePngDecDecode) \
     X(scePngDecDecodeWithInputControl) \
     X(scePngDecDelete) \
     X(scePngDecParseHeader) \
     X(scePngDecQueryMemorySize)
-#define OBS_CORPUS_CALLABLE_0224_LIBSCEPNGDEC(X) \
+#define OBS_CORPUS_CALLABLE_0223_LIBSCEPNGDEC(X) \
     X(scePngDecCreate) \
     X(scePngDecDecode) \
     X(scePngDecDecodeWithInputControl) \
@@ -58879,49 +58805,37 @@
     X(scePngDecQueryMemorySize)
 
 /* libScePngEnc: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0225_LIBSCEPNGENC(X) \
+#define OBS_CORPUS_0224_LIBSCEPNGENC(X) \
     X(scePngEncCreate) \
     X(scePngEncDelete) \
     X(scePngEncEncode) \
     X(scePngEncQueryMemorySize)
-#define OBS_CORPUS_CALLABLE_0225_LIBSCEPNGENC(X) \
+#define OBS_CORPUS_CALLABLE_0224_LIBSCEPNGENC(X) \
     X(scePngEncCreate) \
     X(scePngEncDelete) \
     X(scePngEncEncode) \
     X(scePngEncQueryMemorySize)
 
-/* libScePosix: 306 symbols, 306 callable. */
-#define OBS_CORPUS_0226_LIBSCEPOSIX(X) \
+/* libScePosix: 282 symbols, 282 callable. */
+#define OBS_CORPUS_0225_LIBSCEPOSIX(X) \
     X(_getdirentries) \
     X(_readv) \
     X(accept) \
     X(bind) \
     X(chflags) \
-    X(chmod) \
-    X(clock_getres) \
-    X(clock_gettime) \
-    X(close) \
     X(connect) \
     X(creat) \
     X(fchflags) \
     X(fchmod) \
-    X(fcntl) \
-    X(flock) \
-    X(fstat) \
     X(fsync) \
-    X(ftruncate) \
     X(futimes) \
     X(getcontext) \
     X(getdents) \
     X(getdirentries) \
     X(getdtablesize) \
-    X(getpagesize) \
     X(getpeername) \
-    X(getpid) \
-    X(getrlimit) \
     X(getsockname) \
     X(getsockopt) \
-    X(gettimeofday) \
     X(htonl) \
     X(htons) \
     X(inet_ntop) \
@@ -58929,21 +58843,15 @@
     X(kevent) \
     X(kqueue) \
     X(listen) \
-    X(lseek) \
     X(madvise) \
-    X(mkdir) \
     X(mlock) \
     X(mlockall) \
-    X(mmap) \
     X(mprotect) \
     X(msync) \
     X(munlock) \
     X(munlockall) \
-    X(munmap) \
-    X(nanosleep) \
     X(ntohl) \
     X(ntohs) \
-    X(open) \
     X(posix_close) \
     X(posix_fstat) \
     X(posix_fsync) \
@@ -59160,7 +59068,6 @@
     X(pthread_yield) \
     X(pwrite) \
     X(pwritev) \
-    X(read) \
     X(readv) \
     X(recv) \
     X(recvfrom) \
@@ -59171,7 +59078,6 @@
     X(sched_get_priority_min) \
     X(sched_getparam) \
     X(sched_setparam) \
-    X(sched_yield) \
     X(select) \
     X(sem_destroy) \
     X(sem_getvalue) \
@@ -59190,45 +59096,29 @@
     X(shutdown) \
     X(sleep) \
     X(socket) \
-    X(stat) \
     X(swapcontext) \
-    X(sync) \
     X(truncate) \
-    X(unlink) \
-    X(usleep) \
     X(utimes) \
     X(writev)
-#define OBS_CORPUS_CALLABLE_0226_LIBSCEPOSIX(X) \
+#define OBS_CORPUS_CALLABLE_0225_LIBSCEPOSIX(X) \
     X(_getdirentries) \
     X(_readv) \
     X(accept) \
     X(bind) \
     X(chflags) \
-    X(chmod) \
-    X(clock_getres) \
-    X(clock_gettime) \
-    X(close) \
     X(connect) \
     X(creat) \
     X(fchflags) \
     X(fchmod) \
-    X(fcntl) \
-    X(flock) \
-    X(fstat) \
     X(fsync) \
-    X(ftruncate) \
     X(futimes) \
     X(getcontext) \
     X(getdents) \
     X(getdirentries) \
     X(getdtablesize) \
-    X(getpagesize) \
     X(getpeername) \
-    X(getpid) \
-    X(getrlimit) \
     X(getsockname) \
     X(getsockopt) \
-    X(gettimeofday) \
     X(htonl) \
     X(htons) \
     X(inet_ntop) \
@@ -59236,21 +59126,15 @@
     X(kevent) \
     X(kqueue) \
     X(listen) \
-    X(lseek) \
     X(madvise) \
-    X(mkdir) \
     X(mlock) \
     X(mlockall) \
-    X(mmap) \
     X(mprotect) \
     X(msync) \
     X(munlock) \
     X(munlockall) \
-    X(munmap) \
-    X(nanosleep) \
     X(ntohl) \
     X(ntohs) \
-    X(open) \
     X(posix_close) \
     X(posix_fstat) \
     X(posix_fsync) \
@@ -59467,7 +59351,6 @@
     X(pthread_yield) \
     X(pwrite) \
     X(pwritev) \
-    X(read) \
     X(readv) \
     X(recv) \
     X(recvfrom) \
@@ -59478,7 +59361,6 @@
     X(sched_get_priority_min) \
     X(sched_getparam) \
     X(sched_setparam) \
-    X(sched_yield) \
     X(select) \
     X(sem_destroy) \
     X(sem_getvalue) \
@@ -59497,17 +59379,13 @@
     X(shutdown) \
     X(sleep) \
     X(socket) \
-    X(stat) \
     X(swapcontext) \
-    X(sync) \
     X(truncate) \
-    X(unlink) \
-    X(usleep) \
     X(utimes) \
     X(writev)
 
-/* libScePosixForWebKit: 20 symbols, 20 callable. */
-#define OBS_CORPUS_0227_LIBSCEPOSIXFORWEBKIT(X) \
+/* libScePosixForWebKit: 19 symbols, 19 callable. */
+#define OBS_CORPUS_0226_LIBSCEPOSIXFORWEBKIT(X) \
     X(__wrap_clock_gettime) \
     X(__wrap_getenv) \
     X(__wrap_mmap) \
@@ -59522,13 +59400,12 @@
     X(gethostbyname) \
     X(getnameinfo) \
     X(getservbyname) \
-    X(isatty) \
     X(mmap_np) \
     X(msetname) \
     X(setenv_np) \
     X(strcasestr) \
     X(sysinfo)
-#define OBS_CORPUS_CALLABLE_0227_LIBSCEPOSIXFORWEBKIT(X) \
+#define OBS_CORPUS_CALLABLE_0226_LIBSCEPOSIXFORWEBKIT(X) \
     X(__wrap_clock_gettime) \
     X(__wrap_getenv) \
     X(__wrap_mmap) \
@@ -59543,7 +59420,6 @@
     X(gethostbyname) \
     X(getnameinfo) \
     X(getservbyname) \
-    X(isatty) \
     X(mmap_np) \
     X(msetname) \
     X(setenv_np) \
@@ -59551,23 +59427,23 @@
     X(sysinfo)
 
 /* libScePrecompiledShaders: 1 symbols, 0 callable. */
-#define OBS_CORPUS_0228_LIBSCEPRECOMPILEDSHADERS(X) \
+#define OBS_CORPUS_0227_LIBSCEPRECOMPILEDSHADERS(X) \
     X(scePrecompiledShaderEntries)
-#define OBS_CORPUS_CALLABLE_0228_LIBSCEPRECOMPILEDSHADERS(X) \
+#define OBS_CORPUS_CALLABLE_0227_LIBSCEPRECOMPILEDSHADERS(X) \
     /* none */
 
 /* libSceProfileCacheExternal: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0229_LIBSCEPROFILECACHEEXTERNAL(X) \
+#define OBS_CORPUS_0228_LIBSCEPROFILECACHEEXTERNAL(X) \
     X(sceProfileCacheGetAvatar) \
     X(sceProfileCacheGetProfilePicture) \
     X(sceProfileCacheGetTrueName)
-#define OBS_CORPUS_CALLABLE_0229_LIBSCEPROFILECACHEEXTERNAL(X) \
+#define OBS_CORPUS_CALLABLE_0228_LIBSCEPROFILECACHEEXTERNAL(X) \
     X(sceProfileCacheGetAvatar) \
     X(sceProfileCacheGetProfilePicture) \
     X(sceProfileCacheGetTrueName)
 
 /* libScePs2EmuMenuDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0230_LIBSCEPS2EMUMENUDIALOG(X) \
+#define OBS_CORPUS_0229_LIBSCEPS2EMUMENUDIALOG(X) \
     X(scePs2EmuMenuDialogClose) \
     X(scePs2EmuMenuDialogGetResult) \
     X(scePs2EmuMenuDialogGetStatus) \
@@ -59575,7 +59451,7 @@
     X(scePs2EmuMenuDialogOpen) \
     X(scePs2EmuMenuDialogTerminate) \
     X(scePs2EmuMenuDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0230_LIBSCEPS2EMUMENUDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0229_LIBSCEPS2EMUMENUDIALOG(X) \
     X(scePs2EmuMenuDialogClose) \
     X(scePs2EmuMenuDialogGetResult) \
     X(scePs2EmuMenuDialogGetStatus) \
@@ -59585,7 +59461,7 @@
     X(scePs2EmuMenuDialogUpdateStatus)
 
 /* libScePsm: 302 symbols, 301 callable. */
-#define OBS_CORPUS_0231_LIBSCEPSM(X) \
+#define OBS_CORPUS_0230_LIBSCEPSM(X) \
     X(ScePsmMiniGetDebugOptions) \
     X(ScePsmMonoAddInternalCall) \
     X(ScePsmMonoArrayAddrWithSize) \
@@ -59888,7 +59764,7 @@
     X(scePssSoundPlayerUserCreate) \
     X(scePssSoundSetSurroundPanSpeakerConfig) \
     X(scePssThreadIsActive)
-#define OBS_CORPUS_CALLABLE_0231_LIBSCEPSM(X) \
+#define OBS_CORPUS_CALLABLE_0230_LIBSCEPSM(X) \
     X(ScePsmMiniGetDebugOptions) \
     X(ScePsmMonoAddInternalCall) \
     X(ScePsmMonoArrayAddrWithSize) \
@@ -60192,19 +60068,19 @@
     X(scePssThreadIsActive)
 
 /* libScePsmKitSystem: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0232_LIBSCEPSMKITSYSTEM(X) \
+#define OBS_CORPUS_0231_LIBSCEPSMKITSYSTEM(X) \
     X(scePsmKitFontConfigGetAttr) \
     X(scePsmKitFontConfigGetFont) \
     X(scePsmKitFontConfigGetFontName) \
     X(scePsmKitFontConfigGetFontPath)
-#define OBS_CORPUS_CALLABLE_0232_LIBSCEPSMKITSYSTEM(X) \
+#define OBS_CORPUS_CALLABLE_0231_LIBSCEPSMKITSYSTEM(X) \
     X(scePsmKitFontConfigGetAttr) \
     X(scePsmKitFontConfigGetFont) \
     X(scePsmKitFontConfigGetFontName) \
     X(scePsmKitFontConfigGetFontPath)
 
 /* libScePsmUtil: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0233_LIBSCEPSMUTIL(X) \
+#define OBS_CORPUS_0232_LIBSCEPSMUTIL(X) \
     X(sceMusicCoreServerGetPlayStatus_vsh) \
     X(scePsmUtilFinalize) \
     X(scePsmUtilGetDebugAssetManagerSize) \
@@ -60216,7 +60092,7 @@
     X(scePsmUtilGetSystemAssetManagerSize) \
     X(scePsmUtilInitialize) \
     X(scePsmUtilRegisterCallbacks)
-#define OBS_CORPUS_CALLABLE_0233_LIBSCEPSMUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0232_LIBSCEPSMUTIL(X) \
     X(sceMusicCoreServerGetPlayStatus_vsh) \
     X(scePsmUtilFinalize) \
     X(scePsmUtilGetDebugAssetManagerSize) \
@@ -60230,7 +60106,7 @@
     X(scePsmUtilRegisterCallbacks)
 
 /* libScePsml: 9 symbols, 9 callable. */
-#define OBS_CORPUS_0234_LIBSCEPSML(X) \
+#define OBS_CORPUS_0233_LIBSCEPSML(X) \
     X(scePsmlMfsrCreateContext800M3_2) \
     X(scePsmlMfsrCreateSharedResources) \
     X(scePsmlMfsrGetContextBufferRequirement800M3_2) \
@@ -60240,7 +60116,7 @@
     X(scePsmlMfsrGetDispatchMfsrPacketSizeInDwords) \
     X(scePsmlMfsrGetSharedResourcesInitRequirement) \
     X(scePsmlMfsrInit)
-#define OBS_CORPUS_CALLABLE_0234_LIBSCEPSML(X) \
+#define OBS_CORPUS_CALLABLE_0233_LIBSCEPSML(X) \
     X(scePsmlMfsrCreateContext800M3_2) \
     X(scePsmlMfsrCreateSharedResources) \
     X(scePsmlMfsrGetContextBufferRequirement800M3_2) \
@@ -60252,7 +60128,7 @@
     X(scePsmlMfsrInit)
 
 /* libSceRazorCpu: 29 symbols, 29 callable. */
-#define OBS_CORPUS_0235_LIBSCERAZORCPU(X) \
+#define OBS_CORPUS_0234_LIBSCERAZORCPU(X) \
     X(sceRazorCpuBeginLogicalFileAccess) \
     X(sceRazorCpuDisableFiberUserMarkers) \
     X(sceRazorCpuEndLogicalFileAccess) \
@@ -60282,7 +60158,7 @@
     X(sceRazorCpuWorkloadRunEnd) \
     X(sceRazorCpuWorkloadSubmit) \
     X(sceRazorCpuWriteBookmark)
-#define OBS_CORPUS_CALLABLE_0235_LIBSCERAZORCPU(X) \
+#define OBS_CORPUS_CALLABLE_0234_LIBSCERAZORCPU(X) \
     X(sceRazorCpuBeginLogicalFileAccess) \
     X(sceRazorCpuDisableFiberUserMarkers) \
     X(sceRazorCpuEndLogicalFileAccess) \
@@ -60314,7 +60190,7 @@
     X(sceRazorCpuWriteBookmark)
 
 /* libSceRegMgr: 64 symbols, 64 callable. */
-#define OBS_CORPUS_0236_LIBSCEREGMGR(X) \
+#define OBS_CORPUS_0235_LIBSCEREGMGR(X) \
     X(sceRegMgrBackupNeedMem) \
     X(sceRegMgrBackupPullData) \
     X(sceRegMgrBackupPushData) \
@@ -60379,7 +60255,7 @@
     X(sceRegMgrToolGetEntryCnt) \
     X(sceRegMgrToolGetInfo) \
     X(sceRegMgrToolGetUpdateCnt)
-#define OBS_CORPUS_CALLABLE_0236_LIBSCEREGMGR(X) \
+#define OBS_CORPUS_CALLABLE_0235_LIBSCEREGMGR(X) \
     X(sceRegMgrBackupNeedMem) \
     X(sceRegMgrBackupPullData) \
     X(sceRegMgrBackupPushData) \
@@ -60446,7 +60322,7 @@
     X(sceRegMgrToolGetUpdateCnt)
 
 /* libSceRemoteplay: 44 symbols, 44 callable. */
-#define OBS_CORPUS_0237_LIBSCEREMOTEPLAY(X) \
+#define OBS_CORPUS_0236_LIBSCEREMOTEPLAY(X) \
     X(Func_1D5EE365ED5FADB3) \
     X(sceRemoteplayApprove) \
     X(sceRemoteplayChangeEnterKey) \
@@ -60491,7 +60367,7 @@
     X(sceRemoteplaySetProhibitionForVsh) \
     X(sceRemoteplaySetRpMode) \
     X(sceRemoteplayTerminate)
-#define OBS_CORPUS_CALLABLE_0237_LIBSCEREMOTEPLAY(X) \
+#define OBS_CORPUS_CALLABLE_0236_LIBSCEREMOTEPLAY(X) \
     X(Func_1D5EE365ED5FADB3) \
     X(sceRemoteplayApprove) \
     X(sceRemoteplayChangeEnterKey) \
@@ -60538,7 +60414,7 @@
     X(sceRemoteplayTerminate)
 
 /* libSceRnpsAppMgr: 25 symbols, 25 callable. */
-#define OBS_CORPUS_0238_LIBSCERNPSAPPMGR(X) \
+#define OBS_CORPUS_0237_LIBSCERNPSAPPMGR(X) \
     X(sceRnpsAppMgrBlockAppInstall) \
     X(sceRnpsAppMgrCreateUpdateRequest) \
     X(sceRnpsAppMgrCreateUrlRequest) \
@@ -60564,7 +60440,7 @@
     X(sceRnpsAppMgrTerminate) \
     X(sceRnpsAppMgrUnblockAppInstall) \
     X(sceRnpsAppMgrUnregisterShellUI)
-#define OBS_CORPUS_CALLABLE_0238_LIBSCERNPSAPPMGR(X) \
+#define OBS_CORPUS_CALLABLE_0237_LIBSCERNPSAPPMGR(X) \
     X(sceRnpsAppMgrBlockAppInstall) \
     X(sceRnpsAppMgrCreateUpdateRequest) \
     X(sceRnpsAppMgrCreateUrlRequest) \
@@ -60592,7 +60468,7 @@
     X(sceRnpsAppMgrUnregisterShellUI)
 
 /* libSceRtc: 47 symbols, 47 callable. */
-#define OBS_CORPUS_0239_LIBSCERTC(X) \
+#define OBS_CORPUS_0238_LIBSCERTC(X) \
     X(sceRtcCheckValid) \
     X(sceRtcCompareTick) \
     X(sceRtcConvertLocalTimeToUtc) \
@@ -60640,7 +60516,7 @@
     X(sceRtcTickAddTicks) \
     X(sceRtcTickAddWeeks) \
     X(sceRtcTickAddYears)
-#define OBS_CORPUS_CALLABLE_0239_LIBSCERTC(X) \
+#define OBS_CORPUS_CALLABLE_0238_LIBSCERTC(X) \
     X(sceRtcCheckValid) \
     X(sceRtcCompareTick) \
     X(sceRtcConvertLocalTimeToUtc) \
@@ -60690,7 +60566,7 @@
     X(sceRtcTickAddYears)
 
 /* libSceRudp: 34 symbols, 34 callable. */
-#define OBS_CORPUS_0240_LIBSCERUDP(X) \
+#define OBS_CORPUS_0239_LIBSCERUDP(X) \
     X(sceRudpAccept) \
     X(sceRudpActivate) \
     X(sceRudpBind) \
@@ -60725,7 +60601,7 @@
     X(sceRudpSetOption) \
     X(sceRudpTerminate) \
     X(sceRudpWrite)
-#define OBS_CORPUS_CALLABLE_0240_LIBSCERUDP(X) \
+#define OBS_CORPUS_CALLABLE_0239_LIBSCERUDP(X) \
     X(sceRudpAccept) \
     X(sceRudpActivate) \
     X(sceRudpBind) \
@@ -60762,31 +60638,31 @@
     X(sceRudpWrite)
 
 /* libSceS3DConversion: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0241_LIBSCES3DCONVERSION(X) \
+#define OBS_CORPUS_0240_LIBSCES3DCONVERSION(X) \
     X(sceS3dConversionClose) \
     X(sceS3dConversionExec) \
     X(sceS3dConversionOpen) \
     X(sceS3dConversionQueryAttr)
-#define OBS_CORPUS_CALLABLE_0241_LIBSCES3DCONVERSION(X) \
+#define OBS_CORPUS_CALLABLE_0240_LIBSCES3DCONVERSION(X) \
     X(sceS3dConversionClose) \
     X(sceS3dConversionExec) \
     X(sceS3dConversionOpen) \
     X(sceS3dConversionQueryAttr)
 
 /* libSceS3da: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0242_LIBSCES3DA(X) \
+#define OBS_CORPUS_0241_LIBSCES3DA(X) \
     X(sceS3daClose) \
     X(sceS3daGetInfo) \
     X(sceS3daOpen) \
     X(sceS3daSendData)
-#define OBS_CORPUS_CALLABLE_0242_LIBSCES3DA(X) \
+#define OBS_CORPUS_CALLABLE_0241_LIBSCES3DA(X) \
     X(sceS3daClose) \
     X(sceS3daGetInfo) \
     X(sceS3daOpen) \
     X(sceS3daSendData)
 
 /* libSceSaveData: 95 symbols, 95 callable. */
-#define OBS_CORPUS_0243_LIBSCESAVEDATA(X) \
+#define OBS_CORPUS_0242_LIBSCESAVEDATA(X) \
     X(Func_02E4C4D201716422) \
     X(sceSaveDataAbort) \
     X(sceSaveDataBackup) \
@@ -60882,7 +60758,7 @@
     X(sceSaveDataUmountWithBackup) \
     X(sceSaveDataUnregisterEventCallback) \
     X(sceSaveDataUpload)
-#define OBS_CORPUS_CALLABLE_0243_LIBSCESAVEDATA(X) \
+#define OBS_CORPUS_CALLABLE_0242_LIBSCESAVEDATA(X) \
     X(Func_02E4C4D201716422) \
     X(sceSaveDataAbort) \
     X(sceSaveDataBackup) \
@@ -60980,7 +60856,7 @@
     X(sceSaveDataUpload)
 
 /* libSceSaveDataDialog: 10 symbols, 10 callable. */
-#define OBS_CORPUS_0244_LIBSCESAVEDATADIALOG(X) \
+#define OBS_CORPUS_0243_LIBSCESAVEDATADIALOG(X) \
     X(sceSaveDataDialogClose) \
     X(sceSaveDataDialogGetResult) \
     X(sceSaveDataDialogGetStatus) \
@@ -60991,7 +60867,7 @@
     X(sceSaveDataDialogProgressBarSetValue) \
     X(sceSaveDataDialogTerminate) \
     X(sceSaveDataDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0244_LIBSCESAVEDATADIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0243_LIBSCESAVEDATADIALOG(X) \
     X(sceSaveDataDialogClose) \
     X(sceSaveDataDialogGetResult) \
     X(sceSaveDataDialogGetStatus) \
@@ -61004,19 +60880,19 @@
     X(sceSaveDataDialogUpdateStatus)
 
 /* libSceScm: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0245_LIBSCESCM(X) \
+#define OBS_CORPUS_0244_LIBSCESCM(X) \
     X(sceSblACMgrCheckPlatformDLL) \
     X(sceSblACMgrIsPlatformDLL) \
     X(sceSblRcMgrIsAllowLimitedUiInspector) \
     X(sceSblRcMgrIsIntdevForPSM)
-#define OBS_CORPUS_CALLABLE_0245_LIBSCESCM(X) \
+#define OBS_CORPUS_CALLABLE_0244_LIBSCESCM(X) \
     X(sceSblACMgrCheckPlatformDLL) \
     X(sceSblACMgrIsPlatformDLL) \
     X(sceSblRcMgrIsAllowLimitedUiInspector) \
     X(sceSblRcMgrIsIntdevForPSM)
 
 /* libSceScreenShot: 12 symbols, 12 callable. */
-#define OBS_CORPUS_0246_LIBSCESCREENSHOT(X) \
+#define OBS_CORPUS_0245_LIBSCESCREENSHOT(X) \
     X(sceScreenShotCapture) \
     X(sceScreenShotDisable) \
     X(sceScreenShotDisableNotification) \
@@ -61029,7 +60905,7 @@
     X(sceScreenShotSetOverlayImage) \
     X(sceScreenShotSetOverlayImageWithOrigin) \
     X(sceScreenShotSetParam)
-#define OBS_CORPUS_CALLABLE_0246_LIBSCESCREENSHOT(X) \
+#define OBS_CORPUS_CALLABLE_0245_LIBSCESCREENSHOT(X) \
     X(sceScreenShotCapture) \
     X(sceScreenShotDisable) \
     X(sceScreenShotDisableNotification) \
@@ -61044,13 +60920,13 @@
     X(sceScreenShotSetParam)
 
 /* libSceScreenShotDrc: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0247_LIBSCESCREENSHOTDRC(X) \
+#define OBS_CORPUS_0246_LIBSCESCREENSHOTDRC(X) \
     X(sceScreenShotSetDrcParam)
-#define OBS_CORPUS_CALLABLE_0247_LIBSCESCREENSHOTDRC(X) \
+#define OBS_CORPUS_CALLABLE_0246_LIBSCESCREENSHOTDRC(X) \
     X(sceScreenShotSetDrcParam)
 
 /* libSceSdma: 30 symbols, 30 callable. */
-#define OBS_CORPUS_0248_LIBSCESDMA(X) \
+#define OBS_CORPUS_0247_LIBSCESDMA(X) \
     X(_sceSdmaNop) \
     X(sceSdmaBeginQueueMode) \
     X(sceSdmaCancelQueue) \
@@ -61081,7 +60957,7 @@
     X(sceSdmaTryFlush) \
     X(sceSdmaUnmapUserVAddress) \
     X(sceSdmaWaitForEvent)
-#define OBS_CORPUS_CALLABLE_0248_LIBSCESDMA(X) \
+#define OBS_CORPUS_CALLABLE_0247_LIBSCESDMA(X) \
     X(_sceSdmaNop) \
     X(sceSdmaBeginQueueMode) \
     X(sceSdmaCancelQueue) \
@@ -61114,14 +60990,14 @@
     X(sceSdmaWaitForEvent)
 
 /* libSceShareFactoryUtil: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0249_LIBSCESHAREFACTORYUTIL(X) \
+#define OBS_CORPUS_0248_LIBSCESHAREFACTORYUTIL(X) \
     X(sceShareFactoryUtilBackToGameFromShareFactory) \
     X(sceShareFactoryUtilGetLaunchStatus) \
     X(sceShareFactoryUtilGetLaunchStatusOfShareFactory) \
     X(sceShareFactoryUtilInitialize) \
     X(sceShareFactoryUtilLaunchShareFactory) \
     X(sceShareFactoryUtilTerminate)
-#define OBS_CORPUS_CALLABLE_0249_LIBSCESHAREFACTORYUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0248_LIBSCESHAREFACTORYUTIL(X) \
     X(sceShareFactoryUtilBackToGameFromShareFactory) \
     X(sceShareFactoryUtilGetLaunchStatus) \
     X(sceShareFactoryUtilGetLaunchStatusOfShareFactory) \
@@ -61130,7 +61006,7 @@
     X(sceShareFactoryUtilTerminate)
 
 /* libSceSharePlay: 24 symbols, 24 callable. */
-#define OBS_CORPUS_0250_LIBSCESHAREPLAY(X) \
+#define OBS_CORPUS_0249_LIBSCESHAREPLAY(X) \
     X(Func_2E93C0EA6A6B67C4) \
     X(Func_C1C236728D88E177) \
     X(Func_E9E80C474781F115) \
@@ -61155,7 +61031,7 @@
     X(sceSharePlayStopStandby) \
     X(sceSharePlayStopStreaming) \
     X(sceSharePlayTerminate)
-#define OBS_CORPUS_CALLABLE_0250_LIBSCESHAREPLAY(X) \
+#define OBS_CORPUS_CALLABLE_0249_LIBSCESHAREPLAY(X) \
     X(Func_2E93C0EA6A6B67C4) \
     X(Func_C1C236728D88E177) \
     X(Func_E9E80C474781F115) \
@@ -61182,7 +61058,7 @@
     X(sceSharePlayTerminate)
 
 /* libSceShareUtility: 28 symbols, 28 callable. */
-#define OBS_CORPUS_0251_LIBSCESHAREUTILITY(X) \
+#define OBS_CORPUS_0250_LIBSCESHAREUTILITY(X) \
     X(sceShareFeaturePermit) \
     X(sceShareInitialize) \
     X(sceShareRegisterContentEventCallback) \
@@ -61211,7 +61087,7 @@
     X(sceShareUtilityOpenShareMenuDefault) \
     X(sceShareUtilityOpenShareMenuForShareContent) \
     X(sceShareUtilityTerminate)
-#define OBS_CORPUS_CALLABLE_0251_LIBSCESHAREUTILITY(X) \
+#define OBS_CORPUS_CALLABLE_0250_LIBSCESHAREUTILITY(X) \
     X(sceShareFeaturePermit) \
     X(sceShareInitialize) \
     X(sceShareRegisterContentEventCallback) \
@@ -61242,7 +61118,7 @@
     X(sceShareUtilityTerminate)
 
 /* libSceShellCoreUtil: 227 symbols, 227 callable. */
-#define OBS_CORPUS_0252_LIBSCESHELLCOREUTIL(X) \
+#define OBS_CORPUS_0251_LIBSCESHELLCOREUTIL(X) \
     X(Func_1E5CA5A71FA7F028) \
     X(Func_6D43644F75C38346) \
     X(Func_739FB849CB28F445) \
@@ -61470,7 +61346,7 @@
     X(sceShellCoreUtilUnmountHddForRestore) \
     X(sceShellCoreUtilWriteSmrHddDummyData) \
     X(sceShellCoreutilGetCrashReportProcessInformation)
-#define OBS_CORPUS_CALLABLE_0252_LIBSCESHELLCOREUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0251_LIBSCESHELLCOREUTIL(X) \
     X(Func_1E5CA5A71FA7F028) \
     X(Func_6D43644F75C38346) \
     X(Func_739FB849CB28F445) \
@@ -61700,13 +61576,13 @@
     X(sceShellCoreutilGetCrashReportProcessInformation)
 
 /* libSceShellUIUtil: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0253_LIBSCESHELLUIUTIL(X) \
+#define OBS_CORPUS_0252_LIBSCESHELLUIUTIL(X) \
     X(sceShellUIUtilGetAppUrl) \
     X(sceShellUIUtilGetDefaultQueryParameter) \
     X(sceShellUIUtilInitialize) \
     X(sceShellUIUtilLaunchByUri) \
     X(sceShellUIUtilTerminate)
-#define OBS_CORPUS_CALLABLE_0253_LIBSCESHELLUIUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0252_LIBSCESHELLUIUTIL(X) \
     X(sceShellUIUtilGetAppUrl) \
     X(sceShellUIUtilGetDefaultQueryParameter) \
     X(sceShellUIUtilInitialize) \
@@ -61714,7 +61590,7 @@
     X(sceShellUIUtilTerminate)
 
 /* libSceSigninDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0254_LIBSCESIGNINDIALOG(X) \
+#define OBS_CORPUS_0253_LIBSCESIGNINDIALOG(X) \
     X(sceSigninDialogClose) \
     X(sceSigninDialogGetResult) \
     X(sceSigninDialogGetStatus) \
@@ -61722,7 +61598,7 @@
     X(sceSigninDialogOpen) \
     X(sceSigninDialogTerminate) \
     X(sceSigninDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0254_LIBSCESIGNINDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0253_LIBSCESIGNINDIALOG(X) \
     X(sceSigninDialogClose) \
     X(sceSigninDialogGetResult) \
     X(sceSigninDialogGetStatus) \
@@ -61732,7 +61608,7 @@
     X(sceSigninDialogUpdateStatus)
 
 /* libSceSocialScreen: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0255_LIBSCESOCIALSCREEN(X) \
+#define OBS_CORPUS_0254_LIBSCESOCIALSCREEN(X) \
     X(sceSocialScreenCloseSeparateMode) \
     X(sceSocialScreenConfigureSeparateMode) \
     X(sceSocialScreenCrashDaemon) \
@@ -61744,7 +61620,7 @@
     X(sceSocialScreenSetIgnoreSeparateMode) \
     X(sceSocialScreenSetMode) \
     X(sceSocialScreenTerminate)
-#define OBS_CORPUS_CALLABLE_0255_LIBSCESOCIALSCREEN(X) \
+#define OBS_CORPUS_CALLABLE_0254_LIBSCESOCIALSCREEN(X) \
     X(sceSocialScreenCloseSeparateMode) \
     X(sceSocialScreenConfigureSeparateMode) \
     X(sceSocialScreenCrashDaemon) \
@@ -61758,7 +61634,7 @@
     X(sceSocialScreenTerminate)
 
 /* libSceSocialScreenDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0256_LIBSCESOCIALSCREENDIALOG(X) \
+#define OBS_CORPUS_0255_LIBSCESOCIALSCREENDIALOG(X) \
     X(sceSocialScreenDialogClose) \
     X(sceSocialScreenDialogGetResult) \
     X(sceSocialScreenDialogGetStatus) \
@@ -61766,7 +61642,7 @@
     X(sceSocialScreenDialogOpen) \
     X(sceSocialScreenDialogTerminate) \
     X(sceSocialScreenDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0256_LIBSCESOCIALSCREENDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0255_LIBSCESOCIALSCREENDIALOG(X) \
     X(sceSocialScreenDialogClose) \
     X(sceSocialScreenDialogGetResult) \
     X(sceSocialScreenDialogGetStatus) \
@@ -61776,7 +61652,7 @@
     X(sceSocialScreenDialogUpdateStatus)
 
 /* libSceSpSysCallWrapper: 48 symbols, 48 callable. */
-#define OBS_CORPUS_0257_LIBSCESPSYSCALLWRAPPER(X) \
+#define OBS_CORPUS_0256_LIBSCESPSYSCALLWRAPPER(X) \
     X(sceSpGetPid) \
     X(sceSpKernelGettimeofday) \
     X(sceSpKernelNanosleep) \
@@ -61825,7 +61701,7 @@
     X(sceSpPthreadMutexattrSettype) \
     X(sceSpPthreadSetprio) \
     X(sceSpSelect)
-#define OBS_CORPUS_CALLABLE_0257_LIBSCESPSYSCALLWRAPPER(X) \
+#define OBS_CORPUS_CALLABLE_0256_LIBSCESPSYSCALLWRAPPER(X) \
     X(sceSpGetPid) \
     X(sceSpKernelGettimeofday) \
     X(sceSpKernelNanosleep) \
@@ -61876,7 +61752,7 @@
     X(sceSpSelect)
 
 /* libSceSrcUtl: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0258_LIBSCESRCUTL(X) \
+#define OBS_CORPUS_0257_LIBSCESRCUTL(X) \
     X(sceSrcUtilityFinalize) \
     X(sceSrcUtilityFlush) \
     X(sceSrcUtilityGetDelaySamples) \
@@ -61885,7 +61761,7 @@
     X(sceSrcUtilityInitialize) \
     X(sceSrcUtilityResample) \
     X(sceSrcUtilitySetPriority)
-#define OBS_CORPUS_CALLABLE_0258_LIBSCESRCUTL(X) \
+#define OBS_CORPUS_CALLABLE_0257_LIBSCESRCUTL(X) \
     X(sceSrcUtilityFinalize) \
     X(sceSrcUtilityFlush) \
     X(sceSrcUtilityGetDelaySamples) \
@@ -61896,7 +61772,7 @@
     X(sceSrcUtilitySetPriority)
 
 /* libSceSsl: 228 symbols, 228 callable. */
-#define OBS_CORPUS_0259_LIBSCESSL(X) \
+#define OBS_CORPUS_0258_LIBSCESSL(X) \
     X(CA_MGMT_allocCertDistinguishedName) \
     X(CA_MGMT_certDistinguishedNameCompare) \
     X(CA_MGMT_convertKeyBlobToPKCS8Key) \
@@ -62125,7 +62001,7 @@
     X(tls_read) \
     X(tls_term) \
     X(tls_write)
-#define OBS_CORPUS_CALLABLE_0259_LIBSCESSL(X) \
+#define OBS_CORPUS_CALLABLE_0258_LIBSCESSL(X) \
     X(CA_MGMT_allocCertDistinguishedName) \
     X(CA_MGMT_certDistinguishedNameCompare) \
     X(CA_MGMT_convertKeyBlobToPKCS8Key) \
@@ -62356,7 +62232,7 @@
     X(tls_write)
 
 /* libSceSulphaDrv: 8 symbols, 8 callable. */
-#define OBS_CORPUS_0260_LIBSCESULPHADRV(X) \
+#define OBS_CORPUS_0259_LIBSCESULPHADRV(X) \
     X(sceSulphaGetClientInfo) \
     X(sceSulphaGetConnectedClientCount) \
     X(sceSulphaGetDefaultConfig) \
@@ -62365,7 +62241,7 @@
     X(sceSulphaMessage) \
     X(sceSulphaSetBookmark) \
     X(sceSulphaShutdown)
-#define OBS_CORPUS_CALLABLE_0260_LIBSCESULPHADRV(X) \
+#define OBS_CORPUS_CALLABLE_0259_LIBSCESULPHADRV(X) \
     X(sceSulphaGetClientInfo) \
     X(sceSulphaGetConnectedClientCount) \
     X(sceSulphaGetDefaultConfig) \
@@ -62376,7 +62252,7 @@
     X(sceSulphaShutdown)
 
 /* libSceSysCore: 83 symbols, 83 callable. */
-#define OBS_CORPUS_0261_LIBSCESYSCORE(X) \
+#define OBS_CORPUS_0260_LIBSCESYSCORE(X) \
     X(_sceApplicationGetAppId) \
     X(sceApplicationAddProcess2) \
     X(sceApplicationBeginSclkChange) \
@@ -62460,7 +62336,7 @@
     X(sceApplictionGetStateForDebugger) \
     X(sceSysCoreGetEventCount) \
     X(sceSysCoreReceiveEvent)
-#define OBS_CORPUS_CALLABLE_0261_LIBSCESYSCORE(X) \
+#define OBS_CORPUS_CALLABLE_0260_LIBSCESYSCORE(X) \
     X(_sceApplicationGetAppId) \
     X(sceApplicationAddProcess2) \
     X(sceApplicationBeginSclkChange) \
@@ -62546,7 +62422,7 @@
     X(sceSysCoreReceiveEvent)
 
 /* libSceSysUtil: 24 symbols, 24 callable. */
-#define OBS_CORPUS_0262_LIBSCESYSUTIL(X) \
+#define OBS_CORPUS_0261_LIBSCESYSUTIL(X) \
     X(sceSysUtilSendAddressingSystemNotification) \
     X(sceSysUtilSendAddressingSystemNotificationWithDeviceId) \
     X(sceSysUtilSendAddressingSystemNotificationWithUserId) \
@@ -62571,7 +62447,7 @@
     X(sceSysUtilSendSystemNotificationWithUserNameInfo) \
     X(sceSysUtilSendTrcCheckNotificationRequest) \
     X(sceSysUtilSendWebDebugNotificationRequest)
-#define OBS_CORPUS_CALLABLE_0262_LIBSCESYSUTIL(X) \
+#define OBS_CORPUS_CALLABLE_0261_LIBSCESYSUTIL(X) \
     X(sceSysUtilSendAddressingSystemNotification) \
     X(sceSysUtilSendAddressingSystemNotificationWithDeviceId) \
     X(sceSysUtilSendAddressingSystemNotificationWithUserId) \
@@ -62598,7 +62474,7 @@
     X(sceSysUtilSendWebDebugNotificationRequest)
 
 /* libSceSysmodule: 12 symbols, 12 callable. */
-#define OBS_CORPUS_0263_LIBSCESYSMODULE(X) \
+#define OBS_CORPUS_0262_LIBSCESYSMODULE(X) \
     X(SysmoduleGetModuleInfoForUnwind) \
     X(sceKernelGetJitModuleInfoForUnwind) \
     X(sceSysmoduleGetModuleHandleInternal) \
@@ -62611,7 +62487,7 @@
     X(sceSysmodulePreloadModuleForLibkernel) \
     X(sceSysmoduleUnloadModuleByNameInternal) \
     X(sceSysmoduleUnloadModuleInternalWithArg)
-#define OBS_CORPUS_CALLABLE_0263_LIBSCESYSMODULE(X) \
+#define OBS_CORPUS_CALLABLE_0262_LIBSCESYSMODULE(X) \
     X(SysmoduleGetModuleInfoForUnwind) \
     X(sceKernelGetJitModuleInfoForUnwind) \
     X(sceSysmoduleGetModuleHandleInternal) \
@@ -62626,7 +62502,7 @@
     X(sceSysmoduleUnloadModuleInternalWithArg)
 
 /* libSceSystemGesture: 23 symbols, 23 callable. */
-#define OBS_CORPUS_0264_LIBSCESYSTEMGESTURE(X) \
+#define OBS_CORPUS_0263_LIBSCESYSTEMGESTURE(X) \
     X(sceSystemGestureAppendTouchRecognizer) \
     X(sceSystemGestureClose) \
     X(sceSystemGestureCreateTouchRecognizer) \
@@ -62650,7 +62526,7 @@
     X(sceSystemGestureUpdatePrimitiveTouchRecognizer) \
     X(sceSystemGestureUpdateTouchRecognizer) \
     X(sceSystemGestureUpdateTouchRecognizerRectangle)
-#define OBS_CORPUS_CALLABLE_0264_LIBSCESYSTEMGESTURE(X) \
+#define OBS_CORPUS_CALLABLE_0263_LIBSCESYSTEMGESTURE(X) \
     X(sceSystemGestureAppendTouchRecognizer) \
     X(sceSystemGestureClose) \
     X(sceSystemGestureCreateTouchRecognizer) \
@@ -62676,24 +62552,24 @@
     X(sceSystemGestureUpdateTouchRecognizerRectangle)
 
 /* libSceSystemLogger: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0265_LIBSCESYSTEMLOGGER(X) \
+#define OBS_CORPUS_0264_LIBSCESYSTEMLOGGER(X) \
     X(sceSystemLoggerInitialize) \
     X(sceSystemLoggerSetLogData) \
     X(sceSystemLoggerTerminate)
-#define OBS_CORPUS_CALLABLE_0265_LIBSCESYSTEMLOGGER(X) \
+#define OBS_CORPUS_CALLABLE_0264_LIBSCESYSTEMLOGGER(X) \
     X(sceSystemLoggerInitialize) \
     X(sceSystemLoggerSetLogData) \
     X(sceSystemLoggerTerminate)
 
 /* libSceSystemLogger2: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0266_LIBSCESYSTEMLOGGER2(X) \
+#define OBS_CORPUS_0265_LIBSCESYSTEMLOGGER2(X) \
     X(sceSystemLogger2Initialize) \
     X(sceSystemLogger2SetAsyncPeripheralConnectionLog) \
     X(sceSystemLogger2SetLog) \
     X(sceSystemLogger2SetLogAsync) \
     X(sceSystemLogger2SetPeripheralConnectionLog) \
     X(sceSystemLogger2Terminate)
-#define OBS_CORPUS_CALLABLE_0266_LIBSCESYSTEMLOGGER2(X) \
+#define OBS_CORPUS_CALLABLE_0265_LIBSCESYSTEMLOGGER2(X) \
     X(sceSystemLogger2Initialize) \
     X(sceSystemLogger2SetAsyncPeripheralConnectionLog) \
     X(sceSystemLogger2SetLog) \
@@ -62702,7 +62578,7 @@
     X(sceSystemLogger2Terminate)
 
 /* libSceSystemService: 80 symbols, 80 callable. */
-#define OBS_CORPUS_0267_LIBSCESYSTEMSERVICE(X) \
+#define OBS_CORPUS_0266_LIBSCESYSTEMSERVICE(X) \
     X(Func_9031A344CB540F1A) \
     X(Func_A9D4CF2568EAB837) \
     X(sceSystemServiceAcquireFb0) \
@@ -62783,7 +62659,7 @@
     X(sceSystemServiceSuspendLocalProcess) \
     X(sceSystemServiceTickVideoPlayback) \
     X(sceSystemServiceTurnOffScreenSaver)
-#define OBS_CORPUS_CALLABLE_0267_LIBSCESYSTEMSERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0266_LIBSCESYSTEMSERVICE(X) \
     X(Func_9031A344CB540F1A) \
     X(Func_A9D4CF2568EAB837) \
     X(sceSystemServiceAcquireFb0) \
@@ -62866,7 +62742,7 @@
     X(sceSystemServiceTurnOffScreenSaver)
 
 /* libSceSystemServiceActivateHevc: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0268_LIBSCESYSTEMSERVICEACTIVATEHEVC(X) \
+#define OBS_CORPUS_0267_LIBSCESYSTEMSERVICEACTIVATEHEVC(X) \
     X(sceSystemServiceActivateHevc) \
     X(sceSystemServiceActivateHevcAbort) \
     X(sceSystemServiceActivateHevcGetStatus) \
@@ -62874,7 +62750,7 @@
     X(sceSystemServiceActivateHevcIsActivated) \
     X(sceSystemServiceActivateHevcStart) \
     X(sceSystemServiceActivateHevcTerm)
-#define OBS_CORPUS_CALLABLE_0268_LIBSCESYSTEMSERVICEACTIVATEHEVC(X) \
+#define OBS_CORPUS_CALLABLE_0267_LIBSCESYSTEMSERVICEACTIVATEHEVC(X) \
     X(sceSystemServiceActivateHevc) \
     X(sceSystemServiceActivateHevcAbort) \
     X(sceSystemServiceActivateHevcGetStatus) \
@@ -62884,7 +62760,7 @@
     X(sceSystemServiceActivateHevcTerm)
 
 /* libSceSystemServiceActivateHevcSoft: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0269_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT(X) \
+#define OBS_CORPUS_0268_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT(X) \
     X(sceSystemServiceActivateHevcSoft) \
     X(sceSystemServiceActivateHevcSoftAbort) \
     X(sceSystemServiceActivateHevcSoftGetStatus) \
@@ -62892,7 +62768,7 @@
     X(sceSystemServiceActivateHevcSoftIsActivated) \
     X(sceSystemServiceActivateHevcSoftStart) \
     X(sceSystemServiceActivateHevcSoftTerm)
-#define OBS_CORPUS_CALLABLE_0269_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT(X) \
+#define OBS_CORPUS_CALLABLE_0268_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT(X) \
     X(sceSystemServiceActivateHevcSoft) \
     X(sceSystemServiceActivateHevcSoftAbort) \
     X(sceSystemServiceActivateHevcSoftGetStatus) \
@@ -62902,14 +62778,14 @@
     X(sceSystemServiceActivateHevcSoftTerm)
 
 /* libSceSystemServiceActivateMpeg2: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0270_LIBSCESYSTEMSERVICEACTIVATEMPEG2(X) \
+#define OBS_CORPUS_0269_LIBSCESYSTEMSERVICEACTIVATEMPEG2(X) \
     X(sceSystemServiceActivateMpeg2Abort) \
     X(sceSystemServiceActivateMpeg2GetStatus) \
     X(sceSystemServiceActivateMpeg2Init) \
     X(sceSystemServiceActivateMpeg2IsActivated) \
     X(sceSystemServiceActivateMpeg2Start) \
     X(sceSystemServiceActivateMpeg2Term)
-#define OBS_CORPUS_CALLABLE_0270_LIBSCESYSTEMSERVICEACTIVATEMPEG2(X) \
+#define OBS_CORPUS_CALLABLE_0269_LIBSCESYSTEMSERVICEACTIVATEMPEG2(X) \
     X(sceSystemServiceActivateMpeg2Abort) \
     X(sceSystemServiceActivateMpeg2GetStatus) \
     X(sceSystemServiceActivateMpeg2Init) \
@@ -62918,163 +62794,163 @@
     X(sceSystemServiceActivateMpeg2Term)
 
 /* libSceSystemServiceAppLaunchLink: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0271_LIBSCESYSTEMSERVICEAPPLAUNCHLINK(X) \
+#define OBS_CORPUS_0270_LIBSCESYSTEMSERVICEAPPLAUNCHLINK(X) \
     X(sceSystemServiceInvokeAppLaunchLink)
-#define OBS_CORPUS_CALLABLE_0271_LIBSCESYSTEMSERVICEAPPLAUNCHLINK(X) \
+#define OBS_CORPUS_CALLABLE_0270_LIBSCESYSTEMSERVICEAPPLAUNCHLINK(X) \
     X(sceSystemServiceInvokeAppLaunchLink)
 
 /* libSceSystemServiceClosedCaption: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0272_LIBSCESYSTEMSERVICECLOSEDCAPTION(X) \
+#define OBS_CORPUS_0271_LIBSCESYSTEMSERVICECLOSEDCAPTION(X) \
     X(sceSystemServiceShowClosedCaptionAdvancedSettings) \
     X(sceSystemServiceShowClosedCaptionSettings)
-#define OBS_CORPUS_CALLABLE_0272_LIBSCESYSTEMSERVICECLOSEDCAPTION(X) \
+#define OBS_CORPUS_CALLABLE_0271_LIBSCESYSTEMSERVICECLOSEDCAPTION(X) \
     X(sceSystemServiceShowClosedCaptionAdvancedSettings) \
     X(sceSystemServiceShowClosedCaptionSettings)
 
 /* libSceSystemServiceDbg: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0273_LIBSCESYSTEMSERVICEDBG(X) \
+#define OBS_CORPUS_0272_LIBSCESYSTEMSERVICEDBG(X) \
     X(sceSystemServiceGetDbgExecutablePath)
-#define OBS_CORPUS_CALLABLE_0273_LIBSCESYSTEMSERVICEDBG(X) \
+#define OBS_CORPUS_CALLABLE_0272_LIBSCESYSTEMSERVICEDBG(X) \
     X(sceSystemServiceGetDbgExecutablePath)
 
 /* libSceSystemServiceForShellCoreOnly: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0274_LIBSCESYSTEMSERVICEFORSHELLCOREONLY(X) \
+#define OBS_CORPUS_0273_LIBSCESYSTEMSERVICEFORSHELLCOREONLY(X) \
     X(sceSystemServiceInitializeForShellCore)
-#define OBS_CORPUS_CALLABLE_0274_LIBSCESYSTEMSERVICEFORSHELLCOREONLY(X) \
+#define OBS_CORPUS_CALLABLE_0273_LIBSCESYSTEMSERVICEFORSHELLCOREONLY(X) \
     X(sceSystemServiceInitializeForShellCore)
 
 /* libSceSystemServicePadspkRouting: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0275_LIBSCESYSTEMSERVICEPADSPKROUTING(X) \
+#define OBS_CORPUS_0274_LIBSCESYSTEMSERVICEPADSPKROUTING(X) \
     X(Func_7C1183FC73629929)
-#define OBS_CORPUS_CALLABLE_0275_LIBSCESYSTEMSERVICEPADSPKROUTING(X) \
+#define OBS_CORPUS_CALLABLE_0274_LIBSCESYSTEMSERVICEPADSPKROUTING(X) \
     X(Func_7C1183FC73629929)
 
 /* libSceSystemServicePartyVoice: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0276_LIBSCESYSTEMSERVICEPARTYVOICE(X) \
+#define OBS_CORPUS_0275_LIBSCESYSTEMSERVICEPARTYVOICE(X) \
     X(sceSystemServiceDisablePartyVoice) \
     X(sceSystemServiceReenablePartyVoice)
-#define OBS_CORPUS_CALLABLE_0276_LIBSCESYSTEMSERVICEPARTYVOICE(X) \
+#define OBS_CORPUS_CALLABLE_0275_LIBSCESYSTEMSERVICEPARTYVOICE(X) \
     X(sceSystemServiceDisablePartyVoice) \
     X(sceSystemServiceReenablePartyVoice)
 
 /* libSceSystemServicePlatformPrivacy: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0277_LIBSCESYSTEMSERVICEPLATFORMPRIVACY(X) \
+#define OBS_CORPUS_0276_LIBSCESYSTEMSERVICEPLATFORMPRIVACY(X) \
     X(sceSystemServiceGetPlatformPrivacyDefinitionData) \
     X(sceSystemServiceGetPlatformPrivacyDefinitionVersion) \
     X(sceSystemServiceGetPlatformPrivacySetting)
-#define OBS_CORPUS_CALLABLE_0277_LIBSCESYSTEMSERVICEPLATFORMPRIVACY(X) \
+#define OBS_CORPUS_CALLABLE_0276_LIBSCESYSTEMSERVICEPLATFORMPRIVACY(X) \
     X(sceSystemServiceGetPlatformPrivacyDefinitionData) \
     X(sceSystemServiceGetPlatformPrivacyDefinitionVersion) \
     X(sceSystemServiceGetPlatformPrivacySetting)
 
 /* libSceSystemServicePowerControl: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0278_LIBSCESYSTEMSERVICEPOWERCONTROL(X) \
+#define OBS_CORPUS_0277_LIBSCESYSTEMSERVICEPOWERCONTROL(X) \
     X(sceSystemServiceRequestPowerOff) \
     X(sceSystemServiceRequestReboot)
-#define OBS_CORPUS_CALLABLE_0278_LIBSCESYSTEMSERVICEPOWERCONTROL(X) \
+#define OBS_CORPUS_CALLABLE_0277_LIBSCESYSTEMSERVICEPOWERCONTROL(X) \
     X(sceSystemServiceRequestPowerOff) \
     X(sceSystemServiceRequestReboot)
 
 /* libSceSystemServicePowerSaveLevel: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0279_LIBSCESYSTEMSERVICEPOWERSAVELEVEL(X) \
+#define OBS_CORPUS_0278_LIBSCESYSTEMSERVICEPOWERSAVELEVEL(X) \
     X(sceSystemServiceSetPowerSaveLevel)
-#define OBS_CORPUS_CALLABLE_0279_LIBSCESYSTEMSERVICEPOWERSAVELEVEL(X) \
+#define OBS_CORPUS_CALLABLE_0278_LIBSCESYSTEMSERVICEPOWERSAVELEVEL(X) \
     X(sceSystemServiceSetPowerSaveLevel)
 
 /* libSceSystemServicePs2Emu: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0280_LIBSCESYSTEMSERVICEPS2EMU(X) \
+#define OBS_CORPUS_0279_LIBSCESYSTEMSERVICEPS2EMU(X) \
     X(sceSystemServiceAddLocalProcessForPs2Emu) \
     X(sceSystemServiceGetParentSocketForPs2Emu) \
     X(sceSystemServiceKillLocalProcessForPs2Emu) \
     X(sceSystemServiceShowImposeMenuForPs2Emu)
-#define OBS_CORPUS_CALLABLE_0280_LIBSCESYSTEMSERVICEPS2EMU(X) \
+#define OBS_CORPUS_CALLABLE_0279_LIBSCESYSTEMSERVICEPS2EMU(X) \
     X(sceSystemServiceAddLocalProcessForPs2Emu) \
     X(sceSystemServiceGetParentSocketForPs2Emu) \
     X(sceSystemServiceKillLocalProcessForPs2Emu) \
     X(sceSystemServiceShowImposeMenuForPs2Emu)
 
 /* libSceSystemServiceStore: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0281_LIBSCESYSTEMSERVICESTORE(X) \
+#define OBS_CORPUS_0280_LIBSCESYSTEMSERVICESTORE(X) \
     X(sceSystemServiceLaunchStore)
-#define OBS_CORPUS_CALLABLE_0281_LIBSCESYSTEMSERVICESTORE(X) \
+#define OBS_CORPUS_CALLABLE_0280_LIBSCESYSTEMSERVICESTORE(X) \
     X(sceSystemServiceLaunchStore)
 
 /* libSceSystemServiceSuspend: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0282_LIBSCESYSTEMSERVICESUSPEND(X) \
+#define OBS_CORPUS_0281_LIBSCESYSTEMSERVICESUSPEND(X) \
     X(sceSystemServiceDeclareReadyForSuspend) \
     X(sceSystemServiceDisableSuspendNotification) \
     X(sceSystemServiceEnableSuspendNotification)
-#define OBS_CORPUS_CALLABLE_0282_LIBSCESYSTEMSERVICESUSPEND(X) \
+#define OBS_CORPUS_CALLABLE_0281_LIBSCESYSTEMSERVICESUSPEND(X) \
     X(sceSystemServiceDeclareReadyForSuspend) \
     X(sceSystemServiceDisableSuspendNotification) \
     X(sceSystemServiceEnableSuspendNotification)
 
 /* libSceSystemServiceTelemetry: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0283_LIBSCESYSTEMSERVICETELEMETRY(X) \
+#define OBS_CORPUS_0282_LIBSCESYSTEMSERVICETELEMETRY(X) \
     X(sceSystemServiceTelemetrySetData)
-#define OBS_CORPUS_CALLABLE_0283_LIBSCESYSTEMSERVICETELEMETRY(X) \
+#define OBS_CORPUS_CALLABLE_0282_LIBSCESYSTEMSERVICETELEMETRY(X) \
     X(sceSystemServiceTelemetrySetData)
 
 /* libSceSystemServiceTournamentMlg: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0284_LIBSCESYSTEMSERVICETOURNAMENTMLG(X) \
+#define OBS_CORPUS_0283_LIBSCESYSTEMSERVICETOURNAMENTMLG(X) \
     X(Func_C67FC780F5B6F71E)
-#define OBS_CORPUS_CALLABLE_0284_LIBSCESYSTEMSERVICETOURNAMENTMLG(X) \
+#define OBS_CORPUS_CALLABLE_0283_LIBSCESYSTEMSERVICETOURNAMENTMLG(X) \
     X(Func_C67FC780F5B6F71E)
 
 /* libSceSystemServiceUdsApp: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0285_LIBSCESYSTEMSERVICEUDSAPP(X) \
+#define OBS_CORPUS_0284_LIBSCESYSTEMSERVICEUDSAPP(X) \
     X(sceSystemServiceLaunchUdsApp)
-#define OBS_CORPUS_CALLABLE_0285_LIBSCESYSTEMSERVICEUDSAPP(X) \
+#define OBS_CORPUS_CALLABLE_0284_LIBSCESYSTEMSERVICEUDSAPP(X) \
     X(sceSystemServiceLaunchUdsApp)
 
 /* libSceSystemServiceVideoServiceWebApp: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0286_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP(X) \
+#define OBS_CORPUS_0285_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP(X) \
     X(sceSystemServiceLoadExecVideoServiceWebApp)
-#define OBS_CORPUS_CALLABLE_0286_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP(X) \
+#define OBS_CORPUS_CALLABLE_0285_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP(X) \
     X(sceSystemServiceLoadExecVideoServiceWebApp)
 
 /* libSceSystemServiceVideoToken: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0287_LIBSCESYSTEMSERVICEVIDEOTOKEN(X) \
+#define OBS_CORPUS_0286_LIBSCESYSTEMSERVICEVIDEOTOKEN(X) \
     X(sceSystemServiceSaveVideoToken)
-#define OBS_CORPUS_CALLABLE_0287_LIBSCESYSTEMSERVICEVIDEOTOKEN(X) \
+#define OBS_CORPUS_CALLABLE_0286_LIBSCESYSTEMSERVICEVIDEOTOKEN(X) \
     X(sceSystemServiceSaveVideoToken)
 
 /* libSceSystemServiceVoiceRecognition: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0288_LIBSCESYSTEMSERVICEVOICERECOGNITION(X) \
+#define OBS_CORPUS_0287_LIBSCESYSTEMSERVICEVOICERECOGNITION(X) \
     X(sceSystemServiceDisableVoiceRecognition) \
     X(sceSystemServiceReenableVoiceRecognition)
-#define OBS_CORPUS_CALLABLE_0288_LIBSCESYSTEMSERVICEVOICERECOGNITION(X) \
+#define OBS_CORPUS_CALLABLE_0287_LIBSCESYSTEMSERVICEVOICERECOGNITION(X) \
     X(sceSystemServiceDisableVoiceRecognition) \
     X(sceSystemServiceReenableVoiceRecognition)
 
 /* libSceSystemServiceWebApp: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0289_LIBSCESYSTEMSERVICEWEBAPP(X) \
+#define OBS_CORPUS_0288_LIBSCESYSTEMSERVICEWEBAPP(X) \
     X(Func_B8495C766861FDCF) \
     X(sceSystemServiceLaunchWebApp)
-#define OBS_CORPUS_CALLABLE_0289_LIBSCESYSTEMSERVICEWEBAPP(X) \
+#define OBS_CORPUS_CALLABLE_0288_LIBSCESYSTEMSERVICEWEBAPP(X) \
     X(Func_B8495C766861FDCF) \
     X(sceSystemServiceLaunchWebApp)
 
 /* libSceSystemServiceYouTubeAccountLinkStatus: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0290_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS(X) \
+#define OBS_CORPUS_0289_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS(X) \
     X(Func_6B1CDB955F0EBD65) \
     X(Func_CB5E885E225F69F0)
-#define OBS_CORPUS_CALLABLE_0290_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS(X) \
+#define OBS_CORPUS_CALLABLE_0289_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS(X) \
     X(Func_6B1CDB955F0EBD65) \
     X(Func_CB5E885E225F69F0)
 
 /* libSceSystemService_jvm: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0291_LIBSCESYSTEMSERVICE_JVM(X) \
+#define OBS_CORPUS_0290_LIBSCESYSTEMSERVICE_JVM(X) \
     X(sceSystemServiceAddLocalProcessForJvm) \
     X(sceSystemServiceGetParentSocketForJvm) \
     X(sceSystemServiceKillLocalProcessForJvm)
-#define OBS_CORPUS_CALLABLE_0291_LIBSCESYSTEMSERVICE_JVM(X) \
+#define OBS_CORPUS_CALLABLE_0290_LIBSCESYSTEMSERVICE_JVM(X) \
     X(sceSystemServiceAddLocalProcessForJvm) \
     X(sceSystemServiceGetParentSocketForJvm) \
     X(sceSystemServiceKillLocalProcessForJvm)
 
 /* libSceSystemStateMgr: 27 symbols, 27 callable. */
-#define OBS_CORPUS_0292_LIBSCESYSTEMSTATEMGR(X) \
+#define OBS_CORPUS_0291_LIBSCESYSTEMSTATEMGR(X) \
     X(Func_89F262179C22B49E) \
     X(Func_AC8A8FAB4A1696B8) \
     X(sceSystemStateMgrCancelShutdownTimer) \
@@ -63102,7 +62978,7 @@
     X(sceSystemStateMgrVshAutoUpdate) \
     X(sceSystemStateMgrWaitVshAutoUpdateVerifyDone) \
     X(sceSystemStateMgrWakeUp)
-#define OBS_CORPUS_CALLABLE_0292_LIBSCESYSTEMSTATEMGR(X) \
+#define OBS_CORPUS_CALLABLE_0291_LIBSCESYSTEMSTATEMGR(X) \
     X(Func_89F262179C22B49E) \
     X(Func_AC8A8FAB4A1696B8) \
     X(sceSystemStateMgrCancelShutdownTimer) \
@@ -63132,7 +63008,7 @@
     X(sceSystemStateMgrWakeUp)
 
 /* libSceTextToSpeech: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0293_LIBSCETEXTTOSPEECH(X) \
+#define OBS_CORPUS_0292_LIBSCETEXTTOSPEECH(X) \
     X(sceTextToSpeechCancelImpl) \
     X(sceTextToSpeechCloseImpl) \
     X(sceTextToSpeechGetAudioDataImpl) \
@@ -63144,7 +63020,7 @@
     X(sceTextToSpeechSpeakContinuousImpl) \
     X(sceTextToSpeechSpeakImpl) \
     X(sceTextToSpeechTermImpl)
-#define OBS_CORPUS_CALLABLE_0293_LIBSCETEXTTOSPEECH(X) \
+#define OBS_CORPUS_CALLABLE_0292_LIBSCETEXTTOSPEECH(X) \
     X(sceTextToSpeechCancelImpl) \
     X(sceTextToSpeechCloseImpl) \
     X(sceTextToSpeechGetAudioDataImpl) \
@@ -63158,17 +63034,17 @@
     X(sceTextToSpeechTermImpl)
 
 /* libSceTtsCoreJp: 3 symbols, 3 callable. */
-#define OBS_CORPUS_0294_LIBSCETTSCOREJP(X) \
+#define OBS_CORPUS_0293_LIBSCETTSCOREJP(X) \
     X(initialize_Jp) \
     X(terminateWave_Jp) \
     X(terminate_Jp)
-#define OBS_CORPUS_CALLABLE_0294_LIBSCETTSCOREJP(X) \
+#define OBS_CORPUS_CALLABLE_0293_LIBSCETTSCOREJP(X) \
     X(initialize_Jp) \
     X(terminateWave_Jp) \
     X(terminate_Jp)
 
 /* libSceUlt: 64 symbols, 64 callable. */
-#define OBS_CORPUS_0295_LIBSCEULT(X) \
+#define OBS_CORPUS_0294_LIBSCEULT(X) \
     X(_sceUltConditionVariableCreate) \
     X(_sceUltConditionVariableOptParamInitialize) \
     X(_sceUltMutexCreate) \
@@ -63233,7 +63109,7 @@
     X(sceUltUlthreadYield) \
     X(sceUltWaitingQueueResourcePoolDestroy) \
     X(sceUltWaitingQueueResourcePoolGetWorkAreaSize)
-#define OBS_CORPUS_CALLABLE_0295_LIBSCEULT(X) \
+#define OBS_CORPUS_CALLABLE_0294_LIBSCEULT(X) \
     X(_sceUltConditionVariableCreate) \
     X(_sceUltConditionVariableOptParamInitialize) \
     X(_sceUltMutexCreate) \
@@ -63300,7 +63176,7 @@
     X(sceUltWaitingQueueResourcePoolGetWorkAreaSize)
 
 /* libSceUpdateService: 63 symbols, 63 callable. */
-#define OBS_CORPUS_0296_LIBSCEUPDATESERVICE(X) \
+#define OBS_CORPUS_0295_LIBSCEUPDATESERVICE(X) \
     X(sceUpsrvGetCompletedTaskId) \
     X(sceUpsrvGetNextUpdateCheckDateTime) \
     X(sceUpsrvGetRebootFlag) \
@@ -63364,7 +63240,7 @@
     X(sceUpsrvUpdateSetUpdateMode) \
     X(sceUpsrvUpdateStartUpdateTask) \
     X(sceUpsrvVerifySystemExBank)
-#define OBS_CORPUS_CALLABLE_0296_LIBSCEUPDATESERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0295_LIBSCEUPDATESERVICE(X) \
     X(sceUpsrvGetCompletedTaskId) \
     X(sceUpsrvGetNextUpdateCheckDateTime) \
     X(sceUpsrvGetRebootFlag) \
@@ -63430,7 +63306,7 @@
     X(sceUpsrvVerifySystemExBank)
 
 /* libSceUsbStorage: 11 symbols, 11 callable. */
-#define OBS_CORPUS_0297_LIBSCEUSBSTORAGE(X) \
+#define OBS_CORPUS_0296_LIBSCEUSBSTORAGE(X) \
     X(sceUsbStorageGetDeviceInfo) \
     X(sceUsbStorageGetDeviceList) \
     X(sceUsbStorageInit) \
@@ -63442,7 +63318,7 @@
     X(sceUsbStorageTerm) \
     X(sceUsbStorageUnregisterCallback) \
     X(sceUsbStorageUnregisterCallbackForMapAvailable)
-#define OBS_CORPUS_CALLABLE_0297_LIBSCEUSBSTORAGE(X) \
+#define OBS_CORPUS_CALLABLE_0296_LIBSCEUSBSTORAGE(X) \
     X(sceUsbStorageGetDeviceInfo) \
     X(sceUsbStorageGetDeviceList) \
     X(sceUsbStorageInit) \
@@ -63456,14 +63332,14 @@
     X(sceUsbStorageUnregisterCallbackForMapAvailable)
 
 /* libSceUsbStorageAux: 6 symbols, 6 callable. */
-#define OBS_CORPUS_0298_LIBSCEUSBSTORAGEAUX(X) \
+#define OBS_CORPUS_0297_LIBSCEUSBSTORAGEAUX(X) \
     X(sceUsbStorageGetdentsClose) \
     X(sceUsbStorageGetdentsOpen) \
     X(sceUsbStorageGetdentsRead) \
     X(sceUsbStorageRegisterCallbackForMapUnavailable) \
     X(sceUsbStorageRequestMapWSB) \
     X(sceUsbStorageUnregisterCallbackForMapUnavailable)
-#define OBS_CORPUS_CALLABLE_0298_LIBSCEUSBSTORAGEAUX(X) \
+#define OBS_CORPUS_CALLABLE_0297_LIBSCEUSBSTORAGEAUX(X) \
     X(sceUsbStorageGetdentsClose) \
     X(sceUsbStorageGetdentsOpen) \
     X(sceUsbStorageGetdentsRead) \
@@ -63472,7 +63348,7 @@
     X(sceUsbStorageUnregisterCallbackForMapUnavailable)
 
 /* libSceUsbStorageDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0299_LIBSCEUSBSTORAGEDIALOG(X) \
+#define OBS_CORPUS_0298_LIBSCEUSBSTORAGEDIALOG(X) \
     X(sceUsbStorageDialogClose) \
     X(sceUsbStorageDialogGetResult) \
     X(sceUsbStorageDialogGetStatus) \
@@ -63480,7 +63356,7 @@
     X(sceUsbStorageDialogOpen) \
     X(sceUsbStorageDialogTerminate) \
     X(sceUsbStorageDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0299_LIBSCEUSBSTORAGEDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0298_LIBSCEUSBSTORAGEDIALOG(X) \
     X(sceUsbStorageDialogClose) \
     X(sceUsbStorageDialogGetResult) \
     X(sceUsbStorageDialogGetStatus) \
@@ -63490,7 +63366,7 @@
     X(sceUsbStorageDialogUpdateStatus)
 
 /* libSceUsbd: 65 symbols, 65 callable. */
-#define OBS_CORPUS_0300_LIBSCEUSBD(X) \
+#define OBS_CORPUS_0299_LIBSCEUSBD(X) \
     X(Func_65F6EF33E38FFF50) \
     X(Func_97F056BAD90AADE7) \
     X(Func_C55104A33B35B264) \
@@ -63556,7 +63432,7 @@
     X(sceUsbdUnlockEvents) \
     X(sceUsbdUnrefDevice) \
     X(sceUsbdWaitForEvent)
-#define OBS_CORPUS_CALLABLE_0300_LIBSCEUSBD(X) \
+#define OBS_CORPUS_CALLABLE_0299_LIBSCEUSBD(X) \
     X(Func_65F6EF33E38FFF50) \
     X(Func_97F056BAD90AADE7) \
     X(Func_C55104A33B35B264) \
@@ -63624,7 +63500,7 @@
     X(sceUsbdWaitForEvent)
 
 /* libSceUserService: 434 symbols, 434 callable. */
-#define OBS_CORPUS_0301_LIBSCEUSERSERVICE(X) \
+#define OBS_CORPUS_0300_LIBSCEUSERSERVICE(X) \
     X(Func_8AC6DC4168D5FEA5) \
     X(Func_A6BDC9DFDAFD02B4) \
     X(Func_BB9491DFE6B4953C) \
@@ -64059,7 +63935,7 @@
     X(sceUserServiceSetVolumeForOtherDevices) \
     X(sceUserServiceSetVolumeForSidetone) \
     X(sceUserServiceUnregisterEventCallback)
-#define OBS_CORPUS_CALLABLE_0301_LIBSCEUSERSERVICE(X) \
+#define OBS_CORPUS_CALLABLE_0300_LIBSCEUSERSERVICE(X) \
     X(Func_8AC6DC4168D5FEA5) \
     X(Func_A6BDC9DFDAFD02B4) \
     X(Func_BB9491DFE6B4953C) \
@@ -64496,15 +64372,15 @@
     X(sceUserServiceUnregisterEventCallback)
 
 /* libSceUserServiceForShellCore: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0302_LIBSCEUSERSERVICEFORSHELLCORE(X) \
+#define OBS_CORPUS_0301_LIBSCEUSERSERVICEFORSHELLCORE(X) \
     X(sceUserServiceInitializeForShellCore) \
     X(sceUserServiceTerminateForShellCore)
-#define OBS_CORPUS_CALLABLE_0302_LIBSCEUSERSERVICEFORSHELLCORE(X) \
+#define OBS_CORPUS_CALLABLE_0301_LIBSCEUSERSERVICEFORSHELLCORE(X) \
     X(sceUserServiceInitializeForShellCore) \
     X(sceUserServiceTerminateForShellCore)
 
 /* libSceVdecCore: 20 symbols, 20 callable. */
-#define OBS_CORPUS_0303_LIBSCEVDECCORE(X) \
+#define OBS_CORPUS_0302_LIBSCEVDECCORE(X) \
     X(sceVdecCoreAnalyzeStream) \
     X(sceVdecCoreCreateDecoder) \
     X(sceVdecCoreDeleteDecoder) \
@@ -64525,7 +64401,7 @@
     X(sceVdecCoreTrySyncDecode) \
     X(sceVdecCoreTrySyncDecodeOutputSw) \
     X(sceVdecCoreTrySyncDecodeWptr)
-#define OBS_CORPUS_CALLABLE_0303_LIBSCEVDECCORE(X) \
+#define OBS_CORPUS_CALLABLE_0302_LIBSCEVDECCORE(X) \
     X(sceVdecCoreAnalyzeStream) \
     X(sceVdecCoreCreateDecoder) \
     X(sceVdecCoreDeleteDecoder) \
@@ -64548,31 +64424,31 @@
     X(sceVdecCoreTrySyncDecodeWptr)
 
 /* libSceVdecSavc: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0304_LIBSCEVDECSAVC(X) \
+#define OBS_CORPUS_0303_LIBSCEVDECSAVC(X) \
     X(sceSdecCreateSw) \
     X(sceSdecDestroySw) \
     X(sceSdecGetVersionSw) \
     X(sceSdecQueryMemorySw)
-#define OBS_CORPUS_CALLABLE_0304_LIBSCEVDECSAVC(X) \
+#define OBS_CORPUS_CALLABLE_0303_LIBSCEVDECSAVC(X) \
     X(sceSdecCreateSw) \
     X(sceSdecDestroySw) \
     X(sceSdecGetVersionSw) \
     X(sceSdecQueryMemorySw)
 
 /* libSceVdecSavc2: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0305_LIBSCEVDECSAVC2(X) \
+#define OBS_CORPUS_0304_LIBSCEVDECSAVC2(X) \
     X(sceSdecCreateSw2) \
     X(sceSdecDestroySw2) \
     X(sceSdecGetVersionSw2) \
     X(sceSdecQueryMemorySw2)
-#define OBS_CORPUS_CALLABLE_0305_LIBSCEVDECSAVC2(X) \
+#define OBS_CORPUS_CALLABLE_0304_LIBSCEVDECSAVC2(X) \
     X(sceSdecCreateSw2) \
     X(sceSdecDestroySw2) \
     X(sceSdecGetVersionSw2) \
     X(sceSdecQueryMemorySw2)
 
 /* libSceVdecShevc: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0306_LIBSCEVDECSHEVC(X) \
+#define OBS_CORPUS_0305_LIBSCEVDECSHEVC(X) \
     X(sceSdecCreateSwHevc) \
     X(sceSdecDestroySwHevc) \
     X(sceSdecExecuteSwHevc) \
@@ -64580,7 +64456,7 @@
     X(sceSdecGetVersionSwHevc) \
     X(sceSdecQueryMemorySwHevc) \
     X(sceSdecResetSwHevc)
-#define OBS_CORPUS_CALLABLE_0306_LIBSCEVDECSHEVC(X) \
+#define OBS_CORPUS_CALLABLE_0305_LIBSCEVDECSHEVC(X) \
     X(sceSdecCreateSwHevc) \
     X(sceSdecDestroySwHevc) \
     X(sceSdecExecuteSwHevc) \
@@ -64590,7 +64466,7 @@
     X(sceSdecResetSwHevc)
 
 /* libSceVdecsw: 20 symbols, 20 callable. */
-#define OBS_CORPUS_0307_LIBSCEVDECSW(X) \
+#define OBS_CORPUS_0306_LIBSCEVDECSW(X) \
     X(sceVdecswAllocateComputeQueue) \
     X(sceVdecswCreateDecoder) \
     X(sceVdecswDeleteDecoder) \
@@ -64611,7 +64487,7 @@
     X(sceVdecswTryGetDecodeOutput) \
     X(sceVdecswTrySyncDecodeInput) \
     X(sceVdecswTrySyncDecodeOutput)
-#define OBS_CORPUS_CALLABLE_0307_LIBSCEVDECSW(X) \
+#define OBS_CORPUS_CALLABLE_0306_LIBSCEVDECSW(X) \
     X(sceVdecswAllocateComputeQueue) \
     X(sceVdecswCreateDecoder) \
     X(sceVdecswDeleteDecoder) \
@@ -64634,7 +64510,7 @@
     X(sceVdecswTrySyncDecodeOutput)
 
 /* libSceVdecwrap: 10 symbols, 10 callable. */
-#define OBS_CORPUS_0308_LIBSCEVDECWRAP(X) \
+#define OBS_CORPUS_0307_LIBSCEVDECWRAP(X) \
     X(sceVdecwrapCreateDecoder) \
     X(sceVdecwrapDeleteDecoder) \
     X(sceVdecwrapFlushDecodeOutput) \
@@ -64645,7 +64521,7 @@
     X(sceVdecwrapResetDecoder) \
     X(sceVdecwrapSetDecodeInput) \
     X(sceVdecwrapSyncDecode)
-#define OBS_CORPUS_CALLABLE_0308_LIBSCEVDECWRAP(X) \
+#define OBS_CORPUS_CALLABLE_0307_LIBSCEVDECWRAP(X) \
     X(sceVdecwrapCreateDecoder) \
     X(sceVdecwrapDeleteDecoder) \
     X(sceVdecwrapFlushDecodeOutput) \
@@ -64658,7 +64534,7 @@
     X(sceVdecwrapSyncDecode)
 
 /* libSceVencCore: 24 symbols, 24 callable. */
-#define OBS_CORPUS_0309_LIBSCEVENCCORE(X) \
+#define OBS_CORPUS_0308_LIBSCEVENCCORE(X) \
     X(sceVencCoreCreateEncoder) \
     X(sceVencCoreDeleteEncoder) \
     X(sceVencCoreGetAuData) \
@@ -64683,7 +64559,7 @@
     X(sceVencCoreSyncEncode) \
     X(sceVencCoreUnmapTargetMemory) \
     X(sceVencCoreUnmapTargetMemoryByPid)
-#define OBS_CORPUS_CALLABLE_0309_LIBSCEVENCCORE(X) \
+#define OBS_CORPUS_CALLABLE_0308_LIBSCEVENCCORE(X) \
     X(sceVencCoreCreateEncoder) \
     X(sceVencCoreDeleteEncoder) \
     X(sceVencCoreGetAuData) \
@@ -64710,7 +64586,7 @@
     X(sceVencCoreUnmapTargetMemoryByPid)
 
 /* libSceVideoCoreInterface: 24 symbols, 24 callable. */
-#define OBS_CORPUS_0310_LIBSCEVIDEOCOREINTERFACE(X) \
+#define OBS_CORPUS_0309_LIBSCEVIDEOCOREINTERFACE(X) \
     X(sceVideoCoreInterfaceAddVblankEvent) \
     X(sceVideoCoreInterfaceCloseCanvas) \
     X(sceVideoCoreInterfaceCloseVideoOut) \
@@ -64735,7 +64611,7 @@
     X(sceVideoCoreInterfaceSubmitCanvases) \
     X(sceVideoCoreInterfaceUnloadModule) \
     X(sceVideoCoreInterfaceWaitCanvasFlip)
-#define OBS_CORPUS_CALLABLE_0310_LIBSCEVIDEOCOREINTERFACE(X) \
+#define OBS_CORPUS_CALLABLE_0309_LIBSCEVIDEOCOREINTERFACE(X) \
     X(sceVideoCoreInterfaceAddVblankEvent) \
     X(sceVideoCoreInterfaceCloseCanvas) \
     X(sceVideoCoreInterfaceCloseVideoOut) \
@@ -64762,7 +64638,7 @@
     X(sceVideoCoreInterfaceWaitCanvasFlip)
 
 /* libSceVideoCoreServerInterface: 48 symbols, 48 callable. */
-#define OBS_CORPUS_0311_LIBSCEVIDEOCORESERVERINTERFACE(X) \
+#define OBS_CORPUS_0310_LIBSCEVIDEOCORESERVERINTERFACE(X) \
     X(sceVideoCoreAbortRequest) \
     X(sceVideoCoreAcquireDecoderResource) \
     X(sceVideoCoreAcquireDecoderResourceForBeWrapper) \
@@ -64811,7 +64687,7 @@
     X(sceVideoCoreSyncAddStream) \
     X(sceVideoCoreSyncSendRequest) \
     X(sceVideoCoreUnregistEventCallback)
-#define OBS_CORPUS_CALLABLE_0311_LIBSCEVIDEOCORESERVERINTERFACE(X) \
+#define OBS_CORPUS_CALLABLE_0310_LIBSCEVIDEOCORESERVERINTERFACE(X) \
     X(sceVideoCoreAbortRequest) \
     X(sceVideoCoreAcquireDecoderResource) \
     X(sceVideoCoreAcquireDecoderResourceForBeWrapper) \
@@ -64862,25 +64738,25 @@
     X(sceVideoCoreUnregistEventCallback)
 
 /* libSceVideoDecoderArbitration: 4 symbols, 4 callable. */
-#define OBS_CORPUS_0312_LIBSCEVIDEODECODERARBITRATION(X) \
+#define OBS_CORPUS_0311_LIBSCEVIDEODECODERARBITRATION(X) \
     X(sceVideoDecoderArbitrationAcceptEvent) \
     X(sceVideoDecoderArbitrationEnable) \
     X(sceVideoDecoderArbitrationEnableSuspendMode) \
     X(sceVideoDecoderArbitrationInitialize)
-#define OBS_CORPUS_CALLABLE_0312_LIBSCEVIDEODECODERARBITRATION(X) \
+#define OBS_CORPUS_CALLABLE_0311_LIBSCEVIDEODECODERARBITRATION(X) \
     X(sceVideoDecoderArbitrationAcceptEvent) \
     X(sceVideoDecoderArbitrationEnable) \
     X(sceVideoDecoderArbitrationEnableSuspendMode) \
     X(sceVideoDecoderArbitrationInitialize)
 
 /* libSceVideoNativeExtEssential: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0313_LIBSCEVIDEONATIVEEXTESSENTIAL(X) \
+#define OBS_CORPUS_0312_LIBSCEVIDEONATIVEEXTESSENTIAL(X) \
     X(sceVideoNativeExtEssential_CreateDecInstance) \
     X(sceVideoNativeExtEssential_DestroyDecInstance) \
     X(sceVideoNativeExtEssential_Finalize) \
     X(sceVideoNativeExtEssential_Initialize) \
     X(sceVideoNativeExtEssential_IsInit)
-#define OBS_CORPUS_CALLABLE_0313_LIBSCEVIDEONATIVEEXTESSENTIAL(X) \
+#define OBS_CORPUS_CALLABLE_0312_LIBSCEVIDEONATIVEEXTESSENTIAL(X) \
     X(sceVideoNativeExtEssential_CreateDecInstance) \
     X(sceVideoNativeExtEssential_DestroyDecInstance) \
     X(sceVideoNativeExtEssential_Finalize) \
@@ -64888,7 +64764,7 @@
     X(sceVideoNativeExtEssential_IsInit)
 
 /* libSceVideoOut: 120 symbols, 120 callable. */
-#define OBS_CORPUS_0314_LIBSCEVIDEOOUT(X) \
+#define OBS_CORPUS_0313_LIBSCEVIDEOOUT(X) \
     X(sceVideoOutAddBuffer) \
     X(sceVideoOutAddBuffer4k2kPrivilege) \
     X(sceVideoOutAddBufferYccPrivilege) \
@@ -65009,7 +64885,7 @@
     X(sceVideoOutUnlockBuffer) \
     X(sceVideoOutUnregisterBufferAttribute) \
     X(sceVideoOutWaitVblank)
-#define OBS_CORPUS_CALLABLE_0314_LIBSCEVIDEOOUT(X) \
+#define OBS_CORPUS_CALLABLE_0313_LIBSCEVIDEOOUT(X) \
     X(sceVideoOutAddBuffer) \
     X(sceVideoOutAddBuffer4k2kPrivilege) \
     X(sceVideoOutAddBufferYccPrivilege) \
@@ -65132,37 +65008,37 @@
     X(sceVideoOutWaitVblank)
 
 /* libSceVideoOutAniso: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0315_LIBSCEVIDEOOUTANISO(X) \
+#define OBS_CORPUS_0314_LIBSCEVIDEOOUTANISO(X) \
     X(sceVideoOutAddBufferAnisoPrivilege)
-#define OBS_CORPUS_CALLABLE_0315_LIBSCEVIDEOOUTANISO(X) \
+#define OBS_CORPUS_CALLABLE_0314_LIBSCEVIDEOOUTANISO(X) \
     X(sceVideoOutAddBufferAnisoPrivilege)
 
 /* libSceVideoOutExtra: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0316_LIBSCEVIDEOOUTEXTRA(X) \
+#define OBS_CORPUS_0315_LIBSCEVIDEOOUTEXTRA(X) \
     X(sceVideoOutAdjustColor2_)
-#define OBS_CORPUS_CALLABLE_0316_LIBSCEVIDEOOUTEXTRA(X) \
+#define OBS_CORPUS_CALLABLE_0315_LIBSCEVIDEOOUTEXTRA(X) \
     X(sceVideoOutAdjustColor2_)
 
 /* libSceVideoOutHdr: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0317_LIBSCEVIDEOOUTHDR(X) \
+#define OBS_CORPUS_0316_LIBSCEVIDEOOUTHDR(X) \
     X(sceVideoOutAddBufferHdrPrivilege)
-#define OBS_CORPUS_CALLABLE_0317_LIBSCEVIDEOOUTHDR(X) \
+#define OBS_CORPUS_CALLABLE_0316_LIBSCEVIDEOOUTHDR(X) \
     X(sceVideoOutAddBufferHdrPrivilege)
 
 /* libSceVideoOutRawEdid: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0318_LIBSCEVIDEOOUTRAWEDID(X) \
+#define OBS_CORPUS_0317_LIBSCEVIDEOOUTRAWEDID(X) \
     X(sceVideoOutGetHdmiRawEdid_)
-#define OBS_CORPUS_CALLABLE_0318_LIBSCEVIDEOOUTRAWEDID(X) \
+#define OBS_CORPUS_CALLABLE_0317_LIBSCEVIDEOOUTRAWEDID(X) \
     X(sceVideoOutGetHdmiRawEdid_)
 
 /* libSceVideoOutSecondary: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0319_LIBSCEVIDEOOUTSECONDARY(X) \
+#define OBS_CORPUS_0318_LIBSCEVIDEOOUTSECONDARY(X) \
     X(__dummy__)
-#define OBS_CORPUS_CALLABLE_0319_LIBSCEVIDEOOUTSECONDARY(X) \
+#define OBS_CORPUS_CALLABLE_0318_LIBSCEVIDEOOUTSECONDARY(X) \
     X(__dummy__)
 
 /* libSceVideoRecording: 14 symbols, 14 callable. */
-#define OBS_CORPUS_0320_LIBSCEVIDEORECORDING(X) \
+#define OBS_CORPUS_0319_LIBSCEVIDEORECORDING(X) \
     X(sceVideoRecordingClose) \
     X(sceVideoRecordingCopyBGRAtoNV12) \
     X(sceVideoRecordingGetInfo) \
@@ -65177,7 +65053,7 @@
     X(sceVideoRecordingStart) \
     X(sceVideoRecordingStop) \
     X(sceVideoRecordingTerm)
-#define OBS_CORPUS_CALLABLE_0320_LIBSCEVIDEORECORDING(X) \
+#define OBS_CORPUS_CALLABLE_0319_LIBSCEVIDEORECORDING(X) \
     X(sceVideoRecordingClose) \
     X(sceVideoRecordingCopyBGRAtoNV12) \
     X(sceVideoRecordingGetInfo) \
@@ -65194,7 +65070,7 @@
     X(sceVideoRecordingTerm)
 
 /* libSceVideodec: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0321_LIBSCEVIDEODEC(X) \
+#define OBS_CORPUS_0320_LIBSCEVIDEODEC(X) \
     X(sceVideodecCreateDecoder) \
     X(sceVideodecDecode) \
     X(sceVideodecDeleteDecoder) \
@@ -65202,7 +65078,7 @@
     X(sceVideodecMapMemory) \
     X(sceVideodecQueryResourceInfo) \
     X(sceVideodecReset)
-#define OBS_CORPUS_CALLABLE_0321_LIBSCEVIDEODEC(X) \
+#define OBS_CORPUS_CALLABLE_0320_LIBSCEVIDEODEC(X) \
     X(sceVideodecCreateDecoder) \
     X(sceVideodecDecode) \
     X(sceVideodecDeleteDecoder) \
@@ -65211,50 +65087,26 @@
     X(sceVideodecQueryResourceInfo) \
     X(sceVideodecReset)
 
-/* libSceVideodec2: 19 symbols, 19 callable. */
-#define OBS_CORPUS_0322_LIBSCEVIDEODEC2(X) \
-    X(sceVideodec2AllocateComputeQueue) \
-    X(sceVideodec2CreateDecoder) \
+/* libSceVideodec2: 7 symbols, 7 callable. */
+#define OBS_CORPUS_0321_LIBSCEVIDEODEC2(X) \
     X(sceVideodec2CreateHevcDecoder) \
-    X(sceVideodec2Decode) \
-    X(sceVideodec2DeleteDecoder) \
-    X(sceVideodec2Flush) \
-    X(sceVideodec2GetAvcPictureInfo) \
     X(sceVideodec2GetHevcPictureInfo) \
-    X(sceVideodec2GetPictureInfo) \
     X(sceVideodec2InitLibrary) \
-    X(sceVideodec2MapDirectMemory) \
-    X(sceVideodec2QueryComputeMemoryInfo) \
     X(sceVideodec2QueryDecoderInfo) \
-    X(sceVideodec2QueryDecoderMemoryInfo) \
     X(sceVideodec2QueryHevcDecoderMemoryInfo) \
     X(sceVideodec2QueryLibraryInfo) \
-    X(sceVideodec2ReleaseComputeQueue) \
-    X(sceVideodec2Reset) \
     X(sceVideodec2TermLibrary)
-#define OBS_CORPUS_CALLABLE_0322_LIBSCEVIDEODEC2(X) \
-    X(sceVideodec2AllocateComputeQueue) \
-    X(sceVideodec2CreateDecoder) \
+#define OBS_CORPUS_CALLABLE_0321_LIBSCEVIDEODEC2(X) \
     X(sceVideodec2CreateHevcDecoder) \
-    X(sceVideodec2Decode) \
-    X(sceVideodec2DeleteDecoder) \
-    X(sceVideodec2Flush) \
-    X(sceVideodec2GetAvcPictureInfo) \
     X(sceVideodec2GetHevcPictureInfo) \
-    X(sceVideodec2GetPictureInfo) \
     X(sceVideodec2InitLibrary) \
-    X(sceVideodec2MapDirectMemory) \
-    X(sceVideodec2QueryComputeMemoryInfo) \
     X(sceVideodec2QueryDecoderInfo) \
-    X(sceVideodec2QueryDecoderMemoryInfo) \
     X(sceVideodec2QueryHevcDecoderMemoryInfo) \
     X(sceVideodec2QueryLibraryInfo) \
-    X(sceVideodec2ReleaseComputeQueue) \
-    X(sceVideodec2Reset) \
     X(sceVideodec2TermLibrary)
 
 /* libSceVisionManager: 56 symbols, 56 callable. */
-#define OBS_CORPUS_0323_LIBSCEVISIONMANAGER(X) \
+#define OBS_CORPUS_0322_LIBSCEVISIONMANAGER(X) \
     X(sceVisionManagerApplyCalibrateHmdResult) \
     X(sceVisionManagerCancelRequest) \
     X(sceVisionManagerClose) \
@@ -65311,7 +65163,7 @@
     X(sceVisionManagerSetCallbackForUpdateRunningStatus) \
     X(sceVisionManagerSetCallbackForUpdateStoreFrame) \
     X(sceVisionManagerWaitResponse)
-#define OBS_CORPUS_CALLABLE_0323_LIBSCEVISIONMANAGER(X) \
+#define OBS_CORPUS_CALLABLE_0322_LIBSCEVISIONMANAGER(X) \
     X(sceVisionManagerApplyCalibrateHmdResult) \
     X(sceVisionManagerCancelRequest) \
     X(sceVisionManagerClose) \
@@ -65370,7 +65222,7 @@
     X(sceVisionManagerWaitResponse)
 
 /* libSceVnaInternal: 27 symbols, 27 callable. */
-#define OBS_CORPUS_0324_LIBSCEVNAINTERNAL(X) \
+#define OBS_CORPUS_0323_LIBSCEVNAINTERNAL(X) \
     X(sceVnaCancelDownloadTts) \
     X(sceVnaCancelTts) \
     X(sceVnaCheckCallback) \
@@ -65398,7 +65250,7 @@
     X(sceVnaStopKeywordDetection) \
     X(sceVnaTerminate) \
     X(sceVnaUnregisterCallback)
-#define OBS_CORPUS_CALLABLE_0324_LIBSCEVNAINTERNAL(X) \
+#define OBS_CORPUS_CALLABLE_0323_LIBSCEVNAINTERNAL(X) \
     X(sceVnaCancelDownloadTts) \
     X(sceVnaCancelTts) \
     X(sceVnaCheckCallback) \
@@ -65428,7 +65280,7 @@
     X(sceVnaUnregisterCallback)
 
 /* libSceVoice: 30 symbols, 30 callable. */
-#define OBS_CORPUS_0325_LIBSCEVOICE(X) \
+#define OBS_CORPUS_0324_LIBSCEVOICE(X) \
     X(sceVoiceConnectIPortToOPort) \
     X(sceVoiceCreatePort) \
     X(sceVoiceDeletePort) \
@@ -65459,7 +65311,7 @@
     X(sceVoiceVADAdjustment) \
     X(sceVoiceVADSetVersion) \
     X(sceVoiceWriteToIPort)
-#define OBS_CORPUS_CALLABLE_0325_LIBSCEVOICE(X) \
+#define OBS_CORPUS_CALLABLE_0324_LIBSCEVOICE(X) \
     X(sceVoiceConnectIPortToOPort) \
     X(sceVoiceCreatePort) \
     X(sceVoiceDeletePort) \
@@ -65492,7 +65344,7 @@
     X(sceVoiceWriteToIPort)
 
 /* libSceVoiceQoS: 23 symbols, 23 callable. */
-#define OBS_CORPUS_0326_LIBSCEVOICEQOS(X) \
+#define OBS_CORPUS_0325_LIBSCEVOICEQOS(X) \
     X(sceVoiceQoSConnect) \
     X(sceVoiceQoSCreateLocalEndpoint) \
     X(sceVoiceQoSCreateRemoteEndpoint) \
@@ -65516,7 +65368,7 @@
     X(sceVoiceQoSSetRemoteEndpointAttribute) \
     X(sceVoiceQoSTerminate) \
     X(sceVoiceQoSWritePacket)
-#define OBS_CORPUS_CALLABLE_0326_LIBSCEVOICEQOS(X) \
+#define OBS_CORPUS_CALLABLE_0325_LIBSCEVOICEQOS(X) \
     X(sceVoiceQoSConnect) \
     X(sceVoiceQoSCreateLocalEndpoint) \
     X(sceVoiceQoSCreateRemoteEndpoint) \
@@ -65542,7 +65394,7 @@
     X(sceVoiceQoSWritePacket)
 
 /* libSceVorbisDec: 34 symbols, 34 callable. */
-#define OBS_CORPUS_0327_LIBSCEVORBISDEC(X) \
+#define OBS_CORPUS_0326_LIBSCEVORBISDEC(X) \
     X(sceVorbisDecBitrate) \
     X(sceVorbisDecBitrateInstant) \
     X(sceVorbisDecClear) \
@@ -65577,7 +65429,7 @@
     X(sceVorbisDecTimeSeekPageLap) \
     X(sceVorbisDecTimeTell) \
     X(sceVorbisDecTimeTotal)
-#define OBS_CORPUS_CALLABLE_0327_LIBSCEVORBISDEC(X) \
+#define OBS_CORPUS_CALLABLE_0326_LIBSCEVORBISDEC(X) \
     X(sceVorbisDecBitrate) \
     X(sceVorbisDecBitrateInstant) \
     X(sceVorbisDecClear) \
@@ -65614,7 +65466,7 @@
     X(sceVorbisDecTimeTotal)
 
 /* libSceVrServiceDialog: 7 symbols, 7 callable. */
-#define OBS_CORPUS_0328_LIBSCEVRSERVICEDIALOG(X) \
+#define OBS_CORPUS_0327_LIBSCEVRSERVICEDIALOG(X) \
     X(sceVrServiceDialogClose) \
     X(sceVrServiceDialogGetResult) \
     X(sceVrServiceDialogGetStatus) \
@@ -65622,7 +65474,7 @@
     X(sceVrServiceDialogOpen) \
     X(sceVrServiceDialogTerminate) \
     X(sceVrServiceDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0328_LIBSCEVRSERVICEDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0327_LIBSCEVRSERVICEDIALOG(X) \
     X(sceVrServiceDialogClose) \
     X(sceVrServiceDialogGetResult) \
     X(sceVrServiceDialogGetStatus) \
@@ -65632,7 +65484,7 @@
     X(sceVrServiceDialogUpdateStatus)
 
 /* libSceVrTracker: 29 symbols, 29 callable. */
-#define OBS_CORPUS_0329_LIBSCEVRTRACKER(X) \
+#define OBS_CORPUS_0328_LIBSCEVRTRACKER(X) \
     X(Func_0FA4C949F8D3024E) \
     X(Func_285C6AFC09C42F7E) \
     X(Func_9A6CDB2103664F8A) \
@@ -65662,7 +65514,7 @@
     X(sceVrTrackerTerm) \
     X(sceVrTrackerUnregisterDevice) \
     X(sceVrTrackerUpdateMotionSensorData)
-#define OBS_CORPUS_CALLABLE_0329_LIBSCEVRTRACKER(X) \
+#define OBS_CORPUS_CALLABLE_0328_LIBSCEVRTRACKER(X) \
     X(Func_0FA4C949F8D3024E) \
     X(Func_285C6AFC09C42F7E) \
     X(Func_9A6CDB2103664F8A) \
@@ -65694,25 +65546,25 @@
     X(sceVrTrackerUpdateMotionSensorData)
 
 /* libSceVrTrackerDeviceRejection: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0330_LIBSCEVRTRACKERDEVICEREJECTION(X) \
+#define OBS_CORPUS_0329_LIBSCEVRTRACKERDEVICEREJECTION(X) \
     X(sceVrTrackerSetDeviceRejection)
-#define OBS_CORPUS_CALLABLE_0330_LIBSCEVRTRACKERDEVICEREJECTION(X) \
+#define OBS_CORPUS_CALLABLE_0329_LIBSCEVRTRACKERDEVICEREJECTION(X) \
     X(sceVrTrackerSetDeviceRejection)
 
 /* libSceVrTrackerFourDeviceAllowed: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0331_LIBSCEVRTRACKERFOURDEVICEALLOWED(X) \
+#define OBS_CORPUS_0330_LIBSCEVRTRACKERFOURDEVICEALLOWED(X) \
     X(sceVrTrackerRegisterDevice2)
-#define OBS_CORPUS_CALLABLE_0331_LIBSCEVRTRACKERFOURDEVICEALLOWED(X) \
+#define OBS_CORPUS_CALLABLE_0330_LIBSCEVRTRACKERFOURDEVICEALLOWED(X) \
     X(sceVrTrackerRegisterDevice2)
 
 /* libSceVrTrackerGpuTest: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0332_LIBSCEVRTRACKERGPUTEST(X) \
+#define OBS_CORPUS_0331_LIBSCEVRTRACKERGPUTEST(X) \
     X(Func_1119B0BE399F37E7) \
     X(Func_4928B43816BC440D) \
     X(Func_863EF32EFCB0FA9C) \
     X(Func_E6E726CBC85C48F9) \
     X(Func_F6407E46C66DF383)
-#define OBS_CORPUS_CALLABLE_0332_LIBSCEVRTRACKERGPUTEST(X) \
+#define OBS_CORPUS_CALLABLE_0331_LIBSCEVRTRACKERGPUTEST(X) \
     X(Func_1119B0BE399F37E7) \
     X(Func_4928B43816BC440D) \
     X(Func_863EF32EFCB0FA9C) \
@@ -65720,13 +65572,13 @@
     X(Func_F6407E46C66DF383)
 
 /* libSceVrTrackerLiveCapture: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0333_LIBSCEVRTRACKERLIVECAPTURE(X) \
+#define OBS_CORPUS_0332_LIBSCEVRTRACKERLIVECAPTURE(X) \
     X(sceVrTrackerCpuPopMarker) \
     X(sceVrTrackerCpuPushMarker) \
     X(sceVrTrackerGetLiveCaptureId) \
     X(sceVrTrackerStartLiveCapture) \
     X(sceVrTrackerStopLiveCapture)
-#define OBS_CORPUS_CALLABLE_0333_LIBSCEVRTRACKERLIVECAPTURE(X) \
+#define OBS_CORPUS_CALLABLE_0332_LIBSCEVRTRACKERLIVECAPTURE(X) \
     X(sceVrTrackerCpuPopMarker) \
     X(sceVrTrackerCpuPushMarker) \
     X(sceVrTrackerGetLiveCaptureId) \
@@ -65734,21 +65586,21 @@
     X(sceVrTrackerStopLiveCapture)
 
 /* libSceVshctl: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0334_LIBSCEVSHCTL(X) \
+#define OBS_CORPUS_0333_LIBSCEVSHCTL(X) \
     X(sceVshctlSetPartyStatus) \
     X(sceVshctlSetProprietaryChatStatus)
-#define OBS_CORPUS_CALLABLE_0334_LIBSCEVSHCTL(X) \
+#define OBS_CORPUS_CALLABLE_0333_LIBSCEVSHCTL(X) \
     X(sceVshctlSetPartyStatus) \
     X(sceVshctlSetProprietaryChatStatus)
 
 /* libSceWeb: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0335_LIBSCEWEB(X) \
+#define OBS_CORPUS_0334_LIBSCEWEB(X) \
     X(_ZN3sce3web11WebViewBase31postMessageToNavigatorSceObjectEPKc) \
     X(_ZN3sce3web15TerminateCsharpEv) \
     X(_ZN3sce3web16InitializeCsharpEm) \
     X(sceWebInitialize) \
     X(sceWebTerminate)
-#define OBS_CORPUS_CALLABLE_0335_LIBSCEWEB(X) \
+#define OBS_CORPUS_CALLABLE_0334_LIBSCEWEB(X) \
     X(_ZN3sce3web11WebViewBase31postMessageToNavigatorSceObjectEPKc) \
     X(_ZN3sce3web15TerminateCsharpEv) \
     X(_ZN3sce3web16InitializeCsharpEm) \
@@ -65756,7 +65608,7 @@
     X(sceWebTerminate)
 
 /* libSceWebBrowserDialog: 13 symbols, 13 callable. */
-#define OBS_CORPUS_0336_LIBSCEWEBBROWSERDIALOG(X) \
+#define OBS_CORPUS_0335_LIBSCEWEBBROWSERDIALOG(X) \
     X(sceWebBrowserDialogClose) \
     X(sceWebBrowserDialogGetEvent) \
     X(sceWebBrowserDialogGetResult) \
@@ -65770,7 +65622,7 @@
     X(sceWebBrowserDialogSetZoom) \
     X(sceWebBrowserDialogTerminate) \
     X(sceWebBrowserDialogUpdateStatus)
-#define OBS_CORPUS_CALLABLE_0336_LIBSCEWEBBROWSERDIALOG(X) \
+#define OBS_CORPUS_CALLABLE_0335_LIBSCEWEBBROWSERDIALOG(X) \
     X(sceWebBrowserDialogClose) \
     X(sceWebBrowserDialogGetEvent) \
     X(sceWebBrowserDialogGetResult) \
@@ -65786,13 +65638,13 @@
     X(sceWebBrowserDialogUpdateStatus)
 
 /* libSceWebBrowserDialogLimited: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0337_LIBSCEWEBBROWSERDIALOGLIMITED(X) \
+#define OBS_CORPUS_0336_LIBSCEWEBBROWSERDIALOGLIMITED(X) \
     X(Func_F2BE042771625F8C)
-#define OBS_CORPUS_CALLABLE_0337_LIBSCEWEBBROWSERDIALOGLIMITED(X) \
+#define OBS_CORPUS_CALLABLE_0336_LIBSCEWEBBROWSERDIALOGLIMITED(X) \
     X(Func_F2BE042771625F8C)
 
 /* libSceWebKit2: 237 symbols, 236 callable. */
-#define OBS_CORPUS_0338_LIBSCEWEBKIT2(X) \
+#define OBS_CORPUS_0337_LIBSCEWEBKIT2(X) \
     X(ACProcessMain) \
     X(WKAXObjectDescription) \
     X(WKAXObjectHelpText) \
@@ -66030,7 +65882,7 @@
     X(_ZNK3IPC15ArgumentDecoder28bufferIsLargeEnoughToContainEjm) \
     X(_ZNK6WebKit17ChildProcessProxy5stateEv) \
     X(_ZTVN3IPC13DataReferenceE)
-#define OBS_CORPUS_CALLABLE_0338_LIBSCEWEBKIT2(X) \
+#define OBS_CORPUS_CALLABLE_0337_LIBSCEWEBKIT2(X) \
     X(ACProcessMain) \
     X(WKAXObjectDescription) \
     X(WKAXObjectHelpText) \
@@ -66269,13 +66121,13 @@
     X(_ZNK6WebKit17ChildProcessProxy5stateEv)
 
 /* libSceWkFontConfig: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0339_LIBSCEWKFONTCONFIG(X) \
+#define OBS_CORPUS_0338_LIBSCEWKFONTCONFIG(X) \
     X(sceWkFontConfigGetAttr) \
     X(sceWkFontConfigGetFont) \
     X(sceWkFontConfigGetFontFromFontName) \
     X(sceWkFontConfigGetFontName) \
     X(sceWkFontConfigGetFontPath)
-#define OBS_CORPUS_CALLABLE_0339_LIBSCEWKFONTCONFIG(X) \
+#define OBS_CORPUS_CALLABLE_0338_LIBSCEWKFONTCONFIG(X) \
     X(sceWkFontConfigGetAttr) \
     X(sceWkFontConfigGetFont) \
     X(sceWkFontConfigGetFontFromFontName) \
@@ -66283,7 +66135,7 @@
     X(sceWkFontConfigGetFontPath)
 
 /* libSceXml: 184 symbols, 183 callable. */
-#define OBS_CORPUS_0340_LIBSCEXML(X) \
+#define OBS_CORPUS_0339_LIBSCEXML(X) \
     X(_ZN3sce3Xml10SimpleDataC1EPKcm) \
     X(_ZN3sce3Xml10SimpleDataC1Ev) \
     X(_ZN3sce3Xml10SimpleDataC2EPKcm) \
@@ -66468,7 +66320,7 @@
     X(_ZNK3sce3Xml4Attr11isAvailableEv) \
     X(_ZNK3sce3Xml4Attr7getNameEv) \
     X(_ZNK3sce3Xml4Attr8getValueEv)
-#define OBS_CORPUS_CALLABLE_0340_LIBSCEXML(X) \
+#define OBS_CORPUS_CALLABLE_0339_LIBSCEXML(X) \
     X(_ZN3sce3Xml10SimpleDataC1EPKcm) \
     X(_ZN3sce3Xml10SimpleDataC1Ev) \
     X(_ZN3sce3Xml10SimpleDataC2EPKcm) \
@@ -66654,13 +66506,13 @@
     X(_ZNK3sce3Xml4Attr8getValueEv)
 
 /* libSceZlib: 5 symbols, 5 callable. */
-#define OBS_CORPUS_0341_LIBSCEZLIB(X) \
+#define OBS_CORPUS_0340_LIBSCEZLIB(X) \
     X(sceZlibFinalize) \
     X(sceZlibGetResult) \
     X(sceZlibInflate) \
     X(sceZlibInitialize) \
     X(sceZlibWaitForDone)
-#define OBS_CORPUS_CALLABLE_0341_LIBSCEZLIB(X) \
+#define OBS_CORPUS_CALLABLE_0340_LIBSCEZLIB(X) \
     X(sceZlibFinalize) \
     X(sceZlibGetResult) \
     X(sceZlibInflate) \
@@ -66668,7 +66520,7 @@
     X(sceZlibWaitForDone)
 
 /* libc: 11 symbols, 10 callable. */
-#define OBS_CORPUS_0342_LIBC(X) \
+#define OBS_CORPUS_0341_LIBC(X) \
     X(Need_sceLibc) \
     X(_Z25sceLibcForceTlsDestructori) \
     X(__cxa_thread_atexit) \
@@ -66680,7 +66532,7 @@
     X(sceLibcGetFD) \
     X(sceLibcGetFH) \
     X(wcsmisc)
-#define OBS_CORPUS_CALLABLE_0342_LIBC(X) \
+#define OBS_CORPUS_CALLABLE_0341_LIBC(X) \
     X(_Z25sceLibcForceTlsDestructori) \
     X(__cxa_thread_atexit) \
     X(catchReturnFromMain) \
@@ -66693,15 +66545,15 @@
     X(wcsmisc)
 
 /* libc_setjmp: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0343_LIBC_SETJMP(X) \
+#define OBS_CORPUS_0342_LIBC_SETJMP(X) \
     X(_longjmp) \
     X(_setjmp)
-#define OBS_CORPUS_CALLABLE_0343_LIBC_SETJMP(X) \
+#define OBS_CORPUS_CALLABLE_0342_LIBC_SETJMP(X) \
     X(_longjmp) \
     X(_setjmp)
 
 /* libcairo: 10 symbols, 10 callable. */
-#define OBS_CORPUS_0344_LIBCAIRO(X) \
+#define OBS_CORPUS_0343_LIBCAIRO(X) \
     X(cairo_font_face_get_user_data) \
     X(cairo_image_surface_create_from_png_stream) \
     X(cairo_mesh_pattern_begin_patch) \
@@ -66712,7 +66564,7 @@
     X(cairo_mesh_pattern_set_corner_color_rgba) \
     X(cairo_pattern_create_mesh) \
     X(cairo_set_font_options)
-#define OBS_CORPUS_CALLABLE_0344_LIBCAIRO(X) \
+#define OBS_CORPUS_CALLABLE_0343_LIBCAIRO(X) \
     X(cairo_font_face_get_user_data) \
     X(cairo_image_surface_create_from_png_stream) \
     X(cairo_mesh_pattern_begin_patch) \
@@ -66725,7 +66577,7 @@
     X(cairo_set_font_options)
 
 /* libcurl: 58 symbols, 58 callable. */
-#define OBS_CORPUS_0345_LIBCURL(X) \
+#define OBS_CORPUS_0344_LIBCURL(X) \
     X(curl_easy_duphandle) \
     X(curl_easy_escape) \
     X(curl_easy_option_by_id) \
@@ -66784,7 +66636,7 @@
     X(curl_url_get) \
     X(curl_url_set) \
     X(curl_version)
-#define OBS_CORPUS_CALLABLE_0345_LIBCURL(X) \
+#define OBS_CORPUS_CALLABLE_0344_LIBCURL(X) \
     X(curl_easy_duphandle) \
     X(curl_easy_escape) \
     X(curl_easy_option_by_id) \
@@ -66844,12 +66696,11 @@
     X(curl_url_set) \
     X(curl_version)
 
-/* libkernel: 779 symbols, 776 callable. */
-#define OBS_CORPUS_0346_LIBKERNEL(X) \
+/* libkernel: 772 symbols, 769 callable. */
+#define OBS_CORPUS_0345_LIBKERNEL(X) \
     X(__Error) \
     X(__Ux86_64_setcontext) \
     X(__elf_phdr_match_addr) \
-    X(__error) \
     X(__freeze) \
     X(__getcwd) \
     X(__inet_ntop) \
@@ -66933,9 +66784,7 @@
     X(_sendmsg) \
     X(_sendto) \
     X(_setsockopt) \
-    X(_sigaction) \
     X(_sigintr) \
-    X(_sigprocmask) \
     X(_sigsuspend) \
     X(_umtx_op) \
     X(_wait4) \
@@ -66956,7 +66805,6 @@
     X(blockpool_open) \
     X(blockpool_unmap) \
     X(chdir) \
-    X(chown) \
     X(chroot) \
     X(clock_settime) \
     X(cpuset) \
@@ -67121,7 +66969,6 @@
     X(pthread_timedjoin_np) \
     X(ptrace) \
     X(raise) \
-    X(readlink) \
     X(reboot) \
     X(renameat) \
     X(revoke) \
@@ -67600,8 +67447,6 @@
     X(sysKernelGetManufacturingMode) \
     X(sysKernelGetUpdVersion) \
     X(sysarch) \
-    X(syscall) \
-    X(sysconf) \
     X(sysctl) \
     X(sysctlnametomib) \
     X(system) \
@@ -67625,11 +67470,10 @@
     X(wait3) \
     X(wait4) \
     X(waitpid)
-#define OBS_CORPUS_CALLABLE_0346_LIBKERNEL(X) \
+#define OBS_CORPUS_CALLABLE_0345_LIBKERNEL(X) \
     X(__Error) \
     X(__Ux86_64_setcontext) \
     X(__elf_phdr_match_addr) \
-    X(__error) \
     X(__freeze) \
     X(__getcwd) \
     X(__inet_ntop) \
@@ -67711,8 +67555,6 @@
     X(_sendmsg) \
     X(_sendto) \
     X(_setsockopt) \
-    X(_sigaction) \
-    X(_sigprocmask) \
     X(_sigsuspend) \
     X(_umtx_op) \
     X(_wait4) \
@@ -67733,7 +67575,6 @@
     X(blockpool_open) \
     X(blockpool_unmap) \
     X(chdir) \
-    X(chown) \
     X(chroot) \
     X(clock_settime) \
     X(cpuset) \
@@ -67898,7 +67739,6 @@
     X(pthread_timedjoin_np) \
     X(ptrace) \
     X(raise) \
-    X(readlink) \
     X(reboot) \
     X(renameat) \
     X(revoke) \
@@ -68377,8 +68217,6 @@
     X(sysKernelGetManufacturingMode) \
     X(sysKernelGetUpdVersion) \
     X(sysarch) \
-    X(syscall) \
-    X(sysconf) \
     X(sysctl) \
     X(sysctlnametomib) \
     X(system) \
@@ -68404,28 +68242,28 @@
     X(waitpid)
 
 /* libkernel_cpumode_platform: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0347_LIBKERNEL_CPUMODE_PLATFORM(X) \
+#define OBS_CORPUS_0346_LIBKERNEL_CPUMODE_PLATFORM(X) \
     X(sceKernelIsProspero)
-#define OBS_CORPUS_CALLABLE_0347_LIBKERNEL_CPUMODE_PLATFORM(X) \
+#define OBS_CORPUS_CALLABLE_0346_LIBKERNEL_CPUMODE_PLATFORM(X) \
     X(sceKernelIsProspero)
 
 /* libkernel_module_load_check: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0348_LIBKERNEL_MODULE_LOAD_CHECK(X) \
+#define OBS_CORPUS_0347_LIBKERNEL_MODULE_LOAD_CHECK(X) \
     X(sceKernelIsModuleLoaded)
-#define OBS_CORPUS_CALLABLE_0348_LIBKERNEL_MODULE_LOAD_CHECK(X) \
+#define OBS_CORPUS_CALLABLE_0347_LIBKERNEL_MODULE_LOAD_CHECK(X) \
     X(sceKernelIsModuleLoaded)
 
 /* libkernel_psmkit: 1 symbols, 1 callable. */
-#define OBS_CORPUS_0349_LIBKERNEL_PSMKIT(X) \
+#define OBS_CORPUS_0348_LIBKERNEL_PSMKIT(X) \
     X(posix_access)
-#define OBS_CORPUS_CALLABLE_0349_LIBKERNEL_PSMKIT(X) \
+#define OBS_CORPUS_CALLABLE_0348_LIBKERNEL_PSMKIT(X) \
     X(posix_access)
 
 /* libkernel_sysc_se: 2 symbols, 2 callable. */
-#define OBS_CORPUS_0350_LIBKERNEL_SYSC_SE(X) \
+#define OBS_CORPUS_0349_LIBKERNEL_SYSC_SE(X) \
     X(sysc_e00) \
     X(sysc_s00)
-#define OBS_CORPUS_CALLABLE_0350_LIBKERNEL_SYSC_SE(X) \
+#define OBS_CORPUS_CALLABLE_0349_LIBKERNEL_SYSC_SE(X) \
     X(sysc_e00) \
     X(sysc_s00)
 
@@ -68463,328 +68301,327 @@
     L(corpus_0026_libSceAudioOutSparkControl, "libSceAudioOutSparkControl", OBS_SHARED, OBS_CORPUS_0026_LIBSCEAUDIOOUTSPARKCONTROL) \
     L(corpus_0027_libSceAudioPropagation, "libSceAudioPropagation", OBS_SHARED, OBS_CORPUS_0027_LIBSCEAUDIOPROPAGATION) \
     L(corpus_0028_libSceAudiodReport, "libSceAudiodReport", OBS_SHARED, OBS_CORPUS_0028_LIBSCEAUDIODREPORT) \
-    L(corpus_0029_libSceAudiodec, "libSceAudiodec", OBS_SHARED, OBS_CORPUS_0029_LIBSCEAUDIODEC) \
-    L(corpus_0030_libSceAudiodecCpu, "libSceAudiodecCpu", OBS_SHARED, OBS_CORPUS_0030_LIBSCEAUDIODECCPU) \
-    L(corpus_0031_libSceAudiodecCpuAlac, "libSceAudiodecCpuAlac", OBS_SHARED, OBS_CORPUS_0031_LIBSCEAUDIODECCPUALAC) \
-    L(corpus_0032_libSceAudiodecCpuDdp, "libSceAudiodecCpuDdp", OBS_SHARED, OBS_CORPUS_0032_LIBSCEAUDIODECCPUDDP) \
-    L(corpus_0033_libSceAudiodecCpuDts, "libSceAudiodecCpuDts", OBS_SHARED, OBS_CORPUS_0033_LIBSCEAUDIODECCPUDTS) \
-    L(corpus_0034_libSceAudiodecCpuDtsHdLbr, "libSceAudiodecCpuDtsHdLbr", OBS_SHARED, OBS_CORPUS_0034_LIBSCEAUDIODECCPUDTSHDLBR) \
-    L(corpus_0035_libSceAudiodecCpuDtsHdMa, "libSceAudiodecCpuDtsHdMa", OBS_SHARED, OBS_CORPUS_0035_LIBSCEAUDIODECCPUDTSHDMA) \
-    L(corpus_0036_libSceAudiodecCpuFlac, "libSceAudiodecCpuFlac", OBS_SHARED, OBS_CORPUS_0036_LIBSCEAUDIODECCPUFLAC) \
-    L(corpus_0037_libSceAudiodecCpuHevag, "libSceAudiodecCpuHevag", OBS_SHARED, OBS_CORPUS_0037_LIBSCEAUDIODECCPUHEVAG) \
-    L(corpus_0038_libSceAudiodecCpuLpcm, "libSceAudiodecCpuLpcm", OBS_SHARED, OBS_CORPUS_0038_LIBSCEAUDIODECCPULPCM) \
-    L(corpus_0039_libSceAudiodecCpuM4aac, "libSceAudiodecCpuM4aac", OBS_SHARED, OBS_CORPUS_0039_LIBSCEAUDIODECCPUM4AAC) \
-    L(corpus_0040_libSceAutoMounterClient, "libSceAutoMounterClient", OBS_SHARED, OBS_CORPUS_0040_LIBSCEAUTOMOUNTERCLIENT) \
-    L(corpus_0041_libSceAvPlayer, "libSceAvPlayer", OBS_SHARED, OBS_CORPUS_0041_LIBSCEAVPLAYER) \
-    L(corpus_0042_libSceAvPlayerStreaming, "libSceAvPlayerStreaming", OBS_SHARED, OBS_CORPUS_0042_LIBSCEAVPLAYERSTREAMING) \
-    L(corpus_0043_libSceAvSetting, "libSceAvSetting", OBS_SHARED, OBS_CORPUS_0043_LIBSCEAVSETTING) \
-    L(corpus_0044_libSceAvSettingDebug, "libSceAvSettingDebug", OBS_SHARED, OBS_CORPUS_0044_LIBSCEAVSETTINGDEBUG) \
-    L(corpus_0045_libSceAvcap, "libSceAvcap", OBS_SHARED, OBS_CORPUS_0045_LIBSCEAVCAP) \
-    L(corpus_0046_libSceBackupRestoreUtil, "libSceBackupRestoreUtil", OBS_SHARED, OBS_CORPUS_0046_LIBSCEBACKUPRESTOREUTIL) \
-    L(corpus_0047_libSceBeisobmf, "libSceBeisobmf", OBS_SHARED, OBS_CORPUS_0047_LIBSCEBEISOBMF) \
-    L(corpus_0048_libSceBemp2sys, "libSceBemp2sys", OBS_SHARED, OBS_CORPUS_0048_LIBSCEBEMP2SYS) \
-    L(corpus_0049_libSceBgft, "libSceBgft", OBS_SHARED, OBS_CORPUS_0049_LIBSCEBGFT) \
-    L(corpus_0050_libSceBluetoothHid, "libSceBluetoothHid", OBS_SHARED, OBS_CORPUS_0050_LIBSCEBLUETOOTHHID) \
-    L(corpus_0051_libSceCamera, "libSceCamera", OBS_SHARED, OBS_CORPUS_0051_LIBSCECAMERA) \
-    L(corpus_0052_libSceCdlgUtilServer, "libSceCdlgUtilServer", OBS_SHARED, OBS_CORPUS_0052_LIBSCECDLGUTILSERVER) \
-    L(corpus_0053_libSceCes, "libSceCes", OBS_SHARED, OBS_CORPUS_0053_LIBSCECES) \
-    L(corpus_0054_libSceClSysCallWrapper, "libSceClSysCallWrapper", OBS_SHARED, OBS_CORPUS_0054_LIBSCECLSYSCALLWRAPPER) \
-    L(corpus_0055_libSceCommonDialog, "libSceCommonDialog", OBS_SHARED, OBS_CORPUS_0055_LIBSCECOMMONDIALOG) \
-    L(corpus_0056_libSceCompanionHttpd, "libSceCompanionHttpd", OBS_SHARED, OBS_CORPUS_0056_LIBSCECOMPANIONHTTPD) \
-    L(corpus_0057_libSceCompanionUtil, "libSceCompanionUtil", OBS_SHARED, OBS_CORPUS_0057_LIBSCECOMPANIONUTIL) \
-    L(corpus_0058_libSceComposite, "libSceComposite", OBS_SHARED, OBS_CORPUS_0058_LIBSCECOMPOSITE) \
-    L(corpus_0059_libSceContentBinder, "libSceContentBinder", OBS_SHARED, OBS_CORPUS_0059_LIBSCECONTENTBINDER) \
-    L(corpus_0060_libSceContentDelete, "libSceContentDelete", OBS_SHARED, OBS_CORPUS_0060_LIBSCECONTENTDELETE) \
-    L(corpus_0061_libSceContentExport, "libSceContentExport", OBS_SHARED, OBS_CORPUS_0061_LIBSCECONTENTEXPORT) \
-    L(corpus_0062_libSceContentSearch, "libSceContentSearch", OBS_SHARED, OBS_CORPUS_0062_LIBSCECONTENTSEARCH) \
-    L(corpus_0063_libSceConvertKeycode, "libSceConvertKeycode", OBS_SHARED, OBS_CORPUS_0063_LIBSCECONVERTKEYCODE) \
-    L(corpus_0064_libSceCoreIPC, "libSceCoreIPC", OBS_SHARED, OBS_CORPUS_0064_LIBSCECOREIPC) \
-    L(corpus_0065_libSceCoredump, "libSceCoredump", OBS_SHARED, OBS_CORPUS_0065_LIBSCECOREDUMP) \
-    L(corpus_0066_libSceCoredump_debug, "libSceCoredump_debug", OBS_SHARED, OBS_CORPUS_0066_LIBSCECOREDUMP_DEBUG) \
-    L(corpus_0067_libSceCustomMusicCore, "libSceCustomMusicCore", OBS_SHARED, OBS_CORPUS_0067_LIBSCECUSTOMMUSICCORE) \
-    L(corpus_0068_libSceCustomMusicService, "libSceCustomMusicService", OBS_SHARED, OBS_CORPUS_0068_LIBSCECUSTOMMUSICSERVICE) \
-    L(corpus_0069_libSceDataTransfer, "libSceDataTransfer", OBS_SHARED, OBS_CORPUS_0069_LIBSCEDATATRANSFER) \
-    L(corpus_0070_libSceDbRecoveryClient, "libSceDbRecoveryClient", OBS_SHARED, OBS_CORPUS_0070_LIBSCEDBRECOVERYCLIENT) \
-    L(corpus_0071_libSceDbgAddressSanitizer, "libSceDbgAddressSanitizer", OBS_SHARED, OBS_CORPUS_0071_LIBSCEDBGADDRESSSANITIZER) \
-    L(corpus_0072_libSceDbgAudioOut, "libSceDbgAudioOut", OBS_SHARED, OBS_CORPUS_0072_LIBSCEDBGAUDIOOUT) \
-    L(corpus_0073_libSceDbgKeyboard, "libSceDbgKeyboard", OBS_SHARED, OBS_CORPUS_0073_LIBSCEDBGKEYBOARD) \
-    L(corpus_0074_libSceDbgPlayGo, "libSceDbgPlayGo", OBS_SHARED, OBS_CORPUS_0074_LIBSCEDBGPLAYGO) \
-    L(corpus_0075_libSceDbgVideoOut, "libSceDbgVideoOut", OBS_SHARED, OBS_CORPUS_0075_LIBSCEDBGVIDEOOUT) \
-    L(corpus_0076_libSceDeci4h, "libSceDeci4h", OBS_SHARED, OBS_CORPUS_0076_LIBSCEDECI4H) \
-    L(corpus_0077_libSceDepth, "libSceDepth", OBS_SHARED, OBS_CORPUS_0077_LIBSCEDEPTH) \
-    L(corpus_0078_libSceDeviceService, "libSceDeviceService", OBS_SHARED, OBS_CORPUS_0078_LIBSCEDEVICESERVICE) \
-    L(corpus_0079_libSceDipsw, "libSceDipsw", OBS_SHARED, OBS_CORPUS_0079_LIBSCEDIPSW) \
-    L(corpus_0080_libSceDiscId, "libSceDiscId", OBS_SHARED, OBS_CORPUS_0080_LIBSCEDISCID) \
-    L(corpus_0081_libSceDiscMap, "libSceDiscMap", OBS_SHARED, OBS_CORPUS_0081_LIBSCEDISCMAP) \
-    L(corpus_0082_libSceDiscMapForVsh, "libSceDiscMapForVsh", OBS_SHARED, OBS_CORPUS_0082_LIBSCEDISCMAPFORVSH) \
-    L(corpus_0083_libSceDseehx, "libSceDseehx", OBS_SHARED, OBS_CORPUS_0083_LIBSCEDSEEHX) \
-    L(corpus_0084_libSceDtcpIp, "libSceDtcpIp", OBS_SHARED, OBS_CORPUS_0084_LIBSCEDTCPIP) \
-    L(corpus_0085_libSceDtsEnc, "libSceDtsEnc", OBS_SHARED, OBS_CORPUS_0085_LIBSCEDTSENC) \
-    L(corpus_0086_libSceEditMp4, "libSceEditMp4", OBS_SHARED, OBS_CORPUS_0086_LIBSCEEDITMP4) \
-    L(corpus_0087_libSceErrorDialog, "libSceErrorDialog", OBS_SHARED, OBS_CORPUS_0087_LIBSCEERRORDIALOG) \
-    L(corpus_0088_libSceFacebook_Yoga, "libSceFacebook.Yoga", OBS_SHARED, OBS_CORPUS_0088_LIBSCEFACEBOOK_YOGA) \
-    L(corpus_0089_libSceFiber, "libSceFiber", OBS_SHARED, OBS_CORPUS_0089_LIBSCEFIBER) \
-    L(corpus_0090_libSceFios2, "libSceFios2", OBS_SHARED, OBS_CORPUS_0090_LIBSCEFIOS2) \
-    L(corpus_0091_libSceFios2_debug, "libSceFios2_debug", OBS_SHARED, OBS_CORPUS_0091_LIBSCEFIOS2_DEBUG) \
-    L(corpus_0092_libSceFont, "libSceFont", OBS_SHARED, OBS_CORPUS_0092_LIBSCEFONT) \
-    L(corpus_0093_libSceFontFt, "libSceFontFt", OBS_SHARED, OBS_CORPUS_0093_LIBSCEFONTFT) \
-    L(corpus_0094_libSceFreeType, "libSceFreeType", OBS_SHARED, OBS_CORPUS_0094_LIBSCEFREETYPE) \
-    L(corpus_0095_libSceFsInternalForVsh, "libSceFsInternalForVsh", OBS_SHARED, OBS_CORPUS_0095_LIBSCEFSINTERNALFORVSH) \
-    L(corpus_0096_libSceGLSlimServerVSH, "libSceGLSlimServerVSH", OBS_SHARED, OBS_CORPUS_0096_LIBSCEGLSLIMSERVERVSH) \
-    L(corpus_0097_libSceGLSlimVSH, "libSceGLSlimVSH", OBS_SHARED, OBS_CORPUS_0097_LIBSCEGLSLIMVSH) \
-    L(corpus_0098_libSceGameCustomDataDialog, "libSceGameCustomDataDialog", OBS_SHARED, OBS_CORPUS_0098_LIBSCEGAMECUSTOMDATADIALOG) \
-    L(corpus_0099_libSceGameLiveStreaming, "libSceGameLiveStreaming", OBS_SHARED, OBS_CORPUS_0099_LIBSCEGAMELIVESTREAMING) \
-    L(corpus_0100_libSceGameLiveStreaming_debug, "libSceGameLiveStreaming_debug", OBS_SHARED, OBS_CORPUS_0100_LIBSCEGAMELIVESTREAMING_DEBUG) \
-    L(corpus_0101_libSceGameRight, "libSceGameRight", OBS_SHARED, OBS_CORPUS_0101_LIBSCEGAMERIGHT) \
-    L(corpus_0102_libSceGameUpdate, "libSceGameUpdate", OBS_SHARED, OBS_CORPUS_0102_LIBSCEGAMEUPDATE) \
-    L(corpus_0103_libSceGic, "libSceGic", OBS_SHARED, OBS_CORPUS_0103_LIBSCEGIC) \
-    L(corpus_0104_libSceGnmDebugModuleReset, "libSceGnmDebugModuleReset", OBS_SHARED, OBS_CORPUS_0104_LIBSCEGNMDEBUGMODULERESET) \
-    L(corpus_0105_libSceGnmDebugReset, "libSceGnmDebugReset", OBS_SHARED, OBS_CORPUS_0105_LIBSCEGNMDEBUGRESET) \
-    L(corpus_0106_libSceGnmDriver, "libSceGnmDriver", OBS_SHARED, OBS_CORPUS_0106_LIBSCEGNMDRIVER) \
-    L(corpus_0107_libSceGnmDriverCompat, "libSceGnmDriverCompat", OBS_SHARED, OBS_CORPUS_0107_LIBSCEGNMDRIVERCOMPAT) \
-    L(corpus_0108_libSceGnmDriverResourceRegistration, "libSceGnmDriverResourceRegistration", OBS_SHARED, OBS_CORPUS_0108_LIBSCEGNMDRIVERRESOURCEREGISTRATION) \
-    L(corpus_0109_libSceGnmDriver_sys, "libSceGnmDriver_sys", OBS_SHARED, OBS_CORPUS_0109_LIBSCEGNMDRIVER_SYS) \
-    L(corpus_0110_libSceGvMp4Parser, "libSceGvMp4Parser", OBS_SHARED, OBS_CORPUS_0110_LIBSCEGVMP4PARSER) \
-    L(corpus_0111_libSceHidControl, "libSceHidControl", OBS_SHARED, OBS_CORPUS_0111_LIBSCEHIDCONTROL) \
-    L(corpus_0112_libSceHmd, "libSceHmd", OBS_SHARED, OBS_CORPUS_0112_LIBSCEHMD) \
-    L(corpus_0113_libSceHmdDistortion, "libSceHmdDistortion", OBS_SHARED, OBS_CORPUS_0113_LIBSCEHMDDISTORTION) \
-    L(corpus_0114_libSceHmdSetupDialog, "libSceHmdSetupDialog", OBS_SHARED, OBS_CORPUS_0114_LIBSCEHMDSETUPDIALOG) \
-    L(corpus_0115_libSceHttp, "libSceHttp", OBS_SHARED, OBS_CORPUS_0115_LIBSCEHTTP) \
-    L(corpus_0116_libSceHttp2, "libSceHttp2", OBS_SHARED, OBS_CORPUS_0116_LIBSCEHTTP2) \
-    L(corpus_0117_libSceHttpCache, "libSceHttpCache", OBS_SHARED, OBS_CORPUS_0117_LIBSCEHTTPCACHE) \
-    L(corpus_0118_libSceHubAppUtil, "libSceHubAppUtil", OBS_SHARED, OBS_CORPUS_0118_LIBSCEHUBAPPUTIL) \
-    L(corpus_0119_libSceIduUtil, "libSceIduUtil", OBS_SHARED, OBS_CORPUS_0119_LIBSCEIDUUTIL) \
-    L(corpus_0120_libSceImageUtil, "libSceImageUtil", OBS_SHARED, OBS_CORPUS_0120_LIBSCEIMAGEUTIL) \
-    L(corpus_0121_libSceIme, "libSceIme", OBS_SHARED, OBS_CORPUS_0121_LIBSCEIME) \
-    L(corpus_0122_libSceImeBackend, "libSceImeBackend", OBS_SHARED, OBS_CORPUS_0122_LIBSCEIMEBACKEND) \
-    L(corpus_0123_libSceImeDialog, "libSceImeDialog", OBS_SHARED, OBS_CORPUS_0123_LIBSCEIMEDIALOG) \
-    L(corpus_0124_libSceInjectedBundle, "libSceInjectedBundle", OBS_SHARED, OBS_CORPUS_0124_LIBSCEINJECTEDBUNDLE) \
-    L(corpus_0125_libSceInvitationDialog, "libSceInvitationDialog", OBS_SHARED, OBS_CORPUS_0125_LIBSCEINVITATIONDIALOG) \
-    L(corpus_0126_libSceIpmi, "libSceIpmi", OBS_SHARED, OBS_CORPUS_0126_LIBSCEIPMI) \
-    L(corpus_0127_libSceIpmiDbg, "libSceIpmiDbg", OBS_SHARED, OBS_CORPUS_0127_LIBSCEIPMIDBG) \
-    L(corpus_0128_libSceJitBridge, "libSceJitBridge", OBS_SHARED, OBS_CORPUS_0128_LIBSCEJITBRIDGE) \
-    L(corpus_0129_libSceJpegDec, "libSceJpegDec", OBS_SHARED, OBS_CORPUS_0129_LIBSCEJPEGDEC) \
-    L(corpus_0130_libSceJpegEnc, "libSceJpegEnc", OBS_SHARED, OBS_CORPUS_0130_LIBSCEJPEGENC) \
-    L(corpus_0131_libSceJpegParser, "libSceJpegParser", OBS_SHARED, OBS_CORPUS_0131_LIBSCEJPEGPARSER) \
-    L(corpus_0132_libSceJsc, "libSceJsc", OBS_SHARED, OBS_CORPUS_0132_LIBSCEJSC) \
-    L(corpus_0133_libSceJscCompiler, "libSceJscCompiler", OBS_SHARED, OBS_CORPUS_0133_LIBSCEJSCCOMPILER) \
-    L(corpus_0134_libSceJson, "libSceJson", OBS_SHARED, OBS_CORPUS_0134_LIBSCEJSON) \
-    L(corpus_0135_libSceJson2, "libSceJson2", OBS_SHARED, OBS_CORPUS_0135_LIBSCEJSON2) \
-    L(corpus_0136_libSceKbEmulate, "libSceKbEmulate", OBS_SHARED, OBS_CORPUS_0136_LIBSCEKBEMULATE) \
-    L(corpus_0137_libSceKeyboard, "libSceKeyboard", OBS_SHARED, OBS_CORPUS_0137_LIBSCEKEYBOARD) \
-    L(corpus_0138_libSceLibcInternal, "libSceLibcInternal", OBS_SHARED, OBS_CORPUS_0138_LIBSCELIBCINTERNAL) \
-    L(corpus_0139_libSceLibcInternalExt, "libSceLibcInternalExt", OBS_SHARED, OBS_CORPUS_0139_LIBSCELIBCINTERNALEXT) \
-    L(corpus_0140_libSceLibreSSL, "libSceLibreSSL", OBS_SHARED, OBS_CORPUS_0140_LIBSCELIBRESSL) \
-    L(corpus_0141_libSceLibreSSl3, "libSceLibreSSl3", OBS_SHARED, OBS_CORPUS_0141_LIBSCELIBRESSL3) \
-    L(corpus_0142_libSceLncUtil, "libSceLncUtil", OBS_SHARED, OBS_CORPUS_0142_LIBSCELNCUTIL) \
-    L(corpus_0143_libSceLoginDialog, "libSceLoginDialog", OBS_SHARED, OBS_CORPUS_0143_LIBSCELOGINDIALOG) \
-    L(corpus_0144_libSceLoginMgrServer, "libSceLoginMgrServer", OBS_SHARED, OBS_CORPUS_0144_LIBSCELOGINMGRSERVER) \
-    L(corpus_0145_libSceLoginService, "libSceLoginService", OBS_SHARED, OBS_CORPUS_0145_LIBSCELOGINSERVICE) \
-    L(corpus_0146_libSceM4aacEnc, "libSceM4aacEnc", OBS_SHARED, OBS_CORPUS_0146_LIBSCEM4AACENC) \
-    L(corpus_0147_libSceManxWtf, "libSceManxWtf", OBS_SHARED, OBS_CORPUS_0147_LIBSCEMANXWTF) \
-    L(corpus_0148_libSceMarlin, "libSceMarlin", OBS_SHARED, OBS_CORPUS_0148_LIBSCEMARLIN) \
-    L(corpus_0149_libSceMbus, "libSceMbus", OBS_SHARED, OBS_CORPUS_0149_LIBSCEMBUS) \
-    L(corpus_0150_libSceMbusDebug, "libSceMbusDebug", OBS_SHARED, OBS_CORPUS_0150_LIBSCEMBUSDEBUG) \
-    L(corpus_0151_libSceMetadataReaderWriter, "libSceMetadataReaderWriter", OBS_SHARED, OBS_CORPUS_0151_LIBSCEMETADATAREADERWRITER) \
-    L(corpus_0152_libSceMouse, "libSceMouse", OBS_SHARED, OBS_CORPUS_0152_LIBSCEMOUSE) \
-    L(corpus_0153_libSceMove, "libSceMove", OBS_SHARED, OBS_CORPUS_0153_LIBSCEMOVE) \
-    L(corpus_0154_libSceMoveTracker, "libSceMoveTracker", OBS_SHARED, OBS_CORPUS_0154_LIBSCEMOVETRACKER) \
-    L(corpus_0155_libSceMsgDialog, "libSceMsgDialog", OBS_SHARED, OBS_CORPUS_0155_LIBSCEMSGDIALOG) \
-    L(corpus_0156_libSceMusicCoreServerClient, "libSceMusicCoreServerClient", OBS_SHARED, OBS_CORPUS_0156_LIBSCEMUSICCORESERVERCLIENT) \
-    L(corpus_0157_libSceMusicCoreServerClientJsEx, "libSceMusicCoreServerClientJsEx", OBS_SHARED, OBS_CORPUS_0157_LIBSCEMUSICCORESERVERCLIENTJSEX) \
-    L(corpus_0158_libSceMusicPlayerService, "libSceMusicPlayerService", OBS_SHARED, OBS_CORPUS_0158_LIBSCEMUSICPLAYERSERVICE) \
-    L(corpus_0159_libSceNKWeb, "libSceNKWeb", OBS_SHARED, OBS_CORPUS_0159_LIBSCENKWEB) \
-    L(corpus_0160_libSceNKWebKit, "libSceNKWebKit", OBS_SHARED, OBS_CORPUS_0160_LIBSCENKWEBKIT) \
-    L(corpus_0161_libSceNKWebKitRequirements, "libSceNKWebKitRequirements", OBS_SHARED, OBS_CORPUS_0161_LIBSCENKWEBKITREQUIREMENTS) \
-    L(corpus_0162_libSceNet, "libSceNet", OBS_SHARED, OBS_CORPUS_0162_LIBSCENET) \
-    L(corpus_0163_libSceNetApctl, "libSceNetApctl", OBS_SHARED, OBS_CORPUS_0163_LIBSCENETAPCTL) \
-    L(corpus_0164_libSceNetBwe, "libSceNetBwe", OBS_SHARED, OBS_CORPUS_0164_LIBSCENETBWE) \
-    L(corpus_0165_libSceNetCtl, "libSceNetCtl", OBS_SHARED, OBS_CORPUS_0165_LIBSCENETCTL) \
-    L(corpus_0166_libSceNetCtlAp, "libSceNetCtlAp", OBS_SHARED, OBS_CORPUS_0166_LIBSCENETCTLAP) \
-    L(corpus_0167_libSceNetCtlApDialog, "libSceNetCtlApDialog", OBS_SHARED, OBS_CORPUS_0167_LIBSCENETCTLAPDIALOG) \
-    L(corpus_0168_libSceNetCtlApIpcInt, "libSceNetCtlApIpcInt", OBS_SHARED, OBS_CORPUS_0168_LIBSCENETCTLAPIPCINT) \
-    L(corpus_0169_libSceNetCtlForNpToolkit, "libSceNetCtlForNpToolkit", OBS_SHARED, OBS_CORPUS_0169_LIBSCENETCTLFORNPTOOLKIT) \
-    L(corpus_0170_libSceNetDebug, "libSceNetDebug", OBS_SHARED, OBS_CORPUS_0170_LIBSCENETDEBUG) \
-    L(corpus_0171_libSceNgs2, "libSceNgs2", OBS_SHARED, OBS_CORPUS_0171_LIBSCENGS2) \
-    L(corpus_0172_libSceNpAppLauncher, "libSceNpAppLauncher", OBS_SHARED, OBS_CORPUS_0172_LIBSCENPAPPLAUNCHER) \
-    L(corpus_0173_libSceNpAuth, "libSceNpAuth", OBS_SHARED, OBS_CORPUS_0173_LIBSCENPAUTH) \
-    L(corpus_0174_libSceNpCommerce, "libSceNpCommerce", OBS_SHARED, OBS_CORPUS_0174_LIBSCENPCOMMERCE) \
-    L(corpus_0175_libSceNpCommon, "libSceNpCommon", OBS_SHARED, OBS_CORPUS_0175_LIBSCENPCOMMON) \
-    L(corpus_0176_libSceNpCppWebApi, "libSceNpCppWebApi", OBS_SHARED, OBS_CORPUS_0176_LIBSCENPCPPWEBAPI) \
-    L(corpus_0177_libSceNpEntitlementAccess, "libSceNpEntitlementAccess", OBS_SHARED, OBS_CORPUS_0177_LIBSCENPENTITLEMENTACCESS) \
-    L(corpus_0178_libSceNpFriendListDialog, "libSceNpFriendListDialog", OBS_SHARED, OBS_CORPUS_0178_LIBSCENPFRIENDLISTDIALOG) \
-    L(corpus_0179_libSceNpGameIntent, "libSceNpGameIntent", OBS_SHARED, OBS_CORPUS_0179_LIBSCENPGAMEINTENT) \
-    L(corpus_0180_libSceNpGriefReport, "libSceNpGriefReport", OBS_SHARED, OBS_CORPUS_0180_LIBSCENPGRIEFREPORT) \
-    L(corpus_0181_libSceNpManager, "libSceNpManager", OBS_SHARED, OBS_CORPUS_0181_LIBSCENPMANAGER) \
-    L(corpus_0182_libSceNpManagerForToolkit, "libSceNpManagerForToolkit", OBS_SHARED, OBS_CORPUS_0182_LIBSCENPMANAGERFORTOOLKIT) \
-    L(corpus_0183_libSceNpMatching2, "libSceNpMatching2", OBS_SHARED, OBS_CORPUS_0183_LIBSCENPMATCHING2) \
-    L(corpus_0184_libSceNpPartner001, "libSceNpPartner001", OBS_SHARED, OBS_CORPUS_0184_LIBSCENPPARTNER001) \
-    L(corpus_0185_libSceNpParty, "libSceNpParty", OBS_SHARED, OBS_CORPUS_0185_LIBSCENPPARTY) \
-    L(corpus_0186_libSceNpProfileDialog, "libSceNpProfileDialog", OBS_SHARED, OBS_CORPUS_0186_LIBSCENPPROFILEDIALOG) \
-    L(corpus_0187_libSceNpRemotePlaySessionSignaling, "libSceNpRemotePlaySessionSignaling", OBS_SHARED, OBS_CORPUS_0187_LIBSCENPREMOTEPLAYSESSIONSIGNALING) \
-    L(corpus_0188_libSceNpScore, "libSceNpScore", OBS_SHARED, OBS_CORPUS_0188_LIBSCENPSCORE) \
-    L(corpus_0189_libSceNpSessionSignaling, "libSceNpSessionSignaling", OBS_SHARED, OBS_CORPUS_0189_LIBSCENPSESSIONSIGNALING) \
-    L(corpus_0190_libSceNpSignaling, "libSceNpSignaling", OBS_SHARED, OBS_CORPUS_0190_LIBSCENPSIGNALING) \
-    L(corpus_0191_libSceNpSns, "libSceNpSns", OBS_SHARED, OBS_CORPUS_0191_LIBSCENPSNS) \
-    L(corpus_0192_libSceNpSnsDailymotionDialog, "libSceNpSnsDailymotionDialog", OBS_SHARED, OBS_CORPUS_0192_LIBSCENPSNSDAILYMOTIONDIALOG) \
-    L(corpus_0193_libSceNpSnsFacebookDialog, "libSceNpSnsFacebookDialog", OBS_SHARED, OBS_CORPUS_0193_LIBSCENPSNSFACEBOOKDIALOG) \
-    L(corpus_0194_libSceNpSnsTwitch, "libSceNpSnsTwitch", OBS_SHARED, OBS_CORPUS_0194_LIBSCENPSNSTWITCH) \
-    L(corpus_0195_libSceNpSnsTwitchDialog, "libSceNpSnsTwitchDialog", OBS_SHARED, OBS_CORPUS_0195_LIBSCENPSNSTWITCHDIALOG) \
-    L(corpus_0196_libSceNpSnsYouTube, "libSceNpSnsYouTube", OBS_SHARED, OBS_CORPUS_0196_LIBSCENPSNSYOUTUBE) \
-    L(corpus_0197_libSceNpSnsYouTubeDialog, "libSceNpSnsYouTubeDialog", OBS_SHARED, OBS_CORPUS_0197_LIBSCENPSNSYOUTUBEDIALOG) \
-    L(corpus_0198_libSceNpTrophy, "libSceNpTrophy", OBS_SHARED, OBS_CORPUS_0198_LIBSCENPTROPHY) \
-    L(corpus_0199_libSceNpTrophy2, "libSceNpTrophy2", OBS_SHARED, OBS_CORPUS_0199_LIBSCENPTROPHY2) \
-    L(corpus_0200_libSceNpTus, "libSceNpTus", OBS_SHARED, OBS_CORPUS_0200_LIBSCENPTUS) \
-    L(corpus_0201_libSceNpUniversalDataSystem, "libSceNpUniversalDataSystem", OBS_SHARED, OBS_CORPUS_0201_LIBSCENPUNIVERSALDATASYSTEM) \
-    L(corpus_0202_libSceNpUtility, "libSceNpUtility", OBS_SHARED, OBS_CORPUS_0202_LIBSCENPUTILITY) \
-    L(corpus_0203_libSceNpWebApi, "libSceNpWebApi", OBS_SHARED, OBS_CORPUS_0203_LIBSCENPWEBAPI) \
-    L(corpus_0204_libSceNpWebApi2, "libSceNpWebApi2", OBS_SHARED, OBS_CORPUS_0204_LIBSCENPWEBAPI2) \
-    L(corpus_0205_libSceNpWebApi2AsyncRestricted, "libSceNpWebApi2AsyncRestricted", OBS_SHARED, OBS_CORPUS_0205_LIBSCENPWEBAPI2ASYNCRESTRICTED) \
-    L(corpus_0206_libSceOpenPsId, "libSceOpenPsId", OBS_SHARED, OBS_CORPUS_0206_LIBSCEOPENPSID) \
-    L(corpus_0207_libSceOpusCeltDec, "libSceOpusCeltDec", OBS_SHARED, OBS_CORPUS_0207_LIBSCEOPUSCELTDEC) \
-    L(corpus_0208_libSceOpusCeltEnc, "libSceOpusCeltEnc", OBS_SHARED, OBS_CORPUS_0208_LIBSCEOPUSCELTENC) \
-    L(corpus_0209_libSceOpusDec, "libSceOpusDec", OBS_SHARED, OBS_CORPUS_0209_LIBSCEOPUSDEC) \
-    L(corpus_0210_libSceOpusSilkEnc, "libSceOpusSilkEnc", OBS_SHARED, OBS_CORPUS_0210_LIBSCEOPUSSILKENC) \
-    L(corpus_0211_libSceOrbisCompat, "libSceOrbisCompat", OBS_SHARED, OBS_CORPUS_0211_LIBSCEORBISCOMPAT) \
-    L(corpus_0212_libSceOrbisCompatForVideoService, "libSceOrbisCompatForVideoService", OBS_SHARED, OBS_CORPUS_0212_LIBSCEORBISCOMPATFORVIDEOSERVICE) \
-    L(corpus_0213_libScePad, "libScePad", OBS_SHARED, OBS_CORPUS_0213_LIBSCEPAD) \
-    L(corpus_0214_libScePadTracker, "libScePadTracker", OBS_SHARED, OBS_CORPUS_0214_LIBSCEPADTRACKER) \
-    L(corpus_0215_libScePatchCheckerClient, "libScePatchCheckerClient", OBS_SHARED, OBS_CORPUS_0215_LIBSCEPATCHCHECKERCLIENT) \
-    L(corpus_0216_libScePerf, "libScePerf", OBS_SHARED, OBS_CORPUS_0216_LIBSCEPERF) \
-    L(corpus_0217_libScePigletv2VSH, "libScePigletv2VSH", OBS_SHARED, OBS_CORPUS_0217_LIBSCEPIGLETV2VSH) \
-    L(corpus_0218_libScePlayGo, "libScePlayGo", OBS_SHARED, OBS_CORPUS_0218_LIBSCEPLAYGO) \
-    L(corpus_0219_libScePlayGoDev, "libScePlayGoDev", OBS_SHARED, OBS_CORPUS_0219_LIBSCEPLAYGODEV) \
-    L(corpus_0220_libScePlayGoDialog, "libScePlayGoDialog", OBS_SHARED, OBS_CORPUS_0220_LIBSCEPLAYGODIALOG) \
-    L(corpus_0221_libScePlayReady, "libScePlayReady", OBS_SHARED, OBS_CORPUS_0221_LIBSCEPLAYREADY) \
-    L(corpus_0222_libScePlayReady2, "libScePlayReady2", OBS_SHARED, OBS_CORPUS_0222_LIBSCEPLAYREADY2) \
-    L(corpus_0223_libScePlayerInvitationDialog, "libScePlayerInvitationDialog", OBS_SHARED, OBS_CORPUS_0223_LIBSCEPLAYERINVITATIONDIALOG) \
-    L(corpus_0224_libScePngDec, "libScePngDec", OBS_SHARED, OBS_CORPUS_0224_LIBSCEPNGDEC) \
-    L(corpus_0225_libScePngEnc, "libScePngEnc", OBS_SHARED, OBS_CORPUS_0225_LIBSCEPNGENC) \
-    L(corpus_0226_libScePosix, "libScePosix", OBS_SHARED, OBS_CORPUS_0226_LIBSCEPOSIX) \
-    L(corpus_0227_libScePosixForWebKit, "libScePosixForWebKit", OBS_SHARED, OBS_CORPUS_0227_LIBSCEPOSIXFORWEBKIT) \
-    L(corpus_0228_libScePrecompiledShaders, "libScePrecompiledShaders", OBS_SHARED, OBS_CORPUS_0228_LIBSCEPRECOMPILEDSHADERS) \
-    L(corpus_0229_libSceProfileCacheExternal, "libSceProfileCacheExternal", OBS_SHARED, OBS_CORPUS_0229_LIBSCEPROFILECACHEEXTERNAL) \
-    L(corpus_0230_libScePs2EmuMenuDialog, "libScePs2EmuMenuDialog", OBS_SHARED, OBS_CORPUS_0230_LIBSCEPS2EMUMENUDIALOG) \
-    L(corpus_0231_libScePsm, "libScePsm", OBS_SHARED, OBS_CORPUS_0231_LIBSCEPSM) \
-    L(corpus_0232_libScePsmKitSystem, "libScePsmKitSystem", OBS_SHARED, OBS_CORPUS_0232_LIBSCEPSMKITSYSTEM) \
-    L(corpus_0233_libScePsmUtil, "libScePsmUtil", OBS_SHARED, OBS_CORPUS_0233_LIBSCEPSMUTIL) \
-    L(corpus_0234_libScePsml, "libScePsml", OBS_SHARED, OBS_CORPUS_0234_LIBSCEPSML) \
-    L(corpus_0235_libSceRazorCpu, "libSceRazorCpu", OBS_SHARED, OBS_CORPUS_0235_LIBSCERAZORCPU) \
-    L(corpus_0236_libSceRegMgr, "libSceRegMgr", OBS_SHARED, OBS_CORPUS_0236_LIBSCEREGMGR) \
-    L(corpus_0237_libSceRemoteplay, "libSceRemoteplay", OBS_SHARED, OBS_CORPUS_0237_LIBSCEREMOTEPLAY) \
-    L(corpus_0238_libSceRnpsAppMgr, "libSceRnpsAppMgr", OBS_SHARED, OBS_CORPUS_0238_LIBSCERNPSAPPMGR) \
-    L(corpus_0239_libSceRtc, "libSceRtc", OBS_SHARED, OBS_CORPUS_0239_LIBSCERTC) \
-    L(corpus_0240_libSceRudp, "libSceRudp", OBS_SHARED, OBS_CORPUS_0240_LIBSCERUDP) \
-    L(corpus_0241_libSceS3DConversion, "libSceS3DConversion", OBS_SHARED, OBS_CORPUS_0241_LIBSCES3DCONVERSION) \
-    L(corpus_0242_libSceS3da, "libSceS3da", OBS_SHARED, OBS_CORPUS_0242_LIBSCES3DA) \
-    L(corpus_0243_libSceSaveData, "libSceSaveData", OBS_SHARED, OBS_CORPUS_0243_LIBSCESAVEDATA) \
-    L(corpus_0244_libSceSaveDataDialog, "libSceSaveDataDialog", OBS_SHARED, OBS_CORPUS_0244_LIBSCESAVEDATADIALOG) \
-    L(corpus_0245_libSceScm, "libSceScm", OBS_SHARED, OBS_CORPUS_0245_LIBSCESCM) \
-    L(corpus_0246_libSceScreenShot, "libSceScreenShot", OBS_SHARED, OBS_CORPUS_0246_LIBSCESCREENSHOT) \
-    L(corpus_0247_libSceScreenShotDrc, "libSceScreenShotDrc", OBS_SHARED, OBS_CORPUS_0247_LIBSCESCREENSHOTDRC) \
-    L(corpus_0248_libSceSdma, "libSceSdma", OBS_SHARED, OBS_CORPUS_0248_LIBSCESDMA) \
-    L(corpus_0249_libSceShareFactoryUtil, "libSceShareFactoryUtil", OBS_SHARED, OBS_CORPUS_0249_LIBSCESHAREFACTORYUTIL) \
-    L(corpus_0250_libSceSharePlay, "libSceSharePlay", OBS_SHARED, OBS_CORPUS_0250_LIBSCESHAREPLAY) \
-    L(corpus_0251_libSceShareUtility, "libSceShareUtility", OBS_SHARED, OBS_CORPUS_0251_LIBSCESHAREUTILITY) \
-    L(corpus_0252_libSceShellCoreUtil, "libSceShellCoreUtil", OBS_SHARED, OBS_CORPUS_0252_LIBSCESHELLCOREUTIL) \
-    L(corpus_0253_libSceShellUIUtil, "libSceShellUIUtil", OBS_SHARED, OBS_CORPUS_0253_LIBSCESHELLUIUTIL) \
-    L(corpus_0254_libSceSigninDialog, "libSceSigninDialog", OBS_SHARED, OBS_CORPUS_0254_LIBSCESIGNINDIALOG) \
-    L(corpus_0255_libSceSocialScreen, "libSceSocialScreen", OBS_SHARED, OBS_CORPUS_0255_LIBSCESOCIALSCREEN) \
-    L(corpus_0256_libSceSocialScreenDialog, "libSceSocialScreenDialog", OBS_SHARED, OBS_CORPUS_0256_LIBSCESOCIALSCREENDIALOG) \
-    L(corpus_0257_libSceSpSysCallWrapper, "libSceSpSysCallWrapper", OBS_SHARED, OBS_CORPUS_0257_LIBSCESPSYSCALLWRAPPER) \
-    L(corpus_0258_libSceSrcUtl, "libSceSrcUtl", OBS_SHARED, OBS_CORPUS_0258_LIBSCESRCUTL) \
-    L(corpus_0259_libSceSsl, "libSceSsl", OBS_SHARED, OBS_CORPUS_0259_LIBSCESSL) \
-    L(corpus_0260_libSceSulphaDrv, "libSceSulphaDrv", OBS_SHARED, OBS_CORPUS_0260_LIBSCESULPHADRV) \
-    L(corpus_0261_libSceSysCore, "libSceSysCore", OBS_SHARED, OBS_CORPUS_0261_LIBSCESYSCORE) \
-    L(corpus_0262_libSceSysUtil, "libSceSysUtil", OBS_SHARED, OBS_CORPUS_0262_LIBSCESYSUTIL) \
-    L(corpus_0263_libSceSysmodule, "libSceSysmodule", OBS_SHARED, OBS_CORPUS_0263_LIBSCESYSMODULE) \
-    L(corpus_0264_libSceSystemGesture, "libSceSystemGesture", OBS_SHARED, OBS_CORPUS_0264_LIBSCESYSTEMGESTURE) \
-    L(corpus_0265_libSceSystemLogger, "libSceSystemLogger", OBS_SHARED, OBS_CORPUS_0265_LIBSCESYSTEMLOGGER) \
-    L(corpus_0266_libSceSystemLogger2, "libSceSystemLogger2", OBS_SHARED, OBS_CORPUS_0266_LIBSCESYSTEMLOGGER2) \
-    L(corpus_0267_libSceSystemService, "libSceSystemService", OBS_SHARED, OBS_CORPUS_0267_LIBSCESYSTEMSERVICE) \
-    L(corpus_0268_libSceSystemServiceActivateHevc, "libSceSystemServiceActivateHevc", OBS_SHARED, OBS_CORPUS_0268_LIBSCESYSTEMSERVICEACTIVATEHEVC) \
-    L(corpus_0269_libSceSystemServiceActivateHevcSoft, "libSceSystemServiceActivateHevcSoft", OBS_SHARED, OBS_CORPUS_0269_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT) \
-    L(corpus_0270_libSceSystemServiceActivateMpeg2, "libSceSystemServiceActivateMpeg2", OBS_SHARED, OBS_CORPUS_0270_LIBSCESYSTEMSERVICEACTIVATEMPEG2) \
-    L(corpus_0271_libSceSystemServiceAppLaunchLink, "libSceSystemServiceAppLaunchLink", OBS_SHARED, OBS_CORPUS_0271_LIBSCESYSTEMSERVICEAPPLAUNCHLINK) \
-    L(corpus_0272_libSceSystemServiceClosedCaption, "libSceSystemServiceClosedCaption", OBS_SHARED, OBS_CORPUS_0272_LIBSCESYSTEMSERVICECLOSEDCAPTION) \
-    L(corpus_0273_libSceSystemServiceDbg, "libSceSystemServiceDbg", OBS_SHARED, OBS_CORPUS_0273_LIBSCESYSTEMSERVICEDBG) \
-    L(corpus_0274_libSceSystemServiceForShellCoreOnly, "libSceSystemServiceForShellCoreOnly", OBS_SHARED, OBS_CORPUS_0274_LIBSCESYSTEMSERVICEFORSHELLCOREONLY) \
-    L(corpus_0275_libSceSystemServicePadspkRouting, "libSceSystemServicePadspkRouting", OBS_SHARED, OBS_CORPUS_0275_LIBSCESYSTEMSERVICEPADSPKROUTING) \
-    L(corpus_0276_libSceSystemServicePartyVoice, "libSceSystemServicePartyVoice", OBS_SHARED, OBS_CORPUS_0276_LIBSCESYSTEMSERVICEPARTYVOICE) \
-    L(corpus_0277_libSceSystemServicePlatformPrivacy, "libSceSystemServicePlatformPrivacy", OBS_SHARED, OBS_CORPUS_0277_LIBSCESYSTEMSERVICEPLATFORMPRIVACY) \
-    L(corpus_0278_libSceSystemServicePowerControl, "libSceSystemServicePowerControl", OBS_SHARED, OBS_CORPUS_0278_LIBSCESYSTEMSERVICEPOWERCONTROL) \
-    L(corpus_0279_libSceSystemServicePowerSaveLevel, "libSceSystemServicePowerSaveLevel", OBS_SHARED, OBS_CORPUS_0279_LIBSCESYSTEMSERVICEPOWERSAVELEVEL) \
-    L(corpus_0280_libSceSystemServicePs2Emu, "libSceSystemServicePs2Emu", OBS_SHARED, OBS_CORPUS_0280_LIBSCESYSTEMSERVICEPS2EMU) \
-    L(corpus_0281_libSceSystemServiceStore, "libSceSystemServiceStore", OBS_SHARED, OBS_CORPUS_0281_LIBSCESYSTEMSERVICESTORE) \
-    L(corpus_0282_libSceSystemServiceSuspend, "libSceSystemServiceSuspend", OBS_SHARED, OBS_CORPUS_0282_LIBSCESYSTEMSERVICESUSPEND) \
-    L(corpus_0283_libSceSystemServiceTelemetry, "libSceSystemServiceTelemetry", OBS_SHARED, OBS_CORPUS_0283_LIBSCESYSTEMSERVICETELEMETRY) \
-    L(corpus_0284_libSceSystemServiceTournamentMlg, "libSceSystemServiceTournamentMlg", OBS_SHARED, OBS_CORPUS_0284_LIBSCESYSTEMSERVICETOURNAMENTMLG) \
-    L(corpus_0285_libSceSystemServiceUdsApp, "libSceSystemServiceUdsApp", OBS_SHARED, OBS_CORPUS_0285_LIBSCESYSTEMSERVICEUDSAPP) \
-    L(corpus_0286_libSceSystemServiceVideoServiceWebApp, "libSceSystemServiceVideoServiceWebApp", OBS_SHARED, OBS_CORPUS_0286_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP) \
-    L(corpus_0287_libSceSystemServiceVideoToken, "libSceSystemServiceVideoToken", OBS_SHARED, OBS_CORPUS_0287_LIBSCESYSTEMSERVICEVIDEOTOKEN) \
-    L(corpus_0288_libSceSystemServiceVoiceRecognition, "libSceSystemServiceVoiceRecognition", OBS_SHARED, OBS_CORPUS_0288_LIBSCESYSTEMSERVICEVOICERECOGNITION) \
-    L(corpus_0289_libSceSystemServiceWebApp, "libSceSystemServiceWebApp", OBS_SHARED, OBS_CORPUS_0289_LIBSCESYSTEMSERVICEWEBAPP) \
-    L(corpus_0290_libSceSystemServiceYouTubeAccountLinkStatus, "libSceSystemServiceYouTubeAccountLinkStatus", OBS_SHARED, OBS_CORPUS_0290_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS) \
-    L(corpus_0291_libSceSystemService_jvm, "libSceSystemService_jvm", OBS_SHARED, OBS_CORPUS_0291_LIBSCESYSTEMSERVICE_JVM) \
-    L(corpus_0292_libSceSystemStateMgr, "libSceSystemStateMgr", OBS_SHARED, OBS_CORPUS_0292_LIBSCESYSTEMSTATEMGR) \
-    L(corpus_0293_libSceTextToSpeech, "libSceTextToSpeech", OBS_SHARED, OBS_CORPUS_0293_LIBSCETEXTTOSPEECH) \
-    L(corpus_0294_libSceTtsCoreJp, "libSceTtsCoreJp", OBS_SHARED, OBS_CORPUS_0294_LIBSCETTSCOREJP) \
-    L(corpus_0295_libSceUlt, "libSceUlt", OBS_SHARED, OBS_CORPUS_0295_LIBSCEULT) \
-    L(corpus_0296_libSceUpdateService, "libSceUpdateService", OBS_SHARED, OBS_CORPUS_0296_LIBSCEUPDATESERVICE) \
-    L(corpus_0297_libSceUsbStorage, "libSceUsbStorage", OBS_SHARED, OBS_CORPUS_0297_LIBSCEUSBSTORAGE) \
-    L(corpus_0298_libSceUsbStorageAux, "libSceUsbStorageAux", OBS_SHARED, OBS_CORPUS_0298_LIBSCEUSBSTORAGEAUX) \
-    L(corpus_0299_libSceUsbStorageDialog, "libSceUsbStorageDialog", OBS_SHARED, OBS_CORPUS_0299_LIBSCEUSBSTORAGEDIALOG) \
-    L(corpus_0300_libSceUsbd, "libSceUsbd", OBS_SHARED, OBS_CORPUS_0300_LIBSCEUSBD) \
-    L(corpus_0301_libSceUserService, "libSceUserService", OBS_SHARED, OBS_CORPUS_0301_LIBSCEUSERSERVICE) \
-    L(corpus_0302_libSceUserServiceForShellCore, "libSceUserServiceForShellCore", OBS_SHARED, OBS_CORPUS_0302_LIBSCEUSERSERVICEFORSHELLCORE) \
-    L(corpus_0303_libSceVdecCore, "libSceVdecCore", OBS_SHARED, OBS_CORPUS_0303_LIBSCEVDECCORE) \
-    L(corpus_0304_libSceVdecSavc, "libSceVdecSavc", OBS_SHARED, OBS_CORPUS_0304_LIBSCEVDECSAVC) \
-    L(corpus_0305_libSceVdecSavc2, "libSceVdecSavc2", OBS_SHARED, OBS_CORPUS_0305_LIBSCEVDECSAVC2) \
-    L(corpus_0306_libSceVdecShevc, "libSceVdecShevc", OBS_SHARED, OBS_CORPUS_0306_LIBSCEVDECSHEVC) \
-    L(corpus_0307_libSceVdecsw, "libSceVdecsw", OBS_SHARED, OBS_CORPUS_0307_LIBSCEVDECSW) \
-    L(corpus_0308_libSceVdecwrap, "libSceVdecwrap", OBS_SHARED, OBS_CORPUS_0308_LIBSCEVDECWRAP) \
-    L(corpus_0309_libSceVencCore, "libSceVencCore", OBS_SHARED, OBS_CORPUS_0309_LIBSCEVENCCORE) \
-    L(corpus_0310_libSceVideoCoreInterface, "libSceVideoCoreInterface", OBS_SHARED, OBS_CORPUS_0310_LIBSCEVIDEOCOREINTERFACE) \
-    L(corpus_0311_libSceVideoCoreServerInterface, "libSceVideoCoreServerInterface", OBS_SHARED, OBS_CORPUS_0311_LIBSCEVIDEOCORESERVERINTERFACE) \
-    L(corpus_0312_libSceVideoDecoderArbitration, "libSceVideoDecoderArbitration", OBS_SHARED, OBS_CORPUS_0312_LIBSCEVIDEODECODERARBITRATION) \
-    L(corpus_0313_libSceVideoNativeExtEssential, "libSceVideoNativeExtEssential", OBS_SHARED, OBS_CORPUS_0313_LIBSCEVIDEONATIVEEXTESSENTIAL) \
-    L(corpus_0314_libSceVideoOut, "libSceVideoOut", OBS_SHARED, OBS_CORPUS_0314_LIBSCEVIDEOOUT) \
-    L(corpus_0315_libSceVideoOutAniso, "libSceVideoOutAniso", OBS_SHARED, OBS_CORPUS_0315_LIBSCEVIDEOOUTANISO) \
-    L(corpus_0316_libSceVideoOutExtra, "libSceVideoOutExtra", OBS_SHARED, OBS_CORPUS_0316_LIBSCEVIDEOOUTEXTRA) \
-    L(corpus_0317_libSceVideoOutHdr, "libSceVideoOutHdr", OBS_SHARED, OBS_CORPUS_0317_LIBSCEVIDEOOUTHDR) \
-    L(corpus_0318_libSceVideoOutRawEdid, "libSceVideoOutRawEdid", OBS_SHARED, OBS_CORPUS_0318_LIBSCEVIDEOOUTRAWEDID) \
-    L(corpus_0319_libSceVideoOutSecondary, "libSceVideoOutSecondary", OBS_SHARED, OBS_CORPUS_0319_LIBSCEVIDEOOUTSECONDARY) \
-    L(corpus_0320_libSceVideoRecording, "libSceVideoRecording", OBS_SHARED, OBS_CORPUS_0320_LIBSCEVIDEORECORDING) \
-    L(corpus_0321_libSceVideodec, "libSceVideodec", OBS_SHARED, OBS_CORPUS_0321_LIBSCEVIDEODEC) \
-    L(corpus_0322_libSceVideodec2, "libSceVideodec2", OBS_SHARED, OBS_CORPUS_0322_LIBSCEVIDEODEC2) \
-    L(corpus_0323_libSceVisionManager, "libSceVisionManager", OBS_SHARED, OBS_CORPUS_0323_LIBSCEVISIONMANAGER) \
-    L(corpus_0324_libSceVnaInternal, "libSceVnaInternal", OBS_SHARED, OBS_CORPUS_0324_LIBSCEVNAINTERNAL) \
-    L(corpus_0325_libSceVoice, "libSceVoice", OBS_SHARED, OBS_CORPUS_0325_LIBSCEVOICE) \
-    L(corpus_0326_libSceVoiceQoS, "libSceVoiceQoS", OBS_SHARED, OBS_CORPUS_0326_LIBSCEVOICEQOS) \
-    L(corpus_0327_libSceVorbisDec, "libSceVorbisDec", OBS_SHARED, OBS_CORPUS_0327_LIBSCEVORBISDEC) \
-    L(corpus_0328_libSceVrServiceDialog, "libSceVrServiceDialog", OBS_SHARED, OBS_CORPUS_0328_LIBSCEVRSERVICEDIALOG) \
-    L(corpus_0329_libSceVrTracker, "libSceVrTracker", OBS_SHARED, OBS_CORPUS_0329_LIBSCEVRTRACKER) \
-    L(corpus_0330_libSceVrTrackerDeviceRejection, "libSceVrTrackerDeviceRejection", OBS_SHARED, OBS_CORPUS_0330_LIBSCEVRTRACKERDEVICEREJECTION) \
-    L(corpus_0331_libSceVrTrackerFourDeviceAllowed, "libSceVrTrackerFourDeviceAllowed", OBS_SHARED, OBS_CORPUS_0331_LIBSCEVRTRACKERFOURDEVICEALLOWED) \
-    L(corpus_0332_libSceVrTrackerGpuTest, "libSceVrTrackerGpuTest", OBS_SHARED, OBS_CORPUS_0332_LIBSCEVRTRACKERGPUTEST) \
-    L(corpus_0333_libSceVrTrackerLiveCapture, "libSceVrTrackerLiveCapture", OBS_SHARED, OBS_CORPUS_0333_LIBSCEVRTRACKERLIVECAPTURE) \
-    L(corpus_0334_libSceVshctl, "libSceVshctl", OBS_SHARED, OBS_CORPUS_0334_LIBSCEVSHCTL) \
-    L(corpus_0335_libSceWeb, "libSceWeb", OBS_SHARED, OBS_CORPUS_0335_LIBSCEWEB) \
-    L(corpus_0336_libSceWebBrowserDialog, "libSceWebBrowserDialog", OBS_SHARED, OBS_CORPUS_0336_LIBSCEWEBBROWSERDIALOG) \
-    L(corpus_0337_libSceWebBrowserDialogLimited, "libSceWebBrowserDialogLimited", OBS_SHARED, OBS_CORPUS_0337_LIBSCEWEBBROWSERDIALOGLIMITED) \
-    L(corpus_0338_libSceWebKit2, "libSceWebKit2", OBS_SHARED, OBS_CORPUS_0338_LIBSCEWEBKIT2) \
-    L(corpus_0339_libSceWkFontConfig, "libSceWkFontConfig", OBS_SHARED, OBS_CORPUS_0339_LIBSCEWKFONTCONFIG) \
-    L(corpus_0340_libSceXml, "libSceXml", OBS_SHARED, OBS_CORPUS_0340_LIBSCEXML) \
-    L(corpus_0341_libSceZlib, "libSceZlib", OBS_SHARED, OBS_CORPUS_0341_LIBSCEZLIB) \
-    L(corpus_0342_libc, "libc", OBS_SHARED, OBS_CORPUS_0342_LIBC) \
-    L(corpus_0343_libc_setjmp, "libc_setjmp", OBS_SHARED, OBS_CORPUS_0343_LIBC_SETJMP) \
-    L(corpus_0344_libcairo, "libcairo", OBS_SHARED, OBS_CORPUS_0344_LIBCAIRO) \
-    L(corpus_0345_libcurl, "libcurl", OBS_SHARED, OBS_CORPUS_0345_LIBCURL) \
-    L(corpus_0346_libkernel, "libkernel", OBS_SHARED, OBS_CORPUS_0346_LIBKERNEL) \
-    L(corpus_0347_libkernel_cpumode_platform, "libkernel_cpumode_platform", OBS_SHARED, OBS_CORPUS_0347_LIBKERNEL_CPUMODE_PLATFORM) \
-    L(corpus_0348_libkernel_module_load_check, "libkernel_module_load_check", OBS_SHARED, OBS_CORPUS_0348_LIBKERNEL_MODULE_LOAD_CHECK) \
-    L(corpus_0349_libkernel_psmkit, "libkernel_psmkit", OBS_SHARED, OBS_CORPUS_0349_LIBKERNEL_PSMKIT) \
-    L(corpus_0350_libkernel_sysc_se, "libkernel_sysc_se", OBS_SHARED, OBS_CORPUS_0350_LIBKERNEL_SYSC_SE)
+    L(corpus_0029_libSceAudiodecCpu, "libSceAudiodecCpu", OBS_SHARED, OBS_CORPUS_0029_LIBSCEAUDIODECCPU) \
+    L(corpus_0030_libSceAudiodecCpuAlac, "libSceAudiodecCpuAlac", OBS_SHARED, OBS_CORPUS_0030_LIBSCEAUDIODECCPUALAC) \
+    L(corpus_0031_libSceAudiodecCpuDdp, "libSceAudiodecCpuDdp", OBS_SHARED, OBS_CORPUS_0031_LIBSCEAUDIODECCPUDDP) \
+    L(corpus_0032_libSceAudiodecCpuDts, "libSceAudiodecCpuDts", OBS_SHARED, OBS_CORPUS_0032_LIBSCEAUDIODECCPUDTS) \
+    L(corpus_0033_libSceAudiodecCpuDtsHdLbr, "libSceAudiodecCpuDtsHdLbr", OBS_SHARED, OBS_CORPUS_0033_LIBSCEAUDIODECCPUDTSHDLBR) \
+    L(corpus_0034_libSceAudiodecCpuDtsHdMa, "libSceAudiodecCpuDtsHdMa", OBS_SHARED, OBS_CORPUS_0034_LIBSCEAUDIODECCPUDTSHDMA) \
+    L(corpus_0035_libSceAudiodecCpuFlac, "libSceAudiodecCpuFlac", OBS_SHARED, OBS_CORPUS_0035_LIBSCEAUDIODECCPUFLAC) \
+    L(corpus_0036_libSceAudiodecCpuHevag, "libSceAudiodecCpuHevag", OBS_SHARED, OBS_CORPUS_0036_LIBSCEAUDIODECCPUHEVAG) \
+    L(corpus_0037_libSceAudiodecCpuLpcm, "libSceAudiodecCpuLpcm", OBS_SHARED, OBS_CORPUS_0037_LIBSCEAUDIODECCPULPCM) \
+    L(corpus_0038_libSceAudiodecCpuM4aac, "libSceAudiodecCpuM4aac", OBS_SHARED, OBS_CORPUS_0038_LIBSCEAUDIODECCPUM4AAC) \
+    L(corpus_0039_libSceAutoMounterClient, "libSceAutoMounterClient", OBS_SHARED, OBS_CORPUS_0039_LIBSCEAUTOMOUNTERCLIENT) \
+    L(corpus_0040_libSceAvPlayer, "libSceAvPlayer", OBS_SHARED, OBS_CORPUS_0040_LIBSCEAVPLAYER) \
+    L(corpus_0041_libSceAvPlayerStreaming, "libSceAvPlayerStreaming", OBS_SHARED, OBS_CORPUS_0041_LIBSCEAVPLAYERSTREAMING) \
+    L(corpus_0042_libSceAvSetting, "libSceAvSetting", OBS_SHARED, OBS_CORPUS_0042_LIBSCEAVSETTING) \
+    L(corpus_0043_libSceAvSettingDebug, "libSceAvSettingDebug", OBS_SHARED, OBS_CORPUS_0043_LIBSCEAVSETTINGDEBUG) \
+    L(corpus_0044_libSceAvcap, "libSceAvcap", OBS_SHARED, OBS_CORPUS_0044_LIBSCEAVCAP) \
+    L(corpus_0045_libSceBackupRestoreUtil, "libSceBackupRestoreUtil", OBS_SHARED, OBS_CORPUS_0045_LIBSCEBACKUPRESTOREUTIL) \
+    L(corpus_0046_libSceBeisobmf, "libSceBeisobmf", OBS_SHARED, OBS_CORPUS_0046_LIBSCEBEISOBMF) \
+    L(corpus_0047_libSceBemp2sys, "libSceBemp2sys", OBS_SHARED, OBS_CORPUS_0047_LIBSCEBEMP2SYS) \
+    L(corpus_0048_libSceBgft, "libSceBgft", OBS_SHARED, OBS_CORPUS_0048_LIBSCEBGFT) \
+    L(corpus_0049_libSceBluetoothHid, "libSceBluetoothHid", OBS_SHARED, OBS_CORPUS_0049_LIBSCEBLUETOOTHHID) \
+    L(corpus_0050_libSceCamera, "libSceCamera", OBS_SHARED, OBS_CORPUS_0050_LIBSCECAMERA) \
+    L(corpus_0051_libSceCdlgUtilServer, "libSceCdlgUtilServer", OBS_SHARED, OBS_CORPUS_0051_LIBSCECDLGUTILSERVER) \
+    L(corpus_0052_libSceCes, "libSceCes", OBS_SHARED, OBS_CORPUS_0052_LIBSCECES) \
+    L(corpus_0053_libSceClSysCallWrapper, "libSceClSysCallWrapper", OBS_SHARED, OBS_CORPUS_0053_LIBSCECLSYSCALLWRAPPER) \
+    L(corpus_0054_libSceCommonDialog, "libSceCommonDialog", OBS_SHARED, OBS_CORPUS_0054_LIBSCECOMMONDIALOG) \
+    L(corpus_0055_libSceCompanionHttpd, "libSceCompanionHttpd", OBS_SHARED, OBS_CORPUS_0055_LIBSCECOMPANIONHTTPD) \
+    L(corpus_0056_libSceCompanionUtil, "libSceCompanionUtil", OBS_SHARED, OBS_CORPUS_0056_LIBSCECOMPANIONUTIL) \
+    L(corpus_0057_libSceComposite, "libSceComposite", OBS_SHARED, OBS_CORPUS_0057_LIBSCECOMPOSITE) \
+    L(corpus_0058_libSceContentBinder, "libSceContentBinder", OBS_SHARED, OBS_CORPUS_0058_LIBSCECONTENTBINDER) \
+    L(corpus_0059_libSceContentDelete, "libSceContentDelete", OBS_SHARED, OBS_CORPUS_0059_LIBSCECONTENTDELETE) \
+    L(corpus_0060_libSceContentExport, "libSceContentExport", OBS_SHARED, OBS_CORPUS_0060_LIBSCECONTENTEXPORT) \
+    L(corpus_0061_libSceContentSearch, "libSceContentSearch", OBS_SHARED, OBS_CORPUS_0061_LIBSCECONTENTSEARCH) \
+    L(corpus_0062_libSceConvertKeycode, "libSceConvertKeycode", OBS_SHARED, OBS_CORPUS_0062_LIBSCECONVERTKEYCODE) \
+    L(corpus_0063_libSceCoreIPC, "libSceCoreIPC", OBS_SHARED, OBS_CORPUS_0063_LIBSCECOREIPC) \
+    L(corpus_0064_libSceCoredump, "libSceCoredump", OBS_SHARED, OBS_CORPUS_0064_LIBSCECOREDUMP) \
+    L(corpus_0065_libSceCoredump_debug, "libSceCoredump_debug", OBS_SHARED, OBS_CORPUS_0065_LIBSCECOREDUMP_DEBUG) \
+    L(corpus_0066_libSceCustomMusicCore, "libSceCustomMusicCore", OBS_SHARED, OBS_CORPUS_0066_LIBSCECUSTOMMUSICCORE) \
+    L(corpus_0067_libSceCustomMusicService, "libSceCustomMusicService", OBS_SHARED, OBS_CORPUS_0067_LIBSCECUSTOMMUSICSERVICE) \
+    L(corpus_0068_libSceDataTransfer, "libSceDataTransfer", OBS_SHARED, OBS_CORPUS_0068_LIBSCEDATATRANSFER) \
+    L(corpus_0069_libSceDbRecoveryClient, "libSceDbRecoveryClient", OBS_SHARED, OBS_CORPUS_0069_LIBSCEDBRECOVERYCLIENT) \
+    L(corpus_0070_libSceDbgAddressSanitizer, "libSceDbgAddressSanitizer", OBS_SHARED, OBS_CORPUS_0070_LIBSCEDBGADDRESSSANITIZER) \
+    L(corpus_0071_libSceDbgAudioOut, "libSceDbgAudioOut", OBS_SHARED, OBS_CORPUS_0071_LIBSCEDBGAUDIOOUT) \
+    L(corpus_0072_libSceDbgKeyboard, "libSceDbgKeyboard", OBS_SHARED, OBS_CORPUS_0072_LIBSCEDBGKEYBOARD) \
+    L(corpus_0073_libSceDbgPlayGo, "libSceDbgPlayGo", OBS_SHARED, OBS_CORPUS_0073_LIBSCEDBGPLAYGO) \
+    L(corpus_0074_libSceDbgVideoOut, "libSceDbgVideoOut", OBS_SHARED, OBS_CORPUS_0074_LIBSCEDBGVIDEOOUT) \
+    L(corpus_0075_libSceDeci4h, "libSceDeci4h", OBS_SHARED, OBS_CORPUS_0075_LIBSCEDECI4H) \
+    L(corpus_0076_libSceDepth, "libSceDepth", OBS_SHARED, OBS_CORPUS_0076_LIBSCEDEPTH) \
+    L(corpus_0077_libSceDeviceService, "libSceDeviceService", OBS_SHARED, OBS_CORPUS_0077_LIBSCEDEVICESERVICE) \
+    L(corpus_0078_libSceDipsw, "libSceDipsw", OBS_SHARED, OBS_CORPUS_0078_LIBSCEDIPSW) \
+    L(corpus_0079_libSceDiscId, "libSceDiscId", OBS_SHARED, OBS_CORPUS_0079_LIBSCEDISCID) \
+    L(corpus_0080_libSceDiscMap, "libSceDiscMap", OBS_SHARED, OBS_CORPUS_0080_LIBSCEDISCMAP) \
+    L(corpus_0081_libSceDiscMapForVsh, "libSceDiscMapForVsh", OBS_SHARED, OBS_CORPUS_0081_LIBSCEDISCMAPFORVSH) \
+    L(corpus_0082_libSceDseehx, "libSceDseehx", OBS_SHARED, OBS_CORPUS_0082_LIBSCEDSEEHX) \
+    L(corpus_0083_libSceDtcpIp, "libSceDtcpIp", OBS_SHARED, OBS_CORPUS_0083_LIBSCEDTCPIP) \
+    L(corpus_0084_libSceDtsEnc, "libSceDtsEnc", OBS_SHARED, OBS_CORPUS_0084_LIBSCEDTSENC) \
+    L(corpus_0085_libSceEditMp4, "libSceEditMp4", OBS_SHARED, OBS_CORPUS_0085_LIBSCEEDITMP4) \
+    L(corpus_0086_libSceErrorDialog, "libSceErrorDialog", OBS_SHARED, OBS_CORPUS_0086_LIBSCEERRORDIALOG) \
+    L(corpus_0087_libSceFacebook_Yoga, "libSceFacebook.Yoga", OBS_SHARED, OBS_CORPUS_0087_LIBSCEFACEBOOK_YOGA) \
+    L(corpus_0088_libSceFiber, "libSceFiber", OBS_SHARED, OBS_CORPUS_0088_LIBSCEFIBER) \
+    L(corpus_0089_libSceFios2, "libSceFios2", OBS_SHARED, OBS_CORPUS_0089_LIBSCEFIOS2) \
+    L(corpus_0090_libSceFios2_debug, "libSceFios2_debug", OBS_SHARED, OBS_CORPUS_0090_LIBSCEFIOS2_DEBUG) \
+    L(corpus_0091_libSceFont, "libSceFont", OBS_SHARED, OBS_CORPUS_0091_LIBSCEFONT) \
+    L(corpus_0092_libSceFontFt, "libSceFontFt", OBS_SHARED, OBS_CORPUS_0092_LIBSCEFONTFT) \
+    L(corpus_0093_libSceFreeType, "libSceFreeType", OBS_SHARED, OBS_CORPUS_0093_LIBSCEFREETYPE) \
+    L(corpus_0094_libSceFsInternalForVsh, "libSceFsInternalForVsh", OBS_SHARED, OBS_CORPUS_0094_LIBSCEFSINTERNALFORVSH) \
+    L(corpus_0095_libSceGLSlimServerVSH, "libSceGLSlimServerVSH", OBS_SHARED, OBS_CORPUS_0095_LIBSCEGLSLIMSERVERVSH) \
+    L(corpus_0096_libSceGLSlimVSH, "libSceGLSlimVSH", OBS_SHARED, OBS_CORPUS_0096_LIBSCEGLSLIMVSH) \
+    L(corpus_0097_libSceGameCustomDataDialog, "libSceGameCustomDataDialog", OBS_SHARED, OBS_CORPUS_0097_LIBSCEGAMECUSTOMDATADIALOG) \
+    L(corpus_0098_libSceGameLiveStreaming, "libSceGameLiveStreaming", OBS_SHARED, OBS_CORPUS_0098_LIBSCEGAMELIVESTREAMING) \
+    L(corpus_0099_libSceGameLiveStreaming_debug, "libSceGameLiveStreaming_debug", OBS_SHARED, OBS_CORPUS_0099_LIBSCEGAMELIVESTREAMING_DEBUG) \
+    L(corpus_0100_libSceGameRight, "libSceGameRight", OBS_SHARED, OBS_CORPUS_0100_LIBSCEGAMERIGHT) \
+    L(corpus_0101_libSceGameUpdate, "libSceGameUpdate", OBS_SHARED, OBS_CORPUS_0101_LIBSCEGAMEUPDATE) \
+    L(corpus_0102_libSceGic, "libSceGic", OBS_SHARED, OBS_CORPUS_0102_LIBSCEGIC) \
+    L(corpus_0103_libSceGnmDebugModuleReset, "libSceGnmDebugModuleReset", OBS_SHARED, OBS_CORPUS_0103_LIBSCEGNMDEBUGMODULERESET) \
+    L(corpus_0104_libSceGnmDebugReset, "libSceGnmDebugReset", OBS_SHARED, OBS_CORPUS_0104_LIBSCEGNMDEBUGRESET) \
+    L(corpus_0105_libSceGnmDriver, "libSceGnmDriver", OBS_SHARED, OBS_CORPUS_0105_LIBSCEGNMDRIVER) \
+    L(corpus_0106_libSceGnmDriverCompat, "libSceGnmDriverCompat", OBS_SHARED, OBS_CORPUS_0106_LIBSCEGNMDRIVERCOMPAT) \
+    L(corpus_0107_libSceGnmDriverResourceRegistration, "libSceGnmDriverResourceRegistration", OBS_SHARED, OBS_CORPUS_0107_LIBSCEGNMDRIVERRESOURCEREGISTRATION) \
+    L(corpus_0108_libSceGnmDriver_sys, "libSceGnmDriver_sys", OBS_SHARED, OBS_CORPUS_0108_LIBSCEGNMDRIVER_SYS) \
+    L(corpus_0109_libSceGvMp4Parser, "libSceGvMp4Parser", OBS_SHARED, OBS_CORPUS_0109_LIBSCEGVMP4PARSER) \
+    L(corpus_0110_libSceHidControl, "libSceHidControl", OBS_SHARED, OBS_CORPUS_0110_LIBSCEHIDCONTROL) \
+    L(corpus_0111_libSceHmd, "libSceHmd", OBS_SHARED, OBS_CORPUS_0111_LIBSCEHMD) \
+    L(corpus_0112_libSceHmdDistortion, "libSceHmdDistortion", OBS_SHARED, OBS_CORPUS_0112_LIBSCEHMDDISTORTION) \
+    L(corpus_0113_libSceHmdSetupDialog, "libSceHmdSetupDialog", OBS_SHARED, OBS_CORPUS_0113_LIBSCEHMDSETUPDIALOG) \
+    L(corpus_0114_libSceHttp, "libSceHttp", OBS_SHARED, OBS_CORPUS_0114_LIBSCEHTTP) \
+    L(corpus_0115_libSceHttp2, "libSceHttp2", OBS_SHARED, OBS_CORPUS_0115_LIBSCEHTTP2) \
+    L(corpus_0116_libSceHttpCache, "libSceHttpCache", OBS_SHARED, OBS_CORPUS_0116_LIBSCEHTTPCACHE) \
+    L(corpus_0117_libSceHubAppUtil, "libSceHubAppUtil", OBS_SHARED, OBS_CORPUS_0117_LIBSCEHUBAPPUTIL) \
+    L(corpus_0118_libSceIduUtil, "libSceIduUtil", OBS_SHARED, OBS_CORPUS_0118_LIBSCEIDUUTIL) \
+    L(corpus_0119_libSceImageUtil, "libSceImageUtil", OBS_SHARED, OBS_CORPUS_0119_LIBSCEIMAGEUTIL) \
+    L(corpus_0120_libSceIme, "libSceIme", OBS_SHARED, OBS_CORPUS_0120_LIBSCEIME) \
+    L(corpus_0121_libSceImeBackend, "libSceImeBackend", OBS_SHARED, OBS_CORPUS_0121_LIBSCEIMEBACKEND) \
+    L(corpus_0122_libSceImeDialog, "libSceImeDialog", OBS_SHARED, OBS_CORPUS_0122_LIBSCEIMEDIALOG) \
+    L(corpus_0123_libSceInjectedBundle, "libSceInjectedBundle", OBS_SHARED, OBS_CORPUS_0123_LIBSCEINJECTEDBUNDLE) \
+    L(corpus_0124_libSceInvitationDialog, "libSceInvitationDialog", OBS_SHARED, OBS_CORPUS_0124_LIBSCEINVITATIONDIALOG) \
+    L(corpus_0125_libSceIpmi, "libSceIpmi", OBS_SHARED, OBS_CORPUS_0125_LIBSCEIPMI) \
+    L(corpus_0126_libSceIpmiDbg, "libSceIpmiDbg", OBS_SHARED, OBS_CORPUS_0126_LIBSCEIPMIDBG) \
+    L(corpus_0127_libSceJitBridge, "libSceJitBridge", OBS_SHARED, OBS_CORPUS_0127_LIBSCEJITBRIDGE) \
+    L(corpus_0128_libSceJpegDec, "libSceJpegDec", OBS_SHARED, OBS_CORPUS_0128_LIBSCEJPEGDEC) \
+    L(corpus_0129_libSceJpegEnc, "libSceJpegEnc", OBS_SHARED, OBS_CORPUS_0129_LIBSCEJPEGENC) \
+    L(corpus_0130_libSceJpegParser, "libSceJpegParser", OBS_SHARED, OBS_CORPUS_0130_LIBSCEJPEGPARSER) \
+    L(corpus_0131_libSceJsc, "libSceJsc", OBS_SHARED, OBS_CORPUS_0131_LIBSCEJSC) \
+    L(corpus_0132_libSceJscCompiler, "libSceJscCompiler", OBS_SHARED, OBS_CORPUS_0132_LIBSCEJSCCOMPILER) \
+    L(corpus_0133_libSceJson, "libSceJson", OBS_SHARED, OBS_CORPUS_0133_LIBSCEJSON) \
+    L(corpus_0134_libSceJson2, "libSceJson2", OBS_SHARED, OBS_CORPUS_0134_LIBSCEJSON2) \
+    L(corpus_0135_libSceKbEmulate, "libSceKbEmulate", OBS_SHARED, OBS_CORPUS_0135_LIBSCEKBEMULATE) \
+    L(corpus_0136_libSceKeyboard, "libSceKeyboard", OBS_SHARED, OBS_CORPUS_0136_LIBSCEKEYBOARD) \
+    L(corpus_0137_libSceLibcInternal, "libSceLibcInternal", OBS_SHARED, OBS_CORPUS_0137_LIBSCELIBCINTERNAL) \
+    L(corpus_0138_libSceLibcInternalExt, "libSceLibcInternalExt", OBS_SHARED, OBS_CORPUS_0138_LIBSCELIBCINTERNALEXT) \
+    L(corpus_0139_libSceLibreSSL, "libSceLibreSSL", OBS_SHARED, OBS_CORPUS_0139_LIBSCELIBRESSL) \
+    L(corpus_0140_libSceLibreSSl3, "libSceLibreSSl3", OBS_SHARED, OBS_CORPUS_0140_LIBSCELIBRESSL3) \
+    L(corpus_0141_libSceLncUtil, "libSceLncUtil", OBS_SHARED, OBS_CORPUS_0141_LIBSCELNCUTIL) \
+    L(corpus_0142_libSceLoginDialog, "libSceLoginDialog", OBS_SHARED, OBS_CORPUS_0142_LIBSCELOGINDIALOG) \
+    L(corpus_0143_libSceLoginMgrServer, "libSceLoginMgrServer", OBS_SHARED, OBS_CORPUS_0143_LIBSCELOGINMGRSERVER) \
+    L(corpus_0144_libSceLoginService, "libSceLoginService", OBS_SHARED, OBS_CORPUS_0144_LIBSCELOGINSERVICE) \
+    L(corpus_0145_libSceM4aacEnc, "libSceM4aacEnc", OBS_SHARED, OBS_CORPUS_0145_LIBSCEM4AACENC) \
+    L(corpus_0146_libSceManxWtf, "libSceManxWtf", OBS_SHARED, OBS_CORPUS_0146_LIBSCEMANXWTF) \
+    L(corpus_0147_libSceMarlin, "libSceMarlin", OBS_SHARED, OBS_CORPUS_0147_LIBSCEMARLIN) \
+    L(corpus_0148_libSceMbus, "libSceMbus", OBS_SHARED, OBS_CORPUS_0148_LIBSCEMBUS) \
+    L(corpus_0149_libSceMbusDebug, "libSceMbusDebug", OBS_SHARED, OBS_CORPUS_0149_LIBSCEMBUSDEBUG) \
+    L(corpus_0150_libSceMetadataReaderWriter, "libSceMetadataReaderWriter", OBS_SHARED, OBS_CORPUS_0150_LIBSCEMETADATAREADERWRITER) \
+    L(corpus_0151_libSceMouse, "libSceMouse", OBS_SHARED, OBS_CORPUS_0151_LIBSCEMOUSE) \
+    L(corpus_0152_libSceMove, "libSceMove", OBS_SHARED, OBS_CORPUS_0152_LIBSCEMOVE) \
+    L(corpus_0153_libSceMoveTracker, "libSceMoveTracker", OBS_SHARED, OBS_CORPUS_0153_LIBSCEMOVETRACKER) \
+    L(corpus_0154_libSceMsgDialog, "libSceMsgDialog", OBS_SHARED, OBS_CORPUS_0154_LIBSCEMSGDIALOG) \
+    L(corpus_0155_libSceMusicCoreServerClient, "libSceMusicCoreServerClient", OBS_SHARED, OBS_CORPUS_0155_LIBSCEMUSICCORESERVERCLIENT) \
+    L(corpus_0156_libSceMusicCoreServerClientJsEx, "libSceMusicCoreServerClientJsEx", OBS_SHARED, OBS_CORPUS_0156_LIBSCEMUSICCORESERVERCLIENTJSEX) \
+    L(corpus_0157_libSceMusicPlayerService, "libSceMusicPlayerService", OBS_SHARED, OBS_CORPUS_0157_LIBSCEMUSICPLAYERSERVICE) \
+    L(corpus_0158_libSceNKWeb, "libSceNKWeb", OBS_SHARED, OBS_CORPUS_0158_LIBSCENKWEB) \
+    L(corpus_0159_libSceNKWebKit, "libSceNKWebKit", OBS_SHARED, OBS_CORPUS_0159_LIBSCENKWEBKIT) \
+    L(corpus_0160_libSceNKWebKitRequirements, "libSceNKWebKitRequirements", OBS_SHARED, OBS_CORPUS_0160_LIBSCENKWEBKITREQUIREMENTS) \
+    L(corpus_0161_libSceNet, "libSceNet", OBS_SHARED, OBS_CORPUS_0161_LIBSCENET) \
+    L(corpus_0162_libSceNetApctl, "libSceNetApctl", OBS_SHARED, OBS_CORPUS_0162_LIBSCENETAPCTL) \
+    L(corpus_0163_libSceNetBwe, "libSceNetBwe", OBS_SHARED, OBS_CORPUS_0163_LIBSCENETBWE) \
+    L(corpus_0164_libSceNetCtl, "libSceNetCtl", OBS_SHARED, OBS_CORPUS_0164_LIBSCENETCTL) \
+    L(corpus_0165_libSceNetCtlAp, "libSceNetCtlAp", OBS_SHARED, OBS_CORPUS_0165_LIBSCENETCTLAP) \
+    L(corpus_0166_libSceNetCtlApDialog, "libSceNetCtlApDialog", OBS_SHARED, OBS_CORPUS_0166_LIBSCENETCTLAPDIALOG) \
+    L(corpus_0167_libSceNetCtlApIpcInt, "libSceNetCtlApIpcInt", OBS_SHARED, OBS_CORPUS_0167_LIBSCENETCTLAPIPCINT) \
+    L(corpus_0168_libSceNetCtlForNpToolkit, "libSceNetCtlForNpToolkit", OBS_SHARED, OBS_CORPUS_0168_LIBSCENETCTLFORNPTOOLKIT) \
+    L(corpus_0169_libSceNetDebug, "libSceNetDebug", OBS_SHARED, OBS_CORPUS_0169_LIBSCENETDEBUG) \
+    L(corpus_0170_libSceNgs2, "libSceNgs2", OBS_SHARED, OBS_CORPUS_0170_LIBSCENGS2) \
+    L(corpus_0171_libSceNpAppLauncher, "libSceNpAppLauncher", OBS_SHARED, OBS_CORPUS_0171_LIBSCENPAPPLAUNCHER) \
+    L(corpus_0172_libSceNpAuth, "libSceNpAuth", OBS_SHARED, OBS_CORPUS_0172_LIBSCENPAUTH) \
+    L(corpus_0173_libSceNpCommerce, "libSceNpCommerce", OBS_SHARED, OBS_CORPUS_0173_LIBSCENPCOMMERCE) \
+    L(corpus_0174_libSceNpCommon, "libSceNpCommon", OBS_SHARED, OBS_CORPUS_0174_LIBSCENPCOMMON) \
+    L(corpus_0175_libSceNpCppWebApi, "libSceNpCppWebApi", OBS_SHARED, OBS_CORPUS_0175_LIBSCENPCPPWEBAPI) \
+    L(corpus_0176_libSceNpEntitlementAccess, "libSceNpEntitlementAccess", OBS_SHARED, OBS_CORPUS_0176_LIBSCENPENTITLEMENTACCESS) \
+    L(corpus_0177_libSceNpFriendListDialog, "libSceNpFriendListDialog", OBS_SHARED, OBS_CORPUS_0177_LIBSCENPFRIENDLISTDIALOG) \
+    L(corpus_0178_libSceNpGameIntent, "libSceNpGameIntent", OBS_SHARED, OBS_CORPUS_0178_LIBSCENPGAMEINTENT) \
+    L(corpus_0179_libSceNpGriefReport, "libSceNpGriefReport", OBS_SHARED, OBS_CORPUS_0179_LIBSCENPGRIEFREPORT) \
+    L(corpus_0180_libSceNpManager, "libSceNpManager", OBS_SHARED, OBS_CORPUS_0180_LIBSCENPMANAGER) \
+    L(corpus_0181_libSceNpManagerForToolkit, "libSceNpManagerForToolkit", OBS_SHARED, OBS_CORPUS_0181_LIBSCENPMANAGERFORTOOLKIT) \
+    L(corpus_0182_libSceNpMatching2, "libSceNpMatching2", OBS_SHARED, OBS_CORPUS_0182_LIBSCENPMATCHING2) \
+    L(corpus_0183_libSceNpPartner001, "libSceNpPartner001", OBS_SHARED, OBS_CORPUS_0183_LIBSCENPPARTNER001) \
+    L(corpus_0184_libSceNpParty, "libSceNpParty", OBS_SHARED, OBS_CORPUS_0184_LIBSCENPPARTY) \
+    L(corpus_0185_libSceNpProfileDialog, "libSceNpProfileDialog", OBS_SHARED, OBS_CORPUS_0185_LIBSCENPPROFILEDIALOG) \
+    L(corpus_0186_libSceNpRemotePlaySessionSignaling, "libSceNpRemotePlaySessionSignaling", OBS_SHARED, OBS_CORPUS_0186_LIBSCENPREMOTEPLAYSESSIONSIGNALING) \
+    L(corpus_0187_libSceNpScore, "libSceNpScore", OBS_SHARED, OBS_CORPUS_0187_LIBSCENPSCORE) \
+    L(corpus_0188_libSceNpSessionSignaling, "libSceNpSessionSignaling", OBS_SHARED, OBS_CORPUS_0188_LIBSCENPSESSIONSIGNALING) \
+    L(corpus_0189_libSceNpSignaling, "libSceNpSignaling", OBS_SHARED, OBS_CORPUS_0189_LIBSCENPSIGNALING) \
+    L(corpus_0190_libSceNpSns, "libSceNpSns", OBS_SHARED, OBS_CORPUS_0190_LIBSCENPSNS) \
+    L(corpus_0191_libSceNpSnsDailymotionDialog, "libSceNpSnsDailymotionDialog", OBS_SHARED, OBS_CORPUS_0191_LIBSCENPSNSDAILYMOTIONDIALOG) \
+    L(corpus_0192_libSceNpSnsFacebookDialog, "libSceNpSnsFacebookDialog", OBS_SHARED, OBS_CORPUS_0192_LIBSCENPSNSFACEBOOKDIALOG) \
+    L(corpus_0193_libSceNpSnsTwitch, "libSceNpSnsTwitch", OBS_SHARED, OBS_CORPUS_0193_LIBSCENPSNSTWITCH) \
+    L(corpus_0194_libSceNpSnsTwitchDialog, "libSceNpSnsTwitchDialog", OBS_SHARED, OBS_CORPUS_0194_LIBSCENPSNSTWITCHDIALOG) \
+    L(corpus_0195_libSceNpSnsYouTube, "libSceNpSnsYouTube", OBS_SHARED, OBS_CORPUS_0195_LIBSCENPSNSYOUTUBE) \
+    L(corpus_0196_libSceNpSnsYouTubeDialog, "libSceNpSnsYouTubeDialog", OBS_SHARED, OBS_CORPUS_0196_LIBSCENPSNSYOUTUBEDIALOG) \
+    L(corpus_0197_libSceNpTrophy, "libSceNpTrophy", OBS_SHARED, OBS_CORPUS_0197_LIBSCENPTROPHY) \
+    L(corpus_0198_libSceNpTrophy2, "libSceNpTrophy2", OBS_SHARED, OBS_CORPUS_0198_LIBSCENPTROPHY2) \
+    L(corpus_0199_libSceNpTus, "libSceNpTus", OBS_SHARED, OBS_CORPUS_0199_LIBSCENPTUS) \
+    L(corpus_0200_libSceNpUniversalDataSystem, "libSceNpUniversalDataSystem", OBS_SHARED, OBS_CORPUS_0200_LIBSCENPUNIVERSALDATASYSTEM) \
+    L(corpus_0201_libSceNpUtility, "libSceNpUtility", OBS_SHARED, OBS_CORPUS_0201_LIBSCENPUTILITY) \
+    L(corpus_0202_libSceNpWebApi, "libSceNpWebApi", OBS_SHARED, OBS_CORPUS_0202_LIBSCENPWEBAPI) \
+    L(corpus_0203_libSceNpWebApi2, "libSceNpWebApi2", OBS_SHARED, OBS_CORPUS_0203_LIBSCENPWEBAPI2) \
+    L(corpus_0204_libSceNpWebApi2AsyncRestricted, "libSceNpWebApi2AsyncRestricted", OBS_SHARED, OBS_CORPUS_0204_LIBSCENPWEBAPI2ASYNCRESTRICTED) \
+    L(corpus_0205_libSceOpenPsId, "libSceOpenPsId", OBS_SHARED, OBS_CORPUS_0205_LIBSCEOPENPSID) \
+    L(corpus_0206_libSceOpusCeltDec, "libSceOpusCeltDec", OBS_SHARED, OBS_CORPUS_0206_LIBSCEOPUSCELTDEC) \
+    L(corpus_0207_libSceOpusCeltEnc, "libSceOpusCeltEnc", OBS_SHARED, OBS_CORPUS_0207_LIBSCEOPUSCELTENC) \
+    L(corpus_0208_libSceOpusDec, "libSceOpusDec", OBS_SHARED, OBS_CORPUS_0208_LIBSCEOPUSDEC) \
+    L(corpus_0209_libSceOpusSilkEnc, "libSceOpusSilkEnc", OBS_SHARED, OBS_CORPUS_0209_LIBSCEOPUSSILKENC) \
+    L(corpus_0210_libSceOrbisCompat, "libSceOrbisCompat", OBS_SHARED, OBS_CORPUS_0210_LIBSCEORBISCOMPAT) \
+    L(corpus_0211_libSceOrbisCompatForVideoService, "libSceOrbisCompatForVideoService", OBS_SHARED, OBS_CORPUS_0211_LIBSCEORBISCOMPATFORVIDEOSERVICE) \
+    L(corpus_0212_libScePad, "libScePad", OBS_SHARED, OBS_CORPUS_0212_LIBSCEPAD) \
+    L(corpus_0213_libScePadTracker, "libScePadTracker", OBS_SHARED, OBS_CORPUS_0213_LIBSCEPADTRACKER) \
+    L(corpus_0214_libScePatchCheckerClient, "libScePatchCheckerClient", OBS_SHARED, OBS_CORPUS_0214_LIBSCEPATCHCHECKERCLIENT) \
+    L(corpus_0215_libScePerf, "libScePerf", OBS_SHARED, OBS_CORPUS_0215_LIBSCEPERF) \
+    L(corpus_0216_libScePigletv2VSH, "libScePigletv2VSH", OBS_SHARED, OBS_CORPUS_0216_LIBSCEPIGLETV2VSH) \
+    L(corpus_0217_libScePlayGo, "libScePlayGo", OBS_SHARED, OBS_CORPUS_0217_LIBSCEPLAYGO) \
+    L(corpus_0218_libScePlayGoDev, "libScePlayGoDev", OBS_SHARED, OBS_CORPUS_0218_LIBSCEPLAYGODEV) \
+    L(corpus_0219_libScePlayGoDialog, "libScePlayGoDialog", OBS_SHARED, OBS_CORPUS_0219_LIBSCEPLAYGODIALOG) \
+    L(corpus_0220_libScePlayReady, "libScePlayReady", OBS_SHARED, OBS_CORPUS_0220_LIBSCEPLAYREADY) \
+    L(corpus_0221_libScePlayReady2, "libScePlayReady2", OBS_SHARED, OBS_CORPUS_0221_LIBSCEPLAYREADY2) \
+    L(corpus_0222_libScePlayerInvitationDialog, "libScePlayerInvitationDialog", OBS_SHARED, OBS_CORPUS_0222_LIBSCEPLAYERINVITATIONDIALOG) \
+    L(corpus_0223_libScePngDec, "libScePngDec", OBS_SHARED, OBS_CORPUS_0223_LIBSCEPNGDEC) \
+    L(corpus_0224_libScePngEnc, "libScePngEnc", OBS_SHARED, OBS_CORPUS_0224_LIBSCEPNGENC) \
+    L(corpus_0225_libScePosix, "libScePosix", OBS_SHARED, OBS_CORPUS_0225_LIBSCEPOSIX) \
+    L(corpus_0226_libScePosixForWebKit, "libScePosixForWebKit", OBS_SHARED, OBS_CORPUS_0226_LIBSCEPOSIXFORWEBKIT) \
+    L(corpus_0227_libScePrecompiledShaders, "libScePrecompiledShaders", OBS_SHARED, OBS_CORPUS_0227_LIBSCEPRECOMPILEDSHADERS) \
+    L(corpus_0228_libSceProfileCacheExternal, "libSceProfileCacheExternal", OBS_SHARED, OBS_CORPUS_0228_LIBSCEPROFILECACHEEXTERNAL) \
+    L(corpus_0229_libScePs2EmuMenuDialog, "libScePs2EmuMenuDialog", OBS_SHARED, OBS_CORPUS_0229_LIBSCEPS2EMUMENUDIALOG) \
+    L(corpus_0230_libScePsm, "libScePsm", OBS_SHARED, OBS_CORPUS_0230_LIBSCEPSM) \
+    L(corpus_0231_libScePsmKitSystem, "libScePsmKitSystem", OBS_SHARED, OBS_CORPUS_0231_LIBSCEPSMKITSYSTEM) \
+    L(corpus_0232_libScePsmUtil, "libScePsmUtil", OBS_SHARED, OBS_CORPUS_0232_LIBSCEPSMUTIL) \
+    L(corpus_0233_libScePsml, "libScePsml", OBS_SHARED, OBS_CORPUS_0233_LIBSCEPSML) \
+    L(corpus_0234_libSceRazorCpu, "libSceRazorCpu", OBS_SHARED, OBS_CORPUS_0234_LIBSCERAZORCPU) \
+    L(corpus_0235_libSceRegMgr, "libSceRegMgr", OBS_SHARED, OBS_CORPUS_0235_LIBSCEREGMGR) \
+    L(corpus_0236_libSceRemoteplay, "libSceRemoteplay", OBS_SHARED, OBS_CORPUS_0236_LIBSCEREMOTEPLAY) \
+    L(corpus_0237_libSceRnpsAppMgr, "libSceRnpsAppMgr", OBS_SHARED, OBS_CORPUS_0237_LIBSCERNPSAPPMGR) \
+    L(corpus_0238_libSceRtc, "libSceRtc", OBS_SHARED, OBS_CORPUS_0238_LIBSCERTC) \
+    L(corpus_0239_libSceRudp, "libSceRudp", OBS_SHARED, OBS_CORPUS_0239_LIBSCERUDP) \
+    L(corpus_0240_libSceS3DConversion, "libSceS3DConversion", OBS_SHARED, OBS_CORPUS_0240_LIBSCES3DCONVERSION) \
+    L(corpus_0241_libSceS3da, "libSceS3da", OBS_SHARED, OBS_CORPUS_0241_LIBSCES3DA) \
+    L(corpus_0242_libSceSaveData, "libSceSaveData", OBS_SHARED, OBS_CORPUS_0242_LIBSCESAVEDATA) \
+    L(corpus_0243_libSceSaveDataDialog, "libSceSaveDataDialog", OBS_SHARED, OBS_CORPUS_0243_LIBSCESAVEDATADIALOG) \
+    L(corpus_0244_libSceScm, "libSceScm", OBS_SHARED, OBS_CORPUS_0244_LIBSCESCM) \
+    L(corpus_0245_libSceScreenShot, "libSceScreenShot", OBS_SHARED, OBS_CORPUS_0245_LIBSCESCREENSHOT) \
+    L(corpus_0246_libSceScreenShotDrc, "libSceScreenShotDrc", OBS_SHARED, OBS_CORPUS_0246_LIBSCESCREENSHOTDRC) \
+    L(corpus_0247_libSceSdma, "libSceSdma", OBS_SHARED, OBS_CORPUS_0247_LIBSCESDMA) \
+    L(corpus_0248_libSceShareFactoryUtil, "libSceShareFactoryUtil", OBS_SHARED, OBS_CORPUS_0248_LIBSCESHAREFACTORYUTIL) \
+    L(corpus_0249_libSceSharePlay, "libSceSharePlay", OBS_SHARED, OBS_CORPUS_0249_LIBSCESHAREPLAY) \
+    L(corpus_0250_libSceShareUtility, "libSceShareUtility", OBS_SHARED, OBS_CORPUS_0250_LIBSCESHAREUTILITY) \
+    L(corpus_0251_libSceShellCoreUtil, "libSceShellCoreUtil", OBS_SHARED, OBS_CORPUS_0251_LIBSCESHELLCOREUTIL) \
+    L(corpus_0252_libSceShellUIUtil, "libSceShellUIUtil", OBS_SHARED, OBS_CORPUS_0252_LIBSCESHELLUIUTIL) \
+    L(corpus_0253_libSceSigninDialog, "libSceSigninDialog", OBS_SHARED, OBS_CORPUS_0253_LIBSCESIGNINDIALOG) \
+    L(corpus_0254_libSceSocialScreen, "libSceSocialScreen", OBS_SHARED, OBS_CORPUS_0254_LIBSCESOCIALSCREEN) \
+    L(corpus_0255_libSceSocialScreenDialog, "libSceSocialScreenDialog", OBS_SHARED, OBS_CORPUS_0255_LIBSCESOCIALSCREENDIALOG) \
+    L(corpus_0256_libSceSpSysCallWrapper, "libSceSpSysCallWrapper", OBS_SHARED, OBS_CORPUS_0256_LIBSCESPSYSCALLWRAPPER) \
+    L(corpus_0257_libSceSrcUtl, "libSceSrcUtl", OBS_SHARED, OBS_CORPUS_0257_LIBSCESRCUTL) \
+    L(corpus_0258_libSceSsl, "libSceSsl", OBS_SHARED, OBS_CORPUS_0258_LIBSCESSL) \
+    L(corpus_0259_libSceSulphaDrv, "libSceSulphaDrv", OBS_SHARED, OBS_CORPUS_0259_LIBSCESULPHADRV) \
+    L(corpus_0260_libSceSysCore, "libSceSysCore", OBS_SHARED, OBS_CORPUS_0260_LIBSCESYSCORE) \
+    L(corpus_0261_libSceSysUtil, "libSceSysUtil", OBS_SHARED, OBS_CORPUS_0261_LIBSCESYSUTIL) \
+    L(corpus_0262_libSceSysmodule, "libSceSysmodule", OBS_SHARED, OBS_CORPUS_0262_LIBSCESYSMODULE) \
+    L(corpus_0263_libSceSystemGesture, "libSceSystemGesture", OBS_SHARED, OBS_CORPUS_0263_LIBSCESYSTEMGESTURE) \
+    L(corpus_0264_libSceSystemLogger, "libSceSystemLogger", OBS_SHARED, OBS_CORPUS_0264_LIBSCESYSTEMLOGGER) \
+    L(corpus_0265_libSceSystemLogger2, "libSceSystemLogger2", OBS_SHARED, OBS_CORPUS_0265_LIBSCESYSTEMLOGGER2) \
+    L(corpus_0266_libSceSystemService, "libSceSystemService", OBS_SHARED, OBS_CORPUS_0266_LIBSCESYSTEMSERVICE) \
+    L(corpus_0267_libSceSystemServiceActivateHevc, "libSceSystemServiceActivateHevc", OBS_SHARED, OBS_CORPUS_0267_LIBSCESYSTEMSERVICEACTIVATEHEVC) \
+    L(corpus_0268_libSceSystemServiceActivateHevcSoft, "libSceSystemServiceActivateHevcSoft", OBS_SHARED, OBS_CORPUS_0268_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT) \
+    L(corpus_0269_libSceSystemServiceActivateMpeg2, "libSceSystemServiceActivateMpeg2", OBS_SHARED, OBS_CORPUS_0269_LIBSCESYSTEMSERVICEACTIVATEMPEG2) \
+    L(corpus_0270_libSceSystemServiceAppLaunchLink, "libSceSystemServiceAppLaunchLink", OBS_SHARED, OBS_CORPUS_0270_LIBSCESYSTEMSERVICEAPPLAUNCHLINK) \
+    L(corpus_0271_libSceSystemServiceClosedCaption, "libSceSystemServiceClosedCaption", OBS_SHARED, OBS_CORPUS_0271_LIBSCESYSTEMSERVICECLOSEDCAPTION) \
+    L(corpus_0272_libSceSystemServiceDbg, "libSceSystemServiceDbg", OBS_SHARED, OBS_CORPUS_0272_LIBSCESYSTEMSERVICEDBG) \
+    L(corpus_0273_libSceSystemServiceForShellCoreOnly, "libSceSystemServiceForShellCoreOnly", OBS_SHARED, OBS_CORPUS_0273_LIBSCESYSTEMSERVICEFORSHELLCOREONLY) \
+    L(corpus_0274_libSceSystemServicePadspkRouting, "libSceSystemServicePadspkRouting", OBS_SHARED, OBS_CORPUS_0274_LIBSCESYSTEMSERVICEPADSPKROUTING) \
+    L(corpus_0275_libSceSystemServicePartyVoice, "libSceSystemServicePartyVoice", OBS_SHARED, OBS_CORPUS_0275_LIBSCESYSTEMSERVICEPARTYVOICE) \
+    L(corpus_0276_libSceSystemServicePlatformPrivacy, "libSceSystemServicePlatformPrivacy", OBS_SHARED, OBS_CORPUS_0276_LIBSCESYSTEMSERVICEPLATFORMPRIVACY) \
+    L(corpus_0277_libSceSystemServicePowerControl, "libSceSystemServicePowerControl", OBS_SHARED, OBS_CORPUS_0277_LIBSCESYSTEMSERVICEPOWERCONTROL) \
+    L(corpus_0278_libSceSystemServicePowerSaveLevel, "libSceSystemServicePowerSaveLevel", OBS_SHARED, OBS_CORPUS_0278_LIBSCESYSTEMSERVICEPOWERSAVELEVEL) \
+    L(corpus_0279_libSceSystemServicePs2Emu, "libSceSystemServicePs2Emu", OBS_SHARED, OBS_CORPUS_0279_LIBSCESYSTEMSERVICEPS2EMU) \
+    L(corpus_0280_libSceSystemServiceStore, "libSceSystemServiceStore", OBS_SHARED, OBS_CORPUS_0280_LIBSCESYSTEMSERVICESTORE) \
+    L(corpus_0281_libSceSystemServiceSuspend, "libSceSystemServiceSuspend", OBS_SHARED, OBS_CORPUS_0281_LIBSCESYSTEMSERVICESUSPEND) \
+    L(corpus_0282_libSceSystemServiceTelemetry, "libSceSystemServiceTelemetry", OBS_SHARED, OBS_CORPUS_0282_LIBSCESYSTEMSERVICETELEMETRY) \
+    L(corpus_0283_libSceSystemServiceTournamentMlg, "libSceSystemServiceTournamentMlg", OBS_SHARED, OBS_CORPUS_0283_LIBSCESYSTEMSERVICETOURNAMENTMLG) \
+    L(corpus_0284_libSceSystemServiceUdsApp, "libSceSystemServiceUdsApp", OBS_SHARED, OBS_CORPUS_0284_LIBSCESYSTEMSERVICEUDSAPP) \
+    L(corpus_0285_libSceSystemServiceVideoServiceWebApp, "libSceSystemServiceVideoServiceWebApp", OBS_SHARED, OBS_CORPUS_0285_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP) \
+    L(corpus_0286_libSceSystemServiceVideoToken, "libSceSystemServiceVideoToken", OBS_SHARED, OBS_CORPUS_0286_LIBSCESYSTEMSERVICEVIDEOTOKEN) \
+    L(corpus_0287_libSceSystemServiceVoiceRecognition, "libSceSystemServiceVoiceRecognition", OBS_SHARED, OBS_CORPUS_0287_LIBSCESYSTEMSERVICEVOICERECOGNITION) \
+    L(corpus_0288_libSceSystemServiceWebApp, "libSceSystemServiceWebApp", OBS_SHARED, OBS_CORPUS_0288_LIBSCESYSTEMSERVICEWEBAPP) \
+    L(corpus_0289_libSceSystemServiceYouTubeAccountLinkStatus, "libSceSystemServiceYouTubeAccountLinkStatus", OBS_SHARED, OBS_CORPUS_0289_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS) \
+    L(corpus_0290_libSceSystemService_jvm, "libSceSystemService_jvm", OBS_SHARED, OBS_CORPUS_0290_LIBSCESYSTEMSERVICE_JVM) \
+    L(corpus_0291_libSceSystemStateMgr, "libSceSystemStateMgr", OBS_SHARED, OBS_CORPUS_0291_LIBSCESYSTEMSTATEMGR) \
+    L(corpus_0292_libSceTextToSpeech, "libSceTextToSpeech", OBS_SHARED, OBS_CORPUS_0292_LIBSCETEXTTOSPEECH) \
+    L(corpus_0293_libSceTtsCoreJp, "libSceTtsCoreJp", OBS_SHARED, OBS_CORPUS_0293_LIBSCETTSCOREJP) \
+    L(corpus_0294_libSceUlt, "libSceUlt", OBS_SHARED, OBS_CORPUS_0294_LIBSCEULT) \
+    L(corpus_0295_libSceUpdateService, "libSceUpdateService", OBS_SHARED, OBS_CORPUS_0295_LIBSCEUPDATESERVICE) \
+    L(corpus_0296_libSceUsbStorage, "libSceUsbStorage", OBS_SHARED, OBS_CORPUS_0296_LIBSCEUSBSTORAGE) \
+    L(corpus_0297_libSceUsbStorageAux, "libSceUsbStorageAux", OBS_SHARED, OBS_CORPUS_0297_LIBSCEUSBSTORAGEAUX) \
+    L(corpus_0298_libSceUsbStorageDialog, "libSceUsbStorageDialog", OBS_SHARED, OBS_CORPUS_0298_LIBSCEUSBSTORAGEDIALOG) \
+    L(corpus_0299_libSceUsbd, "libSceUsbd", OBS_SHARED, OBS_CORPUS_0299_LIBSCEUSBD) \
+    L(corpus_0300_libSceUserService, "libSceUserService", OBS_SHARED, OBS_CORPUS_0300_LIBSCEUSERSERVICE) \
+    L(corpus_0301_libSceUserServiceForShellCore, "libSceUserServiceForShellCore", OBS_SHARED, OBS_CORPUS_0301_LIBSCEUSERSERVICEFORSHELLCORE) \
+    L(corpus_0302_libSceVdecCore, "libSceVdecCore", OBS_SHARED, OBS_CORPUS_0302_LIBSCEVDECCORE) \
+    L(corpus_0303_libSceVdecSavc, "libSceVdecSavc", OBS_SHARED, OBS_CORPUS_0303_LIBSCEVDECSAVC) \
+    L(corpus_0304_libSceVdecSavc2, "libSceVdecSavc2", OBS_SHARED, OBS_CORPUS_0304_LIBSCEVDECSAVC2) \
+    L(corpus_0305_libSceVdecShevc, "libSceVdecShevc", OBS_SHARED, OBS_CORPUS_0305_LIBSCEVDECSHEVC) \
+    L(corpus_0306_libSceVdecsw, "libSceVdecsw", OBS_SHARED, OBS_CORPUS_0306_LIBSCEVDECSW) \
+    L(corpus_0307_libSceVdecwrap, "libSceVdecwrap", OBS_SHARED, OBS_CORPUS_0307_LIBSCEVDECWRAP) \
+    L(corpus_0308_libSceVencCore, "libSceVencCore", OBS_SHARED, OBS_CORPUS_0308_LIBSCEVENCCORE) \
+    L(corpus_0309_libSceVideoCoreInterface, "libSceVideoCoreInterface", OBS_SHARED, OBS_CORPUS_0309_LIBSCEVIDEOCOREINTERFACE) \
+    L(corpus_0310_libSceVideoCoreServerInterface, "libSceVideoCoreServerInterface", OBS_SHARED, OBS_CORPUS_0310_LIBSCEVIDEOCORESERVERINTERFACE) \
+    L(corpus_0311_libSceVideoDecoderArbitration, "libSceVideoDecoderArbitration", OBS_SHARED, OBS_CORPUS_0311_LIBSCEVIDEODECODERARBITRATION) \
+    L(corpus_0312_libSceVideoNativeExtEssential, "libSceVideoNativeExtEssential", OBS_SHARED, OBS_CORPUS_0312_LIBSCEVIDEONATIVEEXTESSENTIAL) \
+    L(corpus_0313_libSceVideoOut, "libSceVideoOut", OBS_SHARED, OBS_CORPUS_0313_LIBSCEVIDEOOUT) \
+    L(corpus_0314_libSceVideoOutAniso, "libSceVideoOutAniso", OBS_SHARED, OBS_CORPUS_0314_LIBSCEVIDEOOUTANISO) \
+    L(corpus_0315_libSceVideoOutExtra, "libSceVideoOutExtra", OBS_SHARED, OBS_CORPUS_0315_LIBSCEVIDEOOUTEXTRA) \
+    L(corpus_0316_libSceVideoOutHdr, "libSceVideoOutHdr", OBS_SHARED, OBS_CORPUS_0316_LIBSCEVIDEOOUTHDR) \
+    L(corpus_0317_libSceVideoOutRawEdid, "libSceVideoOutRawEdid", OBS_SHARED, OBS_CORPUS_0317_LIBSCEVIDEOOUTRAWEDID) \
+    L(corpus_0318_libSceVideoOutSecondary, "libSceVideoOutSecondary", OBS_SHARED, OBS_CORPUS_0318_LIBSCEVIDEOOUTSECONDARY) \
+    L(corpus_0319_libSceVideoRecording, "libSceVideoRecording", OBS_SHARED, OBS_CORPUS_0319_LIBSCEVIDEORECORDING) \
+    L(corpus_0320_libSceVideodec, "libSceVideodec", OBS_SHARED, OBS_CORPUS_0320_LIBSCEVIDEODEC) \
+    L(corpus_0321_libSceVideodec2, "libSceVideodec2", OBS_SHARED, OBS_CORPUS_0321_LIBSCEVIDEODEC2) \
+    L(corpus_0322_libSceVisionManager, "libSceVisionManager", OBS_SHARED, OBS_CORPUS_0322_LIBSCEVISIONMANAGER) \
+    L(corpus_0323_libSceVnaInternal, "libSceVnaInternal", OBS_SHARED, OBS_CORPUS_0323_LIBSCEVNAINTERNAL) \
+    L(corpus_0324_libSceVoice, "libSceVoice", OBS_SHARED, OBS_CORPUS_0324_LIBSCEVOICE) \
+    L(corpus_0325_libSceVoiceQoS, "libSceVoiceQoS", OBS_SHARED, OBS_CORPUS_0325_LIBSCEVOICEQOS) \
+    L(corpus_0326_libSceVorbisDec, "libSceVorbisDec", OBS_SHARED, OBS_CORPUS_0326_LIBSCEVORBISDEC) \
+    L(corpus_0327_libSceVrServiceDialog, "libSceVrServiceDialog", OBS_SHARED, OBS_CORPUS_0327_LIBSCEVRSERVICEDIALOG) \
+    L(corpus_0328_libSceVrTracker, "libSceVrTracker", OBS_SHARED, OBS_CORPUS_0328_LIBSCEVRTRACKER) \
+    L(corpus_0329_libSceVrTrackerDeviceRejection, "libSceVrTrackerDeviceRejection", OBS_SHARED, OBS_CORPUS_0329_LIBSCEVRTRACKERDEVICEREJECTION) \
+    L(corpus_0330_libSceVrTrackerFourDeviceAllowed, "libSceVrTrackerFourDeviceAllowed", OBS_SHARED, OBS_CORPUS_0330_LIBSCEVRTRACKERFOURDEVICEALLOWED) \
+    L(corpus_0331_libSceVrTrackerGpuTest, "libSceVrTrackerGpuTest", OBS_SHARED, OBS_CORPUS_0331_LIBSCEVRTRACKERGPUTEST) \
+    L(corpus_0332_libSceVrTrackerLiveCapture, "libSceVrTrackerLiveCapture", OBS_SHARED, OBS_CORPUS_0332_LIBSCEVRTRACKERLIVECAPTURE) \
+    L(corpus_0333_libSceVshctl, "libSceVshctl", OBS_SHARED, OBS_CORPUS_0333_LIBSCEVSHCTL) \
+    L(corpus_0334_libSceWeb, "libSceWeb", OBS_SHARED, OBS_CORPUS_0334_LIBSCEWEB) \
+    L(corpus_0335_libSceWebBrowserDialog, "libSceWebBrowserDialog", OBS_SHARED, OBS_CORPUS_0335_LIBSCEWEBBROWSERDIALOG) \
+    L(corpus_0336_libSceWebBrowserDialogLimited, "libSceWebBrowserDialogLimited", OBS_SHARED, OBS_CORPUS_0336_LIBSCEWEBBROWSERDIALOGLIMITED) \
+    L(corpus_0337_libSceWebKit2, "libSceWebKit2", OBS_SHARED, OBS_CORPUS_0337_LIBSCEWEBKIT2) \
+    L(corpus_0338_libSceWkFontConfig, "libSceWkFontConfig", OBS_SHARED, OBS_CORPUS_0338_LIBSCEWKFONTCONFIG) \
+    L(corpus_0339_libSceXml, "libSceXml", OBS_SHARED, OBS_CORPUS_0339_LIBSCEXML) \
+    L(corpus_0340_libSceZlib, "libSceZlib", OBS_SHARED, OBS_CORPUS_0340_LIBSCEZLIB) \
+    L(corpus_0341_libc, "libc", OBS_SHARED, OBS_CORPUS_0341_LIBC) \
+    L(corpus_0342_libc_setjmp, "libc_setjmp", OBS_SHARED, OBS_CORPUS_0342_LIBC_SETJMP) \
+    L(corpus_0343_libcairo, "libcairo", OBS_SHARED, OBS_CORPUS_0343_LIBCAIRO) \
+    L(corpus_0344_libcurl, "libcurl", OBS_SHARED, OBS_CORPUS_0344_LIBCURL) \
+    L(corpus_0345_libkernel, "libkernel", OBS_SHARED, OBS_CORPUS_0345_LIBKERNEL) \
+    L(corpus_0346_libkernel_cpumode_platform, "libkernel_cpumode_platform", OBS_SHARED, OBS_CORPUS_0346_LIBKERNEL_CPUMODE_PLATFORM) \
+    L(corpus_0347_libkernel_module_load_check, "libkernel_module_load_check", OBS_SHARED, OBS_CORPUS_0347_LIBKERNEL_MODULE_LOAD_CHECK) \
+    L(corpus_0348_libkernel_psmkit, "libkernel_psmkit", OBS_SHARED, OBS_CORPUS_0348_LIBKERNEL_PSMKIT) \
+    L(corpus_0349_libkernel_sysc_se, "libkernel_sysc_se", OBS_SHARED, OBS_CORPUS_0349_LIBKERNEL_SYSC_SE)
 
 #else /* OBS_NO_CORPUS */
 
@@ -68825,328 +68662,327 @@
     L(corpus_0026_libSceAudioOutSparkControl, "libSceAudioOutSparkControl", OBS_SHARED, OBS_CORPUS_CALLABLE_0026_LIBSCEAUDIOOUTSPARKCONTROL) \
     L(corpus_0027_libSceAudioPropagation, "libSceAudioPropagation", OBS_SHARED, OBS_CORPUS_CALLABLE_0027_LIBSCEAUDIOPROPAGATION) \
     L(corpus_0028_libSceAudiodReport, "libSceAudiodReport", OBS_SHARED, OBS_CORPUS_CALLABLE_0028_LIBSCEAUDIODREPORT) \
-    L(corpus_0029_libSceAudiodec, "libSceAudiodec", OBS_SHARED, OBS_CORPUS_CALLABLE_0029_LIBSCEAUDIODEC) \
-    L(corpus_0030_libSceAudiodecCpu, "libSceAudiodecCpu", OBS_SHARED, OBS_CORPUS_CALLABLE_0030_LIBSCEAUDIODECCPU) \
-    L(corpus_0031_libSceAudiodecCpuAlac, "libSceAudiodecCpuAlac", OBS_SHARED, OBS_CORPUS_CALLABLE_0031_LIBSCEAUDIODECCPUALAC) \
-    L(corpus_0032_libSceAudiodecCpuDdp, "libSceAudiodecCpuDdp", OBS_SHARED, OBS_CORPUS_CALLABLE_0032_LIBSCEAUDIODECCPUDDP) \
-    L(corpus_0033_libSceAudiodecCpuDts, "libSceAudiodecCpuDts", OBS_SHARED, OBS_CORPUS_CALLABLE_0033_LIBSCEAUDIODECCPUDTS) \
-    L(corpus_0034_libSceAudiodecCpuDtsHdLbr, "libSceAudiodecCpuDtsHdLbr", OBS_SHARED, OBS_CORPUS_CALLABLE_0034_LIBSCEAUDIODECCPUDTSHDLBR) \
-    L(corpus_0035_libSceAudiodecCpuDtsHdMa, "libSceAudiodecCpuDtsHdMa", OBS_SHARED, OBS_CORPUS_CALLABLE_0035_LIBSCEAUDIODECCPUDTSHDMA) \
-    L(corpus_0036_libSceAudiodecCpuFlac, "libSceAudiodecCpuFlac", OBS_SHARED, OBS_CORPUS_CALLABLE_0036_LIBSCEAUDIODECCPUFLAC) \
-    L(corpus_0037_libSceAudiodecCpuHevag, "libSceAudiodecCpuHevag", OBS_SHARED, OBS_CORPUS_CALLABLE_0037_LIBSCEAUDIODECCPUHEVAG) \
-    L(corpus_0038_libSceAudiodecCpuLpcm, "libSceAudiodecCpuLpcm", OBS_SHARED, OBS_CORPUS_CALLABLE_0038_LIBSCEAUDIODECCPULPCM) \
-    L(corpus_0039_libSceAudiodecCpuM4aac, "libSceAudiodecCpuM4aac", OBS_SHARED, OBS_CORPUS_CALLABLE_0039_LIBSCEAUDIODECCPUM4AAC) \
-    L(corpus_0040_libSceAutoMounterClient, "libSceAutoMounterClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0040_LIBSCEAUTOMOUNTERCLIENT) \
-    L(corpus_0041_libSceAvPlayer, "libSceAvPlayer", OBS_SHARED, OBS_CORPUS_CALLABLE_0041_LIBSCEAVPLAYER) \
-    L(corpus_0042_libSceAvPlayerStreaming, "libSceAvPlayerStreaming", OBS_SHARED, OBS_CORPUS_CALLABLE_0042_LIBSCEAVPLAYERSTREAMING) \
-    L(corpus_0043_libSceAvSetting, "libSceAvSetting", OBS_SHARED, OBS_CORPUS_CALLABLE_0043_LIBSCEAVSETTING) \
-    L(corpus_0044_libSceAvSettingDebug, "libSceAvSettingDebug", OBS_SHARED, OBS_CORPUS_CALLABLE_0044_LIBSCEAVSETTINGDEBUG) \
-    L(corpus_0045_libSceAvcap, "libSceAvcap", OBS_SHARED, OBS_CORPUS_CALLABLE_0045_LIBSCEAVCAP) \
-    L(corpus_0046_libSceBackupRestoreUtil, "libSceBackupRestoreUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0046_LIBSCEBACKUPRESTOREUTIL) \
-    L(corpus_0047_libSceBeisobmf, "libSceBeisobmf", OBS_SHARED, OBS_CORPUS_CALLABLE_0047_LIBSCEBEISOBMF) \
-    L(corpus_0048_libSceBemp2sys, "libSceBemp2sys", OBS_SHARED, OBS_CORPUS_CALLABLE_0048_LIBSCEBEMP2SYS) \
-    L(corpus_0049_libSceBgft, "libSceBgft", OBS_SHARED, OBS_CORPUS_CALLABLE_0049_LIBSCEBGFT) \
-    L(corpus_0050_libSceBluetoothHid, "libSceBluetoothHid", OBS_SHARED, OBS_CORPUS_CALLABLE_0050_LIBSCEBLUETOOTHHID) \
-    L(corpus_0051_libSceCamera, "libSceCamera", OBS_SHARED, OBS_CORPUS_CALLABLE_0051_LIBSCECAMERA) \
-    L(corpus_0052_libSceCdlgUtilServer, "libSceCdlgUtilServer", OBS_SHARED, OBS_CORPUS_CALLABLE_0052_LIBSCECDLGUTILSERVER) \
-    L(corpus_0053_libSceCes, "libSceCes", OBS_SHARED, OBS_CORPUS_CALLABLE_0053_LIBSCECES) \
-    L(corpus_0054_libSceClSysCallWrapper, "libSceClSysCallWrapper", OBS_SHARED, OBS_CORPUS_CALLABLE_0054_LIBSCECLSYSCALLWRAPPER) \
-    L(corpus_0055_libSceCommonDialog, "libSceCommonDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0055_LIBSCECOMMONDIALOG) \
-    L(corpus_0056_libSceCompanionHttpd, "libSceCompanionHttpd", OBS_SHARED, OBS_CORPUS_CALLABLE_0056_LIBSCECOMPANIONHTTPD) \
-    L(corpus_0057_libSceCompanionUtil, "libSceCompanionUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0057_LIBSCECOMPANIONUTIL) \
-    L(corpus_0058_libSceComposite, "libSceComposite", OBS_SHARED, OBS_CORPUS_CALLABLE_0058_LIBSCECOMPOSITE) \
-    L(corpus_0059_libSceContentBinder, "libSceContentBinder", OBS_SHARED, OBS_CORPUS_CALLABLE_0059_LIBSCECONTENTBINDER) \
-    L(corpus_0060_libSceContentDelete, "libSceContentDelete", OBS_SHARED, OBS_CORPUS_CALLABLE_0060_LIBSCECONTENTDELETE) \
-    L(corpus_0061_libSceContentExport, "libSceContentExport", OBS_SHARED, OBS_CORPUS_CALLABLE_0061_LIBSCECONTENTEXPORT) \
-    L(corpus_0062_libSceContentSearch, "libSceContentSearch", OBS_SHARED, OBS_CORPUS_CALLABLE_0062_LIBSCECONTENTSEARCH) \
-    L(corpus_0063_libSceConvertKeycode, "libSceConvertKeycode", OBS_SHARED, OBS_CORPUS_CALLABLE_0063_LIBSCECONVERTKEYCODE) \
-    L(corpus_0064_libSceCoreIPC, "libSceCoreIPC", OBS_SHARED, OBS_CORPUS_CALLABLE_0064_LIBSCECOREIPC) \
-    L(corpus_0065_libSceCoredump, "libSceCoredump", OBS_SHARED, OBS_CORPUS_CALLABLE_0065_LIBSCECOREDUMP) \
-    L(corpus_0066_libSceCoredump_debug, "libSceCoredump_debug", OBS_SHARED, OBS_CORPUS_CALLABLE_0066_LIBSCECOREDUMP_DEBUG) \
-    L(corpus_0067_libSceCustomMusicCore, "libSceCustomMusicCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0067_LIBSCECUSTOMMUSICCORE) \
-    L(corpus_0068_libSceCustomMusicService, "libSceCustomMusicService", OBS_SHARED, OBS_CORPUS_CALLABLE_0068_LIBSCECUSTOMMUSICSERVICE) \
-    L(corpus_0069_libSceDataTransfer, "libSceDataTransfer", OBS_SHARED, OBS_CORPUS_CALLABLE_0069_LIBSCEDATATRANSFER) \
-    L(corpus_0070_libSceDbRecoveryClient, "libSceDbRecoveryClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0070_LIBSCEDBRECOVERYCLIENT) \
-    L(corpus_0071_libSceDbgAddressSanitizer, "libSceDbgAddressSanitizer", OBS_SHARED, OBS_CORPUS_CALLABLE_0071_LIBSCEDBGADDRESSSANITIZER) \
-    L(corpus_0072_libSceDbgAudioOut, "libSceDbgAudioOut", OBS_SHARED, OBS_CORPUS_CALLABLE_0072_LIBSCEDBGAUDIOOUT) \
-    L(corpus_0073_libSceDbgKeyboard, "libSceDbgKeyboard", OBS_SHARED, OBS_CORPUS_CALLABLE_0073_LIBSCEDBGKEYBOARD) \
-    L(corpus_0074_libSceDbgPlayGo, "libSceDbgPlayGo", OBS_SHARED, OBS_CORPUS_CALLABLE_0074_LIBSCEDBGPLAYGO) \
-    L(corpus_0075_libSceDbgVideoOut, "libSceDbgVideoOut", OBS_SHARED, OBS_CORPUS_CALLABLE_0075_LIBSCEDBGVIDEOOUT) \
-    L(corpus_0076_libSceDeci4h, "libSceDeci4h", OBS_SHARED, OBS_CORPUS_CALLABLE_0076_LIBSCEDECI4H) \
-    L(corpus_0077_libSceDepth, "libSceDepth", OBS_SHARED, OBS_CORPUS_CALLABLE_0077_LIBSCEDEPTH) \
-    L(corpus_0078_libSceDeviceService, "libSceDeviceService", OBS_SHARED, OBS_CORPUS_CALLABLE_0078_LIBSCEDEVICESERVICE) \
-    L(corpus_0079_libSceDipsw, "libSceDipsw", OBS_SHARED, OBS_CORPUS_CALLABLE_0079_LIBSCEDIPSW) \
-    L(corpus_0080_libSceDiscId, "libSceDiscId", OBS_SHARED, OBS_CORPUS_CALLABLE_0080_LIBSCEDISCID) \
-    L(corpus_0081_libSceDiscMap, "libSceDiscMap", OBS_SHARED, OBS_CORPUS_CALLABLE_0081_LIBSCEDISCMAP) \
-    L(corpus_0082_libSceDiscMapForVsh, "libSceDiscMapForVsh", OBS_SHARED, OBS_CORPUS_CALLABLE_0082_LIBSCEDISCMAPFORVSH) \
-    L(corpus_0083_libSceDseehx, "libSceDseehx", OBS_SHARED, OBS_CORPUS_CALLABLE_0083_LIBSCEDSEEHX) \
-    L(corpus_0084_libSceDtcpIp, "libSceDtcpIp", OBS_SHARED, OBS_CORPUS_CALLABLE_0084_LIBSCEDTCPIP) \
-    L(corpus_0085_libSceDtsEnc, "libSceDtsEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0085_LIBSCEDTSENC) \
-    L(corpus_0086_libSceEditMp4, "libSceEditMp4", OBS_SHARED, OBS_CORPUS_CALLABLE_0086_LIBSCEEDITMP4) \
-    L(corpus_0087_libSceErrorDialog, "libSceErrorDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0087_LIBSCEERRORDIALOG) \
-    L(corpus_0088_libSceFacebook_Yoga, "libSceFacebook.Yoga", OBS_SHARED, OBS_CORPUS_CALLABLE_0088_LIBSCEFACEBOOK_YOGA) \
-    L(corpus_0089_libSceFiber, "libSceFiber", OBS_SHARED, OBS_CORPUS_CALLABLE_0089_LIBSCEFIBER) \
-    L(corpus_0090_libSceFios2, "libSceFios2", OBS_SHARED, OBS_CORPUS_CALLABLE_0090_LIBSCEFIOS2) \
-    L(corpus_0091_libSceFios2_debug, "libSceFios2_debug", OBS_SHARED, OBS_CORPUS_CALLABLE_0091_LIBSCEFIOS2_DEBUG) \
-    L(corpus_0092_libSceFont, "libSceFont", OBS_SHARED, OBS_CORPUS_CALLABLE_0092_LIBSCEFONT) \
-    L(corpus_0093_libSceFontFt, "libSceFontFt", OBS_SHARED, OBS_CORPUS_CALLABLE_0093_LIBSCEFONTFT) \
-    L(corpus_0094_libSceFreeType, "libSceFreeType", OBS_SHARED, OBS_CORPUS_CALLABLE_0094_LIBSCEFREETYPE) \
-    L(corpus_0095_libSceFsInternalForVsh, "libSceFsInternalForVsh", OBS_SHARED, OBS_CORPUS_CALLABLE_0095_LIBSCEFSINTERNALFORVSH) \
-    L(corpus_0096_libSceGLSlimServerVSH, "libSceGLSlimServerVSH", OBS_SHARED, OBS_CORPUS_CALLABLE_0096_LIBSCEGLSLIMSERVERVSH) \
-    L(corpus_0097_libSceGLSlimVSH, "libSceGLSlimVSH", OBS_SHARED, OBS_CORPUS_CALLABLE_0097_LIBSCEGLSLIMVSH) \
-    L(corpus_0098_libSceGameCustomDataDialog, "libSceGameCustomDataDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0098_LIBSCEGAMECUSTOMDATADIALOG) \
-    L(corpus_0099_libSceGameLiveStreaming, "libSceGameLiveStreaming", OBS_SHARED, OBS_CORPUS_CALLABLE_0099_LIBSCEGAMELIVESTREAMING) \
-    L(corpus_0100_libSceGameLiveStreaming_debug, "libSceGameLiveStreaming_debug", OBS_SHARED, OBS_CORPUS_CALLABLE_0100_LIBSCEGAMELIVESTREAMING_DEBUG) \
-    L(corpus_0101_libSceGameRight, "libSceGameRight", OBS_SHARED, OBS_CORPUS_CALLABLE_0101_LIBSCEGAMERIGHT) \
-    L(corpus_0102_libSceGameUpdate, "libSceGameUpdate", OBS_SHARED, OBS_CORPUS_CALLABLE_0102_LIBSCEGAMEUPDATE) \
-    L(corpus_0103_libSceGic, "libSceGic", OBS_SHARED, OBS_CORPUS_CALLABLE_0103_LIBSCEGIC) \
-    L(corpus_0104_libSceGnmDebugModuleReset, "libSceGnmDebugModuleReset", OBS_SHARED, OBS_CORPUS_CALLABLE_0104_LIBSCEGNMDEBUGMODULERESET) \
-    L(corpus_0105_libSceGnmDebugReset, "libSceGnmDebugReset", OBS_SHARED, OBS_CORPUS_CALLABLE_0105_LIBSCEGNMDEBUGRESET) \
-    L(corpus_0106_libSceGnmDriver, "libSceGnmDriver", OBS_SHARED, OBS_CORPUS_CALLABLE_0106_LIBSCEGNMDRIVER) \
-    L(corpus_0107_libSceGnmDriverCompat, "libSceGnmDriverCompat", OBS_SHARED, OBS_CORPUS_CALLABLE_0107_LIBSCEGNMDRIVERCOMPAT) \
-    L(corpus_0108_libSceGnmDriverResourceRegistration, "libSceGnmDriverResourceRegistration", OBS_SHARED, OBS_CORPUS_CALLABLE_0108_LIBSCEGNMDRIVERRESOURCEREGISTRATION) \
-    L(corpus_0109_libSceGnmDriver_sys, "libSceGnmDriver_sys", OBS_SHARED, OBS_CORPUS_CALLABLE_0109_LIBSCEGNMDRIVER_SYS) \
-    L(corpus_0110_libSceGvMp4Parser, "libSceGvMp4Parser", OBS_SHARED, OBS_CORPUS_CALLABLE_0110_LIBSCEGVMP4PARSER) \
-    L(corpus_0111_libSceHidControl, "libSceHidControl", OBS_SHARED, OBS_CORPUS_CALLABLE_0111_LIBSCEHIDCONTROL) \
-    L(corpus_0112_libSceHmd, "libSceHmd", OBS_SHARED, OBS_CORPUS_CALLABLE_0112_LIBSCEHMD) \
-    L(corpus_0113_libSceHmdDistortion, "libSceHmdDistortion", OBS_SHARED, OBS_CORPUS_CALLABLE_0113_LIBSCEHMDDISTORTION) \
-    L(corpus_0114_libSceHmdSetupDialog, "libSceHmdSetupDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0114_LIBSCEHMDSETUPDIALOG) \
-    L(corpus_0115_libSceHttp, "libSceHttp", OBS_SHARED, OBS_CORPUS_CALLABLE_0115_LIBSCEHTTP) \
-    L(corpus_0116_libSceHttp2, "libSceHttp2", OBS_SHARED, OBS_CORPUS_CALLABLE_0116_LIBSCEHTTP2) \
-    L(corpus_0117_libSceHttpCache, "libSceHttpCache", OBS_SHARED, OBS_CORPUS_CALLABLE_0117_LIBSCEHTTPCACHE) \
-    L(corpus_0118_libSceHubAppUtil, "libSceHubAppUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0118_LIBSCEHUBAPPUTIL) \
-    L(corpus_0119_libSceIduUtil, "libSceIduUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0119_LIBSCEIDUUTIL) \
-    L(corpus_0120_libSceImageUtil, "libSceImageUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0120_LIBSCEIMAGEUTIL) \
-    L(corpus_0121_libSceIme, "libSceIme", OBS_SHARED, OBS_CORPUS_CALLABLE_0121_LIBSCEIME) \
-    L(corpus_0122_libSceImeBackend, "libSceImeBackend", OBS_SHARED, OBS_CORPUS_CALLABLE_0122_LIBSCEIMEBACKEND) \
-    L(corpus_0123_libSceImeDialog, "libSceImeDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0123_LIBSCEIMEDIALOG) \
-    L(corpus_0124_libSceInjectedBundle, "libSceInjectedBundle", OBS_SHARED, OBS_CORPUS_CALLABLE_0124_LIBSCEINJECTEDBUNDLE) \
-    L(corpus_0125_libSceInvitationDialog, "libSceInvitationDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0125_LIBSCEINVITATIONDIALOG) \
-    L(corpus_0126_libSceIpmi, "libSceIpmi", OBS_SHARED, OBS_CORPUS_CALLABLE_0126_LIBSCEIPMI) \
-    L(corpus_0127_libSceIpmiDbg, "libSceIpmiDbg", OBS_SHARED, OBS_CORPUS_CALLABLE_0127_LIBSCEIPMIDBG) \
-    L(corpus_0128_libSceJitBridge, "libSceJitBridge", OBS_SHARED, OBS_CORPUS_CALLABLE_0128_LIBSCEJITBRIDGE) \
-    L(corpus_0129_libSceJpegDec, "libSceJpegDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0129_LIBSCEJPEGDEC) \
-    L(corpus_0130_libSceJpegEnc, "libSceJpegEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0130_LIBSCEJPEGENC) \
-    L(corpus_0131_libSceJpegParser, "libSceJpegParser", OBS_SHARED, OBS_CORPUS_CALLABLE_0131_LIBSCEJPEGPARSER) \
-    L(corpus_0132_libSceJsc, "libSceJsc", OBS_SHARED, OBS_CORPUS_CALLABLE_0132_LIBSCEJSC) \
-    L(corpus_0133_libSceJscCompiler, "libSceJscCompiler", OBS_SHARED, OBS_CORPUS_CALLABLE_0133_LIBSCEJSCCOMPILER) \
-    L(corpus_0134_libSceJson, "libSceJson", OBS_SHARED, OBS_CORPUS_CALLABLE_0134_LIBSCEJSON) \
-    L(corpus_0135_libSceJson2, "libSceJson2", OBS_SHARED, OBS_CORPUS_CALLABLE_0135_LIBSCEJSON2) \
-    L(corpus_0136_libSceKbEmulate, "libSceKbEmulate", OBS_SHARED, OBS_CORPUS_CALLABLE_0136_LIBSCEKBEMULATE) \
-    L(corpus_0137_libSceKeyboard, "libSceKeyboard", OBS_SHARED, OBS_CORPUS_CALLABLE_0137_LIBSCEKEYBOARD) \
-    L(corpus_0138_libSceLibcInternal, "libSceLibcInternal", OBS_SHARED, OBS_CORPUS_CALLABLE_0138_LIBSCELIBCINTERNAL) \
-    L(corpus_0139_libSceLibcInternalExt, "libSceLibcInternalExt", OBS_SHARED, OBS_CORPUS_CALLABLE_0139_LIBSCELIBCINTERNALEXT) \
-    L(corpus_0140_libSceLibreSSL, "libSceLibreSSL", OBS_SHARED, OBS_CORPUS_CALLABLE_0140_LIBSCELIBRESSL) \
-    L(corpus_0141_libSceLibreSSl3, "libSceLibreSSl3", OBS_SHARED, OBS_CORPUS_CALLABLE_0141_LIBSCELIBRESSL3) \
-    L(corpus_0142_libSceLncUtil, "libSceLncUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0142_LIBSCELNCUTIL) \
-    L(corpus_0143_libSceLoginDialog, "libSceLoginDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0143_LIBSCELOGINDIALOG) \
-    L(corpus_0144_libSceLoginMgrServer, "libSceLoginMgrServer", OBS_SHARED, OBS_CORPUS_CALLABLE_0144_LIBSCELOGINMGRSERVER) \
-    L(corpus_0145_libSceLoginService, "libSceLoginService", OBS_SHARED, OBS_CORPUS_CALLABLE_0145_LIBSCELOGINSERVICE) \
-    L(corpus_0146_libSceM4aacEnc, "libSceM4aacEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0146_LIBSCEM4AACENC) \
-    L(corpus_0147_libSceManxWtf, "libSceManxWtf", OBS_SHARED, OBS_CORPUS_CALLABLE_0147_LIBSCEMANXWTF) \
-    L(corpus_0148_libSceMarlin, "libSceMarlin", OBS_SHARED, OBS_CORPUS_CALLABLE_0148_LIBSCEMARLIN) \
-    L(corpus_0149_libSceMbus, "libSceMbus", OBS_SHARED, OBS_CORPUS_CALLABLE_0149_LIBSCEMBUS) \
-    L(corpus_0150_libSceMbusDebug, "libSceMbusDebug", OBS_SHARED, OBS_CORPUS_CALLABLE_0150_LIBSCEMBUSDEBUG) \
-    L(corpus_0151_libSceMetadataReaderWriter, "libSceMetadataReaderWriter", OBS_SHARED, OBS_CORPUS_CALLABLE_0151_LIBSCEMETADATAREADERWRITER) \
-    L(corpus_0152_libSceMouse, "libSceMouse", OBS_SHARED, OBS_CORPUS_CALLABLE_0152_LIBSCEMOUSE) \
-    L(corpus_0153_libSceMove, "libSceMove", OBS_SHARED, OBS_CORPUS_CALLABLE_0153_LIBSCEMOVE) \
-    L(corpus_0154_libSceMoveTracker, "libSceMoveTracker", OBS_SHARED, OBS_CORPUS_CALLABLE_0154_LIBSCEMOVETRACKER) \
-    L(corpus_0155_libSceMsgDialog, "libSceMsgDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0155_LIBSCEMSGDIALOG) \
-    L(corpus_0156_libSceMusicCoreServerClient, "libSceMusicCoreServerClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0156_LIBSCEMUSICCORESERVERCLIENT) \
-    L(corpus_0157_libSceMusicCoreServerClientJsEx, "libSceMusicCoreServerClientJsEx", OBS_SHARED, OBS_CORPUS_CALLABLE_0157_LIBSCEMUSICCORESERVERCLIENTJSEX) \
-    L(corpus_0158_libSceMusicPlayerService, "libSceMusicPlayerService", OBS_SHARED, OBS_CORPUS_CALLABLE_0158_LIBSCEMUSICPLAYERSERVICE) \
-    L(corpus_0159_libSceNKWeb, "libSceNKWeb", OBS_SHARED, OBS_CORPUS_CALLABLE_0159_LIBSCENKWEB) \
-    L(corpus_0160_libSceNKWebKit, "libSceNKWebKit", OBS_SHARED, OBS_CORPUS_CALLABLE_0160_LIBSCENKWEBKIT) \
-    L(corpus_0161_libSceNKWebKitRequirements, "libSceNKWebKitRequirements", OBS_SHARED, OBS_CORPUS_CALLABLE_0161_LIBSCENKWEBKITREQUIREMENTS) \
-    L(corpus_0162_libSceNet, "libSceNet", OBS_SHARED, OBS_CORPUS_CALLABLE_0162_LIBSCENET) \
-    L(corpus_0163_libSceNetApctl, "libSceNetApctl", OBS_SHARED, OBS_CORPUS_CALLABLE_0163_LIBSCENETAPCTL) \
-    L(corpus_0164_libSceNetBwe, "libSceNetBwe", OBS_SHARED, OBS_CORPUS_CALLABLE_0164_LIBSCENETBWE) \
-    L(corpus_0165_libSceNetCtl, "libSceNetCtl", OBS_SHARED, OBS_CORPUS_CALLABLE_0165_LIBSCENETCTL) \
-    L(corpus_0166_libSceNetCtlAp, "libSceNetCtlAp", OBS_SHARED, OBS_CORPUS_CALLABLE_0166_LIBSCENETCTLAP) \
-    L(corpus_0167_libSceNetCtlApDialog, "libSceNetCtlApDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0167_LIBSCENETCTLAPDIALOG) \
-    L(corpus_0168_libSceNetCtlApIpcInt, "libSceNetCtlApIpcInt", OBS_SHARED, OBS_CORPUS_CALLABLE_0168_LIBSCENETCTLAPIPCINT) \
-    L(corpus_0169_libSceNetCtlForNpToolkit, "libSceNetCtlForNpToolkit", OBS_SHARED, OBS_CORPUS_CALLABLE_0169_LIBSCENETCTLFORNPTOOLKIT) \
-    L(corpus_0170_libSceNetDebug, "libSceNetDebug", OBS_SHARED, OBS_CORPUS_CALLABLE_0170_LIBSCENETDEBUG) \
-    L(corpus_0171_libSceNgs2, "libSceNgs2", OBS_SHARED, OBS_CORPUS_CALLABLE_0171_LIBSCENGS2) \
-    L(corpus_0172_libSceNpAppLauncher, "libSceNpAppLauncher", OBS_SHARED, OBS_CORPUS_CALLABLE_0172_LIBSCENPAPPLAUNCHER) \
-    L(corpus_0173_libSceNpAuth, "libSceNpAuth", OBS_SHARED, OBS_CORPUS_CALLABLE_0173_LIBSCENPAUTH) \
-    L(corpus_0174_libSceNpCommerce, "libSceNpCommerce", OBS_SHARED, OBS_CORPUS_CALLABLE_0174_LIBSCENPCOMMERCE) \
-    L(corpus_0175_libSceNpCommon, "libSceNpCommon", OBS_SHARED, OBS_CORPUS_CALLABLE_0175_LIBSCENPCOMMON) \
-    L(corpus_0176_libSceNpCppWebApi, "libSceNpCppWebApi", OBS_SHARED, OBS_CORPUS_CALLABLE_0176_LIBSCENPCPPWEBAPI) \
-    L(corpus_0177_libSceNpEntitlementAccess, "libSceNpEntitlementAccess", OBS_SHARED, OBS_CORPUS_CALLABLE_0177_LIBSCENPENTITLEMENTACCESS) \
-    L(corpus_0178_libSceNpFriendListDialog, "libSceNpFriendListDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0178_LIBSCENPFRIENDLISTDIALOG) \
-    L(corpus_0179_libSceNpGameIntent, "libSceNpGameIntent", OBS_SHARED, OBS_CORPUS_CALLABLE_0179_LIBSCENPGAMEINTENT) \
-    L(corpus_0180_libSceNpGriefReport, "libSceNpGriefReport", OBS_SHARED, OBS_CORPUS_CALLABLE_0180_LIBSCENPGRIEFREPORT) \
-    L(corpus_0181_libSceNpManager, "libSceNpManager", OBS_SHARED, OBS_CORPUS_CALLABLE_0181_LIBSCENPMANAGER) \
-    L(corpus_0182_libSceNpManagerForToolkit, "libSceNpManagerForToolkit", OBS_SHARED, OBS_CORPUS_CALLABLE_0182_LIBSCENPMANAGERFORTOOLKIT) \
-    L(corpus_0183_libSceNpMatching2, "libSceNpMatching2", OBS_SHARED, OBS_CORPUS_CALLABLE_0183_LIBSCENPMATCHING2) \
-    L(corpus_0184_libSceNpPartner001, "libSceNpPartner001", OBS_SHARED, OBS_CORPUS_CALLABLE_0184_LIBSCENPPARTNER001) \
-    L(corpus_0185_libSceNpParty, "libSceNpParty", OBS_SHARED, OBS_CORPUS_CALLABLE_0185_LIBSCENPPARTY) \
-    L(corpus_0186_libSceNpProfileDialog, "libSceNpProfileDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0186_LIBSCENPPROFILEDIALOG) \
-    L(corpus_0187_libSceNpRemotePlaySessionSignaling, "libSceNpRemotePlaySessionSignaling", OBS_SHARED, OBS_CORPUS_CALLABLE_0187_LIBSCENPREMOTEPLAYSESSIONSIGNALING) \
-    L(corpus_0188_libSceNpScore, "libSceNpScore", OBS_SHARED, OBS_CORPUS_CALLABLE_0188_LIBSCENPSCORE) \
-    L(corpus_0189_libSceNpSessionSignaling, "libSceNpSessionSignaling", OBS_SHARED, OBS_CORPUS_CALLABLE_0189_LIBSCENPSESSIONSIGNALING) \
-    L(corpus_0190_libSceNpSignaling, "libSceNpSignaling", OBS_SHARED, OBS_CORPUS_CALLABLE_0190_LIBSCENPSIGNALING) \
-    L(corpus_0191_libSceNpSns, "libSceNpSns", OBS_SHARED, OBS_CORPUS_CALLABLE_0191_LIBSCENPSNS) \
-    L(corpus_0192_libSceNpSnsDailymotionDialog, "libSceNpSnsDailymotionDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0192_LIBSCENPSNSDAILYMOTIONDIALOG) \
-    L(corpus_0193_libSceNpSnsFacebookDialog, "libSceNpSnsFacebookDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0193_LIBSCENPSNSFACEBOOKDIALOG) \
-    L(corpus_0194_libSceNpSnsTwitch, "libSceNpSnsTwitch", OBS_SHARED, OBS_CORPUS_CALLABLE_0194_LIBSCENPSNSTWITCH) \
-    L(corpus_0195_libSceNpSnsTwitchDialog, "libSceNpSnsTwitchDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0195_LIBSCENPSNSTWITCHDIALOG) \
-    L(corpus_0196_libSceNpSnsYouTube, "libSceNpSnsYouTube", OBS_SHARED, OBS_CORPUS_CALLABLE_0196_LIBSCENPSNSYOUTUBE) \
-    L(corpus_0197_libSceNpSnsYouTubeDialog, "libSceNpSnsYouTubeDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0197_LIBSCENPSNSYOUTUBEDIALOG) \
-    L(corpus_0198_libSceNpTrophy, "libSceNpTrophy", OBS_SHARED, OBS_CORPUS_CALLABLE_0198_LIBSCENPTROPHY) \
-    L(corpus_0199_libSceNpTrophy2, "libSceNpTrophy2", OBS_SHARED, OBS_CORPUS_CALLABLE_0199_LIBSCENPTROPHY2) \
-    L(corpus_0200_libSceNpTus, "libSceNpTus", OBS_SHARED, OBS_CORPUS_CALLABLE_0200_LIBSCENPTUS) \
-    L(corpus_0201_libSceNpUniversalDataSystem, "libSceNpUniversalDataSystem", OBS_SHARED, OBS_CORPUS_CALLABLE_0201_LIBSCENPUNIVERSALDATASYSTEM) \
-    L(corpus_0202_libSceNpUtility, "libSceNpUtility", OBS_SHARED, OBS_CORPUS_CALLABLE_0202_LIBSCENPUTILITY) \
-    L(corpus_0203_libSceNpWebApi, "libSceNpWebApi", OBS_SHARED, OBS_CORPUS_CALLABLE_0203_LIBSCENPWEBAPI) \
-    L(corpus_0204_libSceNpWebApi2, "libSceNpWebApi2", OBS_SHARED, OBS_CORPUS_CALLABLE_0204_LIBSCENPWEBAPI2) \
-    L(corpus_0205_libSceNpWebApi2AsyncRestricted, "libSceNpWebApi2AsyncRestricted", OBS_SHARED, OBS_CORPUS_CALLABLE_0205_LIBSCENPWEBAPI2ASYNCRESTRICTED) \
-    L(corpus_0206_libSceOpenPsId, "libSceOpenPsId", OBS_SHARED, OBS_CORPUS_CALLABLE_0206_LIBSCEOPENPSID) \
-    L(corpus_0207_libSceOpusCeltDec, "libSceOpusCeltDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0207_LIBSCEOPUSCELTDEC) \
-    L(corpus_0208_libSceOpusCeltEnc, "libSceOpusCeltEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0208_LIBSCEOPUSCELTENC) \
-    L(corpus_0209_libSceOpusDec, "libSceOpusDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0209_LIBSCEOPUSDEC) \
-    L(corpus_0210_libSceOpusSilkEnc, "libSceOpusSilkEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0210_LIBSCEOPUSSILKENC) \
-    L(corpus_0211_libSceOrbisCompat, "libSceOrbisCompat", OBS_SHARED, OBS_CORPUS_CALLABLE_0211_LIBSCEORBISCOMPAT) \
-    L(corpus_0212_libSceOrbisCompatForVideoService, "libSceOrbisCompatForVideoService", OBS_SHARED, OBS_CORPUS_CALLABLE_0212_LIBSCEORBISCOMPATFORVIDEOSERVICE) \
-    L(corpus_0213_libScePad, "libScePad", OBS_SHARED, OBS_CORPUS_CALLABLE_0213_LIBSCEPAD) \
-    L(corpus_0214_libScePadTracker, "libScePadTracker", OBS_SHARED, OBS_CORPUS_CALLABLE_0214_LIBSCEPADTRACKER) \
-    L(corpus_0215_libScePatchCheckerClient, "libScePatchCheckerClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0215_LIBSCEPATCHCHECKERCLIENT) \
-    L(corpus_0216_libScePerf, "libScePerf", OBS_SHARED, OBS_CORPUS_CALLABLE_0216_LIBSCEPERF) \
-    L(corpus_0217_libScePigletv2VSH, "libScePigletv2VSH", OBS_SHARED, OBS_CORPUS_CALLABLE_0217_LIBSCEPIGLETV2VSH) \
-    L(corpus_0218_libScePlayGo, "libScePlayGo", OBS_SHARED, OBS_CORPUS_CALLABLE_0218_LIBSCEPLAYGO) \
-    L(corpus_0219_libScePlayGoDev, "libScePlayGoDev", OBS_SHARED, OBS_CORPUS_CALLABLE_0219_LIBSCEPLAYGODEV) \
-    L(corpus_0220_libScePlayGoDialog, "libScePlayGoDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0220_LIBSCEPLAYGODIALOG) \
-    L(corpus_0221_libScePlayReady, "libScePlayReady", OBS_SHARED, OBS_CORPUS_CALLABLE_0221_LIBSCEPLAYREADY) \
-    L(corpus_0222_libScePlayReady2, "libScePlayReady2", OBS_SHARED, OBS_CORPUS_CALLABLE_0222_LIBSCEPLAYREADY2) \
-    L(corpus_0223_libScePlayerInvitationDialog, "libScePlayerInvitationDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0223_LIBSCEPLAYERINVITATIONDIALOG) \
-    L(corpus_0224_libScePngDec, "libScePngDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0224_LIBSCEPNGDEC) \
-    L(corpus_0225_libScePngEnc, "libScePngEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0225_LIBSCEPNGENC) \
-    L(corpus_0226_libScePosix, "libScePosix", OBS_SHARED, OBS_CORPUS_CALLABLE_0226_LIBSCEPOSIX) \
-    L(corpus_0227_libScePosixForWebKit, "libScePosixForWebKit", OBS_SHARED, OBS_CORPUS_CALLABLE_0227_LIBSCEPOSIXFORWEBKIT) \
-    L(corpus_0228_libScePrecompiledShaders, "libScePrecompiledShaders", OBS_SHARED, OBS_CORPUS_CALLABLE_0228_LIBSCEPRECOMPILEDSHADERS) \
-    L(corpus_0229_libSceProfileCacheExternal, "libSceProfileCacheExternal", OBS_SHARED, OBS_CORPUS_CALLABLE_0229_LIBSCEPROFILECACHEEXTERNAL) \
-    L(corpus_0230_libScePs2EmuMenuDialog, "libScePs2EmuMenuDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0230_LIBSCEPS2EMUMENUDIALOG) \
-    L(corpus_0231_libScePsm, "libScePsm", OBS_SHARED, OBS_CORPUS_CALLABLE_0231_LIBSCEPSM) \
-    L(corpus_0232_libScePsmKitSystem, "libScePsmKitSystem", OBS_SHARED, OBS_CORPUS_CALLABLE_0232_LIBSCEPSMKITSYSTEM) \
-    L(corpus_0233_libScePsmUtil, "libScePsmUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0233_LIBSCEPSMUTIL) \
-    L(corpus_0234_libScePsml, "libScePsml", OBS_SHARED, OBS_CORPUS_CALLABLE_0234_LIBSCEPSML) \
-    L(corpus_0235_libSceRazorCpu, "libSceRazorCpu", OBS_SHARED, OBS_CORPUS_CALLABLE_0235_LIBSCERAZORCPU) \
-    L(corpus_0236_libSceRegMgr, "libSceRegMgr", OBS_SHARED, OBS_CORPUS_CALLABLE_0236_LIBSCEREGMGR) \
-    L(corpus_0237_libSceRemoteplay, "libSceRemoteplay", OBS_SHARED, OBS_CORPUS_CALLABLE_0237_LIBSCEREMOTEPLAY) \
-    L(corpus_0238_libSceRnpsAppMgr, "libSceRnpsAppMgr", OBS_SHARED, OBS_CORPUS_CALLABLE_0238_LIBSCERNPSAPPMGR) \
-    L(corpus_0239_libSceRtc, "libSceRtc", OBS_SHARED, OBS_CORPUS_CALLABLE_0239_LIBSCERTC) \
-    L(corpus_0240_libSceRudp, "libSceRudp", OBS_SHARED, OBS_CORPUS_CALLABLE_0240_LIBSCERUDP) \
-    L(corpus_0241_libSceS3DConversion, "libSceS3DConversion", OBS_SHARED, OBS_CORPUS_CALLABLE_0241_LIBSCES3DCONVERSION) \
-    L(corpus_0242_libSceS3da, "libSceS3da", OBS_SHARED, OBS_CORPUS_CALLABLE_0242_LIBSCES3DA) \
-    L(corpus_0243_libSceSaveData, "libSceSaveData", OBS_SHARED, OBS_CORPUS_CALLABLE_0243_LIBSCESAVEDATA) \
-    L(corpus_0244_libSceSaveDataDialog, "libSceSaveDataDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0244_LIBSCESAVEDATADIALOG) \
-    L(corpus_0245_libSceScm, "libSceScm", OBS_SHARED, OBS_CORPUS_CALLABLE_0245_LIBSCESCM) \
-    L(corpus_0246_libSceScreenShot, "libSceScreenShot", OBS_SHARED, OBS_CORPUS_CALLABLE_0246_LIBSCESCREENSHOT) \
-    L(corpus_0247_libSceScreenShotDrc, "libSceScreenShotDrc", OBS_SHARED, OBS_CORPUS_CALLABLE_0247_LIBSCESCREENSHOTDRC) \
-    L(corpus_0248_libSceSdma, "libSceSdma", OBS_SHARED, OBS_CORPUS_CALLABLE_0248_LIBSCESDMA) \
-    L(corpus_0249_libSceShareFactoryUtil, "libSceShareFactoryUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0249_LIBSCESHAREFACTORYUTIL) \
-    L(corpus_0250_libSceSharePlay, "libSceSharePlay", OBS_SHARED, OBS_CORPUS_CALLABLE_0250_LIBSCESHAREPLAY) \
-    L(corpus_0251_libSceShareUtility, "libSceShareUtility", OBS_SHARED, OBS_CORPUS_CALLABLE_0251_LIBSCESHAREUTILITY) \
-    L(corpus_0252_libSceShellCoreUtil, "libSceShellCoreUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0252_LIBSCESHELLCOREUTIL) \
-    L(corpus_0253_libSceShellUIUtil, "libSceShellUIUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0253_LIBSCESHELLUIUTIL) \
-    L(corpus_0254_libSceSigninDialog, "libSceSigninDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0254_LIBSCESIGNINDIALOG) \
-    L(corpus_0255_libSceSocialScreen, "libSceSocialScreen", OBS_SHARED, OBS_CORPUS_CALLABLE_0255_LIBSCESOCIALSCREEN) \
-    L(corpus_0256_libSceSocialScreenDialog, "libSceSocialScreenDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0256_LIBSCESOCIALSCREENDIALOG) \
-    L(corpus_0257_libSceSpSysCallWrapper, "libSceSpSysCallWrapper", OBS_SHARED, OBS_CORPUS_CALLABLE_0257_LIBSCESPSYSCALLWRAPPER) \
-    L(corpus_0258_libSceSrcUtl, "libSceSrcUtl", OBS_SHARED, OBS_CORPUS_CALLABLE_0258_LIBSCESRCUTL) \
-    L(corpus_0259_libSceSsl, "libSceSsl", OBS_SHARED, OBS_CORPUS_CALLABLE_0259_LIBSCESSL) \
-    L(corpus_0260_libSceSulphaDrv, "libSceSulphaDrv", OBS_SHARED, OBS_CORPUS_CALLABLE_0260_LIBSCESULPHADRV) \
-    L(corpus_0261_libSceSysCore, "libSceSysCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0261_LIBSCESYSCORE) \
-    L(corpus_0262_libSceSysUtil, "libSceSysUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0262_LIBSCESYSUTIL) \
-    L(corpus_0263_libSceSysmodule, "libSceSysmodule", OBS_SHARED, OBS_CORPUS_CALLABLE_0263_LIBSCESYSMODULE) \
-    L(corpus_0264_libSceSystemGesture, "libSceSystemGesture", OBS_SHARED, OBS_CORPUS_CALLABLE_0264_LIBSCESYSTEMGESTURE) \
-    L(corpus_0265_libSceSystemLogger, "libSceSystemLogger", OBS_SHARED, OBS_CORPUS_CALLABLE_0265_LIBSCESYSTEMLOGGER) \
-    L(corpus_0266_libSceSystemLogger2, "libSceSystemLogger2", OBS_SHARED, OBS_CORPUS_CALLABLE_0266_LIBSCESYSTEMLOGGER2) \
-    L(corpus_0267_libSceSystemService, "libSceSystemService", OBS_SHARED, OBS_CORPUS_CALLABLE_0267_LIBSCESYSTEMSERVICE) \
-    L(corpus_0268_libSceSystemServiceActivateHevc, "libSceSystemServiceActivateHevc", OBS_SHARED, OBS_CORPUS_CALLABLE_0268_LIBSCESYSTEMSERVICEACTIVATEHEVC) \
-    L(corpus_0269_libSceSystemServiceActivateHevcSoft, "libSceSystemServiceActivateHevcSoft", OBS_SHARED, OBS_CORPUS_CALLABLE_0269_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT) \
-    L(corpus_0270_libSceSystemServiceActivateMpeg2, "libSceSystemServiceActivateMpeg2", OBS_SHARED, OBS_CORPUS_CALLABLE_0270_LIBSCESYSTEMSERVICEACTIVATEMPEG2) \
-    L(corpus_0271_libSceSystemServiceAppLaunchLink, "libSceSystemServiceAppLaunchLink", OBS_SHARED, OBS_CORPUS_CALLABLE_0271_LIBSCESYSTEMSERVICEAPPLAUNCHLINK) \
-    L(corpus_0272_libSceSystemServiceClosedCaption, "libSceSystemServiceClosedCaption", OBS_SHARED, OBS_CORPUS_CALLABLE_0272_LIBSCESYSTEMSERVICECLOSEDCAPTION) \
-    L(corpus_0273_libSceSystemServiceDbg, "libSceSystemServiceDbg", OBS_SHARED, OBS_CORPUS_CALLABLE_0273_LIBSCESYSTEMSERVICEDBG) \
-    L(corpus_0274_libSceSystemServiceForShellCoreOnly, "libSceSystemServiceForShellCoreOnly", OBS_SHARED, OBS_CORPUS_CALLABLE_0274_LIBSCESYSTEMSERVICEFORSHELLCOREONLY) \
-    L(corpus_0275_libSceSystemServicePadspkRouting, "libSceSystemServicePadspkRouting", OBS_SHARED, OBS_CORPUS_CALLABLE_0275_LIBSCESYSTEMSERVICEPADSPKROUTING) \
-    L(corpus_0276_libSceSystemServicePartyVoice, "libSceSystemServicePartyVoice", OBS_SHARED, OBS_CORPUS_CALLABLE_0276_LIBSCESYSTEMSERVICEPARTYVOICE) \
-    L(corpus_0277_libSceSystemServicePlatformPrivacy, "libSceSystemServicePlatformPrivacy", OBS_SHARED, OBS_CORPUS_CALLABLE_0277_LIBSCESYSTEMSERVICEPLATFORMPRIVACY) \
-    L(corpus_0278_libSceSystemServicePowerControl, "libSceSystemServicePowerControl", OBS_SHARED, OBS_CORPUS_CALLABLE_0278_LIBSCESYSTEMSERVICEPOWERCONTROL) \
-    L(corpus_0279_libSceSystemServicePowerSaveLevel, "libSceSystemServicePowerSaveLevel", OBS_SHARED, OBS_CORPUS_CALLABLE_0279_LIBSCESYSTEMSERVICEPOWERSAVELEVEL) \
-    L(corpus_0280_libSceSystemServicePs2Emu, "libSceSystemServicePs2Emu", OBS_SHARED, OBS_CORPUS_CALLABLE_0280_LIBSCESYSTEMSERVICEPS2EMU) \
-    L(corpus_0281_libSceSystemServiceStore, "libSceSystemServiceStore", OBS_SHARED, OBS_CORPUS_CALLABLE_0281_LIBSCESYSTEMSERVICESTORE) \
-    L(corpus_0282_libSceSystemServiceSuspend, "libSceSystemServiceSuspend", OBS_SHARED, OBS_CORPUS_CALLABLE_0282_LIBSCESYSTEMSERVICESUSPEND) \
-    L(corpus_0283_libSceSystemServiceTelemetry, "libSceSystemServiceTelemetry", OBS_SHARED, OBS_CORPUS_CALLABLE_0283_LIBSCESYSTEMSERVICETELEMETRY) \
-    L(corpus_0284_libSceSystemServiceTournamentMlg, "libSceSystemServiceTournamentMlg", OBS_SHARED, OBS_CORPUS_CALLABLE_0284_LIBSCESYSTEMSERVICETOURNAMENTMLG) \
-    L(corpus_0285_libSceSystemServiceUdsApp, "libSceSystemServiceUdsApp", OBS_SHARED, OBS_CORPUS_CALLABLE_0285_LIBSCESYSTEMSERVICEUDSAPP) \
-    L(corpus_0286_libSceSystemServiceVideoServiceWebApp, "libSceSystemServiceVideoServiceWebApp", OBS_SHARED, OBS_CORPUS_CALLABLE_0286_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP) \
-    L(corpus_0287_libSceSystemServiceVideoToken, "libSceSystemServiceVideoToken", OBS_SHARED, OBS_CORPUS_CALLABLE_0287_LIBSCESYSTEMSERVICEVIDEOTOKEN) \
-    L(corpus_0288_libSceSystemServiceVoiceRecognition, "libSceSystemServiceVoiceRecognition", OBS_SHARED, OBS_CORPUS_CALLABLE_0288_LIBSCESYSTEMSERVICEVOICERECOGNITION) \
-    L(corpus_0289_libSceSystemServiceWebApp, "libSceSystemServiceWebApp", OBS_SHARED, OBS_CORPUS_CALLABLE_0289_LIBSCESYSTEMSERVICEWEBAPP) \
-    L(corpus_0290_libSceSystemServiceYouTubeAccountLinkStatus, "libSceSystemServiceYouTubeAccountLinkStatus", OBS_SHARED, OBS_CORPUS_CALLABLE_0290_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS) \
-    L(corpus_0291_libSceSystemService_jvm, "libSceSystemService_jvm", OBS_SHARED, OBS_CORPUS_CALLABLE_0291_LIBSCESYSTEMSERVICE_JVM) \
-    L(corpus_0292_libSceSystemStateMgr, "libSceSystemStateMgr", OBS_SHARED, OBS_CORPUS_CALLABLE_0292_LIBSCESYSTEMSTATEMGR) \
-    L(corpus_0293_libSceTextToSpeech, "libSceTextToSpeech", OBS_SHARED, OBS_CORPUS_CALLABLE_0293_LIBSCETEXTTOSPEECH) \
-    L(corpus_0294_libSceTtsCoreJp, "libSceTtsCoreJp", OBS_SHARED, OBS_CORPUS_CALLABLE_0294_LIBSCETTSCOREJP) \
-    L(corpus_0295_libSceUlt, "libSceUlt", OBS_SHARED, OBS_CORPUS_CALLABLE_0295_LIBSCEULT) \
-    L(corpus_0296_libSceUpdateService, "libSceUpdateService", OBS_SHARED, OBS_CORPUS_CALLABLE_0296_LIBSCEUPDATESERVICE) \
-    L(corpus_0297_libSceUsbStorage, "libSceUsbStorage", OBS_SHARED, OBS_CORPUS_CALLABLE_0297_LIBSCEUSBSTORAGE) \
-    L(corpus_0298_libSceUsbStorageAux, "libSceUsbStorageAux", OBS_SHARED, OBS_CORPUS_CALLABLE_0298_LIBSCEUSBSTORAGEAUX) \
-    L(corpus_0299_libSceUsbStorageDialog, "libSceUsbStorageDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0299_LIBSCEUSBSTORAGEDIALOG) \
-    L(corpus_0300_libSceUsbd, "libSceUsbd", OBS_SHARED, OBS_CORPUS_CALLABLE_0300_LIBSCEUSBD) \
-    L(corpus_0301_libSceUserService, "libSceUserService", OBS_SHARED, OBS_CORPUS_CALLABLE_0301_LIBSCEUSERSERVICE) \
-    L(corpus_0302_libSceUserServiceForShellCore, "libSceUserServiceForShellCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0302_LIBSCEUSERSERVICEFORSHELLCORE) \
-    L(corpus_0303_libSceVdecCore, "libSceVdecCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0303_LIBSCEVDECCORE) \
-    L(corpus_0304_libSceVdecSavc, "libSceVdecSavc", OBS_SHARED, OBS_CORPUS_CALLABLE_0304_LIBSCEVDECSAVC) \
-    L(corpus_0305_libSceVdecSavc2, "libSceVdecSavc2", OBS_SHARED, OBS_CORPUS_CALLABLE_0305_LIBSCEVDECSAVC2) \
-    L(corpus_0306_libSceVdecShevc, "libSceVdecShevc", OBS_SHARED, OBS_CORPUS_CALLABLE_0306_LIBSCEVDECSHEVC) \
-    L(corpus_0307_libSceVdecsw, "libSceVdecsw", OBS_SHARED, OBS_CORPUS_CALLABLE_0307_LIBSCEVDECSW) \
-    L(corpus_0308_libSceVdecwrap, "libSceVdecwrap", OBS_SHARED, OBS_CORPUS_CALLABLE_0308_LIBSCEVDECWRAP) \
-    L(corpus_0309_libSceVencCore, "libSceVencCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0309_LIBSCEVENCCORE) \
-    L(corpus_0310_libSceVideoCoreInterface, "libSceVideoCoreInterface", OBS_SHARED, OBS_CORPUS_CALLABLE_0310_LIBSCEVIDEOCOREINTERFACE) \
-    L(corpus_0311_libSceVideoCoreServerInterface, "libSceVideoCoreServerInterface", OBS_SHARED, OBS_CORPUS_CALLABLE_0311_LIBSCEVIDEOCORESERVERINTERFACE) \
-    L(corpus_0312_libSceVideoDecoderArbitration, "libSceVideoDecoderArbitration", OBS_SHARED, OBS_CORPUS_CALLABLE_0312_LIBSCEVIDEODECODERARBITRATION) \
-    L(corpus_0313_libSceVideoNativeExtEssential, "libSceVideoNativeExtEssential", OBS_SHARED, OBS_CORPUS_CALLABLE_0313_LIBSCEVIDEONATIVEEXTESSENTIAL) \
-    L(corpus_0314_libSceVideoOut, "libSceVideoOut", OBS_SHARED, OBS_CORPUS_CALLABLE_0314_LIBSCEVIDEOOUT) \
-    L(corpus_0315_libSceVideoOutAniso, "libSceVideoOutAniso", OBS_SHARED, OBS_CORPUS_CALLABLE_0315_LIBSCEVIDEOOUTANISO) \
-    L(corpus_0316_libSceVideoOutExtra, "libSceVideoOutExtra", OBS_SHARED, OBS_CORPUS_CALLABLE_0316_LIBSCEVIDEOOUTEXTRA) \
-    L(corpus_0317_libSceVideoOutHdr, "libSceVideoOutHdr", OBS_SHARED, OBS_CORPUS_CALLABLE_0317_LIBSCEVIDEOOUTHDR) \
-    L(corpus_0318_libSceVideoOutRawEdid, "libSceVideoOutRawEdid", OBS_SHARED, OBS_CORPUS_CALLABLE_0318_LIBSCEVIDEOOUTRAWEDID) \
-    L(corpus_0319_libSceVideoOutSecondary, "libSceVideoOutSecondary", OBS_SHARED, OBS_CORPUS_CALLABLE_0319_LIBSCEVIDEOOUTSECONDARY) \
-    L(corpus_0320_libSceVideoRecording, "libSceVideoRecording", OBS_SHARED, OBS_CORPUS_CALLABLE_0320_LIBSCEVIDEORECORDING) \
-    L(corpus_0321_libSceVideodec, "libSceVideodec", OBS_SHARED, OBS_CORPUS_CALLABLE_0321_LIBSCEVIDEODEC) \
-    L(corpus_0322_libSceVideodec2, "libSceVideodec2", OBS_SHARED, OBS_CORPUS_CALLABLE_0322_LIBSCEVIDEODEC2) \
-    L(corpus_0323_libSceVisionManager, "libSceVisionManager", OBS_SHARED, OBS_CORPUS_CALLABLE_0323_LIBSCEVISIONMANAGER) \
-    L(corpus_0324_libSceVnaInternal, "libSceVnaInternal", OBS_SHARED, OBS_CORPUS_CALLABLE_0324_LIBSCEVNAINTERNAL) \
-    L(corpus_0325_libSceVoice, "libSceVoice", OBS_SHARED, OBS_CORPUS_CALLABLE_0325_LIBSCEVOICE) \
-    L(corpus_0326_libSceVoiceQoS, "libSceVoiceQoS", OBS_SHARED, OBS_CORPUS_CALLABLE_0326_LIBSCEVOICEQOS) \
-    L(corpus_0327_libSceVorbisDec, "libSceVorbisDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0327_LIBSCEVORBISDEC) \
-    L(corpus_0328_libSceVrServiceDialog, "libSceVrServiceDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0328_LIBSCEVRSERVICEDIALOG) \
-    L(corpus_0329_libSceVrTracker, "libSceVrTracker", OBS_SHARED, OBS_CORPUS_CALLABLE_0329_LIBSCEVRTRACKER) \
-    L(corpus_0330_libSceVrTrackerDeviceRejection, "libSceVrTrackerDeviceRejection", OBS_SHARED, OBS_CORPUS_CALLABLE_0330_LIBSCEVRTRACKERDEVICEREJECTION) \
-    L(corpus_0331_libSceVrTrackerFourDeviceAllowed, "libSceVrTrackerFourDeviceAllowed", OBS_SHARED, OBS_CORPUS_CALLABLE_0331_LIBSCEVRTRACKERFOURDEVICEALLOWED) \
-    L(corpus_0332_libSceVrTrackerGpuTest, "libSceVrTrackerGpuTest", OBS_SHARED, OBS_CORPUS_CALLABLE_0332_LIBSCEVRTRACKERGPUTEST) \
-    L(corpus_0333_libSceVrTrackerLiveCapture, "libSceVrTrackerLiveCapture", OBS_SHARED, OBS_CORPUS_CALLABLE_0333_LIBSCEVRTRACKERLIVECAPTURE) \
-    L(corpus_0334_libSceVshctl, "libSceVshctl", OBS_SHARED, OBS_CORPUS_CALLABLE_0334_LIBSCEVSHCTL) \
-    L(corpus_0335_libSceWeb, "libSceWeb", OBS_SHARED, OBS_CORPUS_CALLABLE_0335_LIBSCEWEB) \
-    L(corpus_0336_libSceWebBrowserDialog, "libSceWebBrowserDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0336_LIBSCEWEBBROWSERDIALOG) \
-    L(corpus_0337_libSceWebBrowserDialogLimited, "libSceWebBrowserDialogLimited", OBS_SHARED, OBS_CORPUS_CALLABLE_0337_LIBSCEWEBBROWSERDIALOGLIMITED) \
-    L(corpus_0338_libSceWebKit2, "libSceWebKit2", OBS_SHARED, OBS_CORPUS_CALLABLE_0338_LIBSCEWEBKIT2) \
-    L(corpus_0339_libSceWkFontConfig, "libSceWkFontConfig", OBS_SHARED, OBS_CORPUS_CALLABLE_0339_LIBSCEWKFONTCONFIG) \
-    L(corpus_0340_libSceXml, "libSceXml", OBS_SHARED, OBS_CORPUS_CALLABLE_0340_LIBSCEXML) \
-    L(corpus_0341_libSceZlib, "libSceZlib", OBS_SHARED, OBS_CORPUS_CALLABLE_0341_LIBSCEZLIB) \
-    L(corpus_0342_libc, "libc", OBS_SHARED, OBS_CORPUS_CALLABLE_0342_LIBC) \
-    L(corpus_0343_libc_setjmp, "libc_setjmp", OBS_SHARED, OBS_CORPUS_CALLABLE_0343_LIBC_SETJMP) \
-    L(corpus_0344_libcairo, "libcairo", OBS_SHARED, OBS_CORPUS_CALLABLE_0344_LIBCAIRO) \
-    L(corpus_0345_libcurl, "libcurl", OBS_SHARED, OBS_CORPUS_CALLABLE_0345_LIBCURL) \
-    L(corpus_0346_libkernel, "libkernel", OBS_SHARED, OBS_CORPUS_CALLABLE_0346_LIBKERNEL) \
-    L(corpus_0347_libkernel_cpumode_platform, "libkernel_cpumode_platform", OBS_SHARED, OBS_CORPUS_CALLABLE_0347_LIBKERNEL_CPUMODE_PLATFORM) \
-    L(corpus_0348_libkernel_module_load_check, "libkernel_module_load_check", OBS_SHARED, OBS_CORPUS_CALLABLE_0348_LIBKERNEL_MODULE_LOAD_CHECK) \
-    L(corpus_0349_libkernel_psmkit, "libkernel_psmkit", OBS_SHARED, OBS_CORPUS_CALLABLE_0349_LIBKERNEL_PSMKIT) \
-    L(corpus_0350_libkernel_sysc_se, "libkernel_sysc_se", OBS_SHARED, OBS_CORPUS_CALLABLE_0350_LIBKERNEL_SYSC_SE)
+    L(corpus_0029_libSceAudiodecCpu, "libSceAudiodecCpu", OBS_SHARED, OBS_CORPUS_CALLABLE_0029_LIBSCEAUDIODECCPU) \
+    L(corpus_0030_libSceAudiodecCpuAlac, "libSceAudiodecCpuAlac", OBS_SHARED, OBS_CORPUS_CALLABLE_0030_LIBSCEAUDIODECCPUALAC) \
+    L(corpus_0031_libSceAudiodecCpuDdp, "libSceAudiodecCpuDdp", OBS_SHARED, OBS_CORPUS_CALLABLE_0031_LIBSCEAUDIODECCPUDDP) \
+    L(corpus_0032_libSceAudiodecCpuDts, "libSceAudiodecCpuDts", OBS_SHARED, OBS_CORPUS_CALLABLE_0032_LIBSCEAUDIODECCPUDTS) \
+    L(corpus_0033_libSceAudiodecCpuDtsHdLbr, "libSceAudiodecCpuDtsHdLbr", OBS_SHARED, OBS_CORPUS_CALLABLE_0033_LIBSCEAUDIODECCPUDTSHDLBR) \
+    L(corpus_0034_libSceAudiodecCpuDtsHdMa, "libSceAudiodecCpuDtsHdMa", OBS_SHARED, OBS_CORPUS_CALLABLE_0034_LIBSCEAUDIODECCPUDTSHDMA) \
+    L(corpus_0035_libSceAudiodecCpuFlac, "libSceAudiodecCpuFlac", OBS_SHARED, OBS_CORPUS_CALLABLE_0035_LIBSCEAUDIODECCPUFLAC) \
+    L(corpus_0036_libSceAudiodecCpuHevag, "libSceAudiodecCpuHevag", OBS_SHARED, OBS_CORPUS_CALLABLE_0036_LIBSCEAUDIODECCPUHEVAG) \
+    L(corpus_0037_libSceAudiodecCpuLpcm, "libSceAudiodecCpuLpcm", OBS_SHARED, OBS_CORPUS_CALLABLE_0037_LIBSCEAUDIODECCPULPCM) \
+    L(corpus_0038_libSceAudiodecCpuM4aac, "libSceAudiodecCpuM4aac", OBS_SHARED, OBS_CORPUS_CALLABLE_0038_LIBSCEAUDIODECCPUM4AAC) \
+    L(corpus_0039_libSceAutoMounterClient, "libSceAutoMounterClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0039_LIBSCEAUTOMOUNTERCLIENT) \
+    L(corpus_0040_libSceAvPlayer, "libSceAvPlayer", OBS_SHARED, OBS_CORPUS_CALLABLE_0040_LIBSCEAVPLAYER) \
+    L(corpus_0041_libSceAvPlayerStreaming, "libSceAvPlayerStreaming", OBS_SHARED, OBS_CORPUS_CALLABLE_0041_LIBSCEAVPLAYERSTREAMING) \
+    L(corpus_0042_libSceAvSetting, "libSceAvSetting", OBS_SHARED, OBS_CORPUS_CALLABLE_0042_LIBSCEAVSETTING) \
+    L(corpus_0043_libSceAvSettingDebug, "libSceAvSettingDebug", OBS_SHARED, OBS_CORPUS_CALLABLE_0043_LIBSCEAVSETTINGDEBUG) \
+    L(corpus_0044_libSceAvcap, "libSceAvcap", OBS_SHARED, OBS_CORPUS_CALLABLE_0044_LIBSCEAVCAP) \
+    L(corpus_0045_libSceBackupRestoreUtil, "libSceBackupRestoreUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0045_LIBSCEBACKUPRESTOREUTIL) \
+    L(corpus_0046_libSceBeisobmf, "libSceBeisobmf", OBS_SHARED, OBS_CORPUS_CALLABLE_0046_LIBSCEBEISOBMF) \
+    L(corpus_0047_libSceBemp2sys, "libSceBemp2sys", OBS_SHARED, OBS_CORPUS_CALLABLE_0047_LIBSCEBEMP2SYS) \
+    L(corpus_0048_libSceBgft, "libSceBgft", OBS_SHARED, OBS_CORPUS_CALLABLE_0048_LIBSCEBGFT) \
+    L(corpus_0049_libSceBluetoothHid, "libSceBluetoothHid", OBS_SHARED, OBS_CORPUS_CALLABLE_0049_LIBSCEBLUETOOTHHID) \
+    L(corpus_0050_libSceCamera, "libSceCamera", OBS_SHARED, OBS_CORPUS_CALLABLE_0050_LIBSCECAMERA) \
+    L(corpus_0051_libSceCdlgUtilServer, "libSceCdlgUtilServer", OBS_SHARED, OBS_CORPUS_CALLABLE_0051_LIBSCECDLGUTILSERVER) \
+    L(corpus_0052_libSceCes, "libSceCes", OBS_SHARED, OBS_CORPUS_CALLABLE_0052_LIBSCECES) \
+    L(corpus_0053_libSceClSysCallWrapper, "libSceClSysCallWrapper", OBS_SHARED, OBS_CORPUS_CALLABLE_0053_LIBSCECLSYSCALLWRAPPER) \
+    L(corpus_0054_libSceCommonDialog, "libSceCommonDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0054_LIBSCECOMMONDIALOG) \
+    L(corpus_0055_libSceCompanionHttpd, "libSceCompanionHttpd", OBS_SHARED, OBS_CORPUS_CALLABLE_0055_LIBSCECOMPANIONHTTPD) \
+    L(corpus_0056_libSceCompanionUtil, "libSceCompanionUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0056_LIBSCECOMPANIONUTIL) \
+    L(corpus_0057_libSceComposite, "libSceComposite", OBS_SHARED, OBS_CORPUS_CALLABLE_0057_LIBSCECOMPOSITE) \
+    L(corpus_0058_libSceContentBinder, "libSceContentBinder", OBS_SHARED, OBS_CORPUS_CALLABLE_0058_LIBSCECONTENTBINDER) \
+    L(corpus_0059_libSceContentDelete, "libSceContentDelete", OBS_SHARED, OBS_CORPUS_CALLABLE_0059_LIBSCECONTENTDELETE) \
+    L(corpus_0060_libSceContentExport, "libSceContentExport", OBS_SHARED, OBS_CORPUS_CALLABLE_0060_LIBSCECONTENTEXPORT) \
+    L(corpus_0061_libSceContentSearch, "libSceContentSearch", OBS_SHARED, OBS_CORPUS_CALLABLE_0061_LIBSCECONTENTSEARCH) \
+    L(corpus_0062_libSceConvertKeycode, "libSceConvertKeycode", OBS_SHARED, OBS_CORPUS_CALLABLE_0062_LIBSCECONVERTKEYCODE) \
+    L(corpus_0063_libSceCoreIPC, "libSceCoreIPC", OBS_SHARED, OBS_CORPUS_CALLABLE_0063_LIBSCECOREIPC) \
+    L(corpus_0064_libSceCoredump, "libSceCoredump", OBS_SHARED, OBS_CORPUS_CALLABLE_0064_LIBSCECOREDUMP) \
+    L(corpus_0065_libSceCoredump_debug, "libSceCoredump_debug", OBS_SHARED, OBS_CORPUS_CALLABLE_0065_LIBSCECOREDUMP_DEBUG) \
+    L(corpus_0066_libSceCustomMusicCore, "libSceCustomMusicCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0066_LIBSCECUSTOMMUSICCORE) \
+    L(corpus_0067_libSceCustomMusicService, "libSceCustomMusicService", OBS_SHARED, OBS_CORPUS_CALLABLE_0067_LIBSCECUSTOMMUSICSERVICE) \
+    L(corpus_0068_libSceDataTransfer, "libSceDataTransfer", OBS_SHARED, OBS_CORPUS_CALLABLE_0068_LIBSCEDATATRANSFER) \
+    L(corpus_0069_libSceDbRecoveryClient, "libSceDbRecoveryClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0069_LIBSCEDBRECOVERYCLIENT) \
+    L(corpus_0070_libSceDbgAddressSanitizer, "libSceDbgAddressSanitizer", OBS_SHARED, OBS_CORPUS_CALLABLE_0070_LIBSCEDBGADDRESSSANITIZER) \
+    L(corpus_0071_libSceDbgAudioOut, "libSceDbgAudioOut", OBS_SHARED, OBS_CORPUS_CALLABLE_0071_LIBSCEDBGAUDIOOUT) \
+    L(corpus_0072_libSceDbgKeyboard, "libSceDbgKeyboard", OBS_SHARED, OBS_CORPUS_CALLABLE_0072_LIBSCEDBGKEYBOARD) \
+    L(corpus_0073_libSceDbgPlayGo, "libSceDbgPlayGo", OBS_SHARED, OBS_CORPUS_CALLABLE_0073_LIBSCEDBGPLAYGO) \
+    L(corpus_0074_libSceDbgVideoOut, "libSceDbgVideoOut", OBS_SHARED, OBS_CORPUS_CALLABLE_0074_LIBSCEDBGVIDEOOUT) \
+    L(corpus_0075_libSceDeci4h, "libSceDeci4h", OBS_SHARED, OBS_CORPUS_CALLABLE_0075_LIBSCEDECI4H) \
+    L(corpus_0076_libSceDepth, "libSceDepth", OBS_SHARED, OBS_CORPUS_CALLABLE_0076_LIBSCEDEPTH) \
+    L(corpus_0077_libSceDeviceService, "libSceDeviceService", OBS_SHARED, OBS_CORPUS_CALLABLE_0077_LIBSCEDEVICESERVICE) \
+    L(corpus_0078_libSceDipsw, "libSceDipsw", OBS_SHARED, OBS_CORPUS_CALLABLE_0078_LIBSCEDIPSW) \
+    L(corpus_0079_libSceDiscId, "libSceDiscId", OBS_SHARED, OBS_CORPUS_CALLABLE_0079_LIBSCEDISCID) \
+    L(corpus_0080_libSceDiscMap, "libSceDiscMap", OBS_SHARED, OBS_CORPUS_CALLABLE_0080_LIBSCEDISCMAP) \
+    L(corpus_0081_libSceDiscMapForVsh, "libSceDiscMapForVsh", OBS_SHARED, OBS_CORPUS_CALLABLE_0081_LIBSCEDISCMAPFORVSH) \
+    L(corpus_0082_libSceDseehx, "libSceDseehx", OBS_SHARED, OBS_CORPUS_CALLABLE_0082_LIBSCEDSEEHX) \
+    L(corpus_0083_libSceDtcpIp, "libSceDtcpIp", OBS_SHARED, OBS_CORPUS_CALLABLE_0083_LIBSCEDTCPIP) \
+    L(corpus_0084_libSceDtsEnc, "libSceDtsEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0084_LIBSCEDTSENC) \
+    L(corpus_0085_libSceEditMp4, "libSceEditMp4", OBS_SHARED, OBS_CORPUS_CALLABLE_0085_LIBSCEEDITMP4) \
+    L(corpus_0086_libSceErrorDialog, "libSceErrorDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0086_LIBSCEERRORDIALOG) \
+    L(corpus_0087_libSceFacebook_Yoga, "libSceFacebook.Yoga", OBS_SHARED, OBS_CORPUS_CALLABLE_0087_LIBSCEFACEBOOK_YOGA) \
+    L(corpus_0088_libSceFiber, "libSceFiber", OBS_SHARED, OBS_CORPUS_CALLABLE_0088_LIBSCEFIBER) \
+    L(corpus_0089_libSceFios2, "libSceFios2", OBS_SHARED, OBS_CORPUS_CALLABLE_0089_LIBSCEFIOS2) \
+    L(corpus_0090_libSceFios2_debug, "libSceFios2_debug", OBS_SHARED, OBS_CORPUS_CALLABLE_0090_LIBSCEFIOS2_DEBUG) \
+    L(corpus_0091_libSceFont, "libSceFont", OBS_SHARED, OBS_CORPUS_CALLABLE_0091_LIBSCEFONT) \
+    L(corpus_0092_libSceFontFt, "libSceFontFt", OBS_SHARED, OBS_CORPUS_CALLABLE_0092_LIBSCEFONTFT) \
+    L(corpus_0093_libSceFreeType, "libSceFreeType", OBS_SHARED, OBS_CORPUS_CALLABLE_0093_LIBSCEFREETYPE) \
+    L(corpus_0094_libSceFsInternalForVsh, "libSceFsInternalForVsh", OBS_SHARED, OBS_CORPUS_CALLABLE_0094_LIBSCEFSINTERNALFORVSH) \
+    L(corpus_0095_libSceGLSlimServerVSH, "libSceGLSlimServerVSH", OBS_SHARED, OBS_CORPUS_CALLABLE_0095_LIBSCEGLSLIMSERVERVSH) \
+    L(corpus_0096_libSceGLSlimVSH, "libSceGLSlimVSH", OBS_SHARED, OBS_CORPUS_CALLABLE_0096_LIBSCEGLSLIMVSH) \
+    L(corpus_0097_libSceGameCustomDataDialog, "libSceGameCustomDataDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0097_LIBSCEGAMECUSTOMDATADIALOG) \
+    L(corpus_0098_libSceGameLiveStreaming, "libSceGameLiveStreaming", OBS_SHARED, OBS_CORPUS_CALLABLE_0098_LIBSCEGAMELIVESTREAMING) \
+    L(corpus_0099_libSceGameLiveStreaming_debug, "libSceGameLiveStreaming_debug", OBS_SHARED, OBS_CORPUS_CALLABLE_0099_LIBSCEGAMELIVESTREAMING_DEBUG) \
+    L(corpus_0100_libSceGameRight, "libSceGameRight", OBS_SHARED, OBS_CORPUS_CALLABLE_0100_LIBSCEGAMERIGHT) \
+    L(corpus_0101_libSceGameUpdate, "libSceGameUpdate", OBS_SHARED, OBS_CORPUS_CALLABLE_0101_LIBSCEGAMEUPDATE) \
+    L(corpus_0102_libSceGic, "libSceGic", OBS_SHARED, OBS_CORPUS_CALLABLE_0102_LIBSCEGIC) \
+    L(corpus_0103_libSceGnmDebugModuleReset, "libSceGnmDebugModuleReset", OBS_SHARED, OBS_CORPUS_CALLABLE_0103_LIBSCEGNMDEBUGMODULERESET) \
+    L(corpus_0104_libSceGnmDebugReset, "libSceGnmDebugReset", OBS_SHARED, OBS_CORPUS_CALLABLE_0104_LIBSCEGNMDEBUGRESET) \
+    L(corpus_0105_libSceGnmDriver, "libSceGnmDriver", OBS_SHARED, OBS_CORPUS_CALLABLE_0105_LIBSCEGNMDRIVER) \
+    L(corpus_0106_libSceGnmDriverCompat, "libSceGnmDriverCompat", OBS_SHARED, OBS_CORPUS_CALLABLE_0106_LIBSCEGNMDRIVERCOMPAT) \
+    L(corpus_0107_libSceGnmDriverResourceRegistration, "libSceGnmDriverResourceRegistration", OBS_SHARED, OBS_CORPUS_CALLABLE_0107_LIBSCEGNMDRIVERRESOURCEREGISTRATION) \
+    L(corpus_0108_libSceGnmDriver_sys, "libSceGnmDriver_sys", OBS_SHARED, OBS_CORPUS_CALLABLE_0108_LIBSCEGNMDRIVER_SYS) \
+    L(corpus_0109_libSceGvMp4Parser, "libSceGvMp4Parser", OBS_SHARED, OBS_CORPUS_CALLABLE_0109_LIBSCEGVMP4PARSER) \
+    L(corpus_0110_libSceHidControl, "libSceHidControl", OBS_SHARED, OBS_CORPUS_CALLABLE_0110_LIBSCEHIDCONTROL) \
+    L(corpus_0111_libSceHmd, "libSceHmd", OBS_SHARED, OBS_CORPUS_CALLABLE_0111_LIBSCEHMD) \
+    L(corpus_0112_libSceHmdDistortion, "libSceHmdDistortion", OBS_SHARED, OBS_CORPUS_CALLABLE_0112_LIBSCEHMDDISTORTION) \
+    L(corpus_0113_libSceHmdSetupDialog, "libSceHmdSetupDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0113_LIBSCEHMDSETUPDIALOG) \
+    L(corpus_0114_libSceHttp, "libSceHttp", OBS_SHARED, OBS_CORPUS_CALLABLE_0114_LIBSCEHTTP) \
+    L(corpus_0115_libSceHttp2, "libSceHttp2", OBS_SHARED, OBS_CORPUS_CALLABLE_0115_LIBSCEHTTP2) \
+    L(corpus_0116_libSceHttpCache, "libSceHttpCache", OBS_SHARED, OBS_CORPUS_CALLABLE_0116_LIBSCEHTTPCACHE) \
+    L(corpus_0117_libSceHubAppUtil, "libSceHubAppUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0117_LIBSCEHUBAPPUTIL) \
+    L(corpus_0118_libSceIduUtil, "libSceIduUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0118_LIBSCEIDUUTIL) \
+    L(corpus_0119_libSceImageUtil, "libSceImageUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0119_LIBSCEIMAGEUTIL) \
+    L(corpus_0120_libSceIme, "libSceIme", OBS_SHARED, OBS_CORPUS_CALLABLE_0120_LIBSCEIME) \
+    L(corpus_0121_libSceImeBackend, "libSceImeBackend", OBS_SHARED, OBS_CORPUS_CALLABLE_0121_LIBSCEIMEBACKEND) \
+    L(corpus_0122_libSceImeDialog, "libSceImeDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0122_LIBSCEIMEDIALOG) \
+    L(corpus_0123_libSceInjectedBundle, "libSceInjectedBundle", OBS_SHARED, OBS_CORPUS_CALLABLE_0123_LIBSCEINJECTEDBUNDLE) \
+    L(corpus_0124_libSceInvitationDialog, "libSceInvitationDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0124_LIBSCEINVITATIONDIALOG) \
+    L(corpus_0125_libSceIpmi, "libSceIpmi", OBS_SHARED, OBS_CORPUS_CALLABLE_0125_LIBSCEIPMI) \
+    L(corpus_0126_libSceIpmiDbg, "libSceIpmiDbg", OBS_SHARED, OBS_CORPUS_CALLABLE_0126_LIBSCEIPMIDBG) \
+    L(corpus_0127_libSceJitBridge, "libSceJitBridge", OBS_SHARED, OBS_CORPUS_CALLABLE_0127_LIBSCEJITBRIDGE) \
+    L(corpus_0128_libSceJpegDec, "libSceJpegDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0128_LIBSCEJPEGDEC) \
+    L(corpus_0129_libSceJpegEnc, "libSceJpegEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0129_LIBSCEJPEGENC) \
+    L(corpus_0130_libSceJpegParser, "libSceJpegParser", OBS_SHARED, OBS_CORPUS_CALLABLE_0130_LIBSCEJPEGPARSER) \
+    L(corpus_0131_libSceJsc, "libSceJsc", OBS_SHARED, OBS_CORPUS_CALLABLE_0131_LIBSCEJSC) \
+    L(corpus_0132_libSceJscCompiler, "libSceJscCompiler", OBS_SHARED, OBS_CORPUS_CALLABLE_0132_LIBSCEJSCCOMPILER) \
+    L(corpus_0133_libSceJson, "libSceJson", OBS_SHARED, OBS_CORPUS_CALLABLE_0133_LIBSCEJSON) \
+    L(corpus_0134_libSceJson2, "libSceJson2", OBS_SHARED, OBS_CORPUS_CALLABLE_0134_LIBSCEJSON2) \
+    L(corpus_0135_libSceKbEmulate, "libSceKbEmulate", OBS_SHARED, OBS_CORPUS_CALLABLE_0135_LIBSCEKBEMULATE) \
+    L(corpus_0136_libSceKeyboard, "libSceKeyboard", OBS_SHARED, OBS_CORPUS_CALLABLE_0136_LIBSCEKEYBOARD) \
+    L(corpus_0137_libSceLibcInternal, "libSceLibcInternal", OBS_SHARED, OBS_CORPUS_CALLABLE_0137_LIBSCELIBCINTERNAL) \
+    L(corpus_0138_libSceLibcInternalExt, "libSceLibcInternalExt", OBS_SHARED, OBS_CORPUS_CALLABLE_0138_LIBSCELIBCINTERNALEXT) \
+    L(corpus_0139_libSceLibreSSL, "libSceLibreSSL", OBS_SHARED, OBS_CORPUS_CALLABLE_0139_LIBSCELIBRESSL) \
+    L(corpus_0140_libSceLibreSSl3, "libSceLibreSSl3", OBS_SHARED, OBS_CORPUS_CALLABLE_0140_LIBSCELIBRESSL3) \
+    L(corpus_0141_libSceLncUtil, "libSceLncUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0141_LIBSCELNCUTIL) \
+    L(corpus_0142_libSceLoginDialog, "libSceLoginDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0142_LIBSCELOGINDIALOG) \
+    L(corpus_0143_libSceLoginMgrServer, "libSceLoginMgrServer", OBS_SHARED, OBS_CORPUS_CALLABLE_0143_LIBSCELOGINMGRSERVER) \
+    L(corpus_0144_libSceLoginService, "libSceLoginService", OBS_SHARED, OBS_CORPUS_CALLABLE_0144_LIBSCELOGINSERVICE) \
+    L(corpus_0145_libSceM4aacEnc, "libSceM4aacEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0145_LIBSCEM4AACENC) \
+    L(corpus_0146_libSceManxWtf, "libSceManxWtf", OBS_SHARED, OBS_CORPUS_CALLABLE_0146_LIBSCEMANXWTF) \
+    L(corpus_0147_libSceMarlin, "libSceMarlin", OBS_SHARED, OBS_CORPUS_CALLABLE_0147_LIBSCEMARLIN) \
+    L(corpus_0148_libSceMbus, "libSceMbus", OBS_SHARED, OBS_CORPUS_CALLABLE_0148_LIBSCEMBUS) \
+    L(corpus_0149_libSceMbusDebug, "libSceMbusDebug", OBS_SHARED, OBS_CORPUS_CALLABLE_0149_LIBSCEMBUSDEBUG) \
+    L(corpus_0150_libSceMetadataReaderWriter, "libSceMetadataReaderWriter", OBS_SHARED, OBS_CORPUS_CALLABLE_0150_LIBSCEMETADATAREADERWRITER) \
+    L(corpus_0151_libSceMouse, "libSceMouse", OBS_SHARED, OBS_CORPUS_CALLABLE_0151_LIBSCEMOUSE) \
+    L(corpus_0152_libSceMove, "libSceMove", OBS_SHARED, OBS_CORPUS_CALLABLE_0152_LIBSCEMOVE) \
+    L(corpus_0153_libSceMoveTracker, "libSceMoveTracker", OBS_SHARED, OBS_CORPUS_CALLABLE_0153_LIBSCEMOVETRACKER) \
+    L(corpus_0154_libSceMsgDialog, "libSceMsgDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0154_LIBSCEMSGDIALOG) \
+    L(corpus_0155_libSceMusicCoreServerClient, "libSceMusicCoreServerClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0155_LIBSCEMUSICCORESERVERCLIENT) \
+    L(corpus_0156_libSceMusicCoreServerClientJsEx, "libSceMusicCoreServerClientJsEx", OBS_SHARED, OBS_CORPUS_CALLABLE_0156_LIBSCEMUSICCORESERVERCLIENTJSEX) \
+    L(corpus_0157_libSceMusicPlayerService, "libSceMusicPlayerService", OBS_SHARED, OBS_CORPUS_CALLABLE_0157_LIBSCEMUSICPLAYERSERVICE) \
+    L(corpus_0158_libSceNKWeb, "libSceNKWeb", OBS_SHARED, OBS_CORPUS_CALLABLE_0158_LIBSCENKWEB) \
+    L(corpus_0159_libSceNKWebKit, "libSceNKWebKit", OBS_SHARED, OBS_CORPUS_CALLABLE_0159_LIBSCENKWEBKIT) \
+    L(corpus_0160_libSceNKWebKitRequirements, "libSceNKWebKitRequirements", OBS_SHARED, OBS_CORPUS_CALLABLE_0160_LIBSCENKWEBKITREQUIREMENTS) \
+    L(corpus_0161_libSceNet, "libSceNet", OBS_SHARED, OBS_CORPUS_CALLABLE_0161_LIBSCENET) \
+    L(corpus_0162_libSceNetApctl, "libSceNetApctl", OBS_SHARED, OBS_CORPUS_CALLABLE_0162_LIBSCENETAPCTL) \
+    L(corpus_0163_libSceNetBwe, "libSceNetBwe", OBS_SHARED, OBS_CORPUS_CALLABLE_0163_LIBSCENETBWE) \
+    L(corpus_0164_libSceNetCtl, "libSceNetCtl", OBS_SHARED, OBS_CORPUS_CALLABLE_0164_LIBSCENETCTL) \
+    L(corpus_0165_libSceNetCtlAp, "libSceNetCtlAp", OBS_SHARED, OBS_CORPUS_CALLABLE_0165_LIBSCENETCTLAP) \
+    L(corpus_0166_libSceNetCtlApDialog, "libSceNetCtlApDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0166_LIBSCENETCTLAPDIALOG) \
+    L(corpus_0167_libSceNetCtlApIpcInt, "libSceNetCtlApIpcInt", OBS_SHARED, OBS_CORPUS_CALLABLE_0167_LIBSCENETCTLAPIPCINT) \
+    L(corpus_0168_libSceNetCtlForNpToolkit, "libSceNetCtlForNpToolkit", OBS_SHARED, OBS_CORPUS_CALLABLE_0168_LIBSCENETCTLFORNPTOOLKIT) \
+    L(corpus_0169_libSceNetDebug, "libSceNetDebug", OBS_SHARED, OBS_CORPUS_CALLABLE_0169_LIBSCENETDEBUG) \
+    L(corpus_0170_libSceNgs2, "libSceNgs2", OBS_SHARED, OBS_CORPUS_CALLABLE_0170_LIBSCENGS2) \
+    L(corpus_0171_libSceNpAppLauncher, "libSceNpAppLauncher", OBS_SHARED, OBS_CORPUS_CALLABLE_0171_LIBSCENPAPPLAUNCHER) \
+    L(corpus_0172_libSceNpAuth, "libSceNpAuth", OBS_SHARED, OBS_CORPUS_CALLABLE_0172_LIBSCENPAUTH) \
+    L(corpus_0173_libSceNpCommerce, "libSceNpCommerce", OBS_SHARED, OBS_CORPUS_CALLABLE_0173_LIBSCENPCOMMERCE) \
+    L(corpus_0174_libSceNpCommon, "libSceNpCommon", OBS_SHARED, OBS_CORPUS_CALLABLE_0174_LIBSCENPCOMMON) \
+    L(corpus_0175_libSceNpCppWebApi, "libSceNpCppWebApi", OBS_SHARED, OBS_CORPUS_CALLABLE_0175_LIBSCENPCPPWEBAPI) \
+    L(corpus_0176_libSceNpEntitlementAccess, "libSceNpEntitlementAccess", OBS_SHARED, OBS_CORPUS_CALLABLE_0176_LIBSCENPENTITLEMENTACCESS) \
+    L(corpus_0177_libSceNpFriendListDialog, "libSceNpFriendListDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0177_LIBSCENPFRIENDLISTDIALOG) \
+    L(corpus_0178_libSceNpGameIntent, "libSceNpGameIntent", OBS_SHARED, OBS_CORPUS_CALLABLE_0178_LIBSCENPGAMEINTENT) \
+    L(corpus_0179_libSceNpGriefReport, "libSceNpGriefReport", OBS_SHARED, OBS_CORPUS_CALLABLE_0179_LIBSCENPGRIEFREPORT) \
+    L(corpus_0180_libSceNpManager, "libSceNpManager", OBS_SHARED, OBS_CORPUS_CALLABLE_0180_LIBSCENPMANAGER) \
+    L(corpus_0181_libSceNpManagerForToolkit, "libSceNpManagerForToolkit", OBS_SHARED, OBS_CORPUS_CALLABLE_0181_LIBSCENPMANAGERFORTOOLKIT) \
+    L(corpus_0182_libSceNpMatching2, "libSceNpMatching2", OBS_SHARED, OBS_CORPUS_CALLABLE_0182_LIBSCENPMATCHING2) \
+    L(corpus_0183_libSceNpPartner001, "libSceNpPartner001", OBS_SHARED, OBS_CORPUS_CALLABLE_0183_LIBSCENPPARTNER001) \
+    L(corpus_0184_libSceNpParty, "libSceNpParty", OBS_SHARED, OBS_CORPUS_CALLABLE_0184_LIBSCENPPARTY) \
+    L(corpus_0185_libSceNpProfileDialog, "libSceNpProfileDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0185_LIBSCENPPROFILEDIALOG) \
+    L(corpus_0186_libSceNpRemotePlaySessionSignaling, "libSceNpRemotePlaySessionSignaling", OBS_SHARED, OBS_CORPUS_CALLABLE_0186_LIBSCENPREMOTEPLAYSESSIONSIGNALING) \
+    L(corpus_0187_libSceNpScore, "libSceNpScore", OBS_SHARED, OBS_CORPUS_CALLABLE_0187_LIBSCENPSCORE) \
+    L(corpus_0188_libSceNpSessionSignaling, "libSceNpSessionSignaling", OBS_SHARED, OBS_CORPUS_CALLABLE_0188_LIBSCENPSESSIONSIGNALING) \
+    L(corpus_0189_libSceNpSignaling, "libSceNpSignaling", OBS_SHARED, OBS_CORPUS_CALLABLE_0189_LIBSCENPSIGNALING) \
+    L(corpus_0190_libSceNpSns, "libSceNpSns", OBS_SHARED, OBS_CORPUS_CALLABLE_0190_LIBSCENPSNS) \
+    L(corpus_0191_libSceNpSnsDailymotionDialog, "libSceNpSnsDailymotionDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0191_LIBSCENPSNSDAILYMOTIONDIALOG) \
+    L(corpus_0192_libSceNpSnsFacebookDialog, "libSceNpSnsFacebookDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0192_LIBSCENPSNSFACEBOOKDIALOG) \
+    L(corpus_0193_libSceNpSnsTwitch, "libSceNpSnsTwitch", OBS_SHARED, OBS_CORPUS_CALLABLE_0193_LIBSCENPSNSTWITCH) \
+    L(corpus_0194_libSceNpSnsTwitchDialog, "libSceNpSnsTwitchDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0194_LIBSCENPSNSTWITCHDIALOG) \
+    L(corpus_0195_libSceNpSnsYouTube, "libSceNpSnsYouTube", OBS_SHARED, OBS_CORPUS_CALLABLE_0195_LIBSCENPSNSYOUTUBE) \
+    L(corpus_0196_libSceNpSnsYouTubeDialog, "libSceNpSnsYouTubeDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0196_LIBSCENPSNSYOUTUBEDIALOG) \
+    L(corpus_0197_libSceNpTrophy, "libSceNpTrophy", OBS_SHARED, OBS_CORPUS_CALLABLE_0197_LIBSCENPTROPHY) \
+    L(corpus_0198_libSceNpTrophy2, "libSceNpTrophy2", OBS_SHARED, OBS_CORPUS_CALLABLE_0198_LIBSCENPTROPHY2) \
+    L(corpus_0199_libSceNpTus, "libSceNpTus", OBS_SHARED, OBS_CORPUS_CALLABLE_0199_LIBSCENPTUS) \
+    L(corpus_0200_libSceNpUniversalDataSystem, "libSceNpUniversalDataSystem", OBS_SHARED, OBS_CORPUS_CALLABLE_0200_LIBSCENPUNIVERSALDATASYSTEM) \
+    L(corpus_0201_libSceNpUtility, "libSceNpUtility", OBS_SHARED, OBS_CORPUS_CALLABLE_0201_LIBSCENPUTILITY) \
+    L(corpus_0202_libSceNpWebApi, "libSceNpWebApi", OBS_SHARED, OBS_CORPUS_CALLABLE_0202_LIBSCENPWEBAPI) \
+    L(corpus_0203_libSceNpWebApi2, "libSceNpWebApi2", OBS_SHARED, OBS_CORPUS_CALLABLE_0203_LIBSCENPWEBAPI2) \
+    L(corpus_0204_libSceNpWebApi2AsyncRestricted, "libSceNpWebApi2AsyncRestricted", OBS_SHARED, OBS_CORPUS_CALLABLE_0204_LIBSCENPWEBAPI2ASYNCRESTRICTED) \
+    L(corpus_0205_libSceOpenPsId, "libSceOpenPsId", OBS_SHARED, OBS_CORPUS_CALLABLE_0205_LIBSCEOPENPSID) \
+    L(corpus_0206_libSceOpusCeltDec, "libSceOpusCeltDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0206_LIBSCEOPUSCELTDEC) \
+    L(corpus_0207_libSceOpusCeltEnc, "libSceOpusCeltEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0207_LIBSCEOPUSCELTENC) \
+    L(corpus_0208_libSceOpusDec, "libSceOpusDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0208_LIBSCEOPUSDEC) \
+    L(corpus_0209_libSceOpusSilkEnc, "libSceOpusSilkEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0209_LIBSCEOPUSSILKENC) \
+    L(corpus_0210_libSceOrbisCompat, "libSceOrbisCompat", OBS_SHARED, OBS_CORPUS_CALLABLE_0210_LIBSCEORBISCOMPAT) \
+    L(corpus_0211_libSceOrbisCompatForVideoService, "libSceOrbisCompatForVideoService", OBS_SHARED, OBS_CORPUS_CALLABLE_0211_LIBSCEORBISCOMPATFORVIDEOSERVICE) \
+    L(corpus_0212_libScePad, "libScePad", OBS_SHARED, OBS_CORPUS_CALLABLE_0212_LIBSCEPAD) \
+    L(corpus_0213_libScePadTracker, "libScePadTracker", OBS_SHARED, OBS_CORPUS_CALLABLE_0213_LIBSCEPADTRACKER) \
+    L(corpus_0214_libScePatchCheckerClient, "libScePatchCheckerClient", OBS_SHARED, OBS_CORPUS_CALLABLE_0214_LIBSCEPATCHCHECKERCLIENT) \
+    L(corpus_0215_libScePerf, "libScePerf", OBS_SHARED, OBS_CORPUS_CALLABLE_0215_LIBSCEPERF) \
+    L(corpus_0216_libScePigletv2VSH, "libScePigletv2VSH", OBS_SHARED, OBS_CORPUS_CALLABLE_0216_LIBSCEPIGLETV2VSH) \
+    L(corpus_0217_libScePlayGo, "libScePlayGo", OBS_SHARED, OBS_CORPUS_CALLABLE_0217_LIBSCEPLAYGO) \
+    L(corpus_0218_libScePlayGoDev, "libScePlayGoDev", OBS_SHARED, OBS_CORPUS_CALLABLE_0218_LIBSCEPLAYGODEV) \
+    L(corpus_0219_libScePlayGoDialog, "libScePlayGoDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0219_LIBSCEPLAYGODIALOG) \
+    L(corpus_0220_libScePlayReady, "libScePlayReady", OBS_SHARED, OBS_CORPUS_CALLABLE_0220_LIBSCEPLAYREADY) \
+    L(corpus_0221_libScePlayReady2, "libScePlayReady2", OBS_SHARED, OBS_CORPUS_CALLABLE_0221_LIBSCEPLAYREADY2) \
+    L(corpus_0222_libScePlayerInvitationDialog, "libScePlayerInvitationDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0222_LIBSCEPLAYERINVITATIONDIALOG) \
+    L(corpus_0223_libScePngDec, "libScePngDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0223_LIBSCEPNGDEC) \
+    L(corpus_0224_libScePngEnc, "libScePngEnc", OBS_SHARED, OBS_CORPUS_CALLABLE_0224_LIBSCEPNGENC) \
+    L(corpus_0225_libScePosix, "libScePosix", OBS_SHARED, OBS_CORPUS_CALLABLE_0225_LIBSCEPOSIX) \
+    L(corpus_0226_libScePosixForWebKit, "libScePosixForWebKit", OBS_SHARED, OBS_CORPUS_CALLABLE_0226_LIBSCEPOSIXFORWEBKIT) \
+    L(corpus_0227_libScePrecompiledShaders, "libScePrecompiledShaders", OBS_SHARED, OBS_CORPUS_CALLABLE_0227_LIBSCEPRECOMPILEDSHADERS) \
+    L(corpus_0228_libSceProfileCacheExternal, "libSceProfileCacheExternal", OBS_SHARED, OBS_CORPUS_CALLABLE_0228_LIBSCEPROFILECACHEEXTERNAL) \
+    L(corpus_0229_libScePs2EmuMenuDialog, "libScePs2EmuMenuDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0229_LIBSCEPS2EMUMENUDIALOG) \
+    L(corpus_0230_libScePsm, "libScePsm", OBS_SHARED, OBS_CORPUS_CALLABLE_0230_LIBSCEPSM) \
+    L(corpus_0231_libScePsmKitSystem, "libScePsmKitSystem", OBS_SHARED, OBS_CORPUS_CALLABLE_0231_LIBSCEPSMKITSYSTEM) \
+    L(corpus_0232_libScePsmUtil, "libScePsmUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0232_LIBSCEPSMUTIL) \
+    L(corpus_0233_libScePsml, "libScePsml", OBS_SHARED, OBS_CORPUS_CALLABLE_0233_LIBSCEPSML) \
+    L(corpus_0234_libSceRazorCpu, "libSceRazorCpu", OBS_SHARED, OBS_CORPUS_CALLABLE_0234_LIBSCERAZORCPU) \
+    L(corpus_0235_libSceRegMgr, "libSceRegMgr", OBS_SHARED, OBS_CORPUS_CALLABLE_0235_LIBSCEREGMGR) \
+    L(corpus_0236_libSceRemoteplay, "libSceRemoteplay", OBS_SHARED, OBS_CORPUS_CALLABLE_0236_LIBSCEREMOTEPLAY) \
+    L(corpus_0237_libSceRnpsAppMgr, "libSceRnpsAppMgr", OBS_SHARED, OBS_CORPUS_CALLABLE_0237_LIBSCERNPSAPPMGR) \
+    L(corpus_0238_libSceRtc, "libSceRtc", OBS_SHARED, OBS_CORPUS_CALLABLE_0238_LIBSCERTC) \
+    L(corpus_0239_libSceRudp, "libSceRudp", OBS_SHARED, OBS_CORPUS_CALLABLE_0239_LIBSCERUDP) \
+    L(corpus_0240_libSceS3DConversion, "libSceS3DConversion", OBS_SHARED, OBS_CORPUS_CALLABLE_0240_LIBSCES3DCONVERSION) \
+    L(corpus_0241_libSceS3da, "libSceS3da", OBS_SHARED, OBS_CORPUS_CALLABLE_0241_LIBSCES3DA) \
+    L(corpus_0242_libSceSaveData, "libSceSaveData", OBS_SHARED, OBS_CORPUS_CALLABLE_0242_LIBSCESAVEDATA) \
+    L(corpus_0243_libSceSaveDataDialog, "libSceSaveDataDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0243_LIBSCESAVEDATADIALOG) \
+    L(corpus_0244_libSceScm, "libSceScm", OBS_SHARED, OBS_CORPUS_CALLABLE_0244_LIBSCESCM) \
+    L(corpus_0245_libSceScreenShot, "libSceScreenShot", OBS_SHARED, OBS_CORPUS_CALLABLE_0245_LIBSCESCREENSHOT) \
+    L(corpus_0246_libSceScreenShotDrc, "libSceScreenShotDrc", OBS_SHARED, OBS_CORPUS_CALLABLE_0246_LIBSCESCREENSHOTDRC) \
+    L(corpus_0247_libSceSdma, "libSceSdma", OBS_SHARED, OBS_CORPUS_CALLABLE_0247_LIBSCESDMA) \
+    L(corpus_0248_libSceShareFactoryUtil, "libSceShareFactoryUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0248_LIBSCESHAREFACTORYUTIL) \
+    L(corpus_0249_libSceSharePlay, "libSceSharePlay", OBS_SHARED, OBS_CORPUS_CALLABLE_0249_LIBSCESHAREPLAY) \
+    L(corpus_0250_libSceShareUtility, "libSceShareUtility", OBS_SHARED, OBS_CORPUS_CALLABLE_0250_LIBSCESHAREUTILITY) \
+    L(corpus_0251_libSceShellCoreUtil, "libSceShellCoreUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0251_LIBSCESHELLCOREUTIL) \
+    L(corpus_0252_libSceShellUIUtil, "libSceShellUIUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0252_LIBSCESHELLUIUTIL) \
+    L(corpus_0253_libSceSigninDialog, "libSceSigninDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0253_LIBSCESIGNINDIALOG) \
+    L(corpus_0254_libSceSocialScreen, "libSceSocialScreen", OBS_SHARED, OBS_CORPUS_CALLABLE_0254_LIBSCESOCIALSCREEN) \
+    L(corpus_0255_libSceSocialScreenDialog, "libSceSocialScreenDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0255_LIBSCESOCIALSCREENDIALOG) \
+    L(corpus_0256_libSceSpSysCallWrapper, "libSceSpSysCallWrapper", OBS_SHARED, OBS_CORPUS_CALLABLE_0256_LIBSCESPSYSCALLWRAPPER) \
+    L(corpus_0257_libSceSrcUtl, "libSceSrcUtl", OBS_SHARED, OBS_CORPUS_CALLABLE_0257_LIBSCESRCUTL) \
+    L(corpus_0258_libSceSsl, "libSceSsl", OBS_SHARED, OBS_CORPUS_CALLABLE_0258_LIBSCESSL) \
+    L(corpus_0259_libSceSulphaDrv, "libSceSulphaDrv", OBS_SHARED, OBS_CORPUS_CALLABLE_0259_LIBSCESULPHADRV) \
+    L(corpus_0260_libSceSysCore, "libSceSysCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0260_LIBSCESYSCORE) \
+    L(corpus_0261_libSceSysUtil, "libSceSysUtil", OBS_SHARED, OBS_CORPUS_CALLABLE_0261_LIBSCESYSUTIL) \
+    L(corpus_0262_libSceSysmodule, "libSceSysmodule", OBS_SHARED, OBS_CORPUS_CALLABLE_0262_LIBSCESYSMODULE) \
+    L(corpus_0263_libSceSystemGesture, "libSceSystemGesture", OBS_SHARED, OBS_CORPUS_CALLABLE_0263_LIBSCESYSTEMGESTURE) \
+    L(corpus_0264_libSceSystemLogger, "libSceSystemLogger", OBS_SHARED, OBS_CORPUS_CALLABLE_0264_LIBSCESYSTEMLOGGER) \
+    L(corpus_0265_libSceSystemLogger2, "libSceSystemLogger2", OBS_SHARED, OBS_CORPUS_CALLABLE_0265_LIBSCESYSTEMLOGGER2) \
+    L(corpus_0266_libSceSystemService, "libSceSystemService", OBS_SHARED, OBS_CORPUS_CALLABLE_0266_LIBSCESYSTEMSERVICE) \
+    L(corpus_0267_libSceSystemServiceActivateHevc, "libSceSystemServiceActivateHevc", OBS_SHARED, OBS_CORPUS_CALLABLE_0267_LIBSCESYSTEMSERVICEACTIVATEHEVC) \
+    L(corpus_0268_libSceSystemServiceActivateHevcSoft, "libSceSystemServiceActivateHevcSoft", OBS_SHARED, OBS_CORPUS_CALLABLE_0268_LIBSCESYSTEMSERVICEACTIVATEHEVCSOFT) \
+    L(corpus_0269_libSceSystemServiceActivateMpeg2, "libSceSystemServiceActivateMpeg2", OBS_SHARED, OBS_CORPUS_CALLABLE_0269_LIBSCESYSTEMSERVICEACTIVATEMPEG2) \
+    L(corpus_0270_libSceSystemServiceAppLaunchLink, "libSceSystemServiceAppLaunchLink", OBS_SHARED, OBS_CORPUS_CALLABLE_0270_LIBSCESYSTEMSERVICEAPPLAUNCHLINK) \
+    L(corpus_0271_libSceSystemServiceClosedCaption, "libSceSystemServiceClosedCaption", OBS_SHARED, OBS_CORPUS_CALLABLE_0271_LIBSCESYSTEMSERVICECLOSEDCAPTION) \
+    L(corpus_0272_libSceSystemServiceDbg, "libSceSystemServiceDbg", OBS_SHARED, OBS_CORPUS_CALLABLE_0272_LIBSCESYSTEMSERVICEDBG) \
+    L(corpus_0273_libSceSystemServiceForShellCoreOnly, "libSceSystemServiceForShellCoreOnly", OBS_SHARED, OBS_CORPUS_CALLABLE_0273_LIBSCESYSTEMSERVICEFORSHELLCOREONLY) \
+    L(corpus_0274_libSceSystemServicePadspkRouting, "libSceSystemServicePadspkRouting", OBS_SHARED, OBS_CORPUS_CALLABLE_0274_LIBSCESYSTEMSERVICEPADSPKROUTING) \
+    L(corpus_0275_libSceSystemServicePartyVoice, "libSceSystemServicePartyVoice", OBS_SHARED, OBS_CORPUS_CALLABLE_0275_LIBSCESYSTEMSERVICEPARTYVOICE) \
+    L(corpus_0276_libSceSystemServicePlatformPrivacy, "libSceSystemServicePlatformPrivacy", OBS_SHARED, OBS_CORPUS_CALLABLE_0276_LIBSCESYSTEMSERVICEPLATFORMPRIVACY) \
+    L(corpus_0277_libSceSystemServicePowerControl, "libSceSystemServicePowerControl", OBS_SHARED, OBS_CORPUS_CALLABLE_0277_LIBSCESYSTEMSERVICEPOWERCONTROL) \
+    L(corpus_0278_libSceSystemServicePowerSaveLevel, "libSceSystemServicePowerSaveLevel", OBS_SHARED, OBS_CORPUS_CALLABLE_0278_LIBSCESYSTEMSERVICEPOWERSAVELEVEL) \
+    L(corpus_0279_libSceSystemServicePs2Emu, "libSceSystemServicePs2Emu", OBS_SHARED, OBS_CORPUS_CALLABLE_0279_LIBSCESYSTEMSERVICEPS2EMU) \
+    L(corpus_0280_libSceSystemServiceStore, "libSceSystemServiceStore", OBS_SHARED, OBS_CORPUS_CALLABLE_0280_LIBSCESYSTEMSERVICESTORE) \
+    L(corpus_0281_libSceSystemServiceSuspend, "libSceSystemServiceSuspend", OBS_SHARED, OBS_CORPUS_CALLABLE_0281_LIBSCESYSTEMSERVICESUSPEND) \
+    L(corpus_0282_libSceSystemServiceTelemetry, "libSceSystemServiceTelemetry", OBS_SHARED, OBS_CORPUS_CALLABLE_0282_LIBSCESYSTEMSERVICETELEMETRY) \
+    L(corpus_0283_libSceSystemServiceTournamentMlg, "libSceSystemServiceTournamentMlg", OBS_SHARED, OBS_CORPUS_CALLABLE_0283_LIBSCESYSTEMSERVICETOURNAMENTMLG) \
+    L(corpus_0284_libSceSystemServiceUdsApp, "libSceSystemServiceUdsApp", OBS_SHARED, OBS_CORPUS_CALLABLE_0284_LIBSCESYSTEMSERVICEUDSAPP) \
+    L(corpus_0285_libSceSystemServiceVideoServiceWebApp, "libSceSystemServiceVideoServiceWebApp", OBS_SHARED, OBS_CORPUS_CALLABLE_0285_LIBSCESYSTEMSERVICEVIDEOSERVICEWEBAPP) \
+    L(corpus_0286_libSceSystemServiceVideoToken, "libSceSystemServiceVideoToken", OBS_SHARED, OBS_CORPUS_CALLABLE_0286_LIBSCESYSTEMSERVICEVIDEOTOKEN) \
+    L(corpus_0287_libSceSystemServiceVoiceRecognition, "libSceSystemServiceVoiceRecognition", OBS_SHARED, OBS_CORPUS_CALLABLE_0287_LIBSCESYSTEMSERVICEVOICERECOGNITION) \
+    L(corpus_0288_libSceSystemServiceWebApp, "libSceSystemServiceWebApp", OBS_SHARED, OBS_CORPUS_CALLABLE_0288_LIBSCESYSTEMSERVICEWEBAPP) \
+    L(corpus_0289_libSceSystemServiceYouTubeAccountLinkStatus, "libSceSystemServiceYouTubeAccountLinkStatus", OBS_SHARED, OBS_CORPUS_CALLABLE_0289_LIBSCESYSTEMSERVICEYOUTUBEACCOUNTLINKSTATUS) \
+    L(corpus_0290_libSceSystemService_jvm, "libSceSystemService_jvm", OBS_SHARED, OBS_CORPUS_CALLABLE_0290_LIBSCESYSTEMSERVICE_JVM) \
+    L(corpus_0291_libSceSystemStateMgr, "libSceSystemStateMgr", OBS_SHARED, OBS_CORPUS_CALLABLE_0291_LIBSCESYSTEMSTATEMGR) \
+    L(corpus_0292_libSceTextToSpeech, "libSceTextToSpeech", OBS_SHARED, OBS_CORPUS_CALLABLE_0292_LIBSCETEXTTOSPEECH) \
+    L(corpus_0293_libSceTtsCoreJp, "libSceTtsCoreJp", OBS_SHARED, OBS_CORPUS_CALLABLE_0293_LIBSCETTSCOREJP) \
+    L(corpus_0294_libSceUlt, "libSceUlt", OBS_SHARED, OBS_CORPUS_CALLABLE_0294_LIBSCEULT) \
+    L(corpus_0295_libSceUpdateService, "libSceUpdateService", OBS_SHARED, OBS_CORPUS_CALLABLE_0295_LIBSCEUPDATESERVICE) \
+    L(corpus_0296_libSceUsbStorage, "libSceUsbStorage", OBS_SHARED, OBS_CORPUS_CALLABLE_0296_LIBSCEUSBSTORAGE) \
+    L(corpus_0297_libSceUsbStorageAux, "libSceUsbStorageAux", OBS_SHARED, OBS_CORPUS_CALLABLE_0297_LIBSCEUSBSTORAGEAUX) \
+    L(corpus_0298_libSceUsbStorageDialog, "libSceUsbStorageDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0298_LIBSCEUSBSTORAGEDIALOG) \
+    L(corpus_0299_libSceUsbd, "libSceUsbd", OBS_SHARED, OBS_CORPUS_CALLABLE_0299_LIBSCEUSBD) \
+    L(corpus_0300_libSceUserService, "libSceUserService", OBS_SHARED, OBS_CORPUS_CALLABLE_0300_LIBSCEUSERSERVICE) \
+    L(corpus_0301_libSceUserServiceForShellCore, "libSceUserServiceForShellCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0301_LIBSCEUSERSERVICEFORSHELLCORE) \
+    L(corpus_0302_libSceVdecCore, "libSceVdecCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0302_LIBSCEVDECCORE) \
+    L(corpus_0303_libSceVdecSavc, "libSceVdecSavc", OBS_SHARED, OBS_CORPUS_CALLABLE_0303_LIBSCEVDECSAVC) \
+    L(corpus_0304_libSceVdecSavc2, "libSceVdecSavc2", OBS_SHARED, OBS_CORPUS_CALLABLE_0304_LIBSCEVDECSAVC2) \
+    L(corpus_0305_libSceVdecShevc, "libSceVdecShevc", OBS_SHARED, OBS_CORPUS_CALLABLE_0305_LIBSCEVDECSHEVC) \
+    L(corpus_0306_libSceVdecsw, "libSceVdecsw", OBS_SHARED, OBS_CORPUS_CALLABLE_0306_LIBSCEVDECSW) \
+    L(corpus_0307_libSceVdecwrap, "libSceVdecwrap", OBS_SHARED, OBS_CORPUS_CALLABLE_0307_LIBSCEVDECWRAP) \
+    L(corpus_0308_libSceVencCore, "libSceVencCore", OBS_SHARED, OBS_CORPUS_CALLABLE_0308_LIBSCEVENCCORE) \
+    L(corpus_0309_libSceVideoCoreInterface, "libSceVideoCoreInterface", OBS_SHARED, OBS_CORPUS_CALLABLE_0309_LIBSCEVIDEOCOREINTERFACE) \
+    L(corpus_0310_libSceVideoCoreServerInterface, "libSceVideoCoreServerInterface", OBS_SHARED, OBS_CORPUS_CALLABLE_0310_LIBSCEVIDEOCORESERVERINTERFACE) \
+    L(corpus_0311_libSceVideoDecoderArbitration, "libSceVideoDecoderArbitration", OBS_SHARED, OBS_CORPUS_CALLABLE_0311_LIBSCEVIDEODECODERARBITRATION) \
+    L(corpus_0312_libSceVideoNativeExtEssential, "libSceVideoNativeExtEssential", OBS_SHARED, OBS_CORPUS_CALLABLE_0312_LIBSCEVIDEONATIVEEXTESSENTIAL) \
+    L(corpus_0313_libSceVideoOut, "libSceVideoOut", OBS_SHARED, OBS_CORPUS_CALLABLE_0313_LIBSCEVIDEOOUT) \
+    L(corpus_0314_libSceVideoOutAniso, "libSceVideoOutAniso", OBS_SHARED, OBS_CORPUS_CALLABLE_0314_LIBSCEVIDEOOUTANISO) \
+    L(corpus_0315_libSceVideoOutExtra, "libSceVideoOutExtra", OBS_SHARED, OBS_CORPUS_CALLABLE_0315_LIBSCEVIDEOOUTEXTRA) \
+    L(corpus_0316_libSceVideoOutHdr, "libSceVideoOutHdr", OBS_SHARED, OBS_CORPUS_CALLABLE_0316_LIBSCEVIDEOOUTHDR) \
+    L(corpus_0317_libSceVideoOutRawEdid, "libSceVideoOutRawEdid", OBS_SHARED, OBS_CORPUS_CALLABLE_0317_LIBSCEVIDEOOUTRAWEDID) \
+    L(corpus_0318_libSceVideoOutSecondary, "libSceVideoOutSecondary", OBS_SHARED, OBS_CORPUS_CALLABLE_0318_LIBSCEVIDEOOUTSECONDARY) \
+    L(corpus_0319_libSceVideoRecording, "libSceVideoRecording", OBS_SHARED, OBS_CORPUS_CALLABLE_0319_LIBSCEVIDEORECORDING) \
+    L(corpus_0320_libSceVideodec, "libSceVideodec", OBS_SHARED, OBS_CORPUS_CALLABLE_0320_LIBSCEVIDEODEC) \
+    L(corpus_0321_libSceVideodec2, "libSceVideodec2", OBS_SHARED, OBS_CORPUS_CALLABLE_0321_LIBSCEVIDEODEC2) \
+    L(corpus_0322_libSceVisionManager, "libSceVisionManager", OBS_SHARED, OBS_CORPUS_CALLABLE_0322_LIBSCEVISIONMANAGER) \
+    L(corpus_0323_libSceVnaInternal, "libSceVnaInternal", OBS_SHARED, OBS_CORPUS_CALLABLE_0323_LIBSCEVNAINTERNAL) \
+    L(corpus_0324_libSceVoice, "libSceVoice", OBS_SHARED, OBS_CORPUS_CALLABLE_0324_LIBSCEVOICE) \
+    L(corpus_0325_libSceVoiceQoS, "libSceVoiceQoS", OBS_SHARED, OBS_CORPUS_CALLABLE_0325_LIBSCEVOICEQOS) \
+    L(corpus_0326_libSceVorbisDec, "libSceVorbisDec", OBS_SHARED, OBS_CORPUS_CALLABLE_0326_LIBSCEVORBISDEC) \
+    L(corpus_0327_libSceVrServiceDialog, "libSceVrServiceDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0327_LIBSCEVRSERVICEDIALOG) \
+    L(corpus_0328_libSceVrTracker, "libSceVrTracker", OBS_SHARED, OBS_CORPUS_CALLABLE_0328_LIBSCEVRTRACKER) \
+    L(corpus_0329_libSceVrTrackerDeviceRejection, "libSceVrTrackerDeviceRejection", OBS_SHARED, OBS_CORPUS_CALLABLE_0329_LIBSCEVRTRACKERDEVICEREJECTION) \
+    L(corpus_0330_libSceVrTrackerFourDeviceAllowed, "libSceVrTrackerFourDeviceAllowed", OBS_SHARED, OBS_CORPUS_CALLABLE_0330_LIBSCEVRTRACKERFOURDEVICEALLOWED) \
+    L(corpus_0331_libSceVrTrackerGpuTest, "libSceVrTrackerGpuTest", OBS_SHARED, OBS_CORPUS_CALLABLE_0331_LIBSCEVRTRACKERGPUTEST) \
+    L(corpus_0332_libSceVrTrackerLiveCapture, "libSceVrTrackerLiveCapture", OBS_SHARED, OBS_CORPUS_CALLABLE_0332_LIBSCEVRTRACKERLIVECAPTURE) \
+    L(corpus_0333_libSceVshctl, "libSceVshctl", OBS_SHARED, OBS_CORPUS_CALLABLE_0333_LIBSCEVSHCTL) \
+    L(corpus_0334_libSceWeb, "libSceWeb", OBS_SHARED, OBS_CORPUS_CALLABLE_0334_LIBSCEWEB) \
+    L(corpus_0335_libSceWebBrowserDialog, "libSceWebBrowserDialog", OBS_SHARED, OBS_CORPUS_CALLABLE_0335_LIBSCEWEBBROWSERDIALOG) \
+    L(corpus_0336_libSceWebBrowserDialogLimited, "libSceWebBrowserDialogLimited", OBS_SHARED, OBS_CORPUS_CALLABLE_0336_LIBSCEWEBBROWSERDIALOGLIMITED) \
+    L(corpus_0337_libSceWebKit2, "libSceWebKit2", OBS_SHARED, OBS_CORPUS_CALLABLE_0337_LIBSCEWEBKIT2) \
+    L(corpus_0338_libSceWkFontConfig, "libSceWkFontConfig", OBS_SHARED, OBS_CORPUS_CALLABLE_0338_LIBSCEWKFONTCONFIG) \
+    L(corpus_0339_libSceXml, "libSceXml", OBS_SHARED, OBS_CORPUS_CALLABLE_0339_LIBSCEXML) \
+    L(corpus_0340_libSceZlib, "libSceZlib", OBS_SHARED, OBS_CORPUS_CALLABLE_0340_LIBSCEZLIB) \
+    L(corpus_0341_libc, "libc", OBS_SHARED, OBS_CORPUS_CALLABLE_0341_LIBC) \
+    L(corpus_0342_libc_setjmp, "libc_setjmp", OBS_SHARED, OBS_CORPUS_CALLABLE_0342_LIBC_SETJMP) \
+    L(corpus_0343_libcairo, "libcairo", OBS_SHARED, OBS_CORPUS_CALLABLE_0343_LIBCAIRO) \
+    L(corpus_0344_libcurl, "libcurl", OBS_SHARED, OBS_CORPUS_CALLABLE_0344_LIBCURL) \
+    L(corpus_0345_libkernel, "libkernel", OBS_SHARED, OBS_CORPUS_CALLABLE_0345_LIBKERNEL) \
+    L(corpus_0346_libkernel_cpumode_platform, "libkernel_cpumode_platform", OBS_SHARED, OBS_CORPUS_CALLABLE_0346_LIBKERNEL_CPUMODE_PLATFORM) \
+    L(corpus_0347_libkernel_module_load_check, "libkernel_module_load_check", OBS_SHARED, OBS_CORPUS_CALLABLE_0347_LIBKERNEL_MODULE_LOAD_CHECK) \
+    L(corpus_0348_libkernel_psmkit, "libkernel_psmkit", OBS_SHARED, OBS_CORPUS_CALLABLE_0348_LIBKERNEL_PSMKIT) \
+    L(corpus_0349_libkernel_sysc_se, "libkernel_sysc_se", OBS_SHARED, OBS_CORPUS_CALLABLE_0349_LIBKERNEL_SYSC_SE)
 
 /* clang-format on */
 

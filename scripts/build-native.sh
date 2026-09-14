@@ -41,7 +41,7 @@ if [ -n "${CONTENT_ID:-}" ] && [ -z "${TITLE_ID:-}" ]; then
     t="${CONTENT_ID#*-}"
     TITLE_ID="${t%%_*}"
 fi
-TITLE_ID="${TITLE_ID:-PRO${TITLE_CODE}}"
+TITLE_ID="${TITLE_ID:-PPSA90000}"
 CONTENT_ID="${CONTENT_ID:-UP0000-${TITLE_ID}_00-OBSCENE000000000}"
 deeplink_arg=()
 category_arg=(--category 0)
@@ -114,6 +114,5 @@ if [ "${NO_EBOOT:-0}" = "1" ]; then
 else
     echo "build-native: self-contained - carries its fake-signed eboot; launches its own code under kstuff."
 fi
-echo "build-native: register by copying $out/$TITLE_ID to /user/app/ and calling"
-echo "              sceAppInstUtilAppInstallTitleDir(\"$TITLE_ID\", \"/user/app/\", 0) from a payload,"
-echo "              or drop it where an auto-mounter (ShadowMountPlus) scans and it registers itself."
+echo "build-native: register by copying $out/$TITLE_ID to /data/homebrew/ and running"
+echo "              pros titles, or drop it where an auto-mounter (ShadowMountPlus) scans."

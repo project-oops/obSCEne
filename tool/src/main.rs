@@ -104,9 +104,9 @@ pub struct MkmoduleArgs {
 
     /// Which dynamic-table convention to write: `prospero` or `orbis`.
     ///
-    /// `orbis` spends a vendor tag on every table and leaves tables unmapped in PT_SCE_DYNLIBDATA.
+    /// `orbis` spends a vendor tag on every table and leaves tables unmapped in `PT_SCE_DYNLIBDATA`.
     ///
-    /// `prospero` uses standard ELF tags in a mapped PT_LOAD and vendor tags for extras,
+    /// `prospero` uses standard ELF tags in a mapped `PT_LOAD` and vendor tags for extras,
     /// matching retail PS5 executables and PRX dumps.
     ///
     /// If omitted, automatically derived from `--generation`: 5 -> `prospero`, 4 -> `orbis`.
@@ -2116,26 +2116,36 @@ fn run_mkself(
         privilege.parse().map_err(|e: &str| e.to_owned())?;
     let dict = selfish_container::SdkDictionary::embedded();
     let target_sdk = match sdk_str {
-        Some(s) => dict
-            .resolve(s, generation)
-            .map_err(Box::<dyn std::error::Error>::from)?,
-        None => selfish_container::TargetSdk::default_for(generation),
+        Some(s) => Some(
+            dict.resolve(s, generation)
+                .map_err(Box::<dyn std::error::Error>::from)?,
+        ),
+        None => None,
     };
     let container =
-        selfish_container::build_with_options(&payload, generation, priv_tier, Some(target_sdk))?;
+        selfish_container::build_with_options(&payload, generation, priv_tier, target_sdk)?;
     let target = match out {
         Some(p) => p.to_path_buf(),
         None => file.with_file_name("eboot.bin"),
     };
     std::fs::write(&target, &container)?;
-    println!(
-        "{}: {} bytes from a {} byte payload, {generation} (privilege: {priv_tier:?}, sdk: 0x{:08x}/0x{:08x})",
-        target.display(),
-        container.len(),
-        payload.len(),
-        target_sdk.orbis_sdk,
-        target_sdk.ppr_sdk,
-    );
+    if let Some(sdk) = target_sdk {
+        println!(
+            "{}: {} bytes from a {} byte payload, {generation} (privilege: {priv_tier:?}, sdk: 0x{:08x}/0x{:08x})",
+            target.display(),
+            container.len(),
+            payload.len(),
+            sdk.orbis_sdk,
+            sdk.ppr_sdk,
+        );
+    } else {
+        println!(
+            "{}: {} bytes from a {} byte payload, {generation} (privilege: {priv_tier:?})",
+            target.display(),
+            container.len(),
+            payload.len(),
+        );
+    }
     Ok(ExitCode::SUCCESS)
 }
 /// The encoded import names a finished module carries, or `None` if it carries no vendor

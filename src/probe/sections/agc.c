@@ -8215,7 +8215,7 @@ static obs_result check_agc_cb_unreset_cursor(void) {
         obs_fault_unregister();
         return obs_fail_code("fault during unreset cursor check", (uint64_t)sig);
     }
-    void *res1 = (void *)sceAgcCbNop(&probe->begin);
+    void *res1 = (void *)sceAgcCbNop(&probe->begin, 0, 0, 0, 0, 0);
     uint64_t cur1 = probe->cur;
     void *res2 = (void *)sceAgcDcbSetIndexCount(&probe->begin, 36u);
     uint64_t cur2 = probe->cur;

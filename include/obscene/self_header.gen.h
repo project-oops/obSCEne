@@ -28,8 +28,8 @@ static const obs_self_field obs_self_fields[] = {
 
 /* Container magics (LE word at offset 0), both generations, for recognising a SELF. */
 static const unsigned long long obs_self_magics[] = {
-    0xeef51454ull, /* current generation */
-    0x1d3d154full, /* previous generation */
+    0xeef51454ull, /* prospero */
+    0x1d3d154full, /* orbis */
 };
 
 #endif /* OBSCENE_SELF_HEADER_GEN_H */

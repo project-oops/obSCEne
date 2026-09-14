@@ -70,3 +70,4 @@ directly against `sceAgcCreateShader`.
 Section `017-posix/libkernel-pthread-symbols` sweeps 27 standard POSIX pthread functions against
 `libkernel.sprx` via `sceKernelDlsym` inside the application sandbox, recording the exact resolution
 frontier available to unprivileged titles.
+

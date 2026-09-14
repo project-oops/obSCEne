@@ -16,6 +16,12 @@ Site: **[project-oops.github.io/obSCEne](https://project-oops.github.io/obSCEne/
 
 ---
 
+<!-- obscene:counts -->
+**501 checks across 53 sections**, 39493 censused symbols across 372 libraries.
+
+Of those checks, 82 rest on a public specification, 44 on the specification of the system this kernel derives from, 2 on independent implementations that agree, and 368 on this project's own reasoning. **3 have been confirmed on real hardware**, which is the number that limits what any of this can claim.
+<!-- /obscene:counts -->
+
 ## Role in THE LOOP
 
 Within the [OOPS ecosystem](../docs/THE_LOOP.md), obSCEne serves as **The Silicon Oracle**:

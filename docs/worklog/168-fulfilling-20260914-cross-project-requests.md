@@ -56,3 +56,4 @@ All additions were implemented with clean-room provenance and verified with host
 - Host and target builds executed via WSL container `oops-builder`.
 - `make check`: 227 Rust tooling tests passed, host harness executed, target object compiled cleanly.
 - Link and check ID parity verified across Orbis and Prospero target tables.
+

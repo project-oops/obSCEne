@@ -60,7 +60,7 @@ ifeq ($(filter 1 2,$(OOPS_TARGET_NUM)),)
     GEN ?= 5
     TABLE ?= prospero
     EBOOT_GEN ?= 5
-    EBOOT_TABLE ?= prospero
+    EBOOT_TABLE ?= orbis
     EBOOT_KIND ?= executable
     PRIVILEGE ?= root
     SDK ?= $(if $(filter trinity,$(TARGET)),trinity,prospero)
@@ -980,7 +980,8 @@ sce-module-guard:
 # A bundled library is the third layout, and neither of the other scripts produces it: the
 # headers must sit outside the first segment (which `module.ld` does not do) and the image must
 # be based at zero (which `eboot.ld` does not do). See `link/library.ld`. (D222)
-MODULE_GEN ?= $(EBOOT_GEN)
+MODULE_GEN ?= $(if $(filter 5,$(EBOOT_GEN)),4,$(EBOOT_GEN))
+MODULE_PRIVILEGE ?= app
 # The same generation and table convention as the eboot, because they load together and a
 # loader checks. It took the defaults and the eboot did not, which the console named exactly:
 #
@@ -1005,7 +1006,7 @@ sce-module: sce-module-guard tool | $(BUILD)
 	        --symbols $(BUILD)/sce-module-symbols.txt --module-name $$name --kind shared \
 	        --generation $(EBOOT_GEN) --table $(EBOOT_TABLE) || exit 1; \
 	    $(TOOL) mkself $(BUILD)/$$name.module.elf \
-	        --out $(BUILD)/sce_module/$$name.prx --generation $(MODULE_GEN) --privilege $(PRIVILEGE) --sdk $(SDK) || exit 1; \
+	        --out $(BUILD)/sce_module/$$name.prx --generation $(MODULE_GEN) --privilege $(MODULE_PRIVILEGE) || exit 1; \
 	done
 
 eboot-min: TARGET_LD := $(SELFISH)/link/eboot.ld
@@ -1026,6 +1027,11 @@ eboot-min: tool | $(BUILD)
 # is exactly true - on the guest they are whatever the platform library provides.
 host: $(HOST_OBJ) $(OOPS_SDK_HOST_OBJ) | $(BUILD)
 	$(CC) -o $(BUILD)/obscene-host $(HOST_OBJ) $(OOPS_SDK_HOST_OBJ) $(HOST_LIBS)
+
+.PHONY: deck
+deck: host
+	cp $(BUILD)/obscene-host $(BUILD)/obscene-deck
+	@echo "built $(BUILD)/obscene-deck - copy to a Deck and run: ./obscene-deck --serve"
 
 # The host build is run from $(BUILD), and that is a performance fix, not tidiness.
 #

@@ -81,7 +81,6 @@ emulator computes differently from the hardware, which is exactly a shader-recom
 
 ## Regression, meanwhile
 
-`reports/gpu-golden.txt` is the blessed llvmpipe snapshot and `scripts/gpu-golden.sh --check`
-(run by `verify.sh`) guards it. That golden is llvmpipe's, not the Deck's - the check skips on a
-different device rather than failing. A Deck golden could be blessed with `--capture` on the
-Deck, but only once one exists to bless.
+`reports/archive/gpu-golden.txt` is the blessed llvmpipe snapshot. That golden is llvmpipe's,
+not the Deck's - the check skips on a different device rather than failing. A Deck golden could
+be blessed on the Deck, but only once one exists to bless.

@@ -359,7 +359,6 @@ scePthreadCondattrInit
 scePthreadCondattrDestroy
 scePthreadRwlockRdlock
 scePthreadRwlockWrlock
-pthread_setaffinity_np
 @end
 
 @group OBS_SURFACE_POSIX posix libScePosix OBS_SHARED
@@ -508,8 +507,6 @@ nanosleep
 open
 open_memstream
 openlog
-pclose
-popen
 read
 readlink
 regcomp
@@ -535,7 +532,6 @@ reallocarray
 fmemopen
 mkostemp
 strtod_l
-strtok_r
 qsort_r
 sysconf
 posix_fallocate

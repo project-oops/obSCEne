@@ -158,8 +158,7 @@
     X(scePthreadCondattrInit) \
     X(scePthreadCondattrDestroy) \
     X(scePthreadRwlockRdlock) \
-    X(scePthreadRwlockWrlock) \
-    X(pthread_setaffinity_np)
+    X(scePthreadRwlockWrlock)
 
 /* POSIX under its own names, from libScePosix.
  *
@@ -298,8 +297,6 @@
     X(open) \
     X(open_memstream) \
     X(openlog) \
-    X(pclose) \
-    X(popen) \
     X(read) \
     X(readlink) \
     X(regcomp) \
@@ -325,7 +322,6 @@
     X(fmemopen) \
     X(mkostemp) \
     X(strtod_l) \
-    X(strtok_r) \
     X(qsort_r) \
     X(sysconf) \
     X(posix_fallocate) \

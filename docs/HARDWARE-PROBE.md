@@ -296,7 +296,7 @@ loaders that now complete the suite.
 
 ### Question 6 cannot be answered by the probe as it stands, and that is deliberate
 
-`src/probe/gpu_gnm.c` refuses. The hardware submits compute through Gnm/Agc, the submission format is
+`src/probe/sections/gnm.c` refuses. The hardware submits compute through Gnm/Agc, the submission format is
 partly public and available from essentially one source, and D008 says not to guess at it on a
 target that took effort to reach. `GPU=1` does not change this - it changes the skip *reason*
 from "built without OBS_GPU" to the backend refusing, which is more informative on hardware and

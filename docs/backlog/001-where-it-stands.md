@@ -4,8 +4,8 @@
 <!-- obscene:counts -->
 | | |
 |---|---|
-| Behavioural checks | **422** - 81 `spec`, 42 `derived`, 2 `implementations`, 292 `assumed`, 2 `documented`, **3 `hardware`** |
-| Census symbols | **39522** across 373 libraries |
+| Behavioural checks | **501** - 82 `spec`, 44 `derived`, 2 `implementations`, 368 `assumed`, 2 `documented`, **3 `hardware`** |
+| Census symbols | **39493** across 372 libraries |
 | Sections | 53 |
 | Imports placed by the manifest | 311 |
 <!-- /obscene:counts -->

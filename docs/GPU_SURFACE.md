@@ -26,6 +26,8 @@ The authority for the names is LLVM's open-source `IntrinsicsAMDGPU.td`. The sta
 - **16** reachable only through hand-written SPIR-V.
 - **8** absent on the RDNA2 target.
 
+> Generated without `IntrinsicsAMDGPU.td` installed, so names were not cross-checked against the toolchain this run.
+
 ## The intrinsic surface
 
 | operation | category | on RDNA2 | obSCEne reaches it | note |
