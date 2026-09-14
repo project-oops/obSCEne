@@ -33,6 +33,15 @@ silently stops covering the directory is worse than no index, because it reads a
   about it, in the order they will hit it. Self-contained and copyable.
 - [TOOLING.md](TOOLING.md) - `obscene-tool`, what each subcommand is for.
 
+## Features & Operator Guides
+
+- [USER_GUIDE.md](USER_GUIDE.md) - Operator guide: running probes via socket/BIG_APP, reading telemetry, and generating reports.
+- [features/README.md](features/README.md) - Probing modes index and summary table.
+- [features/user-guide.md](features/user-guide.md) - Ports, portable mode, and telemetry grammar.
+- [features/payload.md](features/payload.md) - Direct memory payload execution (:9021).
+- [features/eboot.md](features/eboot.md) - Full-screen HUD BIG_APP probing.
+- [features/pkg.md](features/pkg.md) - Retail sandbox package probing.
+
 ## Running it somewhere
 
 - [INJECTOR.md](INJECTOR.md) - the native process injector: why a payload loaded the ordinary

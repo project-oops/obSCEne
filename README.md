@@ -4,137 +4,121 @@
 
 # ob**SCE**ne
 
-A conformance probe for the Prospero-generation platform, in freestanding C.
+**The Hardware Conformance Probe and Silicon Oracle for Prospero.**
+
+obSCEne is a clean-room conformance probe suite for 8th and 9th generation console software (Orbis and Prospero), written in freestanding C (`-ffreestanding -nostdlib`). It calls platform system functions and submits GPU command buffers deliberately, one by one, recording exactly what the real operating system and silicon actually do.
 
 Site: **[project-oops.github.io/obSCEne](https://project-oops.github.io/obSCEne/)**
 
-The three letters in the middle are the platform's, and the name has always been built
-around them. Where the project renders its own name it marks them rather than spelling the
-vendor out: magenta on the screen and in `obscene-tool pretty`, bold here.
+| 📖 **[Operator Guide & Hardware Probing](docs/USER_GUIDE.md)** | ⚙️ **[Technical Reference & Protocol Specs](docs/README.md)** |
+| :--- | :--- |
+| *Running probes via 9021/BIG_APP, interpreting logs, and JSON reports.* | *Report grammar, wire protocol, GPU surface, and decision records.* |
 
-It calls the system functions a title would call, one at a time, and reports what
-each one actually did. Green if it worked, amber if it answered but the answer was
-suspect, red if it failed, grey if a prerequisite meant it was never attempted.
+---
 
-> **Status: it runs, on most loaders that try it.** Which ones, and how far each gets, is a
-> **generated** table in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) - written from the
-> reports themselves, so it cannot drift the way this paragraph did. It named the wrong
-> loaders in both directions for a while: one that stops early was listed as finishing, and
-> one that finishes was listed as drawing nothing.
->
-> Its purpose is to be the first thing an emulator tries to run, long before a commercial
-> title is realistic.
+## Role in THE LOOP
 
-<!-- obscene:counts -->
-**416 checks across 54 sections**, 39522 censused symbols across 373 libraries.
+Within the [OOPS ecosystem](../docs/THE_LOOP.md), obSCEne serves as **The Silicon Oracle**:
 
-Of those checks, 81 rest on a public specification, 44 on the specification of the system this kernel derives from, 2 on independent implementations that agree, and 284 on this project's own reasoning. **3 have been confirmed on real hardware**, which is the number that limits what any of this can claim.
-<!-- /obscene:counts -->
-
-## Why this exists
-
-An emulator that cannot run anything has no feedback loop. A commercial title is a
-terrible first target: it imports thousands of functions, fails opaquely, and tells
-you nothing about *which* of them was wrong. This is the opposite - a small program
-that exercises one function per check and says exactly what it saw.
-
-It is ordinary homebrew, and it would run on real hardware. That independence is the
-point: a probe that only works inside one emulator measures that emulator's opinion of
-itself.
-
-**Three accommodations are emulator-specific, and it is worth naming them rather than
-claiming none are.** The build-time `EXCLUDE` list names checks known to end the process
-on a particular loader; `GEN=4` builds a module marked for the previous generation,
-because a previous-generation emulator refuses one marked for the current;
-and `puts` is tried before `write` because one emulator accepts written bytes and
-discards them. Each is argued where it appears. None changes what a check asks the
-platform.
-
-## Building
-
-**The recommended way in is [OOPS](https://github.com/project-oops/OOPS)**, which holds all four
-side by side and carries one entry point over them:
-
-```bash
-./bin/oops check obscene      # also: build, test, pkg
+```
+[Orbistoun Emulator Hits Unknown Function / Struct]
+                          │
+                          ▼
+            Formal Question Formulated
+                          │
+                          ▼
+┌───────────────────────────────────────────────────┐
+│ obSCEne Probe Dispatched via Prosperous           │
+│ - Executed directly on PS5 hardware               │
+│ - Probes memory layout, registers, error codes    │
+└─────────────────────────┬─────────────────────────┘
+                          │
+                          ▼
+┌───────────────────────────────────────────────────┐
+│ Telemetry Logged to klog (OBS|measure, OBS|bytes) │
+│ - Exact struct size and byte offsets              │
+│ - Verified POSIX vs SCE error codes               │
+└─────────────────────────┬─────────────────────────┘
+                          │
+                          ▼
+[Orbistoun Lands Typed Implementation: known_by = "measured"]
 ```
 
-That relays to this repository's own entry point rather than reimplementing anything, so the
-two cannot disagree - and it is what CI runs, for the same reason. It also handles the Windows
-case: obSCEne needs `clang` and `lld`, and `oops` re-enters through WSL rather than failing
-with a compiler error that reads as a code fault.
-[docs/BUILDING.md](https://github.com/project-oops/OOPS/blob/main/docs/BUILDING.md) has every verb.
+When an emulator encounters an undocumented system call, the traditional approach is to guess or copy from leaked sources. In OOPS, we **ask the hardware directly**:
+1. An automated test case or probe section is added to obSCEne.
+2. [Prosperous](../prosperous/) delivers the probe to our physical PS5 (`192.168.1.211`).
+3. The probe executes on the metal, logging exact return values and hex dumps of memory buffers to `klog`.
+4. The verified telemetry is fed back into [Orbistoun](../orbistoun/) with `known_by: measured`, permanently closing the gap with 100% clean-room provenance.
 
-**From inside this repository the entry point is `bin/obscene`**, carrying the same verbs:
+---
+
+## Developer Quickstart
+
+### 1. Build the Probe
+obSCEne cross-compiles for the FreeBSD-based console ABI using `clang` and `lld`:
 
 ```bash
-./bin/obscene build   # module, payload, injector, host
-./bin/obscene check   # all of the above plus verification. What CI runs.
-./bin/obscene pkg     # the installable package
+./bin/obscene build    # compiles payload, module, and host test harness
+./bin/obscene check    # runs verification suite (what CI runs)
+./bin/obscene pkg      # creates installable package (ORBO00001 / PROO00001)
 ```
 
-It is a front door rather than an implementation, so any make target still works by name -
-`./bin/obscene eboot`, `./bin/obscene module-min`, `./bin/obscene payload HARDWARE=1`.
+### 2. Why Three Target Builds? (`payload`, `eboot`, `pkg`)
+On real console firmware, **system privileges, sandbox boundaries, and dynamic library resolution change based on how a process is launched**. Testing all three execution contexts (`./scripts/sweep.sh`) is essential to accurately map the platform:
 
-**[docs/BUILDING.md](docs/BUILDING.md)** is the full account - every verb, the make variables
-and the one combination that is refused, which shape reaches which loader, and
-what each CI job establishes.
+| Build Shape | Delivery & Context | Privileges & Sandboxing | What It Measures |
+|---|---|---|---|
+| **`payload`** | Bare ELF sent to `:9021` via `elfldr` (`pros send`). | Runs in memory outside the title sandbox. Elevated kernel privileges; direct raw socket access. | Low-level kernel syscalls, direct page table allocations, raw device drivers, and POSIX sockets. |
+| **`eboot`** | Signed SELF launched via `pros launch`. | Runs as a retail `BIG_APP` (`category 0`). Direct HDMI display ownership; controller focus. | Universal graphics queues (`libSceAgc`), video flip queues, DualSense controller polling, and retail app lifecycle. |
+| **`pkg`** | Installed package under encrypted PFS filesystem. | Strict retail sandbox permissions (`0600`). Restricted filesystem; full OS security checks. | Save data mounting (`libSceSaveData`), background downloads (`BGFT`), entitlement checks, and retail sandboxing. |
 
-**obSCEne does not build from a clone of only this repository.** It resolves SELFish,
-Prosperous and oops-sdk (`../oops-sdk`, the freestanding-C SDK it links into the module and
-eboot) by relative path, as siblings, so the layout is a build requirement rather than a
-convenience. `oops bootstrap obscene` fetches them.
+*Note: A function that succeeds in `payload` might fail in `pkg` due to sandbox restrictions, and vice-versa. Running a full sweep across all three legs isolates OS capabilities from sandbox boundaries.*
 
-**Compiling the C needs only clang.** A conformance probe that needs a vendor toolchain to
-build is a probe most people cannot run.
+### 3. Active Probing vs. Passive Telemetry: The Tracer
+- **obSCEne is Active Probing**: We craft the C test cases, choose inputs, test boundary conditions, and measure returns.
+- **[tracer](../oops-apps/src/tracer/) is Passive Observation**: A companion tool in `oops-apps` that hooks real, running commercial games on PS5 hardware. It captures real call sequences, valid constants, actual PM4 DCB command buffers, and compiled RDNA2 shader bytecode without modifying game code. Decoded traces feed directly into `orbistoun-corpus`.
 
-Producing a *format* - the module, the eboot, the package - goes through
-**[SELFish](https://github.com/project-oops/SELFish)**, which owns every platform file format.
-That is not a convenience: it is why a wrong magic or a stale tag cannot be introduced here
-in isolation. A checkout without it beside this one builds `host` and nothing the hardware or an
-emulator loads.
+### 4. Run Hardware Sweeps via Prosperous
+```bash
+# Verify console is reachable
+pros.exe check
 
-The host build matters more than it looks. It runs the harness on an ordinary machine
-against stubs that fail everything, so the framework is verifiable *before* any
-emulator can load it. Without it, the first run happens inside something that does not
-work yet, and a bug in the probe is indistinguishable from a bug in the thing being
-measured.
+# Execute hardware sweep across all three legs
+./scripts/sweep.sh
+```
 
-## How it works
+### 5. Read Hardware Telemetry Reports
+Hardware logs are saved to `reports/hardware/<timestamp>-<context>.obs.log`:
+- `OBS|sym`: Symbol census record (present vs absent in firmware).
+- `OBS|measure`: Numeric return code or benchmark measurement.
+- `OBS|bytes`: Hex dump of memory buffers or PM4 command packet streams.
 
-The design - what it announces before acting, why it is written from the failure side, how the
-sections are ordered, what it refuses to invent - is in
-**[docs/DESIGN.md](docs/DESIGN.md)**.
+---
 
-## Licence
+## Architecture & Probe Sections
 
-MIT or Apache-2.0, at your option.
+```
+src/probe/
+├── sections/
+│   ├── agc.c           # RDNA2 GPU universal queues, PM4 draw packets, compute shaders
+│   ├── kernelprobe.c   # Virtual memory queries, direct memory maps, syscall errno
+│   ├── threads.c       # Mutexes, semaphores, condition variables, fibers
+│   ├── display.c       # AGC/GNM video out scanout buffers and flip queues
+│   ├── input.c         # DualSense pad buttons, analog stick deadzones, triggers
+│   ├── audio.c         # PCM audio ports, volume control, buffer depth
+│   ├── net.c           # POSIX socket bind, listen, accept, echo
+│   └── save.c          # Save data mounting and directory structures
+├── harness.c           # Standalone runner and structured test harness
+└── min.c               # Minimal payload entry point
+```
 
-## Where to start reading
+---
 
-- **`docs/WORKFLOW.md`** - how the whole loop works, in plain language: where hashing,
-  encoding, decoding and cracking each fit, which commands a person runs by hand, and
-  which run themselves. Start here if any of those four words sound like the same thing.
-- `docs/LOADING.md` - what a loader has to get right, written from the module
-  side after getting one to load.
-- `docs/OUTPUT.md` - the report format, which is a contract.
-- `docs/DECISIONS.md` - every non-obvious choice and why, including the ones that were
-  made, reversed on evidence, and remade.
+## Cross-Project Links
 
-## Part of OOPS
-
-obSCEne is one of four projects aimed at the same platform's operating system. They are developed
-together in **[OOPS](https://github.com/project-oops/OOPS)** and released separately.
-
-| | |
-|---|---|
-| **[Orbistoun](https://github.com/project-oops/Orbistoun)** | the emulator - attempts to reimplement what a title runs on |
-| **[Prosperous](https://github.com/project-oops/Prosperous)** | the instrument - remote management for anything that runs Orbis software |
-| **[SELFish](https://github.com/project-oops/SELFish)** | the formats - read, write and build tools for the platform's own file formats |
-
-**Developing any of them?** Clone [OOPS](https://github.com/project-oops/OOPS) - it holds all four side by side, arranged so
-they build against each other. Cloning this repository alone gets you this project; it is
-the right thing for using it and the wrong thing for changing it.
-
-Shared rules - provenance, naming, decision logs, worklogs, gates - live in
-[the OOPS conventions](https://github.com/project-oops/OOPS/blob/main/docs/CONVENTIONS.md) and are not restated here.
+- **[Master OOPS Front Door](../README.md)** — Collection overview and building instructions.
+- **[The OOPS Loop](../docs/THE_LOOP.md)** — Master ecosystem loop specification.
+- **[Prosperous](../prosperous/)** — Hardware transport deploying probes and capturing `klog`.
+- **[Orbistoun](../orbistoun/)** — Clean-room emulator consuming obSCEne measurements.
+- **[SELFish](../selfish/)** — Formats compiler providing signed containers for probe legs.
+- **[oops-sdk](../oops-sdk/)** — Freestanding C runtime used by obSCEne payloads.

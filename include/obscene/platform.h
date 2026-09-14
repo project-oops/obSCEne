@@ -1417,6 +1417,51 @@ OBS_WEAK void *sceAgcDcbEventWrite(void *dcb, uint32_t event_type,
 OBS_WEAK void *sceAgcDcbSetNumInstances(void *dcb,
                                         uint32_t num_instances) __asm__("$tSBxhAPyytQ");
 
+/* Outstanding AGC Command Builders and GetSize siblings (REQ-20260913T2355Z-a6aa) */
+OBS_WEAK uint64_t sceAgcAcbDispatchIndirect(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$j3EtxFkSIhQ");
+OBS_WEAK uint64_t sceAgcAcbDispatchIndirectGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$PxKWV2fVAps");
+OBS_WEAK uint64_t sceAgcAcbEventWrite(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$cFazmnXpJOE");
+OBS_WEAK uint64_t sceAgcAcbEventWriteGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$Y-5vneiBtzk");
+OBS_WEAK uint64_t sceAgcAcbPopMarker(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$6mFxkVqdmbQ");
+OBS_WEAK uint64_t sceAgcAcbPushMarker(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$cpCILPya5Zk");
+OBS_WEAK uint64_t sceAgcAcbResetQueue(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$JrtiDtKeS38");
+OBS_WEAK uint64_t sceAgcAcbWaitRegMem(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$htn36gPnBk4");
+OBS_WEAK uint64_t sceAgcAcbWriteData(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$eZ4+17OQz4Q");
+OBS_WEAK uint64_t sceAgcCbDispatch(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$k3GhuSNmBLU");
+OBS_WEAK uint64_t sceAgcCbDispatchGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$Abendgtz+3o");
+OBS_WEAK uint64_t sceAgcCbSetShRegistersDirect(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$UZbQjYAwwXM");
+OBS_WEAK uint64_t sceAgcCbSetShRegistersDirectGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$yUBESvCCJ4I");
+OBS_WEAK uint64_t sceAgcDcbCondExec(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$BIPexNBSGog");
+OBS_WEAK uint64_t sceAgcDcbCondExecGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$ou16V5hh5sg");
+OBS_WEAK uint64_t sceAgcDcbDispatchIndirect(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$CtB+A9-VxO0");
+OBS_WEAK uint64_t sceAgcDcbDispatchIndirectGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$w8HVkEeXPv8");
+OBS_WEAK uint64_t sceAgcDcbDrawIndexOffset(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$B+aG9DUnTKA");
+OBS_WEAK uint64_t sceAgcDcbDrawIndexOffsetGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$qMlfB1ZhMDc");
+OBS_WEAK uint64_t sceAgcDcbDrawIndirect(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$1q1titRBL6o");
+OBS_WEAK uint64_t sceAgcDcbDrawIndirectGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$cxPZ4Wgvdj8");
+OBS_WEAK uint64_t sceAgcDcbPopMarker(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$H7uZqCoNuWk");
+OBS_WEAK uint64_t sceAgcDcbPushMarker(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$+kSrjIVxKFE");
+OBS_WEAK uint64_t sceAgcDcbSetBaseIndirectArgs(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$RmaJwLtc8rY");
+OBS_WEAK uint64_t sceAgcDcbSetCfRegisterRangeDirect(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$BVFg3CWU6Eo");
+OBS_WEAK void *sceAgcDcbSetCxRegistersIndirect(void *dcb, uint32_t count, const void *reg_and_vals) __asm__("$ZvwO9euwYzc");
+OBS_WEAK uint64_t sceAgcDcbSetCxRegistersIndirectGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$GBCh3zCihoU");
+OBS_WEAK uint64_t sceAgcDcbSetFlip(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$YUeqkyT7mEQ");
+OBS_WEAK uint64_t sceAgcDcbSetPredication(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$bbFueFP+J4k");
+OBS_WEAK uint64_t sceAgcDcbSetShRegistersIndirect(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$-HOOCn0JY48");
+OBS_WEAK uint64_t sceAgcDcbSetShRegistersIndirectGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$nNlUtdDDvZ0");
+OBS_WEAK uint64_t sceAgcDcbSetUcRegistersIndirect(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$hvUfkUIQcOE");
+OBS_WEAK uint64_t sceAgcDcbSetUcRegistersIndirectGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$UQGTw4xRlcM");
+OBS_WEAK uint64_t sceAgcDcbWaitUntilSafeForRendering(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$MWiElSNE8j8");
+OBS_WEAK uint64_t sceAgcDcbWriteData(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$i1jyy49AjXU");
+OBS_WEAK uint64_t sceAgcDcbWriteDataGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$p9tI+yTvx68");
+
+/* Patch and Device Info (REQ-20260914T1730Z-4386, REQ-20260914T1558Z-7d41) */
+OBS_WEAK int sceAgcSetCxRegIndirectPatchAddRegisters(void *packet_ptr, uint32_t count, const void *regs) __asm__("$d-6uF9sZDIU");
+OBS_WEAK int sceAgcGetDeviceInfo(void *info_buf) __asm__("$Tasc5SLczww");
+OBS_WEAK int sceAgcDriverGetDeviceInfo(void *info_buf) __asm__("$ZGMnhAlcv9Y");
+OBS_WEAK int sceGnmGetGpuInfo(void *info_buf) __asm__("$GKIlegek0JQ");
+OBS_WEAK int sceGnmGetGpuCoreClockFrequency(uint32_t *out_freq) __asm__("$Fwvh++m9IQI");
+
 /* ---- libSceAgcDriver: current-generation GPU command submission ------------ */
 OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t flags);
 OBS_WEAK int sceAgcDriverDestroyQueue(void *queue);

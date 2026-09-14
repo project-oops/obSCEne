@@ -13,6 +13,7 @@
 #include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
+#include "oops/freestd.h"
 #include "oops/krw.h"
 
 /* A modest, well-aligned request. Large enough to span more than one page so a
@@ -129,6 +130,20 @@ static obs_result check_virtual_query_mapped(void) {
 
     obs_report_written("020-memory/virtual-query-mapped", "sceKernelVirtualQuery",
                        "query_info", before, after, OBS_VQ_BUF_LEN);
+
+    /* Record populated non-zero field offsets beyond offset 0x08 (REQ-20260914T1110Z-9b12) */
+    for (unsigned int off = 16; off < OBS_VQ_BUF_LEN; off += 8) {
+        uint64_t val = 0;
+        for (unsigned int i = 0; i < 8; i++) {
+            val |= ((uint64_t)after[off + i]) << (i * 8);
+        }
+        if (val != 0 && val != 0xAAAAAAAAAAAAAAAAULL) {
+            char name[32];
+            oops_snprintf(name, sizeof(name), "field-0x%02x", off);
+            obs_report_measure("020-memory/virtual-query-mapped", "sceKernelVirtualQuery",
+                               name, val, "offset-val");
+        }
+    }
 
     uint64_t start = 0, end = 0;
     for (unsigned int i = 0; i < 8; i++) {

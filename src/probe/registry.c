@@ -150,13 +150,7 @@ const obs_section *const obs_sections[] = {
      * reader is most likely to scroll to the end for. */
     &obs_section_memmap,
     &obs_section_jit,
-    /* GPU compute, before the census: it measures what the device computes, which is a
-     * question about the platform, so it belongs with the sections that call things
-     * rather than with the census that only counts them. Skips cheaply when built
-     * without the GPU capability. */
-    &obs_section_gpu,
-    /* The console GPU API, right after the GPU execution probe: same subsystem, the
-     * other axis (the sceGnm calls rather than what the device computes). Skips as "not
+    /* The console GPU API: same subsystem (the sceGnm calls). Skips as "not
      * present" on any loader without libSceGnmDriver, the host build included. */
     &obs_section_gnm,
     /* Current-generation GPU command building and shaders (libSceAgc). */

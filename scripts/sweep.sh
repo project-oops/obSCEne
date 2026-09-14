@@ -133,6 +133,8 @@ leg_payload() {
     ( "$LTOOL" hw close-app "$NATIVE_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app GLHW00001 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app GLCB00001 2>&1 | tr -d '\r' ) || true
     echo "=== SEND (elfldr) + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
     local tmp trun; tmp="$(mktemp)"; trun="$(mktemp)"
     "$LTOOL" hw logs --seconds "$((SECONDS_WIN + 15))" >"$tmp" 2>/dev/null &
@@ -184,6 +186,8 @@ leg_pkg() {
     echo "=== close $PKG_TITLE_ID & $NATIVE_TITLE_ID + INSTALL (Windows serve, console fetches) ==="
     ( "$LTOOL" hw close-app "$NATIVE_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app GLHW00001 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app GLCB00001 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw close-app "$PKG_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw close-app OBSC00001 2>&1 | tr -d '\r' ) || true
     ( cd /mnt/c && "$WEXE" hw install "$win_pkg" --seconds 80 2>&1 | tr -d '\r' )
@@ -229,6 +233,7 @@ leg_eboot() {
     ( "$LTOOL" hw close-app "$NATIVE_TITLE_ID" 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app GLHW00001 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app GLCB00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw install-native "$dir" 2>&1 | tr -d '\r' )
     echo "waiting 20s for ShadowMountPlus to register the title..."; sleep 20
     echo "=== LAUNCH $NATIVE_TITLE_ID + DEVICE LOG (up to ${SECONDS_WIN}s) ==="

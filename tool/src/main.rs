@@ -102,29 +102,16 @@ pub struct MkmoduleArgs {
     #[arg(long, default_value_t = 5, value_parser = clap::value_parser!(u8).range(4..=5))]
     generation: u8,
 
-    /// Which dynamic-table convention to write: `legacy` or `current`.
+    /// Which dynamic-table convention to write: `prospero` or `orbis`.
     ///
-    /// `legacy` spends a vendor tag on every table. It is what this module has always
-    /// written and what every loader in the toolkit accepts - three of them being
-    /// previous-generation emulators where it *is* the convention.
+    /// `orbis` spends a vendor tag on every table and leaves tables unmapped in PT_SCE_DYNLIBDATA.
     ///
-    /// `current` uses the standard ELF tags for the standard tables and the high vendor
-    /// range for the rest, which is what all six retail current-generation dumps use. Under
-    /// `legacy`, prosper's reader finds **none** of this module's imports; the newer form is
-    /// the reason to have the switch at all. (D193)
+    /// `prospero` uses standard ELF tags in a mapped PT_LOAD and vendor tags for extras,
+    /// matching retail PS5 executables and PRX dumps.
     ///
-    /// It changes the **layout** as well as the numbers, because the two go together: under
-    /// `current` the tables are placed in a mapped `PT_LOAD` past the last one and the tags
-    /// hold virtual addresses, where under `legacy` they sit in `PT_SCE_DYNLIBDATA` at
-    /// vaddr 0 and the tags hold offsets into it. prosper reads 35,518 imports from the
-    /// former and none from the latter. See `docs/MODULE-FORMAT.md`.
-    ///
-    /// **Pick it by generation, not by preference** - which is why the Makefile derives it
-    /// from `GEN` and you should not normally pass this by hand. The previous-generation
-    /// emulators reject the standard tags outright (`unsupported dynamic tag 0x02`), so
-    /// `current` is not a strictly better module, it is a different platform's module.
-    #[arg(long, default_value = "legacy")]
-    table: String,
+    /// If omitted, automatically derived from `--generation`: 5 -> `prospero`, 4 -> `orbis`.
+    #[arg(long)]
+    table: Option<String>,
 
     /// Which kind of object this is: `executable`, `fixed` or `shared`.
     ///
@@ -1154,8 +1141,7 @@ fn run_counts(
 fn run_guards(root: Option<&std::path::Path>) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let root = root.unwrap_or_else(|| std::path::Path::new("."));
     let imports = std::fs::read_to_string(sections::find_file(root, "imports.c"))?;
-    let (problems, total, orphans) =
-        guards::scan(&sections::find_dir(root, "sections"), &imports)?;
+    let (problems, total, orphans) = guards::scan(&sections::find_dir(root, "sections"), &imports)?;
     if !orphans.is_empty() {
         println!(
             "{} of {total} checks name a section that is not declared anywhere
@@ -2122,9 +2108,9 @@ fn run_mkself(
 ) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let payload = std::fs::read(file)?;
     let generation = if generation == 5 {
-        selfish_abi::Generation::Current
+        selfish_abi::Generation::Prospero
     } else {
-        selfish_abi::Generation::Previous
+        selfish_abi::Generation::Orbis
     };
     let priv_tier: selfish_container::Privilege =
         privilege.parse().map_err(|e: &str| e.to_owned())?;
@@ -2242,9 +2228,9 @@ fn run_mkmodule(args: &MkmoduleArgs) -> Result<ExitCode, Box<dyn std::error::Err
     // 5 and 4 on the command line, 2 and 0 in the header. The generation number is what
     // anyone building this thinks in; the byte is what the format holds.
     let generation = if args.generation == 5 {
-        selfish_abi::Generation::Current
+        selfish_abi::Generation::Prospero
     } else {
-        selfish_abi::Generation::Previous
+        selfish_abi::Generation::Orbis
     };
     let mut bytes = std::fs::read(file)?;
 
@@ -2281,9 +2267,16 @@ fn run_mkmodule(args: &MkmoduleArgs) -> Result<ExitCode, Box<dyn std::error::Err
     let exports_a_library = !object_type.is_executable();
     let manifest =
         imports::Imports::parse(&std::fs::read_to_string(&args.symbols)?, exports_a_library)?;
-    let table = match args.table.as_str() {
-        "current" => selfish_elf::dynamic::Table::Current,
-        _ => selfish_elf::dynamic::Table::Legacy,
+    let table = match args.table.as_deref() {
+        Some("prospero") => selfish_elf::dynamic::Table::Prospero,
+        Some("orbis") => selfish_elf::dynamic::Table::Orbis,
+        Some(other) => {
+            return Err(format!("unknown --table {other:?}: expected prospero or orbis").into());
+        }
+        None => match generation {
+            selfish_abi::Generation::Prospero => selfish_elf::dynamic::Table::Prospero,
+            selfish_abi::Generation::Orbis => selfish_elf::dynamic::Table::Orbis,
+        },
     };
 
     // Before anything is built. The builder would catch this too, but only after laying out
@@ -2356,13 +2349,7 @@ fn run_mkmodule(args: &MkmoduleArgs) -> Result<ExitCode, Box<dyn std::error::Err
     // the constants used to build it were right. It costs a millisecond and it is the
     // difference between a derivation that is documented and one that is checked.
     let written = elf::Elf::parse(&bytes)?;
-    let derivation = derive::run_with(
-        &written,
-        match args.table.as_str() {
-            "current" => selfish_elf::dynamic::Table::Current,
-            _ => selfish_elf::dynamic::Table::Legacy,
-        },
-    );
+    let derivation = derive::run_with(&written, table);
     if !derivation.is_consistent() {
         eprintln!("{name}: the module does not reproduce the tag derivation");
         return Ok(print_derivation(&derivation));

@@ -69,6 +69,10 @@
  * from the C library and the read/write locks from the same host stubs 017-posix uses.
  * That makes the host the known-good POSIX baseline - it returns -1 and a bare errno,
  * the convention the target is being measured against. */
+#include <fcntl.h>
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
 #include <unistd.h>
 #endif
 
@@ -86,6 +90,9 @@ typedef int (*fn_rwlock_destroy_t)(ObsPosixRwlock *);
 typedef int (*fn_rwlock_tryrdlock_t)(ObsPosixRwlock *);
 typedef int (*fn_rwlock_trywrlock_t)(ObsPosixRwlock *);
 typedef int (*fn_rwlock_unlock_t)(ObsPosixRwlock *);
+typedef int (*fn_open_t)(const char *path, int flags, ...);
+typedef int (*fn_close_t)(int fd);
+typedef int (*fn_mutex_destroy_t)(void *mutex);
 
 #if !defined(OBSCENE_HOST_BUILD)
 static int s_posixerr_handle = -2;
@@ -137,6 +144,29 @@ static void *obs_posixerr_symbol(const char *name) {
         return (void *)&posix_pthread_rwlock_trywrlock;
     if (obs_strcmp(name, "posix_pthread_rwlock_unlock") == 0)
         return (void *)&posix_pthread_rwlock_unlock;
+    if (obs_strcmp(name, "open") == 0 || obs_strcmp(name, "posix_open") == 0)
+        return (void *)&open;
+    if (obs_strcmp(name, "close") == 0 || obs_strcmp(name, "posix_close") == 0)
+        return (void *)&close;
+    if (obs_strcmp(name, "pthread_mutex_destroy") == 0 ||
+        obs_strcmp(name, "posix_pthread_mutex_destroy") == 0)
+        return (void *)&pthread_mutex_destroy;
+    if (obs_strcmp(name, "pthread_create") == 0) return (void *)&pthread_create;
+    if (obs_strcmp(name, "pthread_join") == 0) return (void *)&pthread_join;
+    if (obs_strcmp(name, "pthread_detach") == 0) return (void *)&pthread_detach;
+    if (obs_strcmp(name, "pthread_self") == 0) return (void *)&pthread_self;
+    if (obs_strcmp(name, "pthread_equal") == 0) return (void *)&pthread_equal;
+    if (obs_strcmp(name, "pthread_once") == 0) return (void *)&pthread_once;
+    if (obs_strcmp(name, "pthread_key_create") == 0) return (void *)&pthread_key_create;
+    if (obs_strcmp(name, "pthread_getspecific") == 0) return (void *)&pthread_getspecific;
+    if (obs_strcmp(name, "pthread_setspecific") == 0) return (void *)&pthread_setspecific;
+    if (obs_strcmp(name, "pthread_mutex_init") == 0) return (void *)&pthread_mutex_init;
+    if (obs_strcmp(name, "pthread_mutex_lock") == 0) return (void *)&pthread_mutex_lock;
+    if (obs_strcmp(name, "pthread_mutex_unlock") == 0) return (void *)&pthread_mutex_unlock;
+    if (obs_strcmp(name, "pthread_cond_init") == 0) return (void *)&pthread_cond_init;
+    if (obs_strcmp(name, "pthread_cond_wait") == 0) return (void *)&pthread_cond_wait;
+    if (obs_strcmp(name, "pthread_cond_broadcast") == 0) return (void *)&pthread_cond_broadcast;
+    if (obs_strcmp(name, "pthread_kill") == 0) return (void *)&pthread_kill;
     return NULL;
 #else
     /* libScePosix first, so where it does resolve the answer is that library's own;
@@ -311,6 +341,140 @@ static obs_result check_pthread_encoding(void) {
     return obs_pass_value((uint64_t)enc);
 }
 
+static obs_result check_provoked_errors(void) {
+    /* Fulfills REQ-20260914T1110Z-9b12:
+     * Deliberately provoke errors on POSIX-named exports:
+     * - open("/nonexistent_path_to_provoke_posix_error", O_RDONLY)
+     * - close(-1)
+     * - pthread_mutex_destroy(NULL)
+     * Record exact 32-bit return code and errno/convention.
+     */
+    fn_open_t fn_open = (fn_open_t)obs_posixerr_symbol("posix_open");
+    if (fn_open == NULL) {
+        fn_open = (fn_open_t)obs_posixerr_symbol("open");
+    }
+    fn_close_t fn_close = (fn_close_t)obs_posixerr_symbol("posix_close");
+    if (fn_close == NULL) {
+        fn_close = (fn_close_t)obs_posixerr_symbol("close");
+    }
+    fn_mutex_destroy_t fn_pmutex_destroy =
+        (fn_mutex_destroy_t)obs_posixerr_symbol("posix_pthread_mutex_destroy");
+    if (fn_pmutex_destroy == NULL) {
+        fn_pmutex_destroy = (fn_mutex_destroy_t)obs_posixerr_symbol("pthread_mutex_destroy");
+    }
+
+    uint32_t open_rc = 0;
+    int open_err = 0;
+    if (fn_open != NULL) {
+        open_rc = (uint32_t)fn_open("/nonexistent_path_to_provoke_posix_error", 0);
+#if defined(OBSCENE_HOST_BUILD)
+        open_err = errno;
+#else
+        if (&__error != NULL && __error() != NULL) {
+            open_err = *__error();
+        }
+#endif
+        obs_report_measure("019-posixerr/provoked-errors", "open", "rc", (uint64_t)open_rc,
+                           "rc");
+        obs_report_measure("019-posixerr/provoked-errors", "open", "errno",
+                           (uint64_t)(uint32_t)open_err, "errno");
+        obs_report_measure("019-posixerr/provoked-errors", "open", "encoding",
+                           (uint64_t)obs_encoding_of_count((sce_ssize_t)(int32_t)open_rc),
+                           "encoding");
+    }
+
+    uint32_t close_rc = 0;
+    int close_err = 0;
+    if (fn_close != NULL) {
+        close_rc = (uint32_t)fn_close(-1);
+#if defined(OBSCENE_HOST_BUILD)
+        close_err = errno;
+#else
+        if (&__error != NULL && __error() != NULL) {
+            close_err = *__error();
+        }
+#endif
+        obs_report_measure("019-posixerr/provoked-errors", "close", "rc", (uint64_t)close_rc,
+                           "rc");
+        obs_report_measure("019-posixerr/provoked-errors", "close", "errno",
+                           (uint64_t)(uint32_t)close_err, "errno");
+        obs_report_measure("019-posixerr/provoked-errors", "close", "encoding",
+                           (uint64_t)obs_encoding_of_count((sce_ssize_t)(int32_t)close_rc),
+                           "encoding");
+    }
+
+    uint32_t mutex_rc = 0;
+    if (fn_pmutex_destroy != NULL) {
+        mutex_rc = (uint32_t)fn_pmutex_destroy(NULL);
+        obs_report_measure("019-posixerr/provoked-errors", "pthread_mutex_destroy", "rc",
+                           (uint64_t)mutex_rc, "rc");
+        obs_report_measure("019-posixerr/provoked-errors", "pthread_mutex_destroy",
+                           "encoding", (uint64_t)obs_encoding_of_status((int)mutex_rc),
+                           "encoding");
+    }
+
+    if (fn_open == NULL && fn_close == NULL && fn_pmutex_destroy == NULL) {
+        return obs_skip("none of open, close, or pthread_mutex_destroy could be resolved");
+    }
+
+    return obs_pass_value((uint64_t)close_rc);
+}
+
+static obs_result check_thread_symbols_libkernel(void) {
+    static const struct {
+        const char *unprefixed;
+        const char *prefixed;
+    } pairs[] = {
+        {"pthread_create", "posix_pthread_create"},
+        {"pthread_join", "posix_pthread_join"},
+        {"pthread_detach", "posix_pthread_detach"},
+        {"pthread_self", "posix_pthread_self"},
+        {"pthread_equal", "posix_pthread_equal"},
+        {"pthread_once", "posix_pthread_once"},
+        {"pthread_key_create", "posix_pthread_key_create"},
+        {"pthread_getspecific", "posix_pthread_getspecific"},
+        {"pthread_setspecific", "posix_pthread_setspecific"},
+        {"pthread_mutex_init", "posix_pthread_mutex_init"},
+        {"pthread_mutex_lock", "posix_pthread_mutex_lock"},
+        {"pthread_mutex_unlock", "posix_pthread_mutex_unlock"},
+        {"pthread_cond_init", "posix_pthread_cond_init"},
+        {"pthread_cond_wait", "posix_pthread_cond_wait"},
+        {"pthread_cond_broadcast", "posix_pthread_cond_broadcast"},
+    };
+    static const char *const controls[] = {
+        "pthread_kill", "pthread_timedjoin_np", "posix_read"
+    };
+
+    unsigned int bound_unprefixed = 0;
+    unsigned int bound_prefixed = 0;
+
+    for (unsigned int i = 0; i < OBS_COUNT(pairs); i++) {
+        void *sym_u = obs_posixerr_symbol(pairs[i].unprefixed);
+        void *sym_p = obs_posixerr_symbol(pairs[i].prefixed);
+
+        if (sym_u != NULL) bound_unprefixed++;
+        if (sym_p != NULL) bound_prefixed++;
+
+        obs_report_measure("019-posixerr/thread-symbols-libkernel", pairs[i].unprefixed,
+                           "bound", (uint64_t)(sym_u != NULL), "bool");
+        obs_report_measure("019-posixerr/thread-symbols-libkernel", pairs[i].prefixed,
+                           "bound", (uint64_t)(sym_p != NULL), "bool");
+    }
+
+    for (unsigned int i = 0; i < OBS_COUNT(controls); i++) {
+        void *sym_c = obs_posixerr_symbol(controls[i]);
+        obs_report_measure("019-posixerr/thread-symbols-libkernel", controls[i],
+                           "control-bound", (uint64_t)(sym_c != NULL), "bool");
+    }
+
+    obs_report_measure("019-posixerr/thread-symbols-libkernel", "summary", "bound-unprefixed",
+                       (uint64_t)bound_unprefixed, "count");
+    obs_report_measure("019-posixerr/thread-symbols-libkernel", "summary", "bound-prefixed",
+                       (uint64_t)bound_prefixed, "count");
+
+    return obs_pass_value((uint64_t)(bound_unprefixed + bound_prefixed));
+}
+
 static const obs_check posixerr_checks[] = {
     {"019-posixerr/fd-encoding", "libScePosix", "posix_read", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_fd_encoding, check_fd_encoding,
@@ -318,6 +482,10 @@ static const obs_check posixerr_checks[] = {
     {"019-posixerr/pthread-encoding", "libScePosix", "posix_pthread_rwlock_trywrlock",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_pthread_encoding,
      check_pthread_encoding, OBS_FROM_DERIVED},
+    {"019-posixerr/provoked-errors", "libScePosix", "(provoked)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_provoked_errors, OBS_FROM_DERIVED},
+    {"019-posixerr/thread-symbols-libkernel", "libkernel", "(symbols)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_thread_symbols_libkernel, OBS_FROM_DERIVED},
 };
 
 const obs_section obs_section_posixerr = {

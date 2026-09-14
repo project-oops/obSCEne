@@ -3,9 +3,9 @@
  *
  * # What this probes, and what it deliberately does not
  *
- * The GPU section (160-gpu) measures what the device *computes*, through public Vulkan
- * - the path a Steam Deck takes, which needs no vendor library. This section is the
- * other axis: the console's own GPU *API*, the sceGnm calls a title makes to drive the
+ * The AGC compute probe (166-agc) measures what the device *computes* via hardware
+ * dispatch on Universal Queue 0. This section is the
+ * command-building axis for Orbis (PS4): the console's own GPU *API*, the sceGnm calls a title makes to drive the
  * hardware. It is to the GPU what the CPU NID probes are to the CPU - "does this call
  * exist, is it reachable, what does it do" - which is exactly what "probe every GPU
  * call" was always meant to reach.

@@ -58,18 +58,18 @@ include $(OOPS_SDK)/oops-sdk.mk
 ifeq ($(filter 1 2,$(OOPS_TARGET_NUM)),)
     # Prospero native (Prospero / Trinity)
     GEN ?= 5
-    TABLE ?= current
+    TABLE ?= prospero
     EBOOT_GEN ?= 5
-    EBOOT_TABLE ?= legacy
+    EBOOT_TABLE ?= prospero
     EBOOT_KIND ?= executable
     PRIVILEGE ?= root
     SDK ?= $(if $(filter trinity,$(TARGET)),trinity,prospero)
 else
     # Orbis (Orbis / Neo)
     GEN ?= 4
-    TABLE ?= legacy
+    TABLE ?= orbis
     EBOOT_GEN ?= 4
-    EBOOT_TABLE ?= legacy
+    EBOOT_TABLE ?= orbis
     EBOOT_KIND ?= fixed
     PRIVILEGE ?= app
     SDK ?= $(if $(filter neo,$(TARGET)),neo,orbis)
@@ -284,20 +284,6 @@ ifneq ($(HATCH),)
 STAMP += -DOBS_NET_ESCAPE
 endif
 
-# GPU compute probe. Off by default.
-#
-# Off because it pulls in a GPU backend and, on the host, links Vulkan - neither of which a
-# plain report run wants. On means the 160-gpu section dispatches its compute kernels and
-# reports what the device computed. The backend is chosen by target: Vulkan on the host and
-# the Deck (gpu_vulkan.c, -lvulkan), a refusing stub on the console (gpu_gnm.c).
-#
-#   make host GPU=1               # dispatch on the host GPU / llvmpipe, prove the pipeline
-#   make module GEN=4 GPU=1       # console module; the Gnm backend refuses until confirmed
-GPU ?=
-ifneq ($(GPU),)
-STAMP += -DOBS_GPU
-endif
-
 # The mined census: 35,000 symbols from firmware and emulator export tables. On by default.
 #
 # Off is for loaders the census overwhelms. It emits one record per symbol through whatever
@@ -358,16 +344,6 @@ INJECTOR_SRC := src/probe/injector_entry.c
 #
 # The target build links nothing at all - its loader resolves every import.
 HOST_LIBS := -Wl,--no-as-needed -lm
-
-# The GPU backend, added only under GPU=1 so a plain build links no Vulkan and the module
-# pulls in no vendor GPU code. The section itself (src/probe/sections/gpu.c) is always compiled -
-# it reports a skip when OBS_GPU is unset - but the backend it calls is target-specific and
-# conditional: Vulkan on the host/Deck, the refusing Gnm stub on the console.
-ifneq ($(GPU),)
-HOST_SRC += src/probe/gpu_vulkan.c
-HOST_LIBS += -lvulkan
-TARGET_SRC += src/probe/gpu_gnm.c
-endif
 
 # The guest is x86-64 and its kernel is FreeBSD-derived, so that is the target
 # triple. -nostdlib keeps it honest: nothing is linked in that a console would not
@@ -1050,29 +1026,6 @@ eboot-min: tool | $(BUILD)
 # is exactly true - on the guest they are whatever the platform library provides.
 host: $(HOST_OBJ) $(OOPS_SDK_HOST_OBJ) | $(BUILD)
 	$(CC) -o $(BUILD)/obscene-host $(HOST_OBJ) $(OOPS_SDK_HOST_OBJ) $(HOST_LIBS)
-
-# The Steam Deck build.
-#
-# The Deck is x86-64 Linux with an RDNA2 GPU and **no vendor libraries**, so it is the
-# host-shaped build - platform calls stubbed, POSIX socket and file backends, the same
-# source lists - not a console-shaped one. What makes it worth a target of its own is not
-# the CPU side (that is the host build) but the GPU: it is the project's first and only
-# RDNA2 execution oracle, which is why this always builds `GPU=1` (real silicon through
-# Vulkan, `gpu_vulkan.c`).
-#
-# It serves the command protocol the same way the host build does, at runtime:
-# `obscene-deck --serve`. There is no SERVE build flag here - that is a console-module
-# concept (the module has no argv); a Linux binary takes the flag.
-#
-# Named and separate from `host` deliberately: "build for the Deck" is a first-class thing,
-# and the machine identity a corpus is graded by is operator-asserted anyway (D108), so the
-# binary being distinct is what stops a Deck result and a dev-machine result being confused
-# by habit.
-.PHONY: deck
-deck:
-	$(MAKE) host GPU=1 BUILD=$(BUILD)
-	cp $(BUILD)/obscene-host $(BUILD)/obscene-deck
-	@echo "built $(BUILD)/obscene-deck - copy to a Deck and run: ./obscene-deck --serve"
 
 # The host build is run from $(BUILD), and that is a performance fix, not tidiness.
 #

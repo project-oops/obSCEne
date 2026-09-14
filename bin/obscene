@@ -56,8 +56,19 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 # The Rust tooling's own binary, built to its default target dir so the checks that run it find
 # it where they look. A helper because several verbs run one of its subcommands.
 _obscene_tool() {
-    [ -x tool/target/release/obscene-tool ] || ( cd tool && cargo build --release --quiet )
-    ./tool/target/release/obscene-tool "$@"
+    # `.exe` is preferred where it exists, and that is not cosmetic on this collection.
+    #
+    # The Windows and WSL builds share `tool/target/`, so a checkout can hold both an
+    # `obscene-tool` (Linux ELF, written by a WSL build) and an `obscene-tool.exe`. The
+    # extensionless name is the one a POSIX shell reaches for, and from Git Bash it is the
+    # one that cannot run - every verb through this helper failed with status 126 and
+    # "cannot execute binary file", which reads like a broken tool rather than the wrong
+    # one of two.
+    _tool="tool/target/release/obscene-tool"
+    [ -x "$_tool.exe" ] && _tool="$_tool.exe"
+    [ -x "$_tool" ] || ( cd tool && cargo build --release --quiet )
+    [ -x "$_tool.exe" ] && _tool="$_tool.exe"
+    "./$_tool" "$@"
 }
 
 case "${1:-help}" in
@@ -133,7 +144,7 @@ case "${1:-help}" in
     # The Rust tooling: build its binary, run its checks. Named so CI reaches them the same way
     # a person does, rather than reaching past the front door to `cargo` and the raw tool path.
     tool-build) shift; ( cd tool && cargo build --release "$@" ) ;;
-    guards)     shift; ( cd tool && cargo run --quiet -- guards "$@" ) ;;
+    guards)     shift; _obscene_tool guards "$@" ;;
     imports)    shift; _obscene_tool imports "$@" ;;
     verify)     shift; _obscene_tool verify "$@" ;;
     matrix)     shift; _obscene_tool matrix "$@" ;;

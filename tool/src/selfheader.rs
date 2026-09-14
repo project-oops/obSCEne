@@ -73,13 +73,13 @@ static const unsigned long long obs_self_magics[] = {\n",
     );
     let _ = writeln!(
         out,
-        "    {:#x}ull, /* current generation */",
-        magic_word(Generation::Current)
+        "    {:#x}ull, /* prospero */",
+        magic_word(Generation::Prospero)
     );
     let _ = writeln!(
         out,
-        "    {:#x}ull, /* previous generation */",
-        magic_word(Generation::Previous)
+        "    {:#x}ull, /* orbis */",
+        magic_word(Generation::Orbis)
     );
     out.push_str("};\n\n#endif /* OBSCENE_SELF_HEADER_GEN_H */\n");
     out

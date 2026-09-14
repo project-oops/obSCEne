@@ -163,9 +163,18 @@ slow way.
 | 2026-09-02 | [(ps5 native execution) targeted SDK dictionary, procparam inspection, and PRX module contract](worklog/151-sdk-versioning-procparam-and-native-execution.md) |
 | 2026-09-03 | [(Porthole M1) Encoder sysmodule load and sceVencCore* entry-point self-resolution](worklog/152-porthole-m1-encoder-self-resolution.md) |
 | 2026-09-03 | [The conformance matrix, and why the filename is the metadata](worklog/153-the-conformance-matrix.md) |
-| 2026-09-03 | [poisoning a scalar out-parameter, and a list of what orbistoun cannot decide](worklog/154-poisoning-a-scalar-out-parameter.md) |
+| 2026-09-03 | [poisoning a scalar out-parameter, and a list of what orbistoun cannot decide](worklog/154-poisoning-a-scalar-out-parameter.md) |
 | 2026-09-03 | [the orbistoun backlog is the whole list now](worklog/155-the-orbistoun-backlog-is-the-whole-list-now.md) |
 | 2026-09-03 | [Porthole M4/M5: Controller input injection (Ghostpad VDI) and dual-socket network server](worklog/156-porthole-m5-input-injection-and-dual-socket-server.md) |
 | 2026-09-03 | [Porthole Video Pipeline: Integrating and Reusing oops-sdk](worklog/157-porthole-video-pipeline-reusing-oops-sdk.md) |
 | 2026-09-07 | [Two probes for the heaviest premises orbistoun is blocked on](worklog/158-error-encoding-and-sync-bounds-probes.md) |
 | 2026-09-07 | [The futex and the stack attributes stop being census entries](worklog/159-the-futex-and-the-stack-attributes-are-called.md) |
+| 2026-09-08 | [The title stops crashing at boot, and a fault guard keeps it running](worklog/160-the-title-runs-and-a-fault-guard-keeps-it-running.md) |
+| 2026-09-08 | [The eboot leg completes, and the sweep stops hanging](worklog/161-the-eboot-leg-completes-and-the-sweep-stops-hanging.md) |
+| 2026-09-08 | [The payload leg completes, and all three shapes run end to end](worklog/162-the-payload-leg-completes-and-all-three-shapes-run.md) |
+| 2026-09-08 | [Pending probes for what oops-sdk needs from hardware](worklog/163-pending-probes-for-what-the-sdk-needs-from-hardware.md) |
+| 2026-09-08 | [A network section for Porthole, and a record for "I could not look"](worklog/164-a-network-section-and-the-resolution-record.md) |
+| 2026-09-08 | [Audio channels settled, mouse payload stub, and POSIX net](worklog/165-audio-channels-settled-mouse-payload-stub-and-posix-net.md) |
+| 2026-09-10 | [libSceAgc command buffer structure and crash elimination](worklog/166-libSceAgc-command-buffer-structure-and-crash-elimination.md) |
+| 2026-09-14 | [AGC pipeline probes, section 160 pruning, and BigApp budget resolution](worklog/167-agc-pipeline-probes-and-section-160-pruning.md) |
+| 2026-09-14 | [Fulfilling cross-project requests: AGC invariants, synthetic container, and POSIX resolution](worklog/168-fulfilling-20260914-cross-project-requests.md) |

@@ -39,9 +39,6 @@
 #include "obscene/net.h"
 #include "obscene/report.h"
 #include "obscene/runtime.h"
-#if defined(OBS_GPU)
-#include "obscene/gpu.h"
-#endif
 
 /* A request line. The specification caps a line at 4096 bytes including the terminator;
  * anything longer is a protocol error rather than something to truncate quietly. */
@@ -468,18 +465,6 @@ static const char *obs_net_capabilities(void) {
      * off unless a build deliberately turns them on - the doc's "blob is off unless
      * enabled" made literal. A driver against a default build learns they are absent
      * and does not assume past it. */
-#if defined(OBS_GPU)
-    /* `gpu` only when a backend is actually up - a GPU build on a target with no usable
-     * device (the console's refusing stub) announces nothing it cannot honour, exactly
-     * the rule the capability list exists to keep. */
-    if (obs_gpu_backend_available()) {
-#if defined(OBS_NET_ESCAPE)
-        return "call,read,report,gpu,blob,reset";
-#else
-        return "call,read,report,gpu";
-#endif
-    }
-#endif
 #if defined(OBS_NET_ESCAPE)
     return "call,read,report,blob,reset";
 #else
@@ -632,94 +617,6 @@ static void obs_net_tee(void *ctx, const char *bytes, size_t len) {
     obs_session *session = (obs_session *)ctx;
     (void)obs_net_backend_send(session->connection, bytes, len);
 }
-
-#if defined(OBS_GPU)
-/* The gpu primitive: dispatch a compiled-in kernel over caller-supplied operands.
- *
- * `CMD|seq|gpu|<kernel>|<op0>|<op1>|...` - the operands are 32-bit words (float bits)
- * fed to the named shader. Unlike `call` and `blob`, this runs only shaders the build
- * already contains, so it executes nothing arbitrary: the driver picks *which* known
- * kernel and *what* inputs, which is the interactive loop - a new question without a
- * rebuild.
- *
- * The operands follow the same lane layout the section uses, applied per command: a
- * unary kernel takes N operands as N lanes; an arity-k kernel takes a multiple of k,
- * each group a tuple laid out `[in0..in_{k-1}, out]`. Results come back as the same
- * `gpu`/`gpuop` records a report emits, teed to this socket, so a driver reads a live
- * dispatch exactly as it reads a captured one - and `gpudev` goes first, so the results
- * are never read without their provenance.
- *
- * A dispatch that fails without crashing (a Vulkan error, the probe still alive) is not
- * a death: it returns zero lanes and no records, which a driver tells from success by
- * the lane count in the `done`. A dispatch that *ends the process* is the ordinary
- * `ack`-with-no `done` path, handled by the driver as `died` like any other. */
-static int obs_net_gpu(obs_session *session, unsigned long seq, char **fields,
-                       unsigned int count) {
-    /* Bounded, so one command cannot ask for an unbounded buffer. The line-length cap
-     * already limits the operands; this is the belt to that braces. */
-    enum { OBS_NET_GPU_MAX = 256u };
-    static uint32_t operands[OBS_NET_GPU_MAX];
-    static uint32_t buffer[OBS_NET_GPU_MAX * 4u];
-
-    if (count < 5) {
-        return obs_net_refused(session, seq, "bad-argument");
-    }
-    const char *kernel = fields[3];
-    unsigned int arity = obs_gpu_arity(kernel);
-    if (arity == 0u) {
-        /* Unknown kernel: refused, not guessed. The driver learns the names from a
-         * report, where every kernel appears. */
-        return obs_net_refused(session, seq, "bad-argument");
-    }
-
-    unsigned int nops = count - 4u;
-    if (nops == 0u || nops > OBS_NET_GPU_MAX || (arity > 1u && nops % arity != 0u)) {
-        return obs_net_refused(session, seq, "bad-argument");
-    }
-    for (unsigned int i = 0; i < nops; i++) {
-        int ok = 0;
-        operands[i] = (uint32_t)obs_net_parse_hex(fields[4 + i], &ok);
-        if (!ok) {
-            return obs_net_refused(session, seq, "bad-argument");
-        }
-    }
-
-    unsigned int stride =
-        arity > 1u ? arity + 1u : 1u; /* unary is in place, stride 1 */
-    unsigned int lanes = arity == 1u ? nops : nops / arity;
-    unsigned int words = lanes * stride;
-    for (unsigned int l = 0; l < lanes; l++) {
-        for (unsigned int d = 0; d < arity; d++) {
-            buffer[l * stride + d] = operands[l * arity + d];
-        }
-        if (arity > 1u) {
-            buffer[l * stride + arity] = 0u; /* the output slot */
-        }
-    }
-
-    /* Tee to this socket while the dispatch runs, exactly as `report` does, so the
-     * gpu/gpuop lines arrive between the ack and the done. Provenance first. */
-    obs_set_write_tee(obs_net_tee, session);
-    obs_report_gpu_device(obs_gpu_backend_name(), obs_gpu_device_name(),
-                          obs_gpu_device_type());
-    int rc = obs_gpu_dispatch_named(kernel, buffer, words);
-    if (rc == 0) {
-        for (unsigned int l = 0; l < lanes; l++) {
-            if (arity == 1u) {
-                obs_report_gpu(kernel, l, operands[l], buffer[l]);
-            } else {
-                obs_report_gpu_op(kernel, l, buffer[l * stride + arity],
-                                  &operands[l * arity], arity);
-            }
-        }
-    }
-    obs_set_write_tee(0, 0);
-
-    /* The lane count on success, zero on a graceful failure - which the driver reads as
-     * "ran but produced nothing", distinct from a death. */
-    return obs_net_done(session, seq, "returned", rc == 0 ? lanes : 0u, NULL);
-}
-#endif /* OBS_GPU */
 
 /* Serves commands until the driver leaves or the connection drops. */
 #if defined(OBS_NET_ESCAPE)
@@ -981,15 +878,6 @@ static void obs_net_session(obs_session *session) {
             }
             continue;
         }
-
-#if defined(OBS_GPU)
-        if (obs_net_equal(verb, "gpu")) {
-            if (!obs_net_gpu(session, (unsigned long)seq, fields, count)) {
-                return;
-            }
-            continue;
-        }
-#endif
 
 #if defined(OBS_NET_ESCAPE)
         if (obs_net_equal(verb, "blob")) {

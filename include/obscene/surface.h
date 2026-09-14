@@ -158,7 +158,8 @@
     X(scePthreadCondattrInit) \
     X(scePthreadCondattrDestroy) \
     X(scePthreadRwlockRdlock) \
-    X(scePthreadRwlockWrlock)
+    X(scePthreadRwlockWrlock) \
+    X(pthread_setaffinity_np)
 
 /* POSIX under its own names, from libScePosix.
  *
@@ -270,7 +271,68 @@
     X(__cxa_guard_acquire) \
     X(__cxa_guard_release) \
     X(__cxa_pure_virtual) \
-    X(__stack_chk_fail)
+    X(__stack_chk_fail) \
+    X(chmod) \
+    X(chown) \
+    X(clock_gettime) \
+    X(close) \
+    X(fcntl) \
+    X(flock) \
+    X(fstat) \
+    X(ftruncate) \
+    X(getline) \
+    X(getpagesize) \
+    X(getpid) \
+    X(getrlimit) \
+    X(gettimeofday) \
+    X(isatty) \
+    X(localtime_r) \
+    X(lseek) \
+    X(mkdir) \
+    X(mknod) \
+    X(mkstemp) \
+    X(mkstemps) \
+    X(mmap) \
+    X(munmap) \
+    X(nanosleep) \
+    X(open) \
+    X(open_memstream) \
+    X(openlog) \
+    X(pclose) \
+    X(popen) \
+    X(read) \
+    X(readlink) \
+    X(regcomp) \
+    X(regexec) \
+    X(regfree) \
+    X(shmat) \
+    X(shmctl) \
+    X(shmdt) \
+    X(shmget) \
+    X(stat) \
+    X(strcat) \
+    X(strrchr) \
+    X(sync) \
+    X(syscall) \
+    X(unlink) \
+    X(usleep) \
+    X(clock_getres) \
+    X(sched_yield) \
+    X(sched_getaffinity) \
+    X(dladdr) \
+    X(dl_iterate_phdr) \
+    X(reallocarray) \
+    X(fmemopen) \
+    X(mkostemp) \
+    X(strtod_l) \
+    X(strtok_r) \
+    X(qsort_r) \
+    X(sysconf) \
+    X(posix_fallocate) \
+    X(secure_getenv) \
+    X(getrandom) \
+    X(random_r) \
+    X(timespec_get)
 
 /* The current generation's graphics interface.
  *
@@ -300,31 +362,21 @@
 #define OBS_SURFACE_AGC(X) \
     X(sceAgcAcbAcquireMem) \
     X(sceAgcAcbAcquireMemGetSize) \
-    X(sceAgcAcbDispatchIndirect) \
     X(sceAgcAcbDmaData) \
     X(sceAgcAcbDmaDataGetSize) \
-    X(sceAgcAcbEventWrite) \
     X(sceAgcAcbJump) \
     X(sceAgcAcbJumpGetSize) \
-    X(sceAgcAcbPopMarker) \
-    X(sceAgcAcbPushMarker) \
-    X(sceAgcAcbResetQueue) \
-    X(sceAgcAcbWaitRegMem) \
-    X(sceAgcAcbWriteData) \
     X(sceAgcCbBranch) \
     X(sceAgcCbBranchGetSize) \
-    X(sceAgcCbDispatch) \
     X(sceAgcCbNop) \
     X(sceAgcCbNopGetSize) \
     X(sceAgcCbQueueEndOfPipeActionGetSize) \
     X(sceAgcCbReleaseMem) \
     X(sceAgcCbSetShRegisterRangeDirect) \
-    X(sceAgcCbSetShRegistersDirect) \
     X(sceAgcCreatePrimState) \
     X(sceAgcCreateShader) \
     X(sceAgcDcbAcquireMem) \
     X(sceAgcDcbAcquireMemGetSize) \
-    X(sceAgcDcbDispatchIndirect) \
     X(sceAgcDcbDmaData) \
     X(sceAgcDcbDmaDataGetSize) \
     X(sceAgcDcbDrawIndex) \
@@ -333,34 +385,23 @@
     X(sceAgcDcbDrawIndexIndirectGetSize) \
     X(sceAgcDcbDrawIndexIndirectMulti) \
     X(sceAgcDcbDrawIndexIndirectMultiGetSize) \
-    X(sceAgcDcbDrawIndexOffset) \
     X(sceAgcDcbEventWrite) \
     X(sceAgcDcbGetLodStats) \
     X(sceAgcDcbGetLodStatsGetSize) \
     X(sceAgcDcbJump) \
     X(sceAgcDcbJumpGetSize) \
-    X(sceAgcDcbPopMarker) \
-    X(sceAgcDcbPushMarker) \
     X(sceAgcDcbRewind) \
     X(sceAgcDcbRewindGetSize) \
-    X(sceAgcDcbSetBaseIndirectArgs) \
-    X(sceAgcDcbSetCxRegistersIndirect) \
-    X(sceAgcDcbSetFlip) \
     X(sceAgcDcbSetIndexBuffer) \
     X(sceAgcDcbSetIndexCount) \
     X(sceAgcDcbSetIndexCountGetSize) \
     X(sceAgcDcbSetIndexSize) \
     X(sceAgcDcbSetNumInstances) \
-    X(sceAgcDcbSetPredication) \
-    X(sceAgcDcbSetShRegistersIndirect) \
     X(sceAgcDcbSetUcRegisterDirect) \
     X(sceAgcDcbSetUcRegisterDirectGetSize) \
-    X(sceAgcDcbSetUcRegistersIndirect) \
     X(sceAgcDcbStallCommandBufferParser) \
     X(sceAgcDcbStallCommandBufferParserGetSize) \
     X(sceAgcDcbWaitRegMem) \
-    X(sceAgcDcbWaitUntilSafeForRendering) \
-    X(sceAgcDcbWriteData) \
     X(sceAgcDmaDataPatchSetDstAddressOrOffset) \
     X(sceAgcDmaDataPatchSetSrcAddressOrOffsetOrImmediate) \
     X(sceAgcDriverGetDefaultOwner) \
@@ -377,7 +418,6 @@
     X(sceAgcQueueEndOfPipeActionPatchData) \
     X(sceAgcQueueEndOfPipeActionPatchGcrCntl) \
     X(sceAgcQueueEndOfPipeActionPatchType) \
-    X(sceAgcSetCxRegIndirectPatchAddRegisters) \
     X(sceAgcSetCxRegIndirectPatchSetAddress) \
     X(sceAgcSetPacketPredication) \
     X(sceAgcSetShRegIndirectPatchAddRegisters) \
@@ -504,7 +544,6 @@
     X(sceGnmDrawInitDefaultHardwareState) \
     X(sceGnmInsertWaitFlipDone) \
     X(sceGnmFlushGarlic) \
-    X(sceGnmGetGpuCoreClockFrequency) \
     X(sceGnmRequestFlipAndSubmitDone) \
     X(sceGnmMapComputeQueue) \
     X(sceGnmDingDong)

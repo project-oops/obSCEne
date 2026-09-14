@@ -155,7 +155,7 @@ pub fn run(elf: &Elf) -> Derivation {
     let table = entries
         .ok()
         .and_then(|entries| Tags::detect(&entries))
-        .unwrap_or(Table::Legacy);
+        .unwrap_or(Table::Orbis);
     run_with(elf, table)
 }
 
@@ -185,8 +185,8 @@ pub fn run_with(elf: &Elf, table: Table) -> Derivation {
     // module carries no marker either, and looking it up the way a loader would is the point.
     // (D193)
     let segment = match table {
-        Table::Legacy => elf.segment(PT_SCE_DYNLIBDATA),
-        Table::Current => entries
+        Table::Orbis => elf.segment(PT_SCE_DYNLIBDATA),
+        Table::Prospero => entries
             .iter()
             .find(|entry| entry.tag == t.strtab)
             .and_then(|entry| {
@@ -214,8 +214,8 @@ pub fn run_with(elf: &Elf, table: Table) -> Derivation {
     // address is not supposed to matter. The tests were right and the shortcut was a
     // coincidence dressed as economy. (D193)
     let base = match table {
-        Table::Legacy => 0,
-        Table::Current => segment.vaddr,
+        Table::Orbis => 0,
+        Table::Prospero => segment.vaddr,
     };
 
     // How much of the segment's tail the dynamic table occupies, or zero when it sits

@@ -40,6 +40,25 @@ if [ -f "$HOME/.cargo/env" ]; then
     . "$HOME/.cargo/env"
 fi
 
+# The gates run the release binary, never `cargo run`.
+#
+# `cargo run` builds the dev profile, and that binary overflows the main thread's stack
+# during start-up - before any gate's own code runs. Forty clap subcommands with long
+# help text, unoptimised, is enough on a default 1 MB main stack. Every gate below
+# therefore reported a failure that was really the binary never starting, and a
+# `--version` would have shown it: the dev profile overflows, release does not.
+#
+# That is why this file could report a clean tree while the documented counts had drifted
+# by 139 checks - the gate that would have caught it never ran.
+#
+# The path follows CARGO_TARGET_DIR because this script exports it (and `verify-wsl.sh`
+# overrides it), so `tool/target/` is the wrong place to look. `.exe` is preferred where it
+# exists: a Windows checkout can hold a Linux binary of the same name from a WSL build, and
+# that one cannot be executed here.
+( cd tool && cargo build --release --quiet )
+TOOL="${CARGO_TARGET_DIR}/release/obscene-tool"
+[ -x "${TOOL}.exe" ] && TOOL="${TOOL}.exe"
+
 log="${TMPDIR:-/tmp}/obscene-verify.$$"
 trap 'rm -f "$log"' EXIT
 
@@ -90,7 +109,7 @@ printf '=== cross-symbol guards\n'
 # least wants to miss. It also assumed every runner is called `check_*`; the blind prober's
 # is `run_bulk`. Neither fault could show up as a failure, only as a smaller number nobody
 # was comparing against anything.
-if (cd tool && cargo run --quiet -- guards --root ..) >"$log" 2>&1; then
+if (cd tool && "$TOOL" guards --root ..) >"$log" 2>&1; then
     head -1 "$log"
 else
     cat "$log"
@@ -103,7 +122,7 @@ fi
 # which `040-file` grants twenty-two sections later, and neither had ever run on any target
 # from the day they were written. The reports were read many times and looked reasonable.
 printf '=== capability ordering\n'
-if (cd tool && cargo run --quiet -- caps --root ..) >"$log" 2>&1; then
+if (cd tool && "$TOOL" caps --root ..) >"$log" 2>&1; then
     head -1 "$log"
 else
     cat "$log"
@@ -114,7 +133,7 @@ fi
 # README said 79 checks when there were 106, and `make target` was named in four files
 # without ever having been a rule.
 printf '=== documentation counts\n'
-if (cd tool && cargo run --quiet -- counts --root .. --check) >"$log" 2>&1; then
+if (cd tool && "$TOOL" counts --root .. --check) >"$log" 2>&1; then
     head -1 "$log"
 else
     cat "$log"
@@ -135,7 +154,7 @@ if [ -f reports/host.txt ] && [ -f reports/shadps4.txt ] \
     && [ -f reports/kyty.txt ] && [ -f reports/fpps4.txt ] \
     && [ -f reports/ps5pcem.txt ] && [ -f reports/orbistoun.txt ]; then
     printf '=== compatibility table\n'
-    if (cd tool && cargo run --quiet -- compat --into ../docs/COMPATIBILITY.md --check \
+    if (cd tool && "$TOOL" compat --into ../docs/COMPATIBILITY.md --check \
         "host=../reports/host.txt" "shadPS4=../reports/shadps4.txt" \
         "PS5PCEM=../reports/ps5pcem.txt" "fpPS4=../reports/fpps4.txt" \
         "kyty=../reports/kyty.txt" "orbistoun=../reports/orbistoun.txt") >"$log" 2>&1; then
@@ -153,7 +172,7 @@ fi
 # gates that could never fail, and a third guarding a contract two implementations are
 # built against is not the place to find out about a fourth.
 printf '=== protocol checker self-test\n'
-if (cd tool && cargo run --quiet -- protocol --root .. --selftest) >"$log" 2>&1; then
+if (cd tool && "$TOOL" protocol --root .. --selftest) >"$log" 2>&1; then
     tail -1 "$log"
 else
     cat "$log"
@@ -161,7 +180,7 @@ else
 fi
 
 printf '=== captured protocol exchanges\n'
-if (cd tool && cargo run --quiet -- protocol --root ..) >"$log" 2>&1; then
+if (cd tool && "$TOOL" protocol --root ..) >"$log" 2>&1; then
     head -1 "$log"
 else
     cat "$log"
@@ -174,7 +193,7 @@ fi
 # under the strict warnings only if something keeps checking it.
 if command -v glslangValidator >/dev/null 2>&1; then
     printf '=== embedded shaders match their source\n'
-    if (cd tool && cargo run --quiet -- shaders --root .. --check) >"$log" 2>&1; then
+    if (cd tool && "$TOOL" shaders --root .. --check) >"$log" 2>&1; then
         head -1 "$log"
     else
         cat "$log"
@@ -187,38 +206,11 @@ fi
 # has it, only adds a cross-check that no named intrinsic has vanished and no new scalar-math
 # one has appeared unclassified. A census that is not gated drifts from the hardware it maps.
 printf '=== GPU surface census\n'
-if (cd tool && cargo run --quiet -- gpusurface --root .. --check) >"$log" 2>&1; then
+if (cd tool && "$TOOL" gpusurface --root .. --check) >"$log" 2>&1; then
     head -1 "$log"
 else
     cat "$log"
     note_failure "obscene-tool gpusurface --check"
-fi
-
-# A GPU=1 compile, when Vulkan headers are present. Compile only, not a run: it proves the
-# backend and section still build under -Werror -Wconversion, without depending on a working
-# software rasteriser or on timing. The dispatch itself is exercised by hand against llvmpipe
-# and, in time, on the Deck.
-if [ -f /usr/include/vulkan/vulkan.h ]; then
-    printf '=== GPU backend builds (GPU=1)\n'
-    if make host GPU=1 BUILD="$BUILD-gpu" >"$log" 2>&1; then
-        printf 'gpu build: ok\n'
-    else
-        tail -20 "$log"
-        note_failure "make host GPU=1"
-    fi
-
-    # The golden regression check, which does run the GPU - but only ever asserts against a
-    # matching device and skips otherwise, so it is not the fragile "needs a rasteriser"
-    # dependency the compile-only rule above guards against. On the build VM's llvmpipe it
-    # catches any change to a kernel's output the reference cannot (the transcendentals); on a
-    # different device, or none, it prints why it skipped and passes. See scripts/gpu-golden.sh.
-    printf '=== GPU golden regression\n'
-    if sh scripts/gpu-golden.sh --check >"$log" 2>&1; then
-        tail -1 "$log"
-    else
-        cat "$log"
-        note_failure "scripts/gpu-golden.sh --check"
-    fi
 fi
 
 # The generated censuses.
@@ -235,7 +227,7 @@ printf '=== generated censuses
 # The curated census too, which was never gated and had quietly stopped regenerating: ten
 # names promoted to `platform.h` were removed from the header and from the refusal list, and
 # left in the generator's own group lists. Nothing noticed, because nothing ran it.
-if (cd tool && cargo run --quiet -- surface --root .. --check) >"$log" 2>&1; then
+if (cd tool && "$TOOL" surface --root .. --check) >"$log" 2>&1; then
     tail -1 "$log"
 else
     cat "$log"
@@ -246,7 +238,7 @@ fi
 # selfish's data/self-format.tsv; the generated C is only trustworthy if a change to that table
 # without regenerating this fails here. Same drift discipline as every other generated header.
 printf '=== SELF header table\n'
-if (cd tool && cargo run --quiet -- selfheader --root .. --check) >"$log" 2>&1; then
+if (cd tool && "$TOOL" selfheader --root .. --check) >"$log" 2>&1; then
     tail -1 "$log"
 else
     cat "$log"
@@ -254,7 +246,7 @@ else
 fi
 
 for which in corpus nids; do
-    if (cd tool && cargo run --quiet -- census "$which" --root .. --platform --check)         >"$log" 2>&1; then
+    if (cd tool && "$TOOL" census "$which" --root .. --platform --check)         >"$log" 2>&1; then
         tail -1 "$log"
     else
         cat "$log"
@@ -291,7 +283,7 @@ done
 # checking anything when the log was split into one file per entry, and a gate is only as
 # good as the last time somebody watched it fail. (D314)
 printf '=== decision index\n'
-if (cd tool && cargo run --quiet -- decisions --root ..) >"$log" 2>&1; then
+if (cd tool && "$TOOL" decisions --root ..) >"$log" 2>&1; then
     tail -1 "$log"
 else
     cat "$log"
@@ -299,7 +291,7 @@ else
 fi
 
 printf '=== corpus provenance\n'
-if (cd tool && cargo run --quiet -- corpus --root ..) >"$log" 2>&1; then
+if (cd tool && "$TOOL" corpus --root ..) >"$log" 2>&1; then
     tail -1 "$log"
 else
     cat "$log"
@@ -307,7 +299,7 @@ else
 fi
 
 printf '=== documentation references\n'
-if (cd tool && cargo run --quiet -- doccheck --root ..) >"$log" 2>&1; then
+if (cd tool && "$TOOL" doccheck --root ..) >"$log" 2>&1; then
     head -1 "$log"
 else
     cat "$log"
@@ -319,7 +311,7 @@ fi
 # longer does. `PROTOCOL.md` spent part of a day stating "It binds loopback by default" after
 # that had been reverted from `net_posix.c`, and nothing failed. (D170)
 printf '=== anchored prose still describes the source\n'
-if (cd tool && cargo run --quiet -- claims --root ..) >"$log" 2>&1; then
+if (cd tool && "$TOOL" claims --root ..) >"$log" 2>&1; then
     tail -1 "$log"
 else
     cat "$log"
@@ -352,7 +344,7 @@ fi
 # `015-sync/event-flag-round-trip` from every gate for part of a day and nothing failed. (D168)
 printf '=== the parser sees every check that ran\n'
 if (cd "$BUILD" && ./obscene-host > "$BUILD/rows-report.txt" 2>/dev/null) || true; then
-    if (cd tool && cargo run --quiet -- rows --root .. \
+    if (cd tool && "$TOOL" rows --root .. \
         --report "$BUILD/rows-report.txt") >"$log" 2>&1; then
         tail -1 "$log"
     else

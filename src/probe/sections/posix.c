@@ -40,6 +40,7 @@
 
 #include "obscene/harness.h"
 #include "obscene/platform.h"
+#include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 
@@ -363,6 +364,55 @@ static obs_result check_spellings_agree(void) {
     return obs_pass();
 }
 
+/* REQ-20260914T1443Z-3ea7: Test whether libkernel exports standard POSIX pthread
+ * symbols directly in the app sandbox (where libScePosix is blocked). */
+static obs_result check_libkernel_pthread_symbols(void) {
+    static const char *const pthread_syms[] = {
+        "pthread_create", "pthread_join", "pthread_detach", "pthread_exit",
+        "pthread_self", "pthread_equal", "pthread_mutex_init", "pthread_mutex_lock",
+        "pthread_mutex_trylock", "pthread_mutex_unlock", "pthread_mutex_destroy",
+        "pthread_cond_init", "pthread_cond_wait", "pthread_cond_timedwait",
+        "pthread_cond_signal", "pthread_cond_broadcast", "pthread_cond_destroy",
+        "pthread_rwlock_init", "pthread_rwlock_rdlock", "pthread_rwlock_wrlock",
+        "pthread_rwlock_unlock", "pthread_rwlock_destroy", "pthread_once",
+        "pthread_key_create", "pthread_key_delete", "pthread_getspecific",
+        "pthread_setspecific"
+    };
+
+    int lk_handle = obs_module_open("libkernel");
+    if (lk_handle < 0) {
+        lk_handle = obs_module_open("libkernel.sprx");
+    }
+
+    uint64_t resolved_count = 0;
+    for (size_t i = 0; i < sizeof(pthread_syms) / sizeof(pthread_syms[0]); i++) {
+        const char *name = pthread_syms[i];
+        const void *fn = NULL;
+        if (lk_handle >= 0) {
+            fn = obs_module_symbol(lk_handle, name);
+        }
+        if (fn == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *addr = NULL;
+            if (sceKernelDlsym(1, name, &addr) == 0 && obs_address_is_callable(addr)) {
+                fn = addr;
+            }
+        }
+        int callable = obs_address_is_callable(fn);
+        if (callable) {
+            resolved_count++;
+        }
+        obs_report_measure("017-posix/libkernel-pthread-symbols", name, "resolved",
+                           (uint64_t)callable, "bool");
+    }
+
+    obs_report_measure("017-posix/libkernel-pthread-symbols", "libkernel", "total-resolved",
+                       resolved_count, "count");
+
+    /* Pass value records total resolved count (0 confirms libkernel exports no direct pthread
+     * aliases, validating oops-mesa's vendor mapping requirement; >0 indicates direct aliases exist). */
+    return obs_pass_value(resolved_count);
+}
+
 static const obs_check posix_checks[] = {
     {"017-posix/page-size", "libScePosix", "posix_getpagesize", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_page_size, check_page_size, OBS_FROM_SPEC},
@@ -377,6 +427,8 @@ static const obs_check posix_checks[] = {
     {"017-posix/spellings-agree", "libScePosix", "posix_pthread_rwlock_tryrdlock",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_spellings_agree,
      check_spellings_agree, OBS_FROM_ASSUMED},
+    {"017-posix/libkernel-pthread-symbols", "libkernel", "(symbols)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_libkernel_pthread_symbols, OBS_FROM_SPEC},
 };
 
 const obs_section obs_section_posix = {

@@ -338,6 +338,7 @@ principles six weeks later.
 | 🟡 | D329 | [a network section for Porthole, and a record for "I could not look"](decisions/D329-a-network-section-for-porthole-and-a-resolution-record.md) | assumed | 2026-09-08 |
 | 🟢 | D330 | [Audio format selectors, mouse stubs in unsigned payloads, and POSIX sockets for Porthole](decisions/D330-audio-format-selector-mouse-in-payload-and-posix-sockets.md) | decided | 2026-09-08 |
 | 🟢 | D331 | [The `*GetSize` family is measured against its own builder, not against a borrowed number](decisions/D331-the-getsize-family-is-measured-against-its-own-builder.md) | decided | 2026-09-12 |
+| 🟢 | D332 | [Hardware AGC Requests, Clean-Room Container Generation, and Sandbox POSIX Probing](decisions/D332-hardware-agc-requests-and-sandbox-posix-probing.md) | decided | 2026-09-14 |
 
 | | meaning |
 |---|---|

@@ -502,6 +502,53 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "$ypVBz4uPKcQ"},
     {"libSceAgc", "$zfcxg-ewMK8"},
 
+    /* REQ-20260913T2355Z-a6aa: Remaining 24 command builders and GetSize siblings */
+    {"libSceAgc", "$j3EtxFkSIhQ"},
+    {"libSceAgc", "$PxKWV2fVAps"},
+    {"libSceAgc", "$cFazmnXpJOE"},
+    {"libSceAgc", "$Y-5vneiBtzk"},
+    {"libSceAgc", "$6mFxkVqdmbQ"},
+    {"libSceAgc", "$cpCILPya5Zk"},
+    {"libSceAgc", "$JrtiDtKeS38"},
+    {"libSceAgc", "$htn36gPnBk4"},
+    {"libSceAgc", "$eZ4+17OQz4Q"},
+    {"libSceAgc", "$k3GhuSNmBLU"},
+    {"libSceAgc", "$Abendgtz+3o"},
+    {"libSceAgc", "$UZbQjYAwwXM"},
+    {"libSceAgc", "$yUBESvCCJ4I"},
+    {"libSceAgc", "$BIPexNBSGog"},
+    {"libSceAgc", "$ou16V5hh5sg"},
+    {"libSceAgc", "$CtB+A9-VxO0"},
+    {"libSceAgc", "$w8HVkEeXPv8"},
+    {"libSceAgc", "$B+aG9DUnTKA"},
+    {"libSceAgc", "$qMlfB1ZhMDc"},
+    {"libSceAgc", "$1q1titRBL6o"},
+    {"libSceAgc", "$cxPZ4Wgvdj8"},
+    {"libSceAgc", "$H7uZqCoNuWk"},
+    {"libSceAgc", "$+kSrjIVxKFE"},
+    {"libSceAgc", "$RmaJwLtc8rY"},
+    {"libSceAgc", "$BVFg3CWU6Eo"},
+    {"libSceAgc", "$ZvwO9euwYzc"},
+    {"libSceAgc", "$GBCh3zCihoU"},
+    {"libSceAgc", "$YUeqkyT7mEQ"},
+    {"libSceAgc", "$bbFueFP+J4k"},
+    {"libSceAgc", "$-HOOCn0JY48"},
+    {"libSceAgc", "$nNlUtdDDvZ0"},
+    {"libSceAgc", "$hvUfkUIQcOE"},
+    {"libSceAgc", "$UQGTw4xRlcM"},
+    {"libSceAgc", "$MWiElSNE8j8"},
+    {"libSceAgc", "$i1jyy49AjXU"},
+    {"libSceAgc", "$p9tI+yTvx68"},
+
+    /* REQ-20260914T1730Z-4386: Patch */
+    {"libSceAgc", "$d-6uF9sZDIU"},
+
+    /* REQ-20260914T1558Z-7d41: Device Info */
+    {"libSceAgc", "$Tasc5SLczww"},
+    {"libSceAgcDriver", "$ZGMnhAlcv9Y"},
+    {"libSceGnmDriver", "$GKIlegek0JQ"},
+    {"libSceGnmDriver", "$Fwvh++m9IQI"},
+
     /* ---- declared inside a section file rather than in platform.h ---------------
      *
      * Two names that exist to be asked about rather than called, so they are declared

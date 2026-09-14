@@ -121,9 +121,6 @@ extern const obs_section obs_section_encoder;
 extern const obs_section obs_section_videodec;
 extern const obs_section obs_section_audiodec;
 
-/* GPU compute. Always present - it reports a skip when built without OBS_GPU - so the
- * capability never silently disappears from the report. */
-extern const obs_section obs_section_gpu;
 extern const obs_section obs_section_gnm;
 extern const obs_section obs_section_agc;
 extern const obs_section obs_section_gpucap;

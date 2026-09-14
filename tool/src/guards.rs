@@ -346,7 +346,7 @@ mod tests {
         let text = "static const obs_check t[] = {\n    {\"171-agc/cull\", \"libSceAgc\", \"sceAgcX\", OBS_CAP_NONE, OBS_CAP_NONE,\n     OBS_NO_SYMBOL, check_cull, OBS_FROM_ASSUMED},\n};\nconst obs_section obs_section_agc = {\n    \"166-agc\",\n};";
         let found = orphans(&sections::rows_in(text), &declared_sections(text));
         assert_eq!(found.len(), 1, "the mis-prefixed row is reported");
-        assert_eq!(found[0].claimed, "171-agc");
+        assert_eq!(found.first().map(|f| f.claimed.as_str()), Some("171-agc"));
     }
 
     #[test]
@@ -367,7 +367,10 @@ mod tests {
     fn declared_sections_reads_every_section_in_a_multi_section_file() {
         let text = "const obs_section obs_section_file = {\n    \"040-file\",\n};\nconst obs_section obs_section_time = {\n    \"050-time\",\n};";
         let found = declared_sections(text);
-        assert!(found.contains("040-file") && found.contains("050-time"), "{found:?}");
+        assert!(
+            found.contains("040-file") && found.contains("050-time"),
+            "{found:?}"
+        );
     }
 
     #[test]
