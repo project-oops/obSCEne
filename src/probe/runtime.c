@@ -9,6 +9,7 @@
  */
 
 #include "oops/freestd.h"
+#include "oops/target.h"
 #include "oops/krw.h"
 #include "obscene/runtime.h"
 #include "obscene/harness.h"
@@ -97,6 +98,11 @@ int obs_has_syscall_route(void) {
 
 uintptr_t obs_syscall_gadget_address(void) {
     return 0;
+}
+
+long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
+    (void)num; (void)a1; (void)a2; (void)a3; (void)a4; (void)a5; (void)a6;
+    return -1;
 }
 #endif
 
@@ -204,24 +210,36 @@ static void obs_debug_out_write(const char *bytes, size_t len) {
     }
     scratch[len] = '\0';
 
-    if (s_fn_debug_out != NULL) {
+    if (s_libkernel_syscall_gadget != 0) {
+        obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
+    } else if (s_fn_debug_out != NULL) {
         s_fn_debug_out(0, scratch);
     } else if (obs_address_is_callable((const void *)&sceKernelDebugOutText)) {
         (void)sceKernelDebugOutText(0, scratch);
-    } else if (s_libkernel_syscall_gadget != 0) {
-        obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
     }
 }
 
 static obs_channel obs_output_channel = OBS_CHANNEL_UNTRIED;
 
 static void *obs_payload_resolve(const char *name) {
-    if (s_fn_dlsym == NULL || name == NULL)
+    if (name == NULL)
         return NULL;
-    void *addr = NULL;
     char nid[12];
     obs_compute_nid(name, nid);
 
+    /* 0. Try staged kexport_table first if available (bypasses retail game DRM / uninitialized dlsym) */
+    const payload_args_t *pargs = obs_get_payload_args();
+    if (pargs != NULL && pargs->kexport_table != NULL) {
+        const void *kaddr = obs_kexport_lookup(
+            (const obs_kexport_table_t *)pargs->kexport_table, nid);
+        if (kaddr != NULL && obs_address_is_callable(kaddr))
+            return (void *)(uintptr_t)kaddr;
+    }
+
+    if (s_fn_dlsym == NULL || !obs_address_is_callable((const void *)s_fn_dlsym))
+        return NULL;
+
+    void *addr = NULL;
     if (s_fn_dlsym(0x2001, nid, &addr) == 0 && obs_address_is_callable(addr))
         return addr;
     if (s_fn_dlsym(0x2001, name, &addr) == 0 && obs_address_is_callable(addr))
@@ -238,12 +256,31 @@ static void *obs_payload_resolve(const char *name) {
 }
 
 void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
-    if (payload_args_word0 < 0x10000UL || payload_args_word0 >= 0x0000800000000000UL ||
-        (payload_args_word0 & 0x7UL) != 0) {
+    const payload_args_t *pargs = obs_get_payload_args();
+    if (pargs != NULL && pargs->kexport_table != NULL) {
+        const void *gptr = obs_kexport_lookup(
+            (const obs_kexport_table_t *)pargs->kexport_table, "W0xkN0+ZkCE");
+        if (gptr != NULL && obs_address_is_callable(gptr)) {
+            s_libkernel_syscall_gadget = (long)(uintptr_t)gptr + 0xa;
+        }
+    }
+
+    if (payload_args_word0 >= 0x10000UL && payload_args_word0 < 0x0000800000000000UL &&
+        (payload_args_word0 & 0x7UL) == 0) {
+        if (obs_address_is_callable((const void *)payload_args_word0)) {
+            s_fn_dlsym = (fn_dlsym_t)payload_args_word0;
+            if (s_libkernel_syscall_gadget == 0) {
+                s_libkernel_syscall_gadget = (long)payload_args_word0 + 0xa;
+            }
+        }
+    }
+
+    if (s_libkernel_syscall_gadget != 0 && s_fn_dlsym == NULL &&
+        (pargs == NULL || pargs->kexport_table == NULL)) {
+        obs_payload_output_bootstrapped = 1;
         return;
     }
-    s_fn_dlsym = (fn_dlsym_t)payload_args_word0;
-    s_libkernel_syscall_gadget = (long)payload_args_word0 + 0xa;
+
     s_fn_debug_out = (fn_debug_out_t)obs_payload_resolve("sceKernelDebugOutText");
     s_fn_write = (fn_write_t)obs_payload_resolve("sceKernelWrite");
     s_fn_open = (fn_open_t)obs_payload_resolve("sceKernelOpen");
@@ -252,17 +289,16 @@ void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
     s_fn_usleep = (fn_usleep_t)obs_payload_resolve("sceKernelUsleep");
     void *getpid_ptr = obs_payload_resolve("getpid");
     if (getpid_ptr != NULL) {
-        s_libkernel_syscall_gadget = (long)getpid_ptr + 0xa;
-        obs_libkernel_base_value = (unsigned long)getpid_ptr - 0x5b0UL;
+        s_libkernel_syscall_gadget = (long)(uintptr_t)getpid_ptr + 0xa;
+        obs_libkernel_base_value = (unsigned long)(uintptr_t)getpid_ptr - 0x5b0UL;
     }
-    if (obs_libkernel_base_value == 0) {
+    if (obs_libkernel_base_value == 0 && payload_args_word0 != 0) {
         if ((payload_args_word0 & 0xffffffff00000000UL) == 0x800000000UL) {
             obs_libkernel_base_value = 0x800000000UL;
         } else {
             obs_libkernel_base_value = payload_args_word0 & ~0xfffffUL;
         }
     }
-    (void)payload_args_word0;
     obs_write_tee = NULL;
     obs_write_tee_ctx = NULL;
     obs_payload_output_bootstrapped = 1;
@@ -369,6 +405,16 @@ static size_t obs_send(obs_channel channel, const char *bytes, size_t len) {
          * s_fn_write above carries this channel and this is skipped: the raw call goes
          * through the JUMP_SLOT a native title leaves at 0x2, which `&sceKernelWrite`
          * (a GLOB_DAT read) cannot see. (D323) */
+        if (s_libkernel_syscall_gadget != 0) {
+            if (len >= sizeof(scratch))
+                len = sizeof(scratch) - 1;
+            for (size_t i = 0; i < len; i++)
+                scratch[i] = bytes[i];
+            scratch[len] = '\0';
+            long n = obs_invoke_syscall(601, 7, (long)scratch, 0, 0, 0, 0);
+            if (n >= 0)
+                return len;
+        }
         if (OBS_RAW_IMPORT_CHANNELS_OK() &&
             obs_address_is_callable((const void *)&sceKernelWrite)) {
             long n = (long)sceKernelWrite(OBS_FD_STDOUT, bytes, len);
@@ -1067,12 +1113,12 @@ static void obs_relocate_payload_got(void) {
     if (count > 0) {
         uint64_t slot0_val = *(const uint64_t *)(base + r[0].r_offset);
         uintptr_t first_stub = 0;
-        if (slot0_val >= base) {
+        if (slot0_val >= base && slot0_val < base + 0x1000000UL) {
             first_stub = (uintptr_t)slot0_val - 6;
-        } else if (slot0_val > 0) {
+        } else if (slot0_val > 0 && slot0_val < 0x1000000UL) {
             first_stub = base + (uintptr_t)slot0_val - 6;
         }
-        if (first_stub >= 0x10) {
+        if (first_stub >= base && first_stub < base + 0x1000000UL && first_stub >= 0x10) {
             plt_start = first_stub - 0x10;
             plt_end = plt_start + 0x10 + count * 0x10;
             obs_set_plt_bounds(plt_start, plt_end);
@@ -1185,16 +1231,17 @@ static int obs_is_prospero(void) {
     if (s_is_prospero != -1) {
         return s_is_prospero;
     }
-    if (obs_libkernel_base_value != 0) {
-        const unsigned char *lk = (const unsigned char *)obs_libkernel_base_value;
-        if (lk[0x5e40] == 0x48 && lk[0x5e41] == 0xc7 && lk[0x5e42] == 0xc0 &&
-            *(const uint32_t *)(lk + 0x5e43) == 585) {
-            s_is_prospero = 1;
-            return 1;
-        }
+#if OOPS_TARGET_IS_PROSPERO || (defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5))
+    s_is_prospero = 1;
+    return 1;
+#else
+    if (obs_detected_generation() == OBS_GENERATION_PROSPERO) {
+        s_is_prospero = 1;
+        return 1;
     }
     s_is_prospero = 0;
     return 0;
+#endif
 }
 
 int sceKernelAllocateDirectMemory(sce_off_t search_start, sce_off_t search_end,

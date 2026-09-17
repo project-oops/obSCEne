@@ -47,9 +47,10 @@ static obs_result check_direct_memory_size(void) {
 }
 
 static obs_result check_allocate(void) {
-    if (!obs_has_syscall_route()) {
+    if (!obs_has_syscall_route() &&
+        !obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory)) {
         return obs_skip(
-            "no syscall route available (no payload args and no syscall gadget)");
+            "no syscall route or library symbol available");
     }
     OBS_REQUIRE(&sceKernelGetDirectMemorySize);
     sce_off_t physical = 0;
@@ -483,6 +484,71 @@ static obs_result check_reserve_virtual_range(void) {
     return obs_fail_code("sceKernelReserveVirtualRange failed", (uint64_t)(uint32_t)rc);
 }
 
+static obs_result check_memory_direct_pools_sequence(void) {
+    if (!obs_address_is_callable((const void *)&sceKernelGetDirectMemorySize)) {
+        return obs_skip("sceKernelGetDirectMemorySize not callable");
+    }
+
+    /* 1. sceKernelGetDirectMemorySize() from clean start */
+    size_t size1 = sceKernelGetDirectMemorySize();
+    obs_report_measure("020-memory/direct-pools-sequence", "query1", "size",
+                       (uint64_t)size1, "bytes");
+
+    /* 2. sceKernelAllocateDirectMemory for large span */
+    size_t span = 0x40000000UL; /* 1 GiB */
+    sce_off_t phys1 = 0;
+    int rc1 = -1;
+    if (obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory)) {
+        rc1 = sceKernelAllocateDirectMemory(0, (sce_off_t)size1, span,
+                                            0x200000UL, OBS_MEM_TYPE_WB_ONION, &phys1);
+        if (rc1 != 0) {
+            span = 0x10000000UL; /* 256 MiB fallback */
+            rc1 = sceKernelAllocateDirectMemory(0, (sce_off_t)size1, span,
+                                                0x200000UL, OBS_MEM_TYPE_WB_ONION, &phys1);
+        }
+    }
+    obs_report_measure("020-memory/direct-pools-sequence", "alloc-direct", "rc",
+                       (uint64_t)(uint32_t)rc1, "code");
+    obs_report_measure("020-memory/direct-pools-sequence", "alloc-direct", "phys",
+                       (uint64_t)phys1, "addr");
+    obs_report_measure("020-memory/direct-pools-sequence", "alloc-direct", "span",
+                       (uint64_t)span, "bytes");
+
+    /* 3. sceKernelGetDirectMemorySize() again */
+    size_t size2 = sceKernelGetDirectMemorySize();
+    obs_report_measure("020-memory/direct-pools-sequence", "query2", "size",
+                       (uint64_t)size2, "bytes");
+
+    /* 4. sceKernelAllocateMainDirectMemory */
+    sce_off_t phys2 = 0;
+    int rc2 = -1;
+    if (obs_address_is_callable((const void *)&sceKernelAllocateMainDirectMemory)) {
+        rc2 = sceKernelAllocateMainDirectMemory(span, 0x200000UL,
+                                                OBS_MEM_TYPE_WB_ONION, &phys2);
+    }
+    obs_report_measure("020-memory/direct-pools-sequence", "alloc-main", "rc",
+                       (uint64_t)(uint32_t)rc2, "code");
+    obs_report_measure("020-memory/direct-pools-sequence", "alloc-main", "phys",
+                       (uint64_t)phys2, "addr");
+
+    /* 5. sceKernelGetDirectMemorySize() third time */
+    size_t size3 = sceKernelGetDirectMemorySize();
+    obs_report_measure("020-memory/direct-pools-sequence", "query3", "size",
+                       (uint64_t)size3, "bytes");
+
+    /* Cleanup allocations */
+    if (rc1 == 0 && phys1 != 0 &&
+        obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
+        sceKernelReleaseDirectMemory(phys1, span);
+    }
+    if (rc2 == 0 && phys2 != 0 &&
+        obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
+        sceKernelReleaseDirectMemory(phys2, span);
+    }
+
+    return obs_pass();
+}
+
 static const obs_check memory_checks[] = {
     {"020-memory/reserve-virtual-range", "libkernel", "sceKernelReserveVirtualRange",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelReserveVirtualRange,
@@ -493,6 +559,9 @@ static const obs_check memory_checks[] = {
     {"020-memory/allocate", "libkernel", "sceKernelAllocateDirectMemory", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelAllocateDirectMemory, check_allocate,
      OBS_FROM_ASSUMED},
+    {"020-memory/direct-pools-sequence", "libkernel", "sceKernelAllocateDirectMemory",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelAllocateDirectMemory,
+     check_memory_direct_pools_sequence, OBS_FROM_ASSUMED},
     {"020-memory/map", "libkernel", "sceKernelMapDirectMemory", OBS_CAP_NONE,
      OBS_CAP_MEMORY, (const void *)&sceKernelMapDirectMemory, check_map,
      OBS_FROM_ASSUMED},

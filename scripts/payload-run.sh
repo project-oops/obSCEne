@@ -29,8 +29,17 @@ REPO="$(cd "$HERE/.." && pwd)"
 if ! grep -qi microsoft /proc/version 2>/dev/null; then
     [ -n "$OBS_PAYLOAD_REENTERED" ] && { echo "payload-run.sh: re-entered WSL and still not in WSL" >&2; exit 1; }
     linux="$(printf '%s' "$HERE/payload-run.sh" | sed 's|^/\([a-zA-Z]\)/|/mnt/\1/|')"
-    echo "payload-run.sh: not in WSL - re-entering ${WSL_DISTRO:-Ubuntu}"
-    exec wsl.exe -d "${WSL_DISTRO:-Ubuntu}" -- env OBS_PAYLOAD_REENTERED=1 bash "$linux" "$@"
+    dist="${WSL_DISTRO:-}"
+    if [ -z "$dist" ]; then
+        if wsl.exe -l -q 2>/dev/null | tr -d '\000\r' | grep -qix 'oops-builder'; then
+            dist="oops-builder"
+        else
+            dist="Ubuntu"
+        fi
+    fi
+    export MSYS_NO_PATHCONV=1
+    echo "payload-run.sh: not in WSL - re-entering $dist"
+    exec wsl.exe -d "$dist" -- env OBS_PAYLOAD_REENTERED=1 bash "$linux" "$@"
 fi
 
 seconds=90
@@ -138,7 +147,7 @@ echo "=== run on console via elfldr + capture both channels (${seconds}s) ==="
 # log ($klog, D233), which is also where the kernel writes the fatal-signal lines a crash leaves.
 # So capture the log across the run *and* keep the full socket output, and read whichever spoke.
 # The log capture starts first, so nothing emitted at startup is lost.
-"$tool" hw logs --seconds "$((seconds + 10))" "${name_arg[@]}" > "$klog" 2>&1 &
+stdbuf -oL -eL "$tool" hw logs --seconds "$((seconds + 10))" "${name_arg[@]}" > "$klog" 2>&1 &
 cap=$!
 # Prepare elf path for tool (handle Windows .exe path if running on WSL)
 elf_arg="$elf"

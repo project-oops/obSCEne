@@ -242,6 +242,15 @@ OBS_WEAK int scePthreadAttrGetstacksize(const ScePthreadAttr *attr, size_t *size
  * the top of the real stack (its D575). What it reports is worth measuring rather than
  * inferring. */
 OBS_WEAK int scePthreadAttrGet(ScePthread thread, ScePthreadAttr *attr);
+OBS_WEAK int scePthreadAttrSetstacksize(ScePthreadAttr *attr, size_t size);
+OBS_WEAK int scePthreadAttrSetaffinity(ScePthreadAttr *attr, uint64_t mask);
+OBS_WEAK int scePthreadAttrGetaffinity(const ScePthreadAttr *attr, uint64_t *mask);
+OBS_WEAK int scePthreadAttrSetschedparam(ScePthreadAttr *attr, const void *param);
+OBS_WEAK int scePthreadAttrGetschedparam(const ScePthreadAttr *attr, void *param);
+OBS_WEAK int scePthreadGetprio(ScePthread thread, int *prio);
+OBS_WEAK int scePthreadSetprio(ScePthread thread, int prio);
+OBS_WEAK int scePthreadGetaffinity(ScePthread thread, uint64_t *mask);
+OBS_WEAK int scePthreadSetaffinity(ScePthread thread, uint64_t mask);
 
 /* ---- libkernel_sync_on_address: waiting on a word --------------------------
  *
@@ -1245,15 +1254,15 @@ OBS_WEAK int32_t sceGnmDispatchDirect(uint32_t *cmdbuf, uint32_t size,
  * for any arity <= 6.
  */
 OBS_WEAK uint64_t sceAgcCbNop(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3,
-                              uint64_t arg4, uint64_t arg5);
+                              uint64_t arg4, uint64_t arg5) __asm__("$LtTouSCZjHM");
 OBS_WEAK uint64_t sceAgcCbReleaseMem(void *arg0, uint64_t arg1, uint64_t arg2,
-                                     uint64_t arg3, uint64_t arg4, uint64_t arg5);
+                                     uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$wr23dPKyWc0");
 OBS_WEAK uint64_t sceAgcDcbDmaData(void *arg0, uint64_t arg1, uint64_t arg2,
-                                   uint64_t arg3, uint64_t arg4, uint64_t arg5);
+                                   uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$WmAc2MEj6Io");
 OBS_WEAK uint64_t sceAgcDcbWaitRegMem(void *arg0, uint64_t arg1, uint64_t arg2,
-                                      uint64_t arg3, uint64_t arg4, uint64_t arg5);
+                                      uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$VmW0Tdpy420");
 OBS_WEAK uint64_t sceAgcDcbResetQueue(void *arg0, uint64_t arg1, uint64_t arg2,
-                                      uint64_t arg3, uint64_t arg4, uint64_t arg5);
+                                      uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$TRO721eVt4g");
 /* The `*GetSize` siblings.
  *
  * What the library says a builder will consume, asked *before* the builder is called.
@@ -1455,8 +1464,16 @@ OBS_WEAK uint64_t sceAgcDcbWaitUntilSafeForRendering(void *arg0, uint64_t arg1, 
 OBS_WEAK uint64_t sceAgcDcbWriteData(void *arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$i1jyy49AjXU");
 OBS_WEAK uint64_t sceAgcDcbWriteDataGetSize(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) __asm__("$p9tI+yTvx68");
 
-/* Patch and Device Info (REQ-20260914T1730Z-4386, REQ-20260914T1558Z-7d41) */
 OBS_WEAK int sceAgcSetCxRegIndirectPatchAddRegisters(void *packet_ptr, uint32_t count, const void *regs) __asm__("$d-6uF9sZDIU");
+OBS_WEAK int sceAgcSetCxRegIndirectPatchSetAddress(void *packet_ptr, uint64_t addr) __asm__("$vcmNN+AAXnY");
+OBS_WEAK int sceAgcSetShRegIndirectPatchAddRegisters(void *packet_ptr, uint32_t count, const void *regs) __asm__("$z2duB-hHQSM");
+OBS_WEAK int sceAgcSetShRegIndirectPatchSetAddress(void *packet_ptr, uint64_t addr) __asm__("$Qrj4c+61z4A");
+OBS_WEAK int sceAgcSetUcRegIndirectPatchAddRegisters(void *packet_ptr, uint32_t count, const void *regs) __asm__("$vRoArM9zaIk");
+OBS_WEAK int sceAgcSetUcRegIndirectPatchSetAddress(void *packet_ptr, uint64_t addr) __asm__("$6lNcCp+fxi4");
+OBS_WEAK int sceAgcDmaDataPatchSetDstAddressOrOffset(void *packet_ptr, uint64_t dst_addr) __asm__("$IxYiarKlXxM");
+OBS_WEAK int sceAgcDmaDataPatchSetSrcAddressOrOffsetOrImmediate(void *packet_ptr, uint64_t src_addr) __asm__("$cdDRpqcFGbU");
+OBS_WEAK int sceAgcWaitRegMemPatchAddress(void *packet_ptr, uint64_t addr) __asm__("$3KDcnM3lrcU");
+OBS_WEAK int sceAgcQueueEndOfPipeActionPatchAddress(void *packet_ptr, uint64_t addr) __asm__("$0fWWK5uG9rQ");
 OBS_WEAK int sceAgcGetDeviceInfo(void *info_buf) __asm__("$Tasc5SLczww");
 OBS_WEAK int sceAgcDriverGetDeviceInfo(void *info_buf) __asm__("$ZGMnhAlcv9Y");
 OBS_WEAK int sceGnmGetGpuInfo(void *info_buf) __asm__("$GKIlegek0JQ");

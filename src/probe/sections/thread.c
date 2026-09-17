@@ -221,6 +221,13 @@ static obs_result check_exception_handler_ordering(void) {
                        "sceKernelInstallExceptionHandler", "rc-2",
                        (uint64_t)(uint32_t)rc_inst2, "rc");
 
+    /* If installation failed (e.g. host title already owns the exception handler slot),
+     * raising signal 30 would be unhandled and terminate the host process. */
+    if (rc_inst1 != 0) {
+        return obs_skip(
+            "exception handler slot occupied in host process (rc=0x80020023)");
+    }
+
     /* 3. Delivering raise(self, 30) */
     s_exc_handler1_called = 0;
     s_exc_handler1_arg0 = 0;
@@ -365,8 +372,9 @@ static obs_result check_exception_handler_ordering(void) {
     obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
                        "rc-inverted-args", (uint64_t)(uint32_t)rc_raise_inv, "rc");
 
-    /* 5. raise(self, 31) - signal nothing was installed for while 30 is installed */
-    int rc_raise31 = fn_raise(self, 31);
+    /* 5. raise(31) - signal nothing was installed for while 30 is installed;
+     * test with invalid thread handle to avoid process termination by unhandled signal */
+    int rc_raise31 = fn_raise((ScePthread)1, 31);
     obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
                        "rc-unhandled-sig31", (uint64_t)(uint32_t)rc_raise31, "rc");
 

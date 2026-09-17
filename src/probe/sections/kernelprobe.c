@@ -85,7 +85,8 @@ void obs_capture_payload_args(unsigned long args) {
          * its callers: no primitive is issued against a struct that is not a
          * payload_args. (D324) */
         if (obs_address_is_callable(
-                (const void *)s_local_payload_args.sys_dynlib_dlsym)) {
+                (const void *)s_local_payload_args.sys_dynlib_dlsym) ||
+            s_local_payload_args.kexport_table != NULL) {
             s_have_payload_args = 1;
         }
     }

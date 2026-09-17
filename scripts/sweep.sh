@@ -39,6 +39,7 @@ if ! grep -qi microsoft /proc/version 2>/dev/null; then
             dist="Ubuntu"
         fi
     fi
+    export MSYS_NO_PATHCONV=1
     echo "sweep.sh: not in WSL - re-entering $dist"
     exec wsl.exe -d "$dist" -- env OBS_SWEEP_REENTERED=1 bash "$linux" "$@"
 fi
@@ -74,7 +75,7 @@ app_env="$REPO/app.env"
 [ -f "$app_env" ] && . "$app_env"
 TITLE_CODE="${TITLE_CODE:-O00001}"
 PKG_TITLE_ID="${PKG_TITLE_ID:-ORB${TITLE_CODE}}"
-NATIVE_TITLE_ID="${NATIVE_TITLE_ID:-PRO${TITLE_CODE}}"
+NATIVE_TITLE_ID="${NATIVE_TITLE_ID:-${TITLE_ID:-PRO${TITLE_CODE}}}"
 
 # Linux tool for everything that connects out; Windows tool for the package install (inbound).
 LTOOL="$TT/release/obscene-tool"

@@ -43,11 +43,13 @@
  * a code.
  */
 
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/sections.h"
 #include "obscene/status.h"
+#include "oops/freestd.h"
 
 /* What the section learned about the running thread, filled by the first check and read
  * by the second. Kept rather than re-derived so the two checks describe one
@@ -238,6 +240,212 @@ static obs_result check_fresh_attr_names_no_stack(void) {
     return obs_pass_value((uint64_t)(uintptr_t)address);
 }
 
+struct attr_worker_result {
+    volatile int started;
+    volatile int finished;
+    void *stack_addr;
+    size_t stack_size;
+    void *frame_local;
+    int detach;
+    int priority;
+    uint64_t affinity;
+};
+
+static void *attr_probe_thread_entry(void *arg) {
+    struct attr_worker_result *res = (struct attr_worker_result *)arg;
+    volatile int local_var = 0x42;
+    res->frame_local = (void *)&local_var;
+
+    ScePthread self = scePthreadSelf();
+    ScePthreadAttr self_attr = 0;
+    if (obs_address_is_callable((const void *)&scePthreadAttrInit) &&
+        scePthreadAttrInit(&self_attr) == 0) {
+        if (obs_address_is_callable((const void *)&scePthreadAttrGet) &&
+            scePthreadAttrGet(self, &self_attr) == 0) {
+            if (obs_address_is_callable((const void *)&scePthreadAttrGetstacksize)) {
+                (void)scePthreadAttrGetstacksize(&self_attr, &res->stack_size);
+            }
+            if (obs_address_is_callable((const void *)&scePthreadAttrGetstackaddr)) {
+                (void)scePthreadAttrGetstackaddr(&self_attr, &res->stack_addr);
+            }
+            if (obs_address_is_callable((const void *)&scePthreadAttrGetdetachstate)) {
+                (void)scePthreadAttrGetdetachstate(&self_attr, &res->detach);
+            }
+        }
+        (void)scePthreadAttrDestroy(&self_attr);
+    }
+
+    if (obs_address_is_callable((const void *)&scePthreadGetprio)) {
+        (void)scePthreadGetprio(self, &res->priority);
+    }
+    if (obs_address_is_callable((const void *)&scePthreadGetaffinity)) {
+        (void)scePthreadGetaffinity(self, &res->affinity);
+    }
+
+    res->finished = 1;
+    return NULL;
+}
+
+static obs_result check_pthread_attr_layout(void) {
+    OBS_REQUIRE(&scePthreadAttrInit, &scePthreadAttrDestroy);
+
+    ScePthreadAttr attr = 0;
+    int rc = scePthreadAttrInit(&attr);
+    if (rc != 0 || attr == NULL) {
+        return obs_fail_code("scePthreadAttrInit failed", (uint64_t)(uint32_t)rc);
+    }
+
+    /* 1. Dump initial state of attr struct (128 bytes) */
+    unsigned char initial[128];
+    unsigned char before[128];
+    unsigned char after[128];
+    memset(initial, 0, sizeof(initial));
+    memset(before, 0, sizeof(before));
+    memset(after, 0, sizeof(after));
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        memcpy(initial, (const void *)attr, 128);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        (void)scePthreadAttrDestroy(&attr);
+        return obs_fail_code("fault reading initial ScePthreadAttr bytes", (uint64_t)sig);
+    }
+
+    obs_report_buffer("031-stackattr/attr-layout", "scePthreadAttrInit", "initial",
+                      initial, 128);
+
+    /* 2. Mutate stack size to distinctive 0x00181000 */
+    memcpy(before, (const void *)attr, 128);
+    int rc_stacksize = -1;
+    if (obs_address_is_callable((const void *)&scePthreadAttrSetstacksize)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_stacksize = scePthreadAttrSetstacksize(&attr, (size_t)0x00181000u);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    memcpy(after, (const void *)attr, 128);
+    obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetstacksize", "rc",
+                       (uint64_t)(uint32_t)rc_stacksize, "code");
+    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetstacksize", "diff",
+                       before, after, 128);
+
+    /* 3. Mutate detach state to 1 (detached) */
+    memcpy(before, (const void *)attr, 128);
+    int rc_detach = -1;
+    if (obs_address_is_callable((const void *)&scePthreadAttrSetdetachstate)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_detach = scePthreadAttrSetdetachstate(&attr, 1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    memcpy(after, (const void *)attr, 128);
+    obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetdetachstate", "rc",
+                       (uint64_t)(uint32_t)rc_detach, "code");
+    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetdetachstate", "diff",
+                       before, after, 128);
+
+    /* 4. Mutate affinity to distinctive 0x5 (cores 0 and 2) */
+    memcpy(before, (const void *)attr, 128);
+    int rc_aff = -1;
+    if (obs_address_is_callable((const void *)&scePthreadAttrSetaffinity)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_aff = scePthreadAttrSetaffinity(&attr, 0x5u);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    memcpy(after, (const void *)attr, 128);
+    obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetaffinity", "rc",
+                       (uint64_t)(uint32_t)rc_aff, "code");
+    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetaffinity", "diff",
+                       before, after, 128);
+
+    /* 5. Mutate sched priority to distinctive 0x42 */
+    memcpy(before, (const void *)attr, 128);
+    int rc_sched = -1;
+    struct { int sched_priority; } param;
+    param.sched_priority = 0x42;
+    if (obs_address_is_callable((const void *)&scePthreadAttrSetschedparam)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_sched = scePthreadAttrSetschedparam(&attr, &param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    memcpy(after, (const void *)attr, 128);
+    obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetschedparam", "rc",
+                       (uint64_t)(uint32_t)rc_sched, "code");
+    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetschedparam", "diff",
+                       before, after, 128);
+
+    /* 6. Create thread using this attr to read back honoured values */
+    struct attr_worker_result res;
+    memset(&res, 0, sizeof(res));
+    res.detach = -1;
+    res.priority = -1;
+
+    ScePthread child = NULL;
+    int rc_create = -1;
+    if (obs_address_is_callable((const void *)&scePthreadCreate)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            /* Try with &attr first */
+            rc_create = scePthreadCreate(&child, &attr, attr_probe_thread_entry, &res, "obscene-attr");
+            if (rc_create != 0) {
+                /* Try with attr directly if &attr was rejected */
+                rc_create = scePthreadCreate(&child, attr, attr_probe_thread_entry, &res, "obscene-attr");
+            }
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure("031-stackattr/attr-layout", "scePthreadCreate", "rc",
+                       (uint64_t)(uint32_t)rc_create, "code");
+
+    if (rc_create == 0) {
+        /* Wait up to 500ms for child to report */
+        for (int iter = 0; iter < 5000 && !res.finished; iter++) {
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+        if (rc_detach != 0 && obs_address_is_callable((const void *)&scePthreadJoin) && child != NULL) {
+            void *join_ret = NULL;
+            (void)scePthreadJoin(child, &join_ret);
+        }
+    }
+
+    obs_report_measure("031-stackattr/attr-layout", "readback", "observed-stacksize",
+                       (uint64_t)res.stack_size, "bytes");
+    obs_report_measure("031-stackattr/attr-layout", "readback", "observed-stackaddr",
+                       (uint64_t)(uintptr_t)res.stack_addr, "address");
+    obs_report_measure("031-stackattr/attr-layout", "readback", "observed-frame-local",
+                       (uint64_t)(uintptr_t)res.frame_local, "address");
+    obs_report_measure("031-stackattr/attr-layout", "readback", "observed-priority",
+                       (uint64_t)(uint32_t)res.priority, "val");
+    obs_report_measure("031-stackattr/attr-layout", "readback", "observed-affinity",
+                       res.affinity, "mask");
+    obs_report_measure("031-stackattr/attr-layout", "readback", "observed-detach",
+                       (uint64_t)(uint32_t)res.detach, "val");
+
+    (void)scePthreadAttrDestroy(&attr);
+    return obs_pass_value((uint64_t)res.stack_size);
+}
+
 static const obs_check stackattr_checks[] = {
     {"031-stackattr/self-describes", "libkernel", "scePthreadAttrGet", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&scePthreadAttrGet, check_self_describes,
@@ -249,6 +457,9 @@ static const obs_check stackattr_checks[] = {
      "scePthreadAttrGetstackaddr", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&scePthreadAttrGetstackaddr, check_fresh_attr_names_no_stack,
      OBS_FROM_DERIVED},
+    {"031-stackattr/attr-layout", "libkernel", "scePthreadAttrInit", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&scePthreadAttrInit, check_pthread_attr_layout,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_stackattr = {

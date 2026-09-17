@@ -200,6 +200,11 @@ int obs_address_is_callable(const void *address) {
     if (addr < OBS_LOWEST_CALLABLE) {
         return 0;
     }
+    /* Platform text (e.g. libkernel 0x800000000 - 0x900000000) is Execute-Only (XO) on PS5.
+     * Dereferencing code bytes causes SYSTEM_XO_VIOLATION. */
+    if (addr >= 0x800000000ULL && addr < 0x900000000ULL) {
+        return 1;
+    }
     if (s_plt_start != 0 && addr >= s_plt_start && addr < s_plt_end) {
         if (addr < s_plt_start + 16) {
             return 0;

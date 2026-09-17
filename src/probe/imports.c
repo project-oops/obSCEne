@@ -65,6 +65,11 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "scePthreadCreate"},
     {"libkernel", "scePthreadJoin"},
     {"libkernel", "scePthreadExit"},
+    {"libkernel", "scePthreadAttrSetstacksize"},
+    {"libkernel", "scePthreadAttrSetaffinity"},
+    {"libkernel", "scePthreadAttrSetschedparam"},
+    {"libkernel", "scePthreadGetprio"},
+    {"libkernel", "scePthreadGetaffinity"},
     {"libkernel", "_sigaction"},
     {"libkernel", "_sigprocmask"},
     {"libkernel", "sceKernelLoadStartModule"},
@@ -540,8 +545,24 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "$i1jyy49AjXU"},
     {"libSceAgc", "$p9tI+yTvx68"},
 
-    /* REQ-20260914T1730Z-4386: Patch */
+    /* REQ-20260914T1730Z-4386 & REQ-20260915T1600Z-a70f: Patch */
     {"libSceAgc", "$d-6uF9sZDIU"},
+    {"libSceAgc", "$vcmNN+AAXnY"},
+    {"libSceAgc", "$z2duB-hHQSM"},
+    {"libSceAgc", "$Qrj4c+61z4A"},
+    {"libSceAgc", "$vRoArM9zaIk"},
+    {"libSceAgc", "$6lNcCp+fxi4"},
+    {"libSceAgc", "$IxYiarKlXxM"},
+    {"libSceAgc", "$cdDRpqcFGbU"},
+    {"libSceAgc", "$3KDcnM3lrcU"},
+    {"libSceAgc", "$0fWWK5uG9rQ"},
+
+    /* REQ-20260915T1600Z-a70f: Builders */
+    {"libSceAgc", "$LtTouSCZjHM"},
+    {"libSceAgc", "$wr23dPKyWc0"},
+    {"libSceAgc", "$WmAc2MEj6Io"},
+    {"libSceAgc", "$VmW0Tdpy420"},
+    {"libSceAgc", "$TRO721eVt4g"},
 
     /* REQ-20260914T1558Z-7d41: Device Info */
     {"libSceAgc", "$Tasc5SLczww"},
@@ -566,6 +587,7 @@ static const obs_import obs_platform_imports[] = {
      * probe reports absent everywhere, which reads as "older hardware" rather than as
      * a mistake - so treat a universal absent result as a reason to check this line
      * before believing it. */
+    {"libSceUserService", "sceUserServiceGetLoginUserIdList"},
 };
 
 /* Calls `fn` once per import declared outside the census. */

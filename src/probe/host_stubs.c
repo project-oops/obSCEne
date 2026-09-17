@@ -1261,6 +1261,8 @@ typedef struct host_attr {
     int detach;
     void *stack_addr;
     size_t stack_size;
+    uint64_t affinity;
+    int priority;
 } host_attr;
 static host_attr s_host_attr[OBS_HOST_ATTR_MAX];
 
@@ -1277,6 +1279,8 @@ int scePthreadAttrInit(ScePthreadAttr *attr) {
              * records what the platform does here; the host answers the POSIX shape. */
             s_host_attr[i].stack_addr = NULL;
             s_host_attr[i].stack_size = 0;
+            s_host_attr[i].affinity = 0x1;
+            s_host_attr[i].priority = 0;
             *attr = (ScePthreadAttr)&s_host_attr[i];
             return 0;
         }
@@ -1305,6 +1309,74 @@ int scePthreadAttrGetdetachstate(const ScePthreadAttr *attr, int *state) {
         return OBS_HOST_NOT_IMPLEMENTED;
     }
     *state = ((const host_attr *)*attr)->detach;
+    return 0;
+}
+
+int scePthreadAttrSetstacksize(ScePthreadAttr *attr, size_t size) {
+    if (attr == NULL || *attr == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    ((host_attr *)*attr)->stack_size = size;
+    return 0;
+}
+
+int scePthreadAttrSetaffinity(ScePthreadAttr *attr, uint64_t mask) {
+    if (attr == NULL || *attr == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    ((host_attr *)*attr)->affinity = mask;
+    return 0;
+}
+
+int scePthreadAttrGetaffinity(const ScePthreadAttr *attr, uint64_t *mask) {
+    if (attr == NULL || *attr == NULL || mask == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    *mask = ((const host_attr *)*attr)->affinity;
+    return 0;
+}
+
+int scePthreadAttrSetschedparam(ScePthreadAttr *attr, const void *param) {
+    if (attr == NULL || *attr == NULL || param == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    ((host_attr *)*attr)->priority = *(const int *)param;
+    return 0;
+}
+
+int scePthreadAttrGetschedparam(const ScePthreadAttr *attr, void *param) {
+    if (attr == NULL || *attr == NULL || param == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    *(int *)param = ((const host_attr *)*attr)->priority;
+    return 0;
+}
+
+int scePthreadGetprio(ScePthread thread, int *prio) {
+    if (thread == NULL || prio == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    *prio = 0;
+    return 0;
+}
+
+int scePthreadSetprio(ScePthread thread, int prio) {
+    (void)thread;
+    (void)prio;
+    return 0;
+}
+
+int scePthreadGetaffinity(ScePthread thread, uint64_t *mask) {
+    if (thread == NULL || mask == NULL) {
+        return OBS_HOST_NOT_IMPLEMENTED;
+    }
+    *mask = 0x1;
+    return 0;
+}
+
+int scePthreadSetaffinity(ScePthread thread, uint64_t mask) {
+    (void)thread;
+    (void)mask;
     return 0;
 }
 
