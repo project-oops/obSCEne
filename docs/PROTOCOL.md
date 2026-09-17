@@ -82,7 +82,8 @@ driver is given the address.
 
 - **TCP**, one connection at a time. A second connection while one is open is refused with
   `busy` rather than queued - two drivers interleaving commands would make the ordering
-  record meaningless, and ordering is part of the evidence.
+  record meaningless, and ordering is part of the evidence. (Not yet built: today a second
+  connection waits in the listen backlog instead of being refused - see `docs/CLIENT.md`.)
 - **Port 9803 by default**, overridable. Nothing else claims it.
 - **The stream is UTF-8 text, newline-terminated.** `\n`, never `\r\n`.
 - Lines are at most **4096 bytes** including the terminator. Anything longer is a protocol

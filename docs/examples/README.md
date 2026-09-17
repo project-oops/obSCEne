@@ -5,8 +5,8 @@ rather than against a description of it.
 
 ## `full-sweep.txt`
 
-The complete run: 17 sections, 88 checks, 523 records, a terminator, and a final tally of
-59 pass / 3 partial / 20 fail / 6 skip. `obscene-tool verify` calls it well-formed.
+The complete run: 18 sections, 95 checks, 554 records, a terminator, and a final tally of
+59 pass / 5 partial / 25 fail / 6 skip. `obscene-tool verify` calls it well-formed.
 
 Two findings in it are worth looking at directly, because they are what the suite is for:
 

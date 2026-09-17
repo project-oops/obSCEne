@@ -120,6 +120,7 @@ This is the part to get right before building readers.
 | `write` | reserved | write guest memory; **refused today** |
 | `blob` / `run` | reserved | upload code and run it; **refused today** |
 | `reset` | reserved | return to a known state; **refused today** |
+| `gpu` | reserved | dispatch a compiled-in compute kernel; announced only by a build with a working GPU backend, which the current tree does not have (`docs/worklog/167-agc-pipeline-probes-and-section-160-pruning.md`) - **refused today** |
 
 A serving build now announces `call,read,report`. A reserved verb is refused with
 `OBS|refused|<seq>|unknown-verb` (or `not-negotiated` if its capability was not announced).

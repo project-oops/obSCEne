@@ -64,9 +64,9 @@ When an emulator encounters an undocumented system call, the traditional approac
 obSCEne cross-compiles for the FreeBSD-based console ABI using `clang` and `lld`:
 
 ```bash
-./bin/obscene build    # compiles payload, module, and host test harness
+./bin/obscene build    # compiles payload, module, host test harness, and the injector
 ./bin/obscene check    # runs verification suite (what CI runs)
-./bin/obscene pkg      # creates installable package (ORBO00001 / PROO00001)
+./bin/obscene pkg      # creates installable package (default title id ORBO00001)
 ```
 
 ### 2. Why Three Target Builds? (`payload`, `eboot`, `pkg`)
@@ -74,9 +74,9 @@ On real console firmware, **system privileges, sandbox boundaries, and dynamic l
 
 | Build Shape | Delivery & Context | Privileges & Sandboxing | What It Measures |
 |---|---|---|---|
-| **`payload`** | Bare ELF sent to `:9021` via `elfldr` (`pros send`). | Runs in memory outside the title sandbox. Elevated kernel privileges; direct raw socket access. | Low-level kernel syscalls, direct page table allocations, raw device drivers, and POSIX sockets. |
-| **`eboot`** | Signed SELF launched via `pros launch`. | Runs as a retail `BIG_APP` (`category 0`). Direct HDMI display ownership; controller focus. | Universal graphics queues (`libSceAgc`), video flip queues, DualSense controller polling, and retail app lifecycle. |
-| **`pkg`** | Installed package under encrypted PFS filesystem. | Strict retail sandbox permissions (`0600`). Restricted filesystem; full OS security checks. | Save data mounting (`libSceSaveData`), background downloads (`BGFT`), entitlement checks, and retail sandboxing. |
+| **`payload`** | Bare ELF sent to `:9021` via `elfldr` (`pros send`). | Runs inside the previous generation's compatibility sandbox (`ps4_mode`) - not outside any sandbox. Dynamic introspection and the current-generation graphics driver are unavailable there (D276). | Low-level kernel syscalls, direct page table allocations, raw device drivers, and POSIX sockets. |
+| **`eboot`** | Fake-signed fSELF (`eboot.bin`) launched via `pros launch`. | Runs as a retail `BIG_APP` (`category 0`). Direct HDMI display ownership; controller focus. | Universal graphics queues (`libSceAgc`), video flip queues, DualSense controller polling, and retail app lifecycle. |
+| **`pkg`** | Installed package under encrypted PFS filesystem. | Strict retail sandbox. The report file itself is sealed `0600` inside it. Restricted filesystem; full OS security checks. | Save data mounting (`libSceSaveData`), background downloads (`BGFT`), entitlement checks, and retail sandboxing. |
 
 *Note: A function that succeeds in `payload` might fail in `pkg` due to sandbox restrictions, and vice-versa. Running a full sweep across all three legs isolates OS capabilities from sandbox boundaries.*
 
@@ -105,17 +105,11 @@ Hardware logs are saved to `reports/hardware/<timestamp>-<context>.obs.log`:
 
 ```
 src/probe/
-├── sections/
-│   ├── agc.c           # RDNA2 GPU universal queues, PM4 draw packets, compute shaders
-│   ├── kernelprobe.c   # Virtual memory queries, direct memory maps, syscall errno
-│   ├── threads.c       # Mutexes, semaphores, condition variables, fibers
-│   ├── display.c       # AGC/GNM video out scanout buffers and flip queues
-│   ├── input.c         # DualSense pad buttons, analog stick deadzones, triggers
-│   ├── audio.c         # PCM audio ports, volume control, buffer depth
-│   ├── net.c           # POSIX socket bind, listen, accept, echo
-│   └── save.c          # Save data mounting and directory structures
-├── harness.c           # Standalone runner and structured test harness
-└── min.c               # Minimal payload entry point
+├── sections/      # the checks, one file per topic - agc.c, gnm.c, memory.c, thread.c, sync.c,
+│                  # net.c, modules.c, posix.c, and 30-plus more; src/probe/registry.c is the
+│                  # authoritative, ordered list of every section actually built
+├── harness.c      # runs the checks in order and emits records
+└── min.c          # minimal payload entry point
 ```
 
 ---

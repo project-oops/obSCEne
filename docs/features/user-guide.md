@@ -14,29 +14,34 @@ obSCEne is dispatched to the console over LAN via Prosperous:
 
 ---
 
-## Paths and Portable Mode
+## Paths
 
-obSCEne produces logs and JSON reports under `%APPDATA%\OOPS\reports\` (or `~/.local/share/OOPS/reports/`).
+obSCEne's sink tries several on-target paths in order and records which one answered:
+`/data/obscene-report.txt`, `/download0/obscene-report.txt`, `/mnt/usb0/obscene-report.txt`,
+or a relative `obscene-report.txt` beside the process. There is no AppData/XDG report location
+and no portable-mode flag - see `docs/ARTIFACTS.md` ("Where a report comes out").
 
-When running in portable mode (e.g. running from a portable checkout or passing `--output-dir`), all telemetry, logs, and generated JSON reports are saved directly to `./reports/` beside the tool without modifying the host profile.
+On the operator's own machine, `obscene-tool report` captures the console's records into
+`reports/hardware/console-klog.txt` by default (`--into` overrides it).
 
 ---
 
 ## Telemetry Grammar
 
-obSCEne emits unbuffered lines with structured prefixes:
-- `try <symbol>`: Check is about to execute.
-- `res <symbol> <code|hex>`: Check completed with returned code.
-- `OBS|measure|<key>=<val>`: Verified hardware measurement.
-- `OBS|bytes|<key>=<hex>`: Verified structure byte dump.
+Every line is pipe-separated and begins `OBS|` (the full contract is `docs/OUTPUT.md`):
+- `OBS|try|<check-id>|<library>|<symbol>`: Check is about to execute.
+- `OBS|res|<check-id>|<status>|<value>|<detail>|<provenance>`: Check completed with a verdict.
+- `OBS|measure|<check-id>|<symbol>|<quantity>|<value>|<unit>`: A measurement, no verdict attached.
+- `OBS|bytes|<check-id>|<symbol>|<label>|<offset>|<hex>`: One line of a structure byte dump.
 
 ---
 
-## Generating Machine-Readable Reports
+## Capturing Reports
 
-Convert text logs into structured JSON:
+`obscene-tool report` captures obscene's own `OBS|` records off the console system log into a
+plain text file - it is not a JSON converter and takes no `--input`/`--output` file arguments:
 
 ```bash
-obscene-tool report --input reports/hardware/latest.log --output reports/latest.json
+obscene-tool report --seconds 120 --into reports/hardware/console-klog.txt
 ```
 

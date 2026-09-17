@@ -146,8 +146,12 @@ attempting to load these fail with permission denials:
 obSCEne treats module presence as an empirical question, probed dynamically rather than assumed:
 
 1. **Static Dynamic Section (`DT_NEEDED`)**:
-   `obscene.eboot.elf` statically links **only the 12 core libraries** guaranteed to exist in
-   `/system/common/lib/` on every Prospero firmware (see [`src/probe/imports.c`](../src/probe/imports.c)).
+   `obscene.eboot.elf` statically links only a small, deliberately-bounded set of core libraries
+   guaranteed to exist in `/system/common/lib/` on every Prospero firmware - gated by
+   `EBOOT_LIBS` (default 18, see `Makefile`) precisely because a system loader resolves every
+   named library before any of our code runs (D226). The exact count moves with the behavioural
+   imports in [`src/probe/imports.c`](../src/probe/imports.c) and per-target exclusions there;
+   read that file for the current figure rather than a number fixed on this page.
 2. **On-Demand Loader (`obs_module_open`)**:
    All non-essential libraries (such as POSIX, video encoders, or system tools) are resolved at
    runtime using `obs_module_open()`, which searches the tier paths in order of accessibility.

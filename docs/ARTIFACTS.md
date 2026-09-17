@@ -19,7 +19,7 @@ one says nothing about the others.
 |---|---|---|---|---|
 | `obscene-probe-prospero.elf` | plain `ET_DYN` | `0x0003` | `0` | a homebrew ELF loader, which maps the segments itself |
 | `obscene-injector.elf` | plain `ET_DYN` | `0x0003` | `0` | a homebrew ELF loader, injects probe into native foreground process |
-| `obscene-module.elf` | vendor ELF | `0xFE10` | `2` | emulators, through their "not a SELF" path |
+| `obscene.module.elf` | vendor ELF | `0xFE10` | `2` | emulators, through their "not a SELF" path |
 | `obscene-probe-prospero.zip` / `eboot.bin` | fSELF | - | - | **the system loader**, from an app directory |
 | `obscene-probe-orbis.pkg` | package | - | - | the installer, then the system loader (ps4-format, previous-generation) |
 | `build/prospero/<TITLE_ID>/` | title directory | - | - | **the system loader**, from `/user/app/<TITLE_ID>` - a ps5 native title: a prospero `eboot.bin` beside `sce_sys/{param.json,icon0.png}` |
@@ -33,7 +33,7 @@ Each has a one-import twin for proving the transport before trusting the payload
 
 | file | size | imports |
 |---|---|---|
-| `obscene-payload-min.elf` | ~3.8 KB | `sceKernelOpen`, `sceKernelWrite`, `sceKernelClose` |
+| `obscene-min.elf` | ~3.8 KB | `sceKernelOpen`, `sceKernelWrite`, `sceKernelClose` |
 | `obscene-min.module.elf` | ~180 KB | `sceKernelWrite` |
 
 And `obscene-host`, a native binary with the platform stubbed, for checking the harness itself

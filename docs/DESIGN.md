@@ -105,6 +105,11 @@ as progress.
 Order is the whole value of the report: a failure at the top is read before a failure
 at the bottom, because the bottom depends on the top.
 
+The table below is illustrative, not exhaustive - it shows the shape of the ordering, low-level
+to high-level, using the earliest sections as landmarks. `src/probe/registry.c` currently
+registers 53 sections, and it is the authoritative, ordered list; this table is not resynced
+against it automatically and should not be read as a full index.
+
 | | Section | Establishes |
 |---|---|---|
 | 000 | boot | The report itself can be trusted |
@@ -121,6 +126,7 @@ at the bottom, because the bottom depends on the top.
 | 080 | video | Acquiring the display output |
 | 090 | audio | Bringing up audio |
 | 100 | input | Acquiring a controller |
+| … | (39 more sections between here and 900, covering sync, POSIX, modules, GPU, and more - see `src/probe/registry.c`) | |
 | 900 | surface | A census of the whole known surface - presence only |
 
 A check whose prerequisites were not met is **skipped, not failed**. One broken

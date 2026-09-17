@@ -1,9 +1,15 @@
 # The platform's GPU API: libSceGnmDriver, both axes
 
-The GPU section (160-gpu) probes what the device *computes*, through public Vulkan - the path a
-Steam Deck takes, needing no vendor library. This is the hardware's own GPU API, `sceGnm`, which
-a PS4 title uses to drive the hardware directly. It is the GPU counterpart of the CPU NID
-probes: "does this call exist, is it reachable, what does it do."
+This is the hardware's own GPU API, `sceGnm`, which a PS4 title uses to drive the hardware
+directly. It is the GPU counterpart of the CPU NID probes: "does this call exist, is it
+reachable, what does it do."
+
+**Section `160-gpu`, which attempted this via public Vulkan compute-kernel dispatch (the path a
+Steam Deck takes, needing no vendor library), was pruned on 2026-09-14** - external GPU memory
+reads from unprivileged contexts are blocked by kernel hardening (`170-gpu-capture`), and direct
+hardware execution is now handled canonically by Section `166-agc` and `oops-sdk`. See
+`docs/worklog/167-agc-pipeline-probes-and-section-160-pruning.md`. What follows below describes
+the still-live `sceGnm` axes.
 
 There are two axes, and they cost very differently.
 

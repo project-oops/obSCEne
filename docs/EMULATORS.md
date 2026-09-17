@@ -22,9 +22,12 @@ loader *is* and that one stays about what each loader *did*.
 ## Running them
 
 ```bash
-sh scripts/sweep.sh --build /tmp/obs-shad   # shadPS4, GEN=4, its own exclusion list
-sh scripts/run-kyty.sh                     # Kyty, GEN=5, captures the unresolved log
+BUILD=/tmp/obs-shad sh scripts/sweep-build.sh   # shadPS4, GEN=4, its own exclusion list
+sh scripts/run-kyty.sh                          # Kyty, GEN=5, captures the unresolved log
 ```
+
+(`scripts/sweep.sh` is a different script - the hardware round-trip behind `./bin/obscene sweep`,
+not an emulator build step.)
 
 craziiEmu is run directly, from where dotnet builds it:
 

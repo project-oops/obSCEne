@@ -292,15 +292,16 @@ loaders that now complete the suite.
 | 3 | real error codes | **yes** | `obs_report_error_code`, six sites |
 | 4 | resolution by name | **yes** | `140-oracle/resolve-by-name`, skipping on every loader with *"nothing resolves by name, including a symbol known to be present"* - the correct answer about them, and it runs the moment something does |
 | 5 | a command buffer | **half** | `165-gnm` calls the command *builders* and dumps their bytes, so the buffer arrives; it submits nothing, so the pages its shader addresses point at do not |
-| 6 | GPU address vs CPU address | **no** | `obs_gpu_backend_available()` returns 0 on the hardware by design |
+| 6 | GPU address vs CPU address | **no** | the GPU backend this question depended on (`160-gpu`) refuses by design; it was later pruned entirely (2026-09-14, `docs/worklog/167-*.md`) in favour of `166-agc` |
 
 ### Question 6 cannot be answered by the probe as it stands, and that is deliberate
 
 `src/probe/sections/gnm.c` refuses. The hardware submits compute through Gnm/Agc, the submission format is
 partly public and available from essentially one source, and D008 says not to guess at it on a
-target that took effort to reach. `GPU=1` does not change this - it changes the skip *reason*
-from "built without OBS_GPU" to the backend refusing, which is more informative on hardware and
-nothing more.
+target that took effort to reach. **This whole line of questioning was written before the
+`160-gpu` section it depended on was pruned** (2026-09-14, in favour of `166-agc`'s hardware
+dispatch) - the GPU-address-vs-CPU-address question is now open again under whatever `166-agc`
+can establish, not answered by a flag.
 
 This is worth knowing before the hardware is in front of somebody rather than after: the GPU
 questions are not one flag away. They are gated on confirming a submission format, and on

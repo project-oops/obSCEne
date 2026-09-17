@@ -16,9 +16,9 @@ version in the `meta` record; new fields may only be appended to the end of a li
 | `context` | measured run environment `<delivery>/<generation>` (e.g. `payload/ps4-bc`, `payload/ps5-native`), then a basis; the environment a run measured in, orthogonal to a check's `OBS_FROM_*` provenance |
 | `sink` | path the report was also written to, or `none` |
 | `guard` | fault guard `on`/`off`, and a short account of what init resolved - so a run that could catch a crashing check is told from one that could not |
-| `peripherals` | four fields - pad, keyboard, mouse, audio - each the device name when it opened at run start or `-` when it did not, so a peripheral probe's `pending` reads against what was attached |
+| `peripherals` | four fields - pad, keyboard, mouse, audio - each the fixed category word when it opened at run start or `-` when it did not (not a device/product name), so a peripheral probe's `pending` reads against what was attached |
 | `resolution` | whether module enumeration and dlsym work here (`works`/`unavailable`) and a short reason - so a `module\|...\|0x0` and an unresolvable symbol read as "not seen" rather than "absent" in a leg that could not enumerate (payload mode) |
-| `net` | command-socket state (`listening`/`unavailable`), port |
+| `net` | command-socket state (`listening`/`unavailable`/`unauthenticated`), port |
 | `sysinfo` | field (`memory`, `vram`, `generation`, `gpu`, `ip`, `firmware`, `temp`, `storage`, `listening`), state (`known`/`unconfirmed`/`absent`), value (or `unknown`) |
 | `display` | state, detail, code - the code is the platform's own answer where a call refused, `0x0` where none did |
 | `section` | id, title, purpose |
@@ -50,6 +50,7 @@ the expectation behind the verdict:
 | `progress` | check id, how far it got |
 | `module` | module name, handle |
 | `moduleword` | offset, value |
+| `modtier` | library, status, privilege tier, detail - the verified permission tier of a reachable module (D296), see `docs/PLATFORM_LIBRARIES.md` |
 | `sectiontally` | section id, pass, partial, fail, skip, crash, pending |
 | `frontier` | capabilities established, checks blocked, deepest wholly-green section |
 | `tally` | pass, partial, fail, skip, crash, pending |
@@ -96,15 +97,18 @@ is an open stream of observations, the protocol is a closed grammar of exchanges
 
 ```
 OBS|meta|1|14|77
-OBS|build|a1b2c3d
+OBS|build|a1b2c3d|payload
 OBS|context|payload/ps4-bc|elfldr payload; libSceGnm mapped, libSceAgc absent
 OBS|section|020-memory|Direct memory|A full reserve, map, use, unmap and release cycle.
 OBS|try|020-memory/allocate|libkernel|sceKernelAllocateDirectMemory
 OBS|res|020-memory/allocate|pass|0x8804000000||assumed
-OBS|sectiontally|020-memory|1|0|2|4|0
-OBS|tally|16|4|7|8|0
-OBS|end
+OBS|sectiontally|020-memory|1|0|2|4|0|0
+OBS|tally|16|4|7|8|0|0
+OBS|end|<channel>
 ```
+
+(`sectiontally` and `tally` carry six numbers - pass, partial, fail, skip, crash, pending - and
+`end` carries the output-channel name, per the record table above.)
 
 ## Diffing two reports
 
@@ -235,9 +239,12 @@ order of magnitude more of them, which is why they carry their own record type r
 than inflating the check count.
 
 ```
-OBS|sym|libkernel|scePthreadMutexLock|present
-OBS|sym|libSceNet|sceNetSocket|absent
+OBS|sym|libkernel|scePthreadMutexLock|present|<availability>
+OBS|sym|libSceNet|sceNetSocket|absent|<availability>
 ```
+
+(A trailing `availability` field is always appended, per the record table above; abbreviated here
+rather than guessed at.)
 
 The census itself never calls anything. The names are declared as data rather than as
 functions precisely so that the type system forbids it.

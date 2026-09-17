@@ -17,7 +17,7 @@ If you are an AI coding agent, compiler architect, or low-level systems engineer
    - [Method B: Full Screen Application (`eboot` via BIG_APP)](#method-b-full-screen-application-eboot-via-big_app)
    - [Method C: Installed Retail Sandbox (`pkg`)](#method-c-installed-retail-sandbox-pkg)
 4. [Reading & Interpreting the Telemetry](#4-reading--interpreting-the-telemetry)
-5. [Generating JSON Reports with `obscene-tool`](#5-generating-json-reports-with-obscene-tool)
+5. [Capturing Reports with `obscene-tool`](#5-capturing-reports-with-obscene-tool)
 6. [Operator Troubleshooting](#6-operator-troubleshooting)
 
 ---
@@ -29,7 +29,7 @@ Different platform capabilities require different execution privileges. obSCEne 
 | Target | File Type | Privileges & Execution Context | Ideal Probing Scope |
 | :--- | :--- | :--- | :--- |
 | **`payload`** | Bare ELF | Runs directly via `elfldr` on `:9021`. Unsandboxed, kernel address space visible, direct POSIX sockets. | Kernel syscalls, memory mapping (`mmap`), errno encoding, raw CPU registers. |
-| **`eboot`** | Signed Container | Runs in `/data/homebrew/` as a retail `BIG_APP`. HDMI screen ownership, universal graphics queues (`libSceAgc`). | GPU command buffers (PM4), DualSense input, video output, display flips. |
+| **`eboot`** | Fake-signed fSELF (`eboot.bin`) | Runs in `/data/homebrew/` as a retail `BIG_APP`. HDMI screen ownership, universal graphics queues (`libSceAgc`). | GPU command buffers (PM4), DualSense input, video output, display flips. |
 | **`pkg`** | Encrypted PFS | Installed on retail SSD (`/user/app/`). Strict retail sandbox (`0600`), isolated filesystem. | Title save mounting, filesystem sandbox boundaries, background download queues. |
 
 ---
@@ -44,7 +44,7 @@ cd obscene
 
 # Build all 3 targets:
 make payload   # Produces build/obscene-probe-prospero.elf
-make native    # Produces build/prospero/PROO00001/
+make native    # Produces build/prospero/<TITLE_ID>/ (default TITLE_ID is PPSA90000)
 make pkg       # Produces build/obscene-probe-orbis.pkg
 ```
 
@@ -80,10 +80,10 @@ For graphics and AGC shader probes that need screen ownership:
 
 ```powershell
 # Stage the directory into /data/homebrew (or use ./bin/obscene native --deploy)
-pros.exe restore build/prospero/PROO00001 /data/homebrew/PROO00001
+pros.exe restore build/prospero/PPSA90000 /data/homebrew/PPSA90000
 
 # Launch the title
-pros.exe launch PROO00001
+pros.exe launch PPSA90000
 ```
 
 The TV display will show the obSCEne HUD rendering real-time test progress.
@@ -104,39 +104,41 @@ pros.exe restore build/obscene-probe-orbis.pkg /data/pkg/obscene-probe-orbis.pkg
 
 ## 4. Reading & Interpreting the Telemetry
 
-obSCEne follows a strict **"Announce Before Attempting"** principle. Every check emits an unbuffered announcement *before* calling the operating system:
+obSCEne follows a strict **"Announce Before Attempting"** principle. Every check emits an unbuffered announcement *before* calling the operating system. Every line is pipe-separated and begins `OBS|` (see `docs/OUTPUT.md` for the full contract):
 
 ```text
-[OBS] try sceKernelVirtualQueryInfo
-[OBS] res sceKernelVirtualQueryInfo 0x0
-[OBS] OBS|measure|kquery_size=0x38
-[OBS] OBS|bytes|kquery_data=0010000000000000...
+OBS|try|130-layout/kquery|libkernel|sceKernelVirtualQueryInfo
+OBS|res|130-layout/kquery|pass|0x0||assumed
+OBS|measure|130-layout/kquery|sceKernelVirtualQueryInfo|size|0x38|bytes
+OBS|bytes|130-layout/kquery|sceKernelVirtualQueryInfo|extent|0x0|0010000000000000...
 ```
 
 ### Key Output Fields:
-1. **`try <symbol>`**: The probe is about to invoke `<symbol>`. If this is the last line printed before a crash, that exact function caused the kernel hang.
-2. **`res <symbol> <hex>`**: The function returned cleanly with return code `<hex>` (`0x0` = success).
-3. **`OBS|measure|<key>=<value>`**: A measured silicon property (e.g. structure size, alignment, or timer frequency).
-4. **`OBS|bytes|<key>=<hex>`**: A byte-exact hex dump of a kernel structure populated by hardware.
+1. **`OBS|try|<check-id>|<library>|<symbol>`**: The probe is about to invoke `<symbol>`. If this is the last line printed before a crash, that exact function caused the kernel hang.
+2. **`OBS|res|<check-id>|<status>|<value>|<detail>|<provenance>`**: The check's verdict - `pass`, `partial`, `fail`, `skip`, `crash` or `pending` - with the returned value and how much the expectation behind it should be trusted.
+3. **`OBS|measure|<check-id>|<symbol>|<quantity>|<value>|<unit>`**: A measured silicon property (e.g. structure size, alignment, or timer frequency), recorded with no verdict attached.
+4. **`OBS|bytes|<check-id>|<symbol>|<label>|<offset>|<hex>`**: One line of a byte-exact hex dump of a kernel structure populated by hardware.
 
 ---
 
-## 5. Generating JSON Reports with `obscene-tool`
+## 5. Capturing Reports with `obscene-tool`
 
-To convert raw console logs into machine-readable JSON reports for Orbistoun HLE grounding:
+`obscene-tool report` captures obscene's own `OBS|`-prefixed records off the console system log
+into a plain text file - not JSON, and not a conversion of an existing log:
 
 ```powershell
 # In Windows PowerShell:
-obscene-tool.exe report --input reports/hardware/latest.log --output reports/latest.json
+obscene-tool.exe report --seconds 120 --into reports/hardware/console-klog.txt
 ```
 
-This JSON report directly feeds the automated blame engine in `orbistoun-turn`.
+The file it writes is exactly what `obscene-tool verify`, `diff` and `pretty` read. See
+`docs/TOOLING.md` for the full set of `report` flags and `docs/OUTPUT.md` for the record format.
 
 ---
 
 ## 6. Operator Troubleshooting
 
-### Problem: Probe outputs `try [check]` and then completely freezes
+### Problem: Probe outputs `OBS|try|...` and then completely freezes
 - **Explanation**: You encountered an unhandled kernel exception or fatal page fault on hardware.
 - **Recovery**: Reboot the console, note the offending check name, and flag it as an architectural wall in `worklog.md`.
 

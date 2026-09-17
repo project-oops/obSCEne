@@ -6,11 +6,11 @@ today against llvmpipe; this is the recipe for the day a Deck (or, later, a PS5)
 
 ## Why the Deck needs no platform GPU API
 
-The Deck is x86-64 Linux with an RDNA2 GPU and **no vendor libraries**. obSCEne's GPU backend
-there is ordinary public Vulkan (`gpu_vulkan.c`, the same one llvmpipe uses in the build VM) - so
-the Deck is reached with the host build, not the hardware module, and needs nothing from `sceGnm`.
-That is the whole reason the Deck is the near-term target: the machinery that runs on it is
-already built and proven on llvmpipe.
+The Deck is x86-64 Linux with an RDNA2 GPU and **no vendor libraries**. The intent is that
+obSCEne's GPU backend there is ordinary public Vulkan, the same one llvmpipe uses in the build
+VM - so the Deck is reached with the host build, not the hardware module, and needs nothing from
+`sceGnm`. As of the `160-gpu` pruning above, no such Vulkan dispatch source currently exists in
+`src/`; this section describes the intended shape of that approach, not a built one.
 
 ## 1. Build
 
@@ -18,9 +18,14 @@ already built and proven on llvmpipe.
 make deck BUILD=/tmp/obs
 ```
 
-Produces `/tmp/obs/obscene-deck` - the `GPU=1` host build, renamed. Copy that one file to the
-Deck (scp, a USB stick, whatever reaches it); it is freestanding apart from `libvulkan`, which
-the Deck has.
+Produces `/tmp/obs/obscene-deck` - the ordinary host build, copied and renamed; there is no
+`GPU=1` build flag. Copy that one file to the Deck (scp, a USB stick, whatever reaches it).
+
+**Note:** the public-Vulkan compute-kernel dispatch path this recipe describes (section
+`160-gpu`) was pruned on 2026-09-14 in favour of hardware dispatch through `166-agc` - see
+`docs/worklog/167-agc-pipeline-probes-and-section-160-pruning.md` and `docs/GNM.md`. This page
+has not yet been re-validated against that change; treat the capture steps below as the intended
+shape rather than a currently-exercised path until it is.
 
 ## 2. Run and capture
 
@@ -81,6 +86,7 @@ emulator computes differently from the hardware, which is exactly a shader-recom
 
 ## Regression, meanwhile
 
-`reports/archive/gpu-golden.txt` is the blessed llvmpipe snapshot. That golden is llvmpipe's,
+`reports/gpu-golden.txt` is the blessed llvmpipe snapshot (see `scripts/gpu-analyze.sh` and
+`docs/decisions/D123-a-golden-gpu-corpus-and-a-regression.md`). That golden is llvmpipe's,
 not the Deck's - the check skips on a different device rather than failing. A Deck golden could
 be blessed on the Deck, but only once one exists to bless.
