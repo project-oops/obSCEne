@@ -1375,9 +1375,12 @@ OBS_WEAK uint64_t sceAgcDcbStallCommandBufferParserGetSize(
     uint64_t arg5) __asm__("$+u6dKSLWM2o");
 OBS_WEAK int sceAgcInit(void *state, uint32_t version) __asm__("$23LRUSvYu1M");
 OBS_WEAK int sceAgcGetIsTrinityMode(uint8_t *out_is_trinity) __asm__("$BfBDZGbti7A");
-OBS_WEAK uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
-                                              uint64_t arg3, uint64_t arg4,
-                                              uint64_t arg5) __asm__("$fYZQG4CU71c");
+#if defined(OBSCENE_HOST_BUILD)
+OBS_WEAK
+#endif
+uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
+                                      uint64_t arg3, uint64_t arg4,
+                                      uint64_t arg5) __asm__("$fYZQG4CU71c");
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
                                      const void *payload,
                                      uint64_t arg3) __asm__("$f3dg2CSgRKY");

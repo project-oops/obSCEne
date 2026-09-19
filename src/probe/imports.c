@@ -588,6 +588,28 @@ static const obs_import obs_platform_imports[] = {
      * a mistake - so treat a universal absent result as a reason to check this line
      * before believing it. */
     {"libSceUserService", "sceUserServiceGetLoginUserIdList"},
+
+    /* oops-sdk system imports */
+    {"libkernel", "sceKernelGetCpuFrequency"},
+    {"libkernel", "sceKernelGetCpuTemperature"},
+    {"libkernel", "sceKernelGetCurrentFanDuty"},
+    {"libkernel", "sceKernelGetHwModelName"},
+    {"libkernel", "sceKernelGetHwSerialNumber"},
+    {"libkernel", "sceKernelGetSocSensorTemperature"},
+    {"libSceSysUtil", "sceSysUtilSendSystemNotificationWithText"},
+    {"libSceSystemService", "sceSystemServiceHideSplashScreen"},
+    {"libSceSystemService", "sceSystemServiceLaunchApp"},
+    {"libSceSystemService", "sceSystemServiceNavigateToGoHome"},
+    {"libSceSystemService", "sceSystemServiceParamGetInt"},
+    {"libSceSystemService", "sceSystemServicePowerTick"},
+    {"libSceSystemService", "sceSystemServiceGetMainAppTitleId"},
+    {"libSceSystemService", "sceSystemServiceIsAppSuspended"},
+    {"libSceSystemService", "sceSystemServiceKillApp"},
+    {"libSceSystemService", "sceSystemServiceGetAppIdOfBigApp"},
+    {"libScePad", "scePadSetProcessPrivilege"},
+    {"libScePad", "scePadGetHandle"},
+    {"libSceUserService", "sceUserServiceGetUserName"},
+    {"libSceUserService", "sceUserServiceGetForegroundUser"},
 };
 
 /* Calls `fn` once per import declared outside the census. */

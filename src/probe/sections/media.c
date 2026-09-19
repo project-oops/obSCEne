@@ -140,19 +140,79 @@ static obs_result check_video_attribute_block(void) {
     if (!obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute2)) {
         return obs_skip("sceVideoOutSetBufferAttribute2 is not callable");
     }
-    /* 0x80000000 is B8G8R8A8_SRGB in the OpenOrbis toolchain; the exact value does not
-     * affect where the tiling field lands, which is what the two dumps are for. */
-    for (uint32_t tiling = 0; tiling <= 1; tiling++) {
-        obs_probe_fill();
-        sceVideoOutSetBufferAttribute2(s_probe_buf, 0x80000000ULL, tiling, 1920u, 1080u,
-                                       0ULL, 0u, 0ULL);
-        obs_report_measure("080-video/attribute-block",
-                           "sceVideoOutSetBufferAttribute2", "tiling-mode",
-                           (uint64_t)tiling, "index");
-        obs_report_buffer("080-video/attribute-block", "sceVideoOutSetBufferAttribute2",
-                          tiling == 0 ? "tiling0" : "tiling1", s_probe_buf, 256);
+
+    uint8_t buf1[256];
+    uint8_t buf2[256];
+    for (size_t i = 0; i < 256; i++) {
+        buf1[i] = 0x5Au;
+        buf2[i] = 0x5Au;
     }
-    return obs_pass_value(256);
+
+    /* Pass 1: 1080p tiled, Prospero format 0x8000000000000000ULL, distinct test constants */
+    const uint64_t fmt1 = 0x8000000000000000ULL;
+    const uint32_t tile1 = 0u;
+    const uint32_t w1 = 1920u;
+    const uint32_t h1 = 1080u;
+    const uint64_t opt1 = 0x0102030405060708ULL;
+    const uint32_t dcc_ctrl1 = 0x0a0b0c0du;
+    const uint64_t dcc_clr1 = 0x1122334455667788ULL;
+
+    sceVideoOutSetBufferAttribute2(buf1, fmt1, tile1, w1, h1, opt1, dcc_ctrl1, dcc_clr1);
+
+    /* Pass 2: 4K linear, 32-bit format 0x80000000ULL, distinct test constants */
+    const uint64_t fmt2 = 0x80000000ULL;
+    const uint32_t tile2 = 1u;
+    const uint32_t w2 = 3840u;
+    const uint32_t h2 = 2160u;
+    const uint64_t opt2 = 0x123456789abcdef0ULL;
+    const uint32_t dcc_ctrl2 = 0x2a2b2c2du;
+    const uint64_t dcc_clr2 = 0x9988776655443322ULL;
+
+    sceVideoOutSetBufferAttribute2(buf2, fmt2, tile2, w2, h2, opt2, dcc_ctrl2, dcc_clr2);
+
+    unsigned int extent1 = 0;
+    unsigned int extent2 = 0;
+    for (size_t i = 0; i < 256; i++) {
+        if (buf1[i] != 0x5Au) extent1 = (unsigned int)(i + 1);
+        if (buf2[i] != 0x5Au) extent2 = (unsigned int)(i + 1);
+    }
+
+    obs_report_measure("080-video/attribute-block", "pass1-1080p-tiled", "extent", (uint64_t)extent1, "bytes");
+    obs_report_measure("080-video/attribute-block", "pass2-4k-linear", "extent", (uint64_t)extent2, "bytes");
+
+    obs_report_buffer("080-video/attribute-block", "sceVideoOutSetBufferAttribute2", "pass1-tiled-1080p", buf1, 256);
+    obs_report_buffer("080-video/attribute-block", "sceVideoOutSetBufferAttribute2", "pass2-linear-4k", buf2, 256);
+
+    /* Field detection by scanning */
+    int32_t off_tile = -1, off_w = -1, off_h = -1, off_dcc_ctrl = -1;
+    int32_t off_fmt = -1, off_opt = -1, off_dcc_clr = -1;
+
+    for (size_t i = 0; i + 4 <= 256; i += 4) {
+        uint32_t v1 = *(const uint32_t *)(const void *)(buf1 + i);
+        uint32_t v2 = *(const uint32_t *)(const void *)(buf2 + i);
+        if (v1 == tile1 && v2 == tile2 && off_tile < 0) off_tile = (int32_t)i;
+        if (v1 == w1 && v2 == w2 && off_w < 0) off_w = (int32_t)i;
+        if (v1 == h1 && v2 == h2 && off_h < 0) off_h = (int32_t)i;
+        if (v1 == dcc_ctrl1 && v2 == dcc_ctrl2 && off_dcc_ctrl < 0) off_dcc_ctrl = (int32_t)i;
+    }
+
+    for (size_t i = 0; i + 8 <= 256; i += 4) {
+        uint64_t v1 = *(const uint64_t *)(const void *)(buf1 + i);
+        uint64_t v2 = *(const uint64_t *)(const void *)(buf2 + i);
+        if (v1 == fmt1 && v2 == fmt2 && off_fmt < 0) off_fmt = (int32_t)i;
+        if (v1 == opt1 && v2 == opt2 && off_opt < 0) off_opt = (int32_t)i;
+        if (v1 == dcc_clr1 && v2 == dcc_clr2 && off_dcc_clr < 0) off_dcc_clr = (int32_t)i;
+    }
+
+    if (off_tile >= 0) obs_report_measure("080-video/attribute-block", "fields", "tiling-mode-offset", (uint64_t)off_tile, "bytes");
+    if (off_w >= 0) obs_report_measure("080-video/attribute-block", "fields", "width-offset", (uint64_t)off_w, "bytes");
+    if (off_h >= 0) obs_report_measure("080-video/attribute-block", "fields", "height-offset", (uint64_t)off_h, "bytes");
+    if (off_fmt >= 0) obs_report_measure("080-video/attribute-block", "fields", "format-offset", (uint64_t)off_fmt, "bytes");
+    if (off_opt >= 0) obs_report_measure("080-video/attribute-block", "fields", "option-offset", (uint64_t)off_opt, "bytes");
+    if (off_dcc_ctrl >= 0) obs_report_measure("080-video/attribute-block", "fields", "dcc-control-offset", (uint64_t)off_dcc_ctrl, "bytes");
+    if (off_dcc_clr >= 0) obs_report_measure("080-video/attribute-block", "fields", "dcc-clear-color-offset", (uint64_t)off_dcc_clr, "bytes");
+
+    return obs_pass_value(extent1 > extent2 ? extent1 : extent2);
 }
 
 /* Flip status and pending: dump the flip-status record and read the pending query.

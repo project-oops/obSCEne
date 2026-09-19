@@ -575,33 +575,31 @@ static obs_result check_unplaced_libc_imports(void) {
 }
 
 static obs_result check_mesa_candidate_imports(void) {
-    /* Characterization for REQ-20260917T0025Z-1f6d:
-     * Check which of eleven libc and kernel names the platform actually exports:
-     * libSceLibcInternal: getenv, __stderrp, abort, fprintf, free, malloc, realloc
-     * libkernel: __error, close, fstat, open, read
+    /* Characterization for REQ-20260917T1610Z-9c3e and REQ-20260917T1640Z-5b28:
+     * Sweep libc/libkernel/libScePosix symbols for Mesa radeonsi screen creation.
      */
-    static const struct {
-        const char *name;
-        int is_control;
-    } libc_syms[] = {
-        {"getenv", 0},
-        {"__stderrp", 0},
-        {"abort", 0},
-        {"fprintf", 0},
-        {"free", 1},
-        {"malloc", 1},
-        {"realloc", 1},
-    };
-
-    static const struct {
-        const char *name;
-        int is_control;
-    } lk_syms[] = {
-        {"__error", 0},
-        {"close", 1},
-        {"fstat", 0},
-        {"open", 1},
-        {"read", 1},
+    static const char *const mesa_139[] = {
+        "_CurrentRuneLocale", "_ThreadRuneLocale", "__cxa_begin_catch", "__cxa_pure_virtual", "__error",
+        "__gxx_personality_v0", "__isfinite", "__isfinitef", "__isinff", "__isnormal", "__isnormalf", "__mb_sb_limit",
+        "__tls_get_addr", "_umtx_op", "access", "asprintf", "atan2", "atoi", "bcmp", "bzero", "ceil", "ceilf", "chmod", "chown",
+        "clock_gettime", "close", "closedir", "cos", "cosf", "devname_r", "exit", "exp2", "exp2f", "fclose", "fcntl", "fdopen", "fgets",
+        "floor", "floorf", "fma", "fmaf", "fopen", "fread", "frexp", "frexpf", "fseek", "fstat", "ftell", "getegid", "geteuid", "getgid",
+        "getpagesize", "getpid", "getprogname", "getuid", "ioctl", "ldexp", "ldexpf", "localtime", "log", "log10", "log2f", "lroundf",
+        "lseek", "memchr", "memmove", "mkdir", "mkstemp", "mmap", "munmap", "nanosleep", "open", "open_memstream", "opendir",
+        "openlog", "operator", "pclose", "popen", "posix_memalign", "powf", "printf", "pthread_set_name_np",
+        "pthread_sigmask", "putchar", "qsort", "qsort_s", "rand", "read", "readdir", "readlink", "realloc", "remove", "rint", "rintf",
+        "round", "roundf", "sigdelset", "sigfillset", "sin", "sinf", "snprintf", "sprintf", "srand", "sscanf", "stat", "std",
+        "strcasecmp", "strcat", "strcpy", "strcspn", "strerror", "strncasecmp", "strncat", "strncmp", "strncpy", "strnlen",
+        "strpbrk", "strtod", "strtok", "strtok_r", "strtol", "strtoll", "strtoul", "strtoull", "sync", "syscall", "sysctlbyname",
+        "syslog", "system", "time", "trunc", "truncf", "unlink", "usleep", "vasprintf", "vsnprintf", "vsprintf", "wmemchr", "write",
+        /* REQ-20260917T2045Z-a4f2 (34 symbols): */
+        "_ZSt7nothrow", "_ZnwmRKSt9nothrow_t", "__cxa_atexit", "__cxa_guard_acquire", "__cxa_guard_release",
+        "dlclose", "dlerror", "dlopen", "dlsym",
+        "__srget", "__stdinp", "__isthreaded", "clearerr", "ferror", "fileno", "getc", "rewind", "setvbuf",
+        "memcmp", "memcpy", "memset", "stpcpy", "strrchr", "bsearch",
+        "setjmp", "longjmp", "sigaction",
+        "flock", "ftruncate", "isatty", "shm_open",
+        "atof", "__fpclassifyf", "isspace"
     };
 
     int lk_handle = obs_module_open("libkernel");
@@ -612,16 +610,50 @@ static obs_result check_mesa_candidate_imports(void) {
     if (libc_handle < 0) {
         libc_handle = obs_module_open("libSceLibcInternal.sprx");
     }
+    int posix_handle = obs_module_open("libScePosix");
+    if (posix_handle < 0) {
+        posix_handle = obs_module_open("libScePosix.sprx");
+    }
 
     obs_report_measure("017-posix/mesa-candidate-imports", "handle-opened", "libkernel",
                        (uint64_t)(lk_handle >= 0 ? 1 : 0), "bool");
     obs_report_measure("017-posix/mesa-candidate-imports", "handle-opened", "libSceLibcInternal",
                        (uint64_t)(libc_handle >= 0 ? 1 : 0), "bool");
+    obs_report_measure("017-posix/mesa-candidate-imports", "handle-opened", "libScePosix",
+                       (uint64_t)(posix_handle >= 0 ? 1 : 0), "bool");
 
+    /* Controls: free, malloc, realloc in libc; close, open, read in kernel; getenv absent */
     uint64_t libc_controls_resolved = 0;
-    uint64_t libc_candidates_resolved = 0;
-    for (size_t i = 0; i < sizeof(libc_syms) / sizeof(libc_syms[0]); i++) {
-        const char *name = libc_syms[i].name;
+    static const char *const libc_controls[] = {"free", "malloc", "realloc"};
+    for (size_t i = 0; i < 3; i++) {
+        const void *fn = (libc_handle >= 0) ? obs_module_symbol(libc_handle, libc_controls[i]) : NULL;
+        if (fn == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *addr = NULL;
+            if (sceKernelDlsym(0x2001, libc_controls[i], &addr) == 0 && obs_address_is_callable(addr)) {
+                fn = addr;
+            }
+        }
+        if (obs_address_is_callable(fn)) libc_controls_resolved++;
+    }
+
+    uint64_t lk_controls_resolved = 0;
+    static const char *const lk_controls[] = {"close", "open", "read"};
+    for (size_t i = 0; i < 3; i++) {
+        const void *fn = (lk_handle >= 0) ? obs_module_symbol(lk_handle, lk_controls[i]) : NULL;
+        if (fn == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *addr = NULL;
+            if (sceKernelDlsym(1, lk_controls[i], &addr) == 0 && obs_address_is_callable(addr)) {
+                fn = addr;
+            }
+        }
+        if (obs_address_is_callable(fn)) lk_controls_resolved++;
+    }
+
+    uint64_t total_resolved = 0;
+    for (size_t i = 0; i < sizeof(mesa_139) / sizeof(mesa_139[0]); i++) {
+        const char *name = mesa_139[i];
+
+        /* Try libSceLibcInternal */
         const void *fn_libc = (libc_handle >= 0) ? obs_module_symbol(libc_handle, name) : NULL;
         if (fn_libc == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
             void *addr = NULL;
@@ -629,22 +661,8 @@ static obs_result check_mesa_candidate_imports(void) {
                 fn_libc = addr;
             }
         }
-        int libc_call = obs_address_is_callable(fn_libc);
-        obs_report_measure("017-posix/mesa-candidate-imports", name, "libSceLibcInternal",
-                           (uint64_t)libc_call, "bool");
-        if (libc_call) {
-            if (libc_syms[i].is_control) {
-                libc_controls_resolved++;
-            } else {
-                libc_candidates_resolved++;
-            }
-        }
-    }
 
-    uint64_t lk_controls_resolved = 0;
-    uint64_t lk_candidates_resolved = 0;
-    for (size_t i = 0; i < sizeof(lk_syms) / sizeof(lk_syms[0]); i++) {
-        const char *name = lk_syms[i].name;
+        /* Try libkernel */
         const void *fn_lk = (lk_handle >= 0) ? obs_module_symbol(lk_handle, name) : NULL;
         if (fn_lk == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
             void *addr = NULL;
@@ -652,31 +670,105 @@ static obs_result check_mesa_candidate_imports(void) {
                 fn_lk = addr;
             }
         }
-        int lk_call = obs_address_is_callable(fn_lk);
+
+        /* Try libScePosix */
+        const void *fn_posix = (posix_handle >= 0) ? obs_module_symbol(posix_handle, name) : NULL;
+        if (fn_posix == NULL) {
+            fn_posix = obs_posix_symbol(name);
+        }
+
+        const void *primary_addr = NULL;
+        const char *primary_lib = "none";
+        if (obs_address_is_callable(fn_libc)) {
+            primary_addr = fn_libc;
+            primary_lib = "libSceLibcInternal";
+        } else if (obs_address_is_callable(fn_lk)) {
+            primary_addr = fn_lk;
+            primary_lib = "libkernel";
+        } else if (obs_address_is_callable(fn_posix)) {
+            primary_addr = fn_posix;
+            primary_lib = "libScePosix";
+        }
+
+        obs_report_measure("017-posix/mesa-candidate-imports", name, "libSceLibcInternal",
+                           (uint64_t)obs_address_is_callable(fn_libc), "bool");
         obs_report_measure("017-posix/mesa-candidate-imports", name, "libkernel",
-                           (uint64_t)lk_call, "bool");
-        if (lk_call) {
-            if (lk_syms[i].is_control) {
-                lk_controls_resolved++;
-            } else {
-                lk_candidates_resolved++;
-            }
+                           (uint64_t)obs_address_is_callable(fn_lk), "bool");
+        obs_report_measure("017-posix/mesa-candidate-imports", name, "libScePosix",
+                           (uint64_t)obs_address_is_callable(fn_posix), "bool");
+        obs_report_measure("017-posix/mesa-candidate-imports", name, "lib",
+                           (uint64_t)(primary_addr != NULL ? 1 : 0), primary_lib);
+        obs_report_measure("017-posix/mesa-candidate-imports", name, "addr",
+                           (uint64_t)(uintptr_t)primary_addr, "hex");
+
+        if (primary_addr != NULL) {
+            total_resolved++;
         }
     }
 
     obs_report_measure("017-posix/mesa-candidate-imports", "getenv", "eboot-linked",
                        (uint64_t)obs_address_is_callable((const void *)&getenv), "bool");
-    obs_report_measure("017-posix/mesa-candidate-imports", "__error", "eboot-linked",
-                       (uint64_t)obs_address_is_callable((const void *)&__error), "bool");
-
     obs_report_measure("017-posix/mesa-candidate-imports", "libc-controls", "resolved",
                        libc_controls_resolved, "count");
     obs_report_measure("017-posix/mesa-candidate-imports", "kernel-controls", "resolved",
                        lk_controls_resolved, "count");
     obs_report_measure("017-posix/mesa-candidate-imports", "candidates", "resolved",
-                       libc_candidates_resolved + lk_candidates_resolved, "count");
+                       total_resolved, "count");
 
-    return obs_pass_value(libc_candidates_resolved + lk_candidates_resolved);
+    return obs_pass_value(total_resolved);
+}
+
+static obs_result check_process_exit_candidates(void) {
+    /* Characterization for REQ-20260917T1450Z-2e71:
+     * Check which process exit functions are exported and callable on FW 12.40:
+     * - libSceLibcInternal: exit, _Exit, quick_exit, abort
+     * - libkernel: _exit, sceKernelExit, sceKernelExitProcess, scePthreadExit
+     * - libSceSystemService: sceSystemServiceKillLocalProcess, sceSystemServiceKillApp
+     * - libSceShellCoreUtil: sceShellCoreUtilExitApp, sceShellCoreUtilExitMiniApp
+     */
+    static const struct {
+        const char *library;
+        const char *symbol;
+    } exit_candidates[] = {
+        {"libSceLibcInternal", "exit"},
+        {"libSceLibcInternal", "_Exit"},
+        {"libSceLibcInternal", "quick_exit"},
+        {"libSceLibcInternal", "abort"},
+        {"libkernel", "_exit"},
+        {"libkernel", "sceKernelExit"},
+        {"libkernel", "sceKernelExitProcess"},
+        {"libkernel", "scePthreadExit"},
+        {"libSceSystemService", "sceSystemServiceKillLocalProcess"},
+        {"libSceSystemService", "sceSystemServiceKillApp"},
+        {"libSceShellCoreUtil", "sceShellCoreUtilExitApp"},
+        {"libSceShellCoreUtil", "sceShellCoreUtilExitMiniApp"},
+    };
+
+    uint64_t found_count = 0;
+    for (size_t i = 0; i < sizeof(exit_candidates) / sizeof(exit_candidates[0]); i++) {
+        const char *lib = exit_candidates[i].library;
+        const char *sym = exit_candidates[i].symbol;
+        int h = obs_module_open(lib);
+        const void *addr = NULL;
+        if (h >= 0) {
+            addr = obs_module_symbol(h, sym);
+        }
+        if (addr == NULL) {
+            addr = obs_module_symbol(1, sym);
+        }
+        int callable = obs_address_is_callable(addr);
+        obs_report_measure("017-posix/process-exit-candidates", sym, lib,
+                           (uint64_t)callable, "bool");
+        obs_report_measure("017-posix/process-exit-candidates", sym, "addr",
+                           (uint64_t)(uintptr_t)addr, "hex");
+        if (callable) {
+            found_count++;
+        }
+    }
+
+    obs_report_measure("017-posix/process-exit-candidates", "candidates", "resolved",
+                       found_count, "count");
+    return obs_pass_value(found_count);
 }
 
 static obs_result check_posix_descriptors_output(void) {
@@ -793,6 +885,8 @@ static const obs_check posix_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_unplaced_libc_imports, OBS_FROM_ASSUMED},
     {"017-posix/mesa-candidate-imports", "libSceLibcInternal", "(symbols)", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_mesa_candidate_imports, OBS_FROM_ASSUMED},
+    {"017-posix/process-exit-candidates", "libkernel", "(symbols)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_process_exit_candidates, OBS_FROM_ASSUMED},
     {"017-posix/descriptors-output", "libkernel", "write", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_posix_descriptors_output, OBS_FROM_ASSUMED},
 };

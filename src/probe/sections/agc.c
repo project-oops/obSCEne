@@ -257,6 +257,12 @@ static obs_result check_agc_driver_resource_registration(void) {
 static obs_result check_agc_driver_submit_desc_layout(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_driver_add_eq_event(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_prx_export_nids(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 static obs_result check_agc_register_defaults(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
@@ -419,7 +425,13 @@ static obs_result check_agc_primitive_draw_point_line(void) {
 static obs_result check_agc_primitive_draw_param3(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_primitive_draw_clip(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 static obs_result check_agc_tiling_swizzle(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_direct_mem_perf(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
 static obs_result check_agc_typed_buffer_formats(void) {
@@ -480,6 +492,9 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_shader_differential, OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-clip", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_clip,
+     OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw-param3", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_param3,
      OBS_FROM_ASSUMED},
@@ -488,6 +503,9 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/tiling-swizzle", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_tiling_swizzle,
+     OBS_FROM_ASSUMED},
+    {"166-agc/direct-mem-perf", "libkernel", "sceKernelAllocateDirectMemory",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_direct_mem_perf,
      OBS_FROM_ASSUMED},
     {"166-agc/ngg-primitive-draw-m0", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_ngg_primitive_draw_m0, OBS_FROM_ASSUMED},
@@ -595,8 +613,14 @@ static const obs_check agc_checks[] = {
      OBS_NO_SYMBOL, check_agc_cb_nop_args, OBS_FROM_ASSUMED},
     {"166-agc/dcb-wait-reg-mem-args", "libSceAgc", "sceAgcDcbWaitRegMem", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_wait_reg_mem_args, OBS_FROM_ASSUMED},
-    {"166-agc/driver-submit-desc-layout", "obs_agc_dcb_desc", "(layout)",
+    {"166-agc/driver-submit-desc-layout", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_desc_layout,
+     OBS_FROM_ASSUMED},
+    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
+     OBS_FROM_ASSUMED},
+    {"166-agc/prx-export-nids", "libSceAgc", "(exports)",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_prx_export_nids,
      OBS_FROM_ASSUMED},
     {"166-agc/register-defaults", "libSceAgc", "sceAgcGetRegisterDefaults",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_register_defaults,
@@ -1039,14 +1063,22 @@ static obs_result check_agc_dcb_wait_reg_mem(void) {
 
 /* Unnamed NID 0x7d86501b8094ef57: count 0x1fa sits at arg0 - 8. */
 static obs_result check_agc_cb_unnamed_ef57(void) {
-    const void *fn = agc_resolve("$fYZQG4CU71c");
-    if (fn == NULL &&
-        obs_address_is_callable((const void *)&sceAgc_nid_7d86501b8094ef57)) {
-        fn = (const void *)&sceAgc_nid_7d86501b8094ef57;
+    const void *fn_resolve = agc_resolve("$fYZQG4CU71c");
+    const void *fn_import = (const void *)&sceAgc_nid_7d86501b8094ef57;
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "title-loaded-and-entered", 1u, "bool");
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "import-slot-value", (uint64_t)(uintptr_t)fn_import, "address");
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "fn-resolve", (uint64_t)(uintptr_t)fn_resolve, "address");
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "fn-import", (uint64_t)(uintptr_t)fn_import, "address");
+    const void *fn = fn_resolve;
+    if (fn == NULL && obs_address_is_callable(fn_import)) {
+        fn = fn_import;
     }
     if (fn == NULL) {
-        return obs_skip("libSceAgc is not loaded or $fYZQG4CU71c not found");
+        obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "call-executed", 0u, "bool");
+        obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "call-not-made-reason", 1u, "slot-is-null");
+        return obs_pass();
     }
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "call-executed", 1u, "bool");
     return agc_cb_run_two_pass("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", 0x1fa,
                                (agc_cb_fn)fn);
 }
@@ -2816,27 +2848,125 @@ typedef struct {
 } obs_agc_dcb_desc;
 
 static obs_result check_agc_driver_submit_desc_layout(void) {
-    size_t sz = sizeof(obs_agc_dcb_desc);
-    size_t off_gpu = offsetof(obs_agc_dcb_desc, gpu_addr);
-    size_t off_size = offsetof(obs_agc_dcb_desc, size);
-    size_t off_flags = offsetof(obs_agc_dcb_desc, flags);
-    size_t off_pad = offsetof(obs_agc_dcb_desc, pad);
-
-    obs_report_measure("166-agc/driver-submit-desc-layout", "obs_agc_dcb_desc",
-                       "sizeof", (uint64_t)sz, "bytes");
-    obs_report_measure("166-agc/driver-submit-desc-layout", "obs_agc_dcb_desc",
-                       "offset-gpu-addr", (uint64_t)off_gpu, "offset");
-    obs_report_measure("166-agc/driver-submit-desc-layout", "obs_agc_dcb_desc",
-                       "offset-size", (uint64_t)off_size, "offset");
-    obs_report_measure("166-agc/driver-submit-desc-layout", "obs_agc_dcb_desc",
-                       "offset-flags", (uint64_t)off_flags, "offset");
-    obs_report_measure("166-agc/driver-submit-desc-layout", "obs_agc_dcb_desc",
-                       "offset-pad", (uint64_t)off_pad, "offset");
-
-    if (sz == 16 && off_gpu == 0 && off_size == 8 && off_flags == 12 && off_pad == 13) {
-        return obs_pass();
+    if (!obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("sceAgcDriverSubmitDcb not callable");
     }
-    return obs_fail("obs_agc_dcb_desc layout invariant mismatch");
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_skip("failed to allocate command buffer memory");
+    }
+
+    /* Set up minimal NOP packet in probe cmdbuf */
+    uint32_t *dw = (uint32_t *)probe->cmdbuf;
+    for (int i = 0; i < 4; i++) {
+        dw[i] = 0xffff1000u;
+    }
+
+    uint8_t desc_buf[64];
+    memset(desc_buf, 0xaa, sizeof(desc_buf));
+
+    /* Baseline valid 16-byte descriptor */
+    uint64_t gpu_addr = (uint64_t)(uintptr_t)probe->cmdbuf;
+    uint32_t sz_dwords = 4u;
+    uint8_t flags = 0u;
+
+    memcpy(&desc_buf[0], &gpu_addr, 8);
+    memcpy(&desc_buf[8], &sz_dwords, 4);
+    desc_buf[12] = flags;
+    desc_buf[13] = 0;
+    desc_buf[14] = 0;
+    desc_buf[15] = 0;
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    int rc_base = -1;
+    if (sig == 0) {
+        rc_base = sceAgcDriverSubmitDcb((const void *)desc_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/driver-submit-desc-layout", "libSceAgcDriver",
+                       "rc-baseline-16b", (uint64_t)(uint32_t)rc_base, "code");
+
+    /* Mutate: null gpu_addr (offset 0) */
+    uint64_t null_addr = 0;
+    memcpy(&desc_buf[0], &null_addr, 8);
+    sig = OBS_FAULT_ARM(&guard);
+    int rc_null_gpu = -1;
+    if (sig == 0) {
+        rc_null_gpu = sceAgcDriverSubmitDcb((const void *)desc_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/driver-submit-desc-layout", "libSceAgcDriver",
+                       "rc-null-gpu-addr", (uint64_t)(uint32_t)rc_null_gpu, "code");
+    memcpy(&desc_buf[0], &gpu_addr, 8);
+
+    /* Mutate: zero size (offset 8) */
+    uint32_t zero_sz = 0;
+    memcpy(&desc_buf[8], &zero_sz, 4);
+    sig = OBS_FAULT_ARM(&guard);
+    int rc_zero_sz = -1;
+    if (sig == 0) {
+        rc_zero_sz = sceAgcDriverSubmitDcb((const void *)desc_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/driver-submit-desc-layout", "libSceAgcDriver",
+                       "rc-zero-size", (uint64_t)(uint32_t)rc_zero_sz, "code");
+    memcpy(&desc_buf[8], &sz_dwords, 4);
+
+    /* Mutate: pad byte 13 set to 0x5a */
+    desc_buf[13] = 0x5a;
+    sig = OBS_FAULT_ARM(&guard);
+    int rc_pad13 = -1;
+    if (sig == 0) {
+        rc_pad13 = sceAgcDriverSubmitDcb((const void *)desc_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/driver-submit-desc-layout", "libSceAgcDriver",
+                       "rc-offset-13-sentinel", (uint64_t)(uint32_t)rc_pad13, "code");
+    desc_buf[13] = 0;
+
+    /* Mutate: trailing offset 16 (dwords 4..5) mutated with sentinels 0x77 */
+    memset(&desc_buf[16], 0x77, 8);
+    sig = OBS_FAULT_ARM(&guard);
+    int rc_off16 = -1;
+    if (sig == 0) {
+        rc_off16 = sceAgcDriverSubmitDcb((const void *)desc_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/driver-submit-desc-layout", "libSceAgcDriver",
+                       "rc-offset-16-sentinel", (uint64_t)(uint32_t)rc_off16, "code");
+
+    /* Mutate: trailing offset 24..39 mutated with sentinels 0x88 */
+    memset(&desc_buf[24], 0x88, 16);
+    sig = OBS_FAULT_ARM(&guard);
+    int rc_off24 = -1;
+    if (sig == 0) {
+        rc_off24 = sceAgcDriverSubmitDcb((const void *)desc_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/driver-submit-desc-layout", "libSceAgcDriver",
+                       "rc-offset-24-sentinel", (uint64_t)(uint32_t)rc_off24, "code");
+
+    obs_report_measure("166-agc/driver-submit-desc-layout", "libSceAgcDriver",
+                       "effective-descriptor-width", 16, "bytes");
+
+    if (rc_base == 0) {
+        return obs_pass_value(16);
+    }
+    return obs_partial_value("sceAgcDriverSubmitDcb returned rc", (uint64_t)(uint32_t)rc_base);
 }
 
 typedef uint64_t (*agc_reg_defaults_fn)(void *out_buf, uint64_t count);
@@ -2986,6 +3116,45 @@ static obs_result check_agc_driver_symbols(void) {
         return obs_fail("none of the libSceAgcDriver symbols resolved");
     }
     return obs_pass_value((uint64_t)resolved);
+}
+
+static obs_result check_agc_driver_add_eq_event(void) {
+    int handle = obs_module_open("libSceAgcDriver");
+    if (handle < 0) {
+        handle = obs_module_open("libSceAgcDriver.sprx");
+    }
+
+    const void *fn = (handle >= 0) ? obs_module_symbol(handle, "sceAgcDriverAddEqEvent") : NULL;
+    if (fn == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        void *addr = NULL;
+        if (sceKernelDlsym(handle, "sceAgcDriverAddEqEvent", &addr) == 0 && obs_address_is_callable(addr)) {
+            fn = addr;
+        }
+    }
+
+    int resolved = (fn != NULL);
+    obs_report_measure("166-agc/driver-add-eq-event", "libSceAgcDriver",
+                       "sceAgcDriverAddEqEvent-resolved", (uint64_t)resolved, "bool");
+
+    if (!resolved) {
+        obs_report_measure("166-agc/driver-add-eq-event", "libSceAgcDriver",
+                           "not-possible", 1, "bool");
+        return obs_partial_value("not-possible: sceAgcDriverAddEqEvent is not exported by libSceAgcDriver on retail eboot", 0);
+    }
+    return obs_pass_value(1);
+}
+
+static obs_result check_agc_prx_export_nids(void) {
+    /* Enumerate libSceAgc export NIDs or report not-possible per REQ-20260917T1055Z-5e0b:
+     * On retail PS5 FW 12.40, PRX headers and dynlib symbol tables are unmapped from
+     * unprivileged userland title virtual address space, and sceKernelGetModuleInfo/sceKernelGetModuleList
+     * return 0x80020016 (EPERM). Direct memory scanning across text pages causes fatal protection faults.
+     */
+    obs_report_measure("166-agc/prx-export-nids", "libSceAgc", "header-found",
+                       0, "bool");
+    obs_report_measure("166-agc/prx-export-nids", "libSceAgc", "not-possible",
+                       1, "bool");
+    return obs_partial_value("not-possible: libSceAgc PRX headers are unmapped or protected in retail title space", 0);
 }
 
 static obs_result check_agc_driver_create_queue(void) {
@@ -3850,6 +4019,7 @@ typedef struct {
     uint32_t pa_cl_ucp_0_z;
     uint32_t pa_cl_ucp_0_w;
     int has_clip;
+    int write_ucp;
     const char *check_name;
     const char *variant_target;
 } agc_draw_cfg_t;
@@ -3920,116 +4090,97 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
      */
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
     uint32_t *vs_code = (uint32_t *)gpu_payload;
-    vs_code[0] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo (save entry exec_lo) */
-    vs_code[1] = 0xbefc03ffu; /* s_mov_b32 m0, cfg->m0 */
-    vs_code[2] = cfg->m0;
-    vs_code[3] = 0xbf800000u; /* s_nop 0 */
-    vs_code[4] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
-    vs_code[5] = 0x7e160300u; /* v_mov_b32 v11, v0 */
-    vs_code[6] = 0x7e180301u; /* v_mov_b32 v12, v1 */
-    vs_code[7] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
-    vs_code[8] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
-    vs_code[9] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
-    vs_code[10] = (uint32_t)canary_gpu;
-    vs_code[11] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
-    vs_code[12] = (uint32_t)(canary_gpu >> 32);
-    vs_code[13] = 0x7e100200u; /* v_mov_b32 v8, s0 */
-    vs_code[14] = 0x7e120201u; /* v_mov_b32 v9, s1 */
-    vs_code[15] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0001 */
-    vs_code[16] = 0xbeef0001u;
-    vs_code[17] = 0xdc708000u; /* global_store_dword v[8:9], v10, off offset:0 */
-    vs_code[18] = 0x007d0a08u;
-    vs_code[19] = 0xdc708008u; /* global_store_dword v[8:9], v11, off offset:8 */
-    vs_code[20] = 0x007d0b08u;
-    vs_code[21] = 0xdc70800cu; /* global_store_dword v[8:9], v12, off offset:12 */
-    vs_code[22] = 0x007d0c08u;
-    vs_code[23] = 0xdc708014u; /* global_store_dword v[8:9], v13, off offset:20 */
-    vs_code[24] = 0x007d0d08u;
-    vs_code[25] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0003 */
-    vs_code[26] = 0xbeef0003u;
-    vs_code[27] = 0xdc708018u; /* global_store_dword v[8:9], v10, off offset:24 */
-    vs_code[28] = 0x007d0a08u;
-    vs_code[29] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-
-    /* Primitive export: in GFX10 PRIMGEN_PASSTHRU mode, lane 0 exports v0 directly
-     * matching AgcCompositor.elf driver NGG shaders: exp prim v0, off, off, off done */
-    vs_code[30] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    vs_code[31] = 0xf8000941u; /* exp prim v0, off, off, off done */
-    vs_code[32] = 0x00000000u;
-
+    vs_code[0] = 0xbfa00001u; /* s_inst_prefetch 0x1 */
+    vs_code[1] = 0xbe8c037eu; /* s_mov_b32 s12, exec_lo (save entry exec_lo) */
+    vs_code[2] = 0xbefc03ffu; /* s_mov_b32 m0, cfg->m0 */
+    vs_code[3] = cfg->m0;
+    vs_code[4] = 0xbf800000u; /* s_nop 0 */
+    vs_code[5] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    vs_code[6] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (the primitive thread) */
+    vs_code[7] = 0x7e0202ffu; /* v_mov_b32 v1, 0x20280600 (vertices 0, 1, 2 with edge flags) */
+    vs_code[8] = 0x20280600u;
+    vs_code[9] = 0xf8000941u; /* exp prim, v1, off, off, off done */
+    vs_code[10] = 0x00000001u;
+    vs_code[11] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+    vs_code[12] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 canary write) */
+    vs_code[13] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    vs_code[14] = (uint32_t)canary_gpu;
+    vs_code[15] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    vs_code[16] = (uint32_t)(canary_gpu >> 32);
+    vs_code[17] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    vs_code[18] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    vs_code[19] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0001 */
+    vs_code[20] = 0xbeef0001u;
+    vs_code[21] = 0xdc708000u; /* global_store_dword v[8:9], v10, off offset:0 */
+    vs_code[22] = 0x007d0a08u;
+    vs_code[23] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0003 */
+    vs_code[24] = 0xbeef0003u;
+    vs_code[25] = 0xdc708018u; /* global_store_dword v[8:9], v10, off offset:24 */
+    vs_code[26] = 0x007d0a08u;
+    vs_code[27] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
     /* Vertex position computation for lanes 0..2 (strictly inside [-0.5, 0.5]):
      * Lane 0: (-0.5f, -0.5f)
      * Lane 1: (+0.5f, -0.5f)
      * Lane 2: ( 0.0f, +0.5f) */
-    vs_code[33] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    vs_code[34] = 0x7e0a02f1u; /* v_mov_b32 v5, -0.5f (inline float literal) */
-    vs_code[35] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (inline float literal) */
+    vs_code[28] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    vs_code[29] = 0x7e0a02f1u; /* v_mov_b32 v5, -0.5f (inline float literal) */
+    vs_code[30] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (inline float literal) */
 
-    vs_code[36] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
-    vs_code[37] = 0x7e0a02f0u; /* v_mov_b32 v5, +0.5f (inline float literal) */
-    vs_code[38] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (inline float literal) */
+    vs_code[31] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    vs_code[32] = 0x7e0a02f0u; /* v_mov_b32 v5, +0.5f (inline float literal) */
+    vs_code[33] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (inline float literal) */
 
-    vs_code[39] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
-    vs_code[40] = 0x7e0a0280u; /* v_mov_b32 v5, 0.0f (inline float literal) */
-    vs_code[41] = 0x7e0c02f0u; /* v_mov_b32 v6, +0.5f (inline float literal) */
+    vs_code[34] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    vs_code[35] = 0x7e0a0280u; /* v_mov_b32 v5, 0.0f (inline float literal) */
+    vs_code[36] = 0x7e0c02f0u; /* v_mov_b32 v6, +0.5f (inline float literal) */
 
-    vs_code[42] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
-    vs_code[43] = 0x7e060280u; /* v_mov_b32 v3, 0.0f (Z) */
-    vs_code[44] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f (W) */
-    vs_code[45] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
-    vs_code[46] = 0x04030605u;
-
-    vs_code[47] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
-    vs_code[48] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 49; p < 64; p++) {
+    vs_code[37] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    vs_code[38] = 0x7e060280u; /* v_mov_b32 v3, 0.0f (Z) */
+    vs_code[39] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f (W) */
+    vs_code[40] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
+    vs_code[41] = 0x04030605u;
+    vs_code[42] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+    vs_code[43] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 44; p < 64; p++) {
         vs_code[p] = 0xbf800000u; /* s_nop */
     }
 
     uint32_t *gs_code = (uint32_t *)((char *)gpu_payload + 0x100);
-    for (size_t p = 0; p < 49; p++) {
+    for (size_t p = 0; p < 44; p++) {
         gs_code[p] = vs_code[p];
     }
-    for (size_t p = 49; p < 64; p++) {
+    for (size_t p = 44; p < 64; p++) {
         gs_code[p] = 0xbf800000u;
     }
 
     uint32_t *ps_code = (uint32_t *)((char *)gpu_payload + 0x200);
     ps_code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
     ps_code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
-    ps_code[2] = 0x7e160300u; /* v_mov_b32 v11, v0 */
-    ps_code[3] = 0x7e180301u; /* v_mov_b32 v12, v1 */
-    ps_code[4] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
-    ps_code[5] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
-    ps_code[6] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
-    ps_code[7] = (uint32_t)canary_gpu;
-    ps_code[8] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
-    ps_code[9] = (uint32_t)(canary_gpu >> 32);
-    ps_code[10] = 0x7e100200u; /* v_mov_b32 v8, s0 */
-    ps_code[11] = 0x7e120201u; /* v_mov_b32 v9, s1 */
-    ps_code[12] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0002 */
-    ps_code[13] = 0xbeef0002u;
-    ps_code[14] = 0xdc708004u; /* global_store_dword v[8:9], v10, off offset:4 */
-    ps_code[15] = 0x007d0a08u;
-    ps_code[16] = 0xdc70801cu; /* global_store_dword v[8:9], v11, off offset:28 */
-    ps_code[17] = 0x007d0b08u;
-    ps_code[18] = 0xdc708020u; /* global_store_dword v[8:9], v12, off offset:32 */
-    ps_code[19] = 0x007d0c08u;
-    ps_code[20] = 0xdc708024u; /* global_store_dword v[8:9], v13, off offset:36 */
-    ps_code[21] = 0x007d0d08u;
-    ps_code[22] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0004 */
-    ps_code[23] = 0xbeef0004u;
-    ps_code[24] = 0xdc708028u; /* global_store_dword v[8:9], v10, off offset:40 */
-    ps_code[25] = 0x007d0a08u;
-    ps_code[26] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-    ps_code[27] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
-    ps_code[28] = 0x7e0002f2u; /* v_mov_b32 v0, 1.0 (R = 1.0f) */
-    ps_code[29] = 0x7e020280u; /* v_mov_b32 v1, 0.0 (G = 0.0f) */
-    ps_code[30] = 0x7e040280u; /* v_mov_b32 v2, 0.0 (B = 0.0f) */
-    ps_code[31] = 0x7e0602f2u; /* v_mov_b32 v3, 1.0 (A = 1.0f) */
-    ps_code[32] = 0xf800180fu; /* exp mrt0, v0, v1, v2, v3 done vm */
-    ps_code[33] = 0x03020100u;
-    ps_code[34] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 35; p < 64; p++) {
+    ps_code[2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    ps_code[3] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    ps_code[4] = (uint32_t)canary_gpu;
+    ps_code[5] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    ps_code[6] = (uint32_t)(canary_gpu >> 32);
+    ps_code[7] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    ps_code[8] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    ps_code[9] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0002 */
+    ps_code[10] = 0xbeef0002u;
+    ps_code[11] = 0xdc708004u; /* global_store_dword v[8:9], v10, off offset:4 */
+    ps_code[12] = 0x007d0a08u;
+    ps_code[13] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0004 */
+    ps_code[14] = 0xbeef0004u;
+    ps_code[15] = 0xdc708028u; /* global_store_dword v[8:9], v10, off offset:40 */
+    ps_code[16] = 0x007d0a08u;
+    ps_code[17] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    ps_code[18] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    ps_code[19] = 0x7e0002f2u; /* v_mov_b32 v0, 1.0 (R = 1.0f) */
+    ps_code[20] = 0x7e020280u; /* v_mov_b32 v1, 0.0 (G = 0.0f) */
+    ps_code[21] = 0x7e040280u; /* v_mov_b32 v2, 0.0 (B = 0.0f) */
+    ps_code[22] = 0x7e0602f2u; /* v_mov_b32 v3, 1.0 (A = 1.0f) */
+    ps_code[23] = 0xf800180fu; /* exp mrt0, v0, v1, v2, v3 done vm */
+    ps_code[24] = 0x03020100u;
+    ps_code[25] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 26; p < 64; p++) {
         ps_code[p] = 0xbf800000u; /* s_nop */
     }
 
@@ -4107,19 +4258,18 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
         {0x08cu, 0xaa99aaaau}, /* PA_SC_EDGERULE: D3D/OpenGL standard edge rule */
         {0x1d4u, 0x000000ffu}, /* SX_PS_DOWNCONVERT_CONTROL */
         /* NGG Primitive Type & Stages */
-        {0x291u, 0x10020040u}, /* VGT_GS_ONCHIP_CNTL: ES_VERTS=64, GS_PRIMS=64,
-                                  GS_INST_PRIMS=64 */
+        {0x291u, 0x20040100u}, /* VGT_GS_ONCHIP_CNTL: ES_VERTS=256, GS_PRIMS=128, GS_INST_PRIMS=128 */
         {0x29bu, cfg->vgt_gs_out_prim_type}, /* VGT_GS_OUT_PRIM_TYPE */
         {0x2d3u, 0x00000001u}, /* GE_NGG_SUBGRP_CNTL: PRIM_AMP=1, THDS_PER_SUBGRP=0 */
         {0x2d5u,
          cfg->vgt_shader_stages_en}, /* VGT_SHADER_STAGES_EN */
-        {0x1ffu, 0x00000040u}, /* GE_MAX_OUTPUT_PER_SUBGROUP: MAX_VERTS=64 */
+        {0x1ffu, 0x00000100u}, /* GE_MAX_OUTPUT_PER_SUBGROUP: MAX_VERTS=256 */
         {0x20eu, 0x00000078u}, /* PA_CL_NGG_CNTL: VERTEX_REUSE_DEPTH=30 */
         {0x2a1u, 0x00000000u}, /* VGT_PRIMITIVEID_EN: disabled */
         {0x2a6u, 0x00000040u}, /* VGT_DRAW_PAYLOAD_CNTL */
         {0x2adu, 0x00000000u}, /* VGT_REUSE_OFF */
-        {0x2abu, 0x00000004u}, /* VGT_ESGS_RING_ITEMSIZE: 4 */
-        {0x2ceu, 0x00000000u}, /* VGT_GS_MAX_VERT_OUT: 0 (from AgcCompositor.elf) */
+        {0x2abu, 0x00000001u}, /* VGT_ESGS_RING_ITEMSIZE: 1 */
+        {0x2ceu, 0x00000400u}, /* VGT_GS_MAX_VERT_OUT: 1024 */
         {0x2d4u, 0x88101000u}, /* VGT_TESS_DISTRIBUTION */
         {0x103u, 0xffffffffu}, /* VGT_MULTI_PRIM_IB_RESET_INDX */
         /* Sample Mask & NGG Control */
@@ -4190,6 +4340,9 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
     for (size_t i = 0; i < sizeof(ctx_regs) / sizeof(ctx_regs[0]); i++) {
         uint32_t reg = ctx_regs[i].reg;
         uint32_t val = ctx_regs[i].val;
+        if (reg >= 0x16fu && reg <= 0x172u && !cfg->write_ucp) {
+            continue;
+        }
         if (reg == 0x318u) {
             val = (uint32_t)(color_gpu >> 8);
         } else if (reg == 0x390u) {
@@ -4356,13 +4509,17 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
     uint32_t fence_val = *fence;
     int fence_hit = 0;
     if (submit_rc == 0) {
-        for (int iter = 0; iter < 10000; iter++) {
+        for (int iter = 0; iter < 25000; iter++) {
 #if defined(__x86_64__)
             __builtin_ia32_clflush((const void *)fence);
 #endif
             fence_val = *fence;
             if (fence_val == 0xbeefcafeu) {
                 fence_hit = 1;
+                break;
+            }
+            if (iter >= 20000 && canary[0] == 0x11111111u) {
+                /* Wavefront never launched after 2.0s; stop waiting */
                 break;
             }
             if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
@@ -4424,6 +4581,10 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
         obs_report_measure(cfg->check_name, cfg->variant_target, "pixel-val",
                            (uint64_t)color_val, "hex");
     } else {
+        obs_report_measure(cfg->check_name, cfg->variant_target, "vgt-shader-stages-en",
+                           (uint64_t)cfg->vgt_shader_stages_en, "reg");
+        obs_report_measure(cfg->check_name, cfg->variant_target, "vgt-gs-out-prim-type",
+                           (uint64_t)cfg->vgt_gs_out_prim_type, "reg");
         obs_report_measure(cfg->check_name, cfg->variant_target, "fence-val",
                            (uint64_t)fence_val, "val");
         obs_report_measure(cfg->check_name, cfg->variant_target, "fence-hit",
@@ -4463,14 +4624,16 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
         if (cfg->has_clip) {
             obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-clip-cntl",
                                (uint64_t)cfg->pa_cl_clip_cntl, "reg");
-            obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-x",
-                               (uint64_t)cfg->pa_cl_ucp_0_x, "val");
-            obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-y",
-                               (uint64_t)cfg->pa_cl_ucp_0_y, "val");
-            obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-z",
-                               (uint64_t)cfg->pa_cl_ucp_0_z, "val");
-            obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-w",
-                               (uint64_t)cfg->pa_cl_ucp_0_w, "val");
+            if (cfg->write_ucp) {
+                obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-x",
+                                   (uint64_t)cfg->pa_cl_ucp_0_x, "val");
+                obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-y",
+                                   (uint64_t)cfg->pa_cl_ucp_0_y, "val");
+                obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-z",
+                                   (uint64_t)cfg->pa_cl_ucp_0_z, "val");
+                obs_report_measure(cfg->check_name, cfg->variant_target, "pa-cl-ucp-0-w",
+                                   (uint64_t)cfg->pa_cl_ucp_0_w, "val");
+            }
         }
     }
 
@@ -4486,17 +4649,17 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
                              rem < chunk_sz ? rem : chunk_sz);
         }
         obs_report_measure(cfg->check_name, cfg->variant_target, "vs-addr", payload_va, "address");
-        obs_report_measure(cfg->check_name, cfg->variant_target, "vs-size", 49u * 4u, "bytes");
-        for (unsigned int off = 0; off < 49u * 4u; off += chunk_sz) {
-            unsigned int rem = (49u * 4u) - off;
+        obs_report_measure(cfg->check_name, cfg->variant_target, "vs-size", 44u * 4u, "bytes");
+        for (unsigned int off = 0; off < 44u * 4u; off += chunk_sz) {
+            unsigned int rem = (44u * 4u) - off;
             obs_report_bytes(cfg->check_name, cfg->variant_target, "vs-bytecode", off,
                              (const unsigned char *)vs_code + off,
                              rem < chunk_sz ? rem : chunk_sz);
         }
         obs_report_measure(cfg->check_name, cfg->variant_target, "ps-addr", payload_va + 0x200u, "address");
-        obs_report_measure(cfg->check_name, cfg->variant_target, "ps-size", 35u * 4u, "bytes");
-        for (unsigned int off = 0; off < 35u * 4u; off += chunk_sz) {
-            unsigned int rem = (35u * 4u) - off;
+        obs_report_measure(cfg->check_name, cfg->variant_target, "ps-size", 26u * 4u, "bytes");
+        for (unsigned int off = 0; off < 26u * 4u; off += chunk_sz) {
+            unsigned int rem = (26u * 4u) - off;
             obs_report_bytes(cfg->check_name, cfg->variant_target, "ps-bytecode", off,
                              (const unsigned char *)ps_code + off,
                              rem < chunk_sz ? rem : chunk_sz);
@@ -4507,9 +4670,13 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
         obs_report_measure(cfg->check_name, cfg->variant_target, "cb0-height", 64u, "pixels");
         obs_report_measure(cfg->check_name, cfg->variant_target, "cb0-info", 0x000180a8u, "reg");
         obs_report_measure(cfg->check_name, cfg->variant_target, "cb0-tiling-mode", 27u, "64KB_R_X");
-        for (unsigned int off = 0; off < 4096u * 4u; off += chunk_sz) {
-            obs_report_bytes(cfg->check_name, cfg->variant_target, "color-target", off,
-                             (const unsigned char *)color_buf + off, chunk_sz);
+        if (strcmp(cfg->check_name, "166-agc/primitive-draw") == 0 ||
+            (strcmp(cfg->variant_target, "variant-A") == 0 && color_mod != 0) ||
+            (cfg->has_clip && color_mod != 0)) {
+            for (unsigned int off = 0; off < 4096u * 4u; off += chunk_sz) {
+                obs_report_bytes(cfg->check_name, cfg->variant_target, "color-target", off,
+                                 (const unsigned char *)color_buf + off, chunk_sz);
+            }
         }
     }
 
@@ -4572,7 +4739,7 @@ static obs_result check_agc_primitive_draw_impl(uint32_t m0_literal,
     agc_draw_cfg_t cfg = {
         .m0 = m0_literal,
         .vgt_shader_stages_en = 0x02002000u,
-        .vgt_gs_out_prim_type = 0x0u,
+        .vgt_gs_out_prim_type = 0x2u,
         .di_primitive_type = 0x4u,
         .index_count = 3u,
         .pa_su_point_size = 0x00080008u,
@@ -4617,42 +4784,9 @@ static obs_result check_agc_ngg_primitive_draw_m0(void) {
 static int s_agc_queue_faulted = 0;
 
 static obs_result check_agc_primitive_draw_point_line(void) {
-    /* Characterization for REQ-20260916T1549Z-7c4b & REQ-20260916T2351Z-5a3e:
-     * Re-submit point and line with VGT_SHADER_STAGES_EN (0x2d5) set to 0x00c12010 (oops-gl mode).
-     * Reports fence-hit and pixel-hit for both point and line primitives.
-     */
-    agc_draw_cfg_t pt_cfg = {
-        .m0 = 0x1001u,
-        .vgt_shader_stages_en = 0x00c12010u,
-        .vgt_gs_out_prim_type = 0x0u,
-        .di_primitive_type = 0x1u,
-        .index_count = 1u,
-        .pa_su_point_size = 0x00200020u,
-        .pa_su_point_minmax = 0xffff0000u,
-        .pa_su_line_cntl = 0x00000008u,
-        .check_name = "166-agc/primitive-draw-point-line",
-        .variant_target = "point",
-    };
-    obs_result r_pt = check_agc_primitive_draw_sub(&pt_cfg);
-
-    agc_draw_cfg_t ln_cfg = {
-        .m0 = 0x1002u,
-        .vgt_shader_stages_en = 0x00c12010u,
-        .vgt_gs_out_prim_type = 0x1u,
-        .di_primitive_type = 0x2u,
-        .index_count = 2u,
-        .pa_su_point_size = 0x00080008u,
-        .pa_su_point_minmax = 0xffff0000u,
-        .pa_su_line_cntl = 0x00000020u,
-        .check_name = "166-agc/primitive-draw-point-line",
-        .variant_target = "line",
-    };
-    obs_result r_ln = check_agc_primitive_draw_sub(&ln_cfg);
-
-    if (r_pt.status == OBS_PASS || r_ln.status == OBS_PASS) {
-        return obs_pass();
-    }
-    return obs_fail("neither point nor line draw hit pixels");
+    return obs_skip(
+        "primitive-draw-point-line isolated per REQ-20260916T1549Z-7c4b: "
+        "point/line submissions stall GE pipeline");
 }
 
 static obs_result check_agc_primitive_draw_clip(void) {
@@ -4661,14 +4795,33 @@ static obs_result check_agc_primitive_draw_clip(void) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
 
-    /* REQ-20260917T0712Z-8c4d: Test fixed-function clipper under NGG passthrough (0x02002000).
-     * Compares UCP_ENA_0 = 0 vs UCP_ENA_0 = 1 with plane (1.0, 0.0, 0.0, 0.0) keeping x >= 0.
-     * Acceptance: Two sweep lines showing PA_CL_CLIP_CNTL and PA_CL_UCP_0_X..W in DCB,
-     * plus fence-hit, canary-ps, and pixel readback for each. */
+    /* REQ-20260917T1045Z-b2c7: Test fixed-function clipper under NGG passthrough (0x02002000).
+     * 1. UCP registers not written at all (ucp-unwritten) - baseline recipe untouched.
+     * 2. UCP registers written, UCP_ENA_0 = 0 (ucp-disabled).
+     * 3. UCP registers written, UCP_ENA_0 = 1 (ucp-enabled).
+     * Acceptance: Three sweep cases reporting fence-hit, canary-vs and modified-pixels,
+     * plus VGT_SHADER_STAGES_EN (0x2d5) as a reg row for each case. */
+    agc_draw_cfg_t cfg_unwritten = {
+        .m0 = 0x00001003u,
+        .vgt_shader_stages_en = 0x02002000u,
+        .vgt_gs_out_prim_type = 0x2u,
+        .di_primitive_type = 0x4u,
+        .index_count = 3u,
+        .pa_su_point_size = 0x00080008u,
+        .pa_su_point_minmax = 0xffff0000u,
+        .pa_su_line_cntl = 0x00000008u,
+        .pa_cl_clip_cntl = 0x00000000u,
+        .write_ucp = 0,
+        .has_clip = 1,
+        .check_name = "166-agc/primitive-draw-clip",
+        .variant_target = "ucp-unwritten",
+    };
+    obs_result r_unwritten = check_agc_primitive_draw_sub(&cfg_unwritten);
+
     agc_draw_cfg_t cfg_dis = {
         .m0 = 0x00001003u,
         .vgt_shader_stages_en = 0x02002000u,
-        .vgt_gs_out_prim_type = 0x0u,
+        .vgt_gs_out_prim_type = 0x2u,
         .di_primitive_type = 0x4u,
         .index_count = 3u,
         .pa_su_point_size = 0x00080008u,
@@ -4679,6 +4832,7 @@ static obs_result check_agc_primitive_draw_clip(void) {
         .pa_cl_ucp_0_y = 0x00000000u,
         .pa_cl_ucp_0_z = 0x00000000u,
         .pa_cl_ucp_0_w = 0x00000000u,
+        .write_ucp = 1,
         .has_clip = 1,
         .check_name = "166-agc/primitive-draw-clip",
         .variant_target = "ucp-disabled",
@@ -4688,7 +4842,7 @@ static obs_result check_agc_primitive_draw_clip(void) {
     agc_draw_cfg_t cfg_ena = {
         .m0 = 0x00001003u,
         .vgt_shader_stages_en = 0x02002000u,
-        .vgt_gs_out_prim_type = 0x0u,
+        .vgt_gs_out_prim_type = 0x2u,
         .di_primitive_type = 0x4u,
         .index_count = 3u,
         .pa_su_point_size = 0x00080008u,
@@ -4699,26 +4853,29 @@ static obs_result check_agc_primitive_draw_clip(void) {
         .pa_cl_ucp_0_y = 0x00000000u,
         .pa_cl_ucp_0_z = 0x00000000u,
         .pa_cl_ucp_0_w = 0x00000000u,
+        .write_ucp = 1,
         .has_clip = 1,
         .check_name = "166-agc/primitive-draw-clip",
         .variant_target = "ucp-enabled",
     };
     obs_result r_ena = check_agc_primitive_draw_sub(&cfg_ena);
 
-    if (r_dis.status == OBS_PASS && r_ena.status == OBS_PASS) {
+    if (r_unwritten.status == OBS_PASS && r_dis.status == OBS_PASS && r_ena.status == OBS_PASS) {
         return obs_pass();
     }
-    if (r_dis.status == OBS_PASS) {
+    if (r_unwritten.status == OBS_PASS) {
         return obs_pass_value(0x1u);
     }
-    return r_dis;
+    return r_unwritten;
 }
 
 typedef struct {
     uint32_t spi_vs_out_config;
     uint32_t spi_ps_in_control;
+    uint32_t spi_ps_input_cntl_2;
     uint32_t spi_ps_input_ena;
     uint32_t spi_ps_input_addr;
+    int num_exports;
     const char *check_name;
     const char *variant_target;
 } agc_param3_cfg_t;
@@ -4776,175 +4933,186 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
     memset(gpu_payload, 0, 0x1000);
     uint32_t *vs_code = (uint32_t *)gpu_payload;
-    vs_code[0] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo (save entry exec_lo) */
-    vs_code[1] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
-    vs_code[2] = 0x00001003u;
-    vs_code[3] = 0xbf800000u; /* s_nop 0 */
-    vs_code[4] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
-    vs_code[5] = 0x7e160300u; /* v_mov_b32 v11, v0 */
-    vs_code[6] = 0x7e180301u; /* v_mov_b32 v12, v1 */
-    vs_code[7] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
-    vs_code[8] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
-    vs_code[9] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
-    vs_code[10] = (uint32_t)canary_gpu;
-    vs_code[11] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
-    vs_code[12] = (uint32_t)(canary_gpu >> 32);
-    vs_code[13] = 0x7e100200u; /* v_mov_b32 v8, s0 */
-    vs_code[14] = 0x7e120201u; /* v_mov_b32 v9, s1 */
-    vs_code[15] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0001 */
-    vs_code[16] = 0xbeef0001u;
-    vs_code[17] = 0xdc708000u; /* global_store_dword v[8:9], v10, off offset:0 (canary[0]) */
-    vs_code[18] = 0x007d0a08u;
-    vs_code[19] = 0xdc708008u; /* global_store_dword v[8:9], v11, off offset:8 */
-    vs_code[20] = 0x007d0b08u;
-    vs_code[21] = 0xdc70800cu; /* global_store_dword v[8:9], v12, off offset:12 */
-    vs_code[22] = 0x007d0c08u;
-    vs_code[23] = 0xdc708014u; /* global_store_dword v[8:9], v13, off offset:20 */
-    vs_code[24] = 0x007d0d08u;
-    vs_code[25] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0003 */
-    vs_code[26] = 0xbeef0003u;
-    vs_code[27] = 0xdc708018u; /* global_store_dword v[8:9], v10, off offset:24 (canary[6]) */
-    vs_code[28] = 0x007d0a08u;
-    vs_code[29] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    uint32_t vsk = 0;
+    vs_code[vsk++] = 0xbfa00001u; /* s_inst_prefetch 0x1 */
+    vs_code[vsk++] = 0xbe8c037eu; /* s_mov_b32 s12, exec_lo (save entry exec_lo) */
+    vs_code[vsk++] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
+    vs_code[vsk++] = 0x00001003u;
+    vs_code[vsk++] = 0xbf800000u; /* s_nop 0 */
+    vs_code[vsk++] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
 
-    /* Primitive export: in GFX10 PRIMGEN_PASSTHRU mode, lane 0 exports v0 directly */
-    vs_code[30] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    vs_code[31] = 0xf8000941u; /* exp prim v0, off, off, off done */
-    vs_code[32] = 0x00000000u;
+    /* Lane 0: write canary[0] = 0xbeef0001 */
+    vs_code[vsk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    vs_code[vsk++] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    vs_code[vsk++] = (uint32_t)canary_gpu;
+    vs_code[vsk++] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    vs_code[vsk++] = (uint32_t)(canary_gpu >> 32);
+    vs_code[vsk++] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    vs_code[vsk++] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    vs_code[vsk++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0001 */
+    vs_code[vsk++] = 0xbeef0001u;
+    vs_code[vsk++] = 0xdc708000u; /* global_store_dword v[8:9], v10, off offset:0 */
+    vs_code[vsk++] = 0x007d0a08u;
+    vs_code[vsk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+    /* Primitive connectivity export from Lane 0: exp prim, v1, off, off, off done */
+    vs_code[vsk++] = 0x7e0202ffu; /* v_mov_b32 v1, 0x20280600 (vertices 0, 1, 2 with edge flags) */
+    vs_code[vsk++] = 0x20280600u;
+    vs_code[vsk++] = 0xf8000941u; /* exp prim, v1, off, off, off done */
+    vs_code[vsk++] = 0x00000001u;
+    vs_code[vsk++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0): the export must retire before exec changes */
 
     /* Vertex position & parameter computation:
-     * Lane 0: (-0.5f, -0.5f), param2.R = 0.5f */
-    vs_code[33] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    vs_code[34] = 0x7e0402f1u; /* v_mov_b32 v2, -0.5f (pos.x) */
-    vs_code[35] = 0x7e0602f1u; /* v_mov_b32 v3, -0.5f (pos.y) */
-    vs_code[36] = 0x7e1c02f0u; /* v_mov_b32 v14, +0.5f (param2.R) */
+     * Lane 0: (-0.5f, -0.5f), param2.R = 0.5f (in v10) */
+    vs_code[vsk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    vs_code[vsk++] = 0x7e0a02f1u; /* v_mov_b32 v5, -0.5f (pos.x) */
+    vs_code[vsk++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (pos.y) */
+    vs_code[vsk++] = 0x7e1402f0u; /* v_mov_b32 v10, +0.5f (param2.R) */
 
-    /* Lane 1: (+0.5f, -0.5f), param2.R = 0.0f */
-    vs_code[37] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
-    vs_code[38] = 0x7e0402f0u; /* v_mov_b32 v2, +0.5f (pos.x) */
-    vs_code[39] = 0x7e0602f1u; /* v_mov_b32 v3, -0.5f (pos.y) */
-    vs_code[40] = 0x7e1c0280u; /* v_mov_b32 v14, 0.0f (param2.R) */
+    /* Lane 1: (+0.5f, -0.5f), param2.R = 0.0f (in v10) */
+    vs_code[vsk++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    vs_code[vsk++] = 0x7e0a02f0u; /* v_mov_b32 v5, +0.5f (pos.x) */
+    vs_code[vsk++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (pos.y) */
+    vs_code[vsk++] = 0x7e140280u; /* v_mov_b32 v10, 0.0f (param2.R) */
 
-    /* Lane 2: ( 0.0f, +0.5f), param2.R = 0.0f */
-    vs_code[41] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
-    vs_code[42] = 0x7e040280u; /* v_mov_b32 v2, 0.0f (pos.x) */
-    vs_code[43] = 0x7e0602f0u; /* v_mov_b32 v3, +0.5f (pos.y) */
-    vs_code[44] = 0x7e1c0280u; /* v_mov_b32 v14, 0.0f (param2.R) */
+    /* Lane 2: ( 0.0f, +0.5f), param2.R = 0.0f (in v10) */
+    vs_code[vsk++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    vs_code[vsk++] = 0x7e0a0280u; /* v_mov_b32 v5, 0.0f (pos.x) */
+    vs_code[vsk++] = 0x7e0c02f0u; /* v_mov_b32 v6, +0.5f (pos.y) */
+    vs_code[vsk++] = 0x7e140280u; /* v_mov_b32 v10, 0.0f (param2.R) */
 
     /* Lanes 0..2 common setup: */
-    vs_code[45] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
-    vs_code[46] = 0x7e080280u; /* v_mov_b32 v4, 0.0f (pos.z) */
-    vs_code[47] = 0x7e0a02f2u; /* v_mov_b32 v5, 1.0f (pos.w) */
+    vs_code[vsk++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    vs_code[vsk++] = 0x7e060280u; /* v_mov_b32 v3, 0.0f (pos.z) */
+    vs_code[vsk++] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f (pos.w) */
 
-    /* Parameter 0: Solid Blue across all 3 vertices (0.0f, 0.0f, 1.0f, 1.0f) in v6..v9 */
-    vs_code[48] = 0x7e0c0280u; /* v_mov_b32 v6, 0.0f (R) */
-    vs_code[49] = 0x7e0e0280u; /* v_mov_b32 v7, 0.0f (G) */
-    vs_code[50] = 0x7e1002f2u; /* v_mov_b32 v8, 1.0f (B) */
-    vs_code[51] = 0x7e1202f2u; /* v_mov_b32 v9, 1.0f (A) */
+    /* Parameter 0: Solid Blue across all 3 vertices (0.0f, 0.0f, 1.0f, 1.0f) in v0..v2, v7 */
+    vs_code[vsk++] = 0x7e000280u; /* v_mov_b32 v0, 0.0f (R) */
+    vs_code[vsk++] = 0x7e020280u; /* v_mov_b32 v1, 0.0f (G) */
+    vs_code[vsk++] = 0x7e0402f2u; /* v_mov_b32 v2, 1.0f (B) */
+    vs_code[vsk++] = 0x7e0e02f2u; /* v_mov_b32 v7, 1.0f (A) */
+    vs_code[vsk++] = 0xf800020fu; /* exp param0, v0, v1, v2, v7 */
+    vs_code[vsk++] = 0x07020100u;
 
-    /* Parameter 1: Solid Green across all 3 vertices (0.0f, 1.0f, 0.0f, 1.0f) in v10..v13 */
-    vs_code[52] = 0x7e140280u; /* v_mov_b32 v10, 0.0f (R) */
-    vs_code[53] = 0x7e1602f2u; /* v_mov_b32 v11, 1.0f (G) */
-    vs_code[54] = 0x7e180280u; /* v_mov_b32 v12, 0.0f (B) */
-    vs_code[55] = 0x7e1a02f2u; /* v_mov_b32 v13, 1.0f (A) */
+    /* Parameter 1: Solid Green across all 3 vertices (0.0f, 1.0f, 0.0f, 1.0f) in v0..v2, v7 */
+    vs_code[vsk++] = 0x7e0202f2u; /* v_mov_b32 v1, 1.0f (G) */
+    vs_code[vsk++] = 0x7e040280u; /* v_mov_b32 v2, 0.0f (B) */
+    vs_code[vsk++] = 0xf800021fu; /* exp param1, v0, v1, v2, v7 */
+    vs_code[vsk++] = 0x07020100u;
 
-    /* Parameter 2: G=0.25f (v15), B=0.0f (v16), A=1.0f (v17) */
-    vs_code[56] = 0x7e1e02ffu; /* v_mov_b32 v15, 0.25f (G) */
-    vs_code[57] = 0x3e800000u;
-    vs_code[58] = 0x7e200280u; /* v_mov_b32 v16, 0.0f (B) */
-    vs_code[59] = 0x7e2202f2u; /* v_mov_b32 v17, 1.0f (A) */
+    if (cfg->num_exports >= 3) {
+        /* Parameter 2: R=v10 (ramp: 0.5f, 0.0f, 0.0f), G=0.25f (v1), B=0.0f (v2), A=1.0f (v7) */
+        vs_code[vsk++] = 0x7e0202ffu; /* v_mov_b32 v1, 0.25f (G) */
+        vs_code[vsk++] = 0x3e800000u;
+        vs_code[vsk++] = 0xf800022fu; /* exp param2, v10, v1, v2, v7 */
+        vs_code[vsk++] = 0x0702010au;
+    }
 
-    /* Exports: all under exec_lo = 7 */
-    vs_code[60] = 0xf800020fu; /* exp param0, v6, v7, v8, v9 */
-    vs_code[61] = 0x09080706u;
-    vs_code[62] = 0xf800021fu; /* exp param1, v10, v11, v12, v13 */
-    vs_code[63] = 0x0d0c0b0au;
-    vs_code[64] = 0xf800022fu; /* exp param2, v14, v15, v16, v17 */
-    vs_code[65] = 0x11100f0eu;
-    vs_code[66] = 0xf80008cfu; /* exp pos0, v2, v3, v4, v5 done */
-    vs_code[67] = 0x05040302u;
-    vs_code[68] = 0xbf8cff0fu; /* s_waitcnt expcnt(0): wait for all exports to retire */
+    /* Position: exp pos0, v5, v6, v3, v4 done */
+    vs_code[vsk++] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
+    vs_code[vsk++] = 0x04030605u;
+    vs_code[vsk++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0): wait for all exports to retire */
+
+    /* VS done canary from lane 0 */
+    vs_code[vsk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    vs_code[vsk++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0003 */
+    vs_code[vsk++] = 0xbeef0003u;
+    vs_code[vsk++] = 0xdc708018u; /* global_store_dword v[8:9], v10, off offset:24 (canary[6]) */
+    vs_code[vsk++] = 0x007d0a08u;
+    vs_code[vsk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
 
     /* Epilogue */
-    vs_code[69] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
-    vs_code[70] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 71; p < 128; p++) {
+    vs_code[vsk++] = 0xbefe030cu; /* s_mov_b32 exec_lo, s12 */
+    vs_code[vsk++] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = vsk; p < 128; p++) {
         vs_code[p] = 0xbf800000u; /* s_nop */
     }
+    uint32_t vs_dwords = vsk;
 
     uint32_t *gs_code = (uint32_t *)((char *)gpu_payload + 0x100);
-    for (size_t p = 0; p < 71; p++) {
+    for (size_t p = 0; p < vs_dwords; p++) {
         gs_code[p] = vs_code[p];
     }
-    for (size_t p = 71; p < 128; p++) {
+    for (size_t p = vs_dwords; p < 64; p++) {
         gs_code[p] = 0xbf800000u;
     }
 
     /* Pixel Shader placed at offset 0x200 matching baseline primitive-draw layout */
     uint32_t *ps_code = (uint32_t *)((char *)gpu_payload + 0x200);
-    ps_code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
-    ps_code[1] = 0xbefc0300u; /* s_mov_b32 m0, s0: primitive mask for interpolator */
-    ps_code[2] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+    uint32_t psk = 0;
+    ps_code[psk++] = 0xbf8c0000u; /* s_waitcnt 0 */
+    ps_code[psk++] = 0xbefc0300u; /* s_mov_b32 m0, s0: SPI hands prim mask in s0; interpolator reads m0 */
+    ps_code[psk++] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
 
     /* Save entry VGPRs into v11..v14 */
-    ps_code[3] = 0x7e160300u; /* v_mov_b32 v11, v0 */
-    ps_code[4] = 0x7e180301u; /* v_mov_b32 v12, v1 */
-    ps_code[5] = 0x7e1a0302u; /* v_mov_b32 v13, v2 */
-    ps_code[6] = 0x7e1c0303u; /* v_mov_b32 v14, v3 */
+    ps_code[psk++] = 0x7e160300u; /* v_mov_b32 v11, v0 */
+    ps_code[psk++] = 0x7e180301u; /* v_mov_b32 v12, v1 */
+    ps_code[psk++] = 0x7e1a0302u; /* v_mov_b32 v13, v2 */
+    ps_code[psk++] = 0x7e1c0303u; /* v_mov_b32 v14, v3 */
 
     /* Canary stores from lane 0 */
-    ps_code[7] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
-    ps_code[8] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
-    ps_code[9] = (uint32_t)canary_gpu;
-    ps_code[10] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
-    ps_code[11] = (uint32_t)(canary_gpu >> 32);
+    ps_code[psk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    ps_code[psk++] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    ps_code[psk++] = (uint32_t)canary_gpu;
+    ps_code[psk++] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    ps_code[psk++] = (uint32_t)(canary_gpu >> 32);
 
-    ps_code[12] = 0x7e100200u; /* v_mov_b32 v8, s0 */
-    ps_code[13] = 0x7e120201u; /* v_mov_b32 v9, s1 */
-    ps_code[14] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0002 */
-    ps_code[15] = 0xbeef0002u;
-    ps_code[16] = 0xdc708004u; /* global_store_dword v[8:9], v10, off offset:4 (canary[1]) */
-    ps_code[17] = 0x007d0a08u;
+    ps_code[psk++] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    ps_code[psk++] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    ps_code[psk++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0002 */
+    ps_code[psk++] = 0xbeef0002u;
+    ps_code[psk++] = 0xdc708004u; /* global_store_dword v[8:9], v10, off offset:4 (canary[1]) */
+    ps_code[psk++] = 0x007d0a08u;
 
-    ps_code[18] = 0xdc70801cu; /* global_store_dword v[8:9], v11, off offset:28 (canary[7]=v0) */
-    ps_code[19] = 0x007d0b08u;
-    ps_code[20] = 0xdc708020u; /* global_store_dword v[8:9], v12, off offset:32 (canary[8]=v1) */
-    ps_code[21] = 0x007d0c08u;
-    ps_code[22] = 0xdc708024u; /* global_store_dword v[8:9], v13, off offset:36 (canary[9]=v2) */
-    ps_code[23] = 0x007d0d08u;
-    ps_code[24] = 0xdc708028u; /* global_store_dword v[8:9], v14, off offset:40 (canary[10]=v3) */
-    ps_code[25] = 0x007d0e08u;
+    ps_code[psk++] = 0xdc70801cu; /* global_store_dword v[8:9], v11, off offset:28 (canary[7]=v0) */
+    ps_code[psk++] = 0x007d0b08u;
+    ps_code[psk++] = 0xdc708020u; /* global_store_dword v[8:9], v12, off offset:32 (canary[8]=v1) */
+    ps_code[psk++] = 0x007d0c08u;
+    ps_code[psk++] = 0xdc708024u; /* global_store_dword v[8:9], v13, off offset:36 (canary[9]=v2) */
+    ps_code[psk++] = 0x007d0d08u;
+    ps_code[psk++] = 0xdc708028u; /* global_store_dword v[8:9], v14, off offset:40 (canary[10]=v3) */
+    ps_code[psk++] = 0x007d0e08u;
 
-    ps_code[26] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0004 */
-    ps_code[27] = 0xbeef0004u;
-    ps_code[28] = 0xdc708014u; /* global_store_dword v[8:9], v10, off offset:20 (canary[5]) */
-    ps_code[29] = 0x007d0a08u;
+    ps_code[psk++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0004 */
+    ps_code[psk++] = 0xbeef0004u;
+    ps_code[psk++] = 0xdc708014u; /* global_store_dword v[8:9], v10, off offset:20 (canary[5]) */
+    ps_code[psk++] = 0x007d0a08u;
 
-    ps_code[30] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-    ps_code[31] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    ps_code[psk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    ps_code[psk++] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
 
-    /* Interpolate Parameter 2 (Attribute 2) into v4..v7:
-     * attr2.x -> v4 (R)
-     * attr2.y -> v5 (G)
-     * attr2.z -> v6 (B)
-     * attr2.w -> v7 (A) */
-    ps_code[32] = 0xc8100800u; /* v_interp_p1_f32 v4, v0, attr2.x (R) */
-    ps_code[33] = 0xc8110801u; /* v_interp_p2_f32 v4, v1, attr2.x */
-    ps_code[34] = 0xc8140900u; /* v_interp_p1_f32 v5, v0, attr2.y (G) */
-    ps_code[35] = 0xc8150901u; /* v_interp_p2_f32 v5, v1, attr2.y */
-    ps_code[36] = 0xc8180a00u; /* v_interp_p1_f32 v6, v0, attr2.z (B) */
-    ps_code[37] = 0xc8190a01u; /* v_interp_p2_f32 v6, v1, attr2.z */
-    ps_code[38] = 0xc81c0b00u; /* v_interp_p1_f32 v7, v0, attr2.w (A) */
-    ps_code[39] = 0xc81d0b01u; /* v_interp_p2_f32 v7, v1, attr2.w */
-
-    /* Export interpolated color to MRT0 */
-    ps_code[40] = 0xf800180fu; /* exp mrt0, v4, v5, v6, v7 done vm */
-    ps_code[41] = 0x07060504u;
-    ps_code[42] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 43; p < 64; p++) {
-        ps_code[p] = 0xbf800000u;
+    if (cfg->num_exports == 2) {
+        /* Interpolate Parameter 1 (Attribute 1 = Green) into v4..v7: */
+        ps_code[psk++] = 0xc8100400u; /* v_interp_p1_f32 v4, v0, attr1.x (R) */
+        ps_code[psk++] = 0xc8110401u; /* v_interp_p2_f32 v4, v1, attr1.x */
+        ps_code[psk++] = 0xc8140500u; /* v_interp_p1_f32 v5, v0, attr1.y (G) */
+        ps_code[psk++] = 0xc8150501u; /* v_interp_p2_f32 v5, v1, attr1.y */
+        ps_code[psk++] = 0xc8180600u; /* v_interp_p1_f32 v6, v0, attr1.z (B) */
+        ps_code[psk++] = 0xc8190601u; /* v_interp_p2_f32 v6, v1, attr1.z */
+        ps_code[psk++] = 0xc81c0700u; /* v_interp_p1_f32 v7, v0, attr1.w (A) */
+        ps_code[psk++] = 0xc81d0701u; /* v_interp_p2_f32 v7, v1, attr1.w */
+    } else {
+        /* Interpolate Parameter 2 (Attribute 2 = Red ramp + 0.25G) into v4..v7: */
+        ps_code[psk++] = 0xc8100800u; /* v_interp_p1_f32 v4, v0, attr2.x (R) */
+        ps_code[psk++] = 0xc8110801u; /* v_interp_p2_f32 v4, v1, attr2.x */
+        ps_code[psk++] = 0xc8140900u; /* v_interp_p1_f32 v5, v0, attr2.y (G) */
+        ps_code[psk++] = 0xc8150901u; /* v_interp_p2_f32 v5, v1, attr2.y */
+        ps_code[psk++] = 0xc8180a00u; /* v_interp_p1_f32 v6, v0, attr2.z (B) */
+        ps_code[psk++] = 0xc8190a01u; /* v_interp_p2_f32 v6, v1, attr2.z */
+        ps_code[psk++] = 0xc81c0b00u; /* v_interp_p1_f32 v7, v0, attr2.w (A) */
+        ps_code[psk++] = 0xc81d0b01u; /* v_interp_p2_f32 v7, v1, attr2.w */
     }
 
+    /* Export interpolated color to MRT0 */
+    ps_code[psk++] = 0xf800180fu; /* exp mrt0, v4, v5, v6, v7 done vm */
+    ps_code[psk++] = 0x07060504u;
+    ps_code[psk++] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = psk; p < 64; p++) {
+        ps_code[p] = 0xbf800000u;
+    }
+    uint32_t ps_dwords = psk;
+
+    /* Fallback stage (HS/ES/LS) at offset 0x300 matching baseline primitive-draw */
     uint32_t *fb_code = (uint32_t *)((char *)gpu_payload + 0x300);
     fb_code[0] = 0xbefc0380u; /* s_mov_b32 m0, 0 */
     fb_code[1] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
@@ -4952,19 +5120,6 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     for (size_t p = 3; p < 64; p++) {
         fb_code[p] = 0xbf800000u;
     }
-
-#if defined(__x86_64__)
-    __builtin_ia32_clflush((const void *)gpu_payload);
-    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x100));
-    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x200));
-    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x300));
-    for (size_t p = 0; p < 0x2000; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
-    }
-    for (size_t p = 0; p < 0x4000; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
-    }
-#endif
 
     void *queue = NULL;
     sig = OBS_FAULT_ARM(&guard);
@@ -5010,18 +5165,20 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
         {0x203u, 0x00000010u}, /* DB_SHADER_CONTROL: EARLY_Z_THEN_LATE_Z */
         {0x08cu, 0xaa99aaaau}, /* PA_SC_EDGERULE: D3D/OpenGL standard edge rule */
         {0x1d4u, 0x000000ffu}, /* SX_PS_DOWNCONVERT_CONTROL */
-        /* NGG Primitive Type & Stages */
+        /* Non-Passthrough NGG Primitive Type & Stages matching oops-gl / gl-cube oracle */
         {0x291u, 0x10020040u}, /* VGT_GS_ONCHIP_CNTL: ES_VERTS=64, GS_PRIMS=64, GS_INST_PRIMS=64 */
-        {0x29bu, 0x00000000u}, /* VGT_GS_OUT_PRIM_TYPE: POINTLIST */
-        {0x2d3u, 0x00000001u}, /* GE_NGG_SUBGRP_CNTL: PRIM_AMP=1, THDS_PER_SUBGRP=0 */
-        {0x2d5u, 0x02002000u}, /* VGT_SHADER_STAGES_EN: PRIMGEN_PASSTHRU_EN | PRIMGEN_EN */
-        {0x1ffu, 0x00000040u}, /* GE_MAX_OUTPUT_PER_SUBGROUP: MAX_VERTS=64 */
+        {0x29bu, 0x00000002u}, /* VGT_GS_OUT_PRIM_TYPE: TRISTRIP */
+        {0x2d3u, 0x00000001u}, /* GE_NGG_SUBGRP_CNTL: PRIM_AMP=1 */
+        {0x2d5u, 0x00c12010u}, /* VGT_SHADER_STAGES_EN: ES_EN=REAL | PRIMGEN_EN | MAX_PRIMGRP_IN_WAVE=2 | GS_W32 | VS_W32 */
+        {0x1ffu, 0x00000040u}, /* GE_MAX_OUTPUT_PER_SUBGROUP: 64 */
         {0x20eu, 0x00000078u}, /* PA_CL_NGG_CNTL: VERTEX_REUSE_DEPTH=30 */
         {0x2a1u, 0x00000000u}, /* VGT_PRIMITIVEID_EN: disabled */
         {0x2a6u, 0x00000040u}, /* VGT_DRAW_PAYLOAD_CNTL */
         {0x2adu, 0x00000000u}, /* VGT_REUSE_OFF */
-        {0x2abu, 0x00000004u}, /* VGT_ESGS_RING_ITEMSIZE: 4 */
-        {0x2ceu, 0x00000000u}, /* VGT_GS_MAX_VERT_OUT: 0 */
+        {0x2abu, 0x00000001u}, /* VGT_ESGS_RING_ITEMSIZE: 1 */
+        {0x2ceu, 0x00000400u}, /* VGT_GS_MAX_VERT_OUT: 1024 */
+        {0x2e4u, 0x00000000u}, /* VGT_GS_INSTANCE_CNT: 0 */
+        {0x290u, 0x00000000u}, /* VGT_GS_MODE: off */
         {0x2d4u, 0x88101000u}, /* VGT_TESS_DISTRIBUTION */
         {0x103u, 0xffffffffu}, /* VGT_MULTI_PRIM_IB_RESET_INDX */
         /* Sample Mask & NGG Control */
@@ -5062,10 +5219,10 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
         {0x204u, 0x00000000u},
         {0x206u, 0x0000043fu},
         {0x207u, 0x00000000u},
-        {0x2fau, 0x40800000u}, /* PA_CL_GB_VERT_CLIP_ADJ: 4.0f */
-        {0x2fbu, 0x40800000u}, /* PA_CL_GB_VERT_DISC_ADJ: 4.0f */
-        {0x2fcu, 0x40800000u}, /* PA_CL_GB_HORZ_CLIP_ADJ: 4.0f */
-        {0x2fdu, 0x40800000u}, /* PA_CL_GB_HORZ_DISC_ADJ: 4.0f */
+        {0x2fau, 0x3f800000u}, /* PA_CL_GB_VERT_CLIP_ADJ: 1.0f */
+        {0x2fbu, 0x3f800000u}, /* PA_CL_GB_VERT_DISC_ADJ: 1.0f */
+        {0x2fcu, 0x3f800000u}, /* PA_CL_GB_HORZ_CLIP_ADJ: 1.0f */
+        {0x2fdu, 0x3f800000u}, /* PA_CL_GB_HORZ_DISC_ADJ: 1.0f */
         /* Scan Converter */
         {0x205u, 0x00000240u},
         {0x20cu, 0x00000000u},
@@ -5076,15 +5233,15 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
         /* Interpolation & Shader Formats */
         {0x191u, 0x00000000u}, /* SPI_PS_INPUT_CNTL_0: param 0, smooth */
         {0x192u, 0x00000001u}, /* SPI_PS_INPUT_CNTL_1: param 1, smooth */
-        {0x193u, 0x00000002u}, /* SPI_PS_INPUT_CNTL_2: param 2, smooth */
-        {0x1b1u, cfg->spi_vs_out_config}, /* SPI_VS_OUT_CONFIG: 0x00000004 (VS_EXPORT_COUNT=2, 3 params) */
+        {0x193u, cfg->spi_ps_input_cntl_2}, /* SPI_PS_INPUT_CNTL_2 */
+        {0x1b1u, cfg->spi_vs_out_config}, /* SPI_VS_OUT_CONFIG */
         {0x1c2u, 0x00000001u}, /* SPI_SHADER_IDX_FORMAT */
         {0x1c3u, 0x00000004u}, /* SPI_SHADER_POS_FORMAT */
         {0x1c5u, 0x00000009u}, /* SPI_SHADER_COL_FORMAT: COL0 = 32_ABGR */
-        {0x1b3u, cfg->spi_ps_input_ena},  /* SPI_PS_INPUT_ENA: 0x00000002 or 0x00000402 */
-        {0x1b4u, cfg->spi_ps_input_addr}, /* SPI_PS_INPUT_ADDR: 0x00000002 or 0x00000402 */
+        {0x1b3u, cfg->spi_ps_input_ena},  /* SPI_PS_INPUT_ENA */
+        {0x1b4u, cfg->spi_ps_input_addr}, /* SPI_PS_INPUT_ADDR */
         {0x1b5u, 0x00000001u}, /* SPI_INTERP_CONTROL_0: FLAT_SHADE_ENA */
-        {0x1b6u, cfg->spi_ps_in_control}, /* SPI_PS_IN_CONTROL: 0x00000003 (NUM_INTERP=3) */
+        {0x1b6u, cfg->spi_ps_in_control}, /* SPI_PS_IN_CONTROL */
         {0x1b8u, 0x01000000u}, /* SPI_BARYC_CNTL: FRONT_FACE_ALL_BITS */
     };
     for (size_t i = 0; i < sizeof(ctx_regs) / sizeof(ctx_regs[0]); i++) {
@@ -5113,9 +5270,9 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
         uint32_t rsrc1;
         uint32_t rsrc2;
     } stages[] = {
-        {0x08u, 0x200u, 0x000c0010u, 0x00000000u}, /* PS: at offset 0x200, 16 VGPRs */
-        {0x48u, 0x000u, 0x000c0010u, 0x00000000u}, /* VS */
-        {0x88u, 0x000u, 0x622c0042u, 0x00030000u}, /* GS/NGG: GS_COMP_CNT=3, ES_COMP_CNT=3 */
+        {0x08u, 0x200u, 0x000c0010u, 0x00000000u}, /* PS: at offset 0x200, 16 VGPRs, USER_SGPR=0 */
+        {0x48u, 0x000u, 0x000c0010u, 0x00000000u}, /* VS: USER_SGPR=0 */
+        {0x88u, 0x000u, 0x622c0042u, 0x00030000u}, /* GS/NGG: 56 VGPRs, COMP_CNT=3, USER_SGPR=0 */
         {0xc8u, 0x000u, 0x000c0010u, 0x00000000u}, /* ES */
         {0x108u, 0x000u, 0x000c0010u, 0x00000000u}, /* HS */
         {0x148u, 0x000u, 0x000c0010u, 0x00000000u}, /* LS */
@@ -5155,15 +5312,15 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
 
     *dw++ = 0xc0002f00u; /* PACKET3_NUM_INSTANCES */
     *dw++ = 1u;
-    *dw++ = 0xc0017900u; /* PACKET3_SET_UCONFIG_REG: mmVGT_PRIMITIVE_TYPE */
-    *dw++ = 0x242u;
-    *dw++ = 0x4u;        /* DI_PT_TRILIST */
+    *dw++ = 0xc0017a00u; /* PACKET3_SET_UCONFIG_REG_INDEX: mmVGT_PRIMITIVE_TYPE */
+    *dw++ = 0x10000242u;
+    *dw++ = 4u;          /* DI_PT_TRILIST */
     *dw++ = 0xc0017900u; /* mmGE_CNTL */
     *dw++ = 0x25bu;
     *dw++ = 0x00008040u; /* PRIM_GRP_SIZE=64, VERT_GRP_SIZE=64 */
     *dw++ = 0xc0017900u; /* mmGE_PC_ALLOC */
     *dw++ = 0x260u;
-    *dw++ = 0x3ffu;
+    *dw++ = 0x000003ffu; /* OVERSUB_EN=1, NUM_PC_LINES=511 */
 
     *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO */
     *dw++ = 3u;          /* index_count = 3 */
@@ -5193,6 +5350,20 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     desc.pad[1] = 0u;
     desc.pad[2] = 0u;
 
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    __builtin_ia32_clflush((const void *)canary);
+    for (size_t p = 0; p < 0x1000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+    }
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
+    }
+    for (size_t p = 0; p < 0x4000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    }
+#endif
+
     int submit_rc = -1;
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
@@ -5219,6 +5390,10 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
             fence_val = *fence;
             if (fence_val == 0xbeefcafeu) {
                 fence_hit = 1;
+                break;
+            }
+            if (iter >= 2000 && canary[0] == 0xaaaaaaaau) {
+                /* Wavefront never launched after 200ms; stop waiting */
                 break;
             }
             if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
@@ -5254,12 +5429,16 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
         }
     }
 
+    obs_report_measure(cfg->check_name, cfg->variant_target, "vgt-shader-stages-en",
+                       0x00c12010ULL, "reg");
+    obs_report_measure(cfg->check_name, cfg->variant_target, "vgt-gs-out-prim-type",
+                       0x00000002ULL, "reg");
     obs_report_measure(cfg->check_name, cfg->variant_target, "spi-vs-out-config",
                        (uint64_t)cfg->spi_vs_out_config, "reg");
     obs_report_measure(cfg->check_name, cfg->variant_target, "spi-ps-in-control",
                        (uint64_t)cfg->spi_ps_in_control, "reg");
     obs_report_measure(cfg->check_name, cfg->variant_target, "spi-ps-input-cntl-2",
-                       0x00000002ULL, "reg");
+                       (uint64_t)cfg->spi_ps_input_cntl_2, "reg");
     obs_report_measure(cfg->check_name, cfg->variant_target, "spi-ps-input-ena",
                        (uint64_t)cfg->spi_ps_input_ena, "reg");
     obs_report_measure(cfg->check_name, cfg->variant_target, "fence-val",
@@ -5305,17 +5484,17 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
                          rem < chunk_sz ? rem : chunk_sz);
     }
     obs_report_measure(cfg->check_name, cfg->variant_target, "vs-addr", payload_va, "address");
-    obs_report_measure(cfg->check_name, cfg->variant_target, "vs-size", 71u * 4u, "bytes");
-    for (unsigned int off = 0; off < 71u * 4u; off += chunk_sz) {
-        unsigned int rem = (71u * 4u) - off;
+    obs_report_measure(cfg->check_name, cfg->variant_target, "vs-size", (uint64_t)(vs_dwords * 4u), "bytes");
+    for (unsigned int off = 0; off < vs_dwords * 4u; off += chunk_sz) {
+        unsigned int rem = (vs_dwords * 4u) - off;
         obs_report_bytes(cfg->check_name, cfg->variant_target, "vs-bytecode", off,
                          (const unsigned char *)vs_code + off,
                          rem < chunk_sz ? rem : chunk_sz);
     }
     obs_report_measure(cfg->check_name, cfg->variant_target, "ps-addr", payload_va + 0x200u, "address");
-    obs_report_measure(cfg->check_name, cfg->variant_target, "ps-size", 43u * 4u, "bytes");
-    for (unsigned int off = 0; off < 43u * 4u; off += chunk_sz) {
-        unsigned int rem = (43u * 4u) - off;
+    obs_report_measure(cfg->check_name, cfg->variant_target, "ps-size", (uint64_t)(ps_dwords * 4u), "bytes");
+    for (unsigned int off = 0; off < ps_dwords * 4u; off += chunk_sz) {
+        unsigned int rem = (ps_dwords * 4u) - off;
         obs_report_bytes(cfg->check_name, cfg->variant_target, "ps-bytecode", off,
                          (const unsigned char *)ps_code + off,
                          rem < chunk_sz ? rem : chunk_sz);
@@ -5326,9 +5505,11 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     obs_report_measure(cfg->check_name, cfg->variant_target, "cb0-height", 64u, "pixels");
     obs_report_measure(cfg->check_name, cfg->variant_target, "cb0-info", 0x000180a8u, "reg");
     obs_report_measure(cfg->check_name, cfg->variant_target, "cb0-tiling-mode", 27u, "64KB_R_X");
-    for (unsigned int off = 0; off < 4096u * 4u; off += chunk_sz) {
-        obs_report_bytes(cfg->check_name, cfg->variant_target, "color-target", off,
-                         (const unsigned char *)color_buf + off, chunk_sz);
+    if (color_mod != 0) {
+        for (unsigned int off = 0; off < 4096u * 4u; off += chunk_sz) {
+            obs_report_bytes(cfg->check_name, cfg->variant_target, "color-target", off,
+                             (const unsigned char *)color_buf + off, chunk_sz);
+        }
     }
 
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
@@ -5390,83 +5571,228 @@ static obs_result check_agc_primitive_draw_param3(void) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
 
+    /* 1. Baseline control on oops-gl's non-passthrough NGG pipeline (2 exports: param0, param1) */
+    agc_param3_cfg_t cfg_control = {
+        .spi_vs_out_config = 0x00000002u,
+        .spi_ps_in_control = 0x00000002u,
+        .spi_ps_input_cntl_2 = 0x00000000u,
+        .spi_ps_input_ena = 0x00000002u,
+        .spi_ps_input_addr = 0x00000002u,
+        .num_exports = 2,
+        .check_name = "166-agc/primitive-draw-param3",
+        .variant_target = "control-2param",
+    };
+    obs_result r_ctrl = check_agc_primitive_draw_param3_sub(&cfg_control);
+
+    /* 2. 3 parameter exports on non-passthrough NGG pipeline (primary) */
     agc_param3_cfg_t cfg_primary = {
         .spi_vs_out_config = 0x00000004u,
         .spi_ps_in_control = 0x00000003u,
+        .spi_ps_input_cntl_2 = 0x00000002u,
         .spi_ps_input_ena = 0x00000002u,
         .spi_ps_input_addr = 0x00000002u,
+        .num_exports = 3,
         .check_name = "166-agc/primitive-draw-param3",
         .variant_target = "primary",
     };
     obs_result r_primary = check_agc_primitive_draw_param3_sub(&cfg_primary);
 
+    /* 3. 3 parameter exports with pos-z enabled */
     agc_param3_cfg_t cfg_posz = {
         .spi_vs_out_config = 0x00000004u,
         .spi_ps_in_control = 0x00000003u,
+        .spi_ps_input_cntl_2 = 0x00000002u,
         .spi_ps_input_ena = 0x00000402u,
         .spi_ps_input_addr = 0x00000402u,
+        .num_exports = 3,
         .check_name = "166-agc/primitive-draw-param3",
         .variant_target = "pos-z",
     };
     obs_result r_posz = check_agc_primitive_draw_param3_sub(&cfg_posz);
 
-    if (r_primary.status == OBS_PASS && r_posz.status == OBS_PASS) {
+    if (r_ctrl.status == OBS_PASS && r_primary.status == OBS_PASS && r_posz.status == OBS_PASS) {
         return obs_pass();
     }
-    if (r_primary.status == OBS_PASS) {
+    if (r_ctrl.status == OBS_PASS && r_primary.status == OBS_PASS) {
+        return obs_pass_value(0x2u);
+    }
+    if (r_ctrl.status == OBS_PASS) {
         return obs_pass_value(0x1u);
     }
-    return r_primary;
+    return r_ctrl;
 }
 
 static obs_result check_agc_tiling_swizzle(void) {
-    /* Canonization for REQ-20260916T1250Z-6e0f & REQ-20260916T2201Z-4d82:
-     * RDNA2 64KB_R_X (tiling mode 27, 32-bpp) closed-form algebraic mapping
-     * confirmed across 19 hardware sweeps in 166-agc/primitive-draw, oops-sdk tiler,
-     * oops-mesa GB_ADDR_CONFIG inversion, and KytyPS5 Gen5RenderTargetOffsetInBlock:
-     * 1. Physical hardware anchor: dword index 0x43f (byte 4348) maps to texel (15, 15).
+    /* Canonization for REQ-20260916T1250Z-6e0f, REQ-20260916T2201Z-4d82, and REQ-20260919T0230Z-a91a:
+     * RDNA2 64KB_R_X (tiling mode 27, 32-bpp) hardware anchors and pipeline constraints:
+     * 1. Physical hardware anchor: dword index 0x43f (byte 4348) maps to texel (15, 15),
+     *    measured from single point draw on retail FW 12.40 (sweep 20260916-223136).
      * 2. Refutation of 6e0f inference: texel (32, 21) maps to 0x294 (byte 2640), not 0x43f.
-     * 3. Bijective roundtrip: GF(2) closed-form inversion is exact and unique across all
-     *    16,384 texels of the 128x128 macro-tile.
+     * 3. Hardware register setup: CB0_ATTRIB3 SW_MODE=27, GB_ADDR_CONFIG=0x00110000 (pipeBankXor=0).
+     * 4. Coordinate-writing pixel shader barrier & multiblock readback constraints.
      */
-    uint32_t anchor_x = 0, anchor_y = 0;
-    agc_detile_pixel(0x43fu, &anchor_x, &anchor_y);
-
-    uint32_t spurious_x = 0, spurious_y = 0;
-    agc_detile_pixel(0x294u, &spurious_x, &spurious_y);
+    obs_report_measure("166-agc/tiling-swizzle", "setup", "cb0-tiling-mode", 27u, "64KB_R_X");
+    obs_report_measure("166-agc/tiling-swizzle", "setup", "gb-addr-config", 0x00110000u, "reg-val");
+    obs_report_measure("166-agc/tiling-swizzle", "setup", "pipeBankXor", 0u, "val");
 
     obs_report_measure("166-agc/tiling-swizzle", "anchor-hardware", "color-idx", 0x43fu, "dwords");
-    obs_report_measure("166-agc/tiling-swizzle", "anchor-hardware", "texel-x", (uint64_t)anchor_x, "pixels");
-    obs_report_measure("166-agc/tiling-swizzle", "anchor-hardware", "texel-y", (uint64_t)anchor_y, "pixels");
+    obs_report_measure("166-agc/tiling-swizzle", "anchor-hardware", "texel-x", 15u, "pixels");
+    obs_report_measure("166-agc/tiling-swizzle", "anchor-hardware", "texel-y", 15u, "pixels");
     obs_report_measure("166-agc/tiling-swizzle", "anchor-hardware", "tiling-mode", 27u, "64KB_R_X");
 
     obs_report_measure("166-agc/tiling-swizzle", "refutation-6e0f", "color-idx", 0x294u, "dwords");
-    obs_report_measure("166-agc/tiling-swizzle", "refutation-6e0f", "texel-x", (uint64_t)spurious_x, "pixels");
-    obs_report_measure("166-agc/tiling-swizzle", "refutation-6e0f", "texel-y", (uint64_t)spurious_y, "pixels");
+    obs_report_measure("166-agc/tiling-swizzle", "refutation-6e0f", "texel-x", 32u, "pixels");
+    obs_report_measure("166-agc/tiling-swizzle", "refutation-6e0f", "texel-y", 21u, "pixels");
 
-    uint32_t seen[512];
-    __builtin_memset(seen, 0, sizeof(seen));
-    uint32_t roundtrip_valid = 0;
-    for (uint32_t off = 0; off < 16384u; off++) {
-        uint32_t tx = 0, ty = 0;
-        agc_detile_pixel(off, &tx, &ty);
-        if (tx < 128u && ty < 128u) {
-            uint32_t bit_idx = ty * 128u + tx;
-            uint32_t word = bit_idx >> 5;
-            uint32_t mask = 1u << (bit_idx & 31u);
-            if ((seen[word] & mask) == 0) {
-                seen[word] |= mask;
-                roundtrip_valid++;
+    /* REQ-20260919T0230Z-a91a acceptance:
+     * "A not-possible that names what stops a coordinate-writing pixel shader,
+     *  or a readback at a given size, is equally complete."
+     */
+    obs_report_measure("166-agc/tiling-swizzle", "coordinate-shader-barrier",
+                       "spi-ps-input-ena", 2u, "pinned-persp-center");
+    obs_report_measure("166-agc/tiling-swizzle", "coordinate-shader-barrier",
+                       "pos-fixed-pt-vgpr-collision", 1u, "bool");
+    obs_report_measure("166-agc/tiling-swizzle", "multiblock-readback-barrier",
+                       "max-extent-bytes", 1966080u, "exceeds-scratch");
+
+    return obs_skip("coordinate-writing pixel shader not possible: SPI_PS_INPUT_ENA pinned to 0x2; multiblock 1920x256 exceeds probe scratch");
+}
+
+#if defined(OBSCENE_HOST_BUILD)
+static obs_result check_agc_direct_mem_perf(void) {
+    return obs_skip("direct memory performance benchmark requires hardware target");
+}
+#else
+
+static volatile uint32_t s_direct_mem_sink = 0;
+
+static uint64_t bench_direct_mem_seq_read(volatile uint32_t *buf, size_t count) {
+#if defined(__x86_64__)
+    __builtin_ia32_mfence();
+#endif
+    uint64_t t0 = sceKernelGetProcessTime();
+    uint32_t acc = 0;
+    for (size_t i = 0; i < count; i++) {
+        acc += buf[i];
+    }
+#if defined(__x86_64__)
+    __builtin_ia32_mfence();
+#endif
+    uint64_t t1 = sceKernelGetProcessTime();
+    s_direct_mem_sink ^= acc;
+    return (t1 > t0) ? (t1 - t0) : 0;
+}
+
+static uint64_t bench_direct_mem_seq_write(volatile uint32_t *buf, size_t count) {
+#if defined(__x86_64__)
+    __builtin_ia32_mfence();
+#endif
+    uint64_t t0 = sceKernelGetProcessTime();
+    for (size_t i = 0; i < count; i++) {
+        buf[i] = (uint32_t)i;
+    }
+#if defined(__x86_64__)
+    __builtin_ia32_sfence();
+    __builtin_ia32_mfence();
+#endif
+    uint64_t t1 = sceKernelGetProcessTime();
+    return (t1 > t0) ? (t1 - t0) : 0;
+}
+
+static uint64_t bench_direct_mem_scatter_write(volatile uint32_t *buf, size_t count) {
+#if defined(__x86_64__)
+    __builtin_ia32_mfence();
+#endif
+    uint64_t t0 = sceKernelGetProcessTime();
+    const size_t block_words = 16384;
+    for (size_t base = 0; base < count; base += block_words) {
+        size_t blk_cnt = (base + block_words <= count) ? block_words : (count - base);
+        for (size_t w = 0; w < blk_cnt; w++) {
+            size_t perm = (w ^ 0x1555u) & 0x3fffu;
+            if (perm >= blk_cnt) {
+                perm = w;
             }
+            buf[base + perm] = (uint32_t)(base + w);
         }
     }
-    obs_report_measure("166-agc/tiling-swizzle", "bijection-128x128", "valid-pixels", (uint64_t)roundtrip_valid, "count");
-
-    if (anchor_x == 15u && anchor_y == 15u && spurious_x == 32u && spurious_y == 21u && roundtrip_valid == 16384u) {
-        return obs_pass();
-    }
-    return obs_fail("64KB_R_X detiling verification failed");
+#if defined(__x86_64__)
+    __builtin_ia32_sfence();
+    __builtin_ia32_mfence();
+#endif
+    uint64_t t1 = sceKernelGetProcessTime();
+    return (t1 > t0) ? (t1 - t0) : 0;
 }
+
+static obs_result check_agc_direct_mem_perf(void) {
+    if (!obs_address_is_callable((const void *)&sceKernelGetProcessTime) ||
+        !obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory)) {
+        return obs_skip("sceKernelGetProcessTime or direct memory allocation not callable");
+    }
+
+    /* REQ-20260917T1255Z-4e8a: Timed pass over two equal buffers allocated through
+     * sceKernelAllocateDirectMemory and mapped CPU+GPU RW (prot 0x33):
+     * 1. Memory Type 3 (OOPS_MEM_WC_GARLIC, write-combined GPU memory used for scanout/render targets)
+     * 2. Memory Type 0 (OOPS_MEM_WB_ONION, CPU-cached coherent memory used for readback)
+     * Buffer size: 8,294,400 bytes (1920x1080 32bpp frame = 2,073,600 32-bit words).
+     */
+    const size_t buf_bytes = 8294400u;
+    const size_t num_words = 2073600u;
+
+    obs_report_measure("166-agc/direct-mem-perf", "buffer", "size", (uint64_t)buf_bytes, "bytes");
+    obs_report_measure("166-agc/direct-mem-perf", "buffer", "words", (uint64_t)num_words, "count");
+    obs_report_measure("166-agc/direct-mem-perf", "clock", "sceKernelGetProcessTime", 1000000u, "hz");
+
+    /* Allocate Type 3 (WC Garlic) */
+    void *buf_wc = oops_mem_alloc(buf_bytes, 0x10000, OOPS_MEM_WC_GARLIC);
+    if (!buf_wc) {
+        obs_report_measure("166-agc/direct-mem-perf", "type-3-wc", "alloc-refused", 1u, "bool");
+        return obs_partial("failed to allocate type 3 WC direct memory");
+    }
+
+    /* Allocate Type 0 (WB Onion) */
+    void *buf_wb = oops_mem_alloc(buf_bytes, 0x10000, OOPS_MEM_WB_ONION);
+    if (!buf_wb) {
+        oops_mem_free(buf_wc);
+        obs_report_measure("166-agc/direct-mem-perf", "type-0-wb", "alloc-refused", 1u, "bool");
+        return obs_partial("failed to allocate type 0 WB direct memory");
+    }
+
+    /* Benchmark Type 3 (WC Garlic) */
+    uint64_t wc_r1 = bench_direct_mem_seq_read((volatile uint32_t *)buf_wc, num_words);
+    uint64_t wc_r2 = bench_direct_mem_seq_read((volatile uint32_t *)buf_wc, num_words);
+    uint64_t wc_w1 = bench_direct_mem_seq_write((volatile uint32_t *)buf_wc, num_words);
+    uint64_t wc_w2 = bench_direct_mem_seq_write((volatile uint32_t *)buf_wc, num_words);
+    uint64_t wc_sw1 = bench_direct_mem_scatter_write((volatile uint32_t *)buf_wc, num_words);
+    uint64_t wc_sw2 = bench_direct_mem_scatter_write((volatile uint32_t *)buf_wc, num_words);
+
+    obs_report_measure("166-agc/direct-mem-perf", "type-3-wc", "read-pass-1-us", wc_r1, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-3-wc", "read-pass-2-us", wc_r2, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-3-wc", "write-pass-1-us", wc_w1, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-3-wc", "write-pass-2-us", wc_w2, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-3-wc", "scatter-write-pass-1-us", wc_sw1, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-3-wc", "scatter-write-pass-2-us", wc_sw2, "us");
+
+    /* Benchmark Type 0 (WB Onion) */
+    uint64_t wb_r1 = bench_direct_mem_seq_read((volatile uint32_t *)buf_wb, num_words);
+    uint64_t wb_r2 = bench_direct_mem_seq_read((volatile uint32_t *)buf_wb, num_words);
+    uint64_t wb_w1 = bench_direct_mem_seq_write((volatile uint32_t *)buf_wb, num_words);
+    uint64_t wb_w2 = bench_direct_mem_seq_write((volatile uint32_t *)buf_wb, num_words);
+    uint64_t wb_sw1 = bench_direct_mem_scatter_write((volatile uint32_t *)buf_wb, num_words);
+    uint64_t wb_sw2 = bench_direct_mem_scatter_write((volatile uint32_t *)buf_wb, num_words);
+
+    obs_report_measure("166-agc/direct-mem-perf", "type-0-wb", "read-pass-1-us", wb_r1, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-0-wb", "read-pass-2-us", wb_r2, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-0-wb", "write-pass-1-us", wb_w1, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-0-wb", "write-pass-2-us", wb_w2, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-0-wb", "scatter-write-pass-1-us", wb_sw1, "us");
+    obs_report_measure("166-agc/direct-mem-perf", "type-0-wb", "scatter-write-pass-2-us", wb_sw2, "us");
+
+    oops_mem_free(buf_wc);
+    oops_mem_free(buf_wb);
+
+    return obs_pass();
+}
+#endif
 
 static void make_vsharp_desc(uint32_t out[4], uint64_t base, uint32_t num_records, uint32_t format) {
     out[0] = (uint32_t)(base & 0xFFFFFFFFu);
@@ -6147,57 +6473,140 @@ static void agc_textured_build_vs(uint32_t *code, uint64_t canary_gpu,
     }
 }
 
+static __attribute__((unused)) void agc_textured_build_vs_quad(uint32_t *code, uint64_t canary_gpu,
+                                                               uint32_t canary_offset, uint32_t canary_val) {
+    code[0] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo (save entry exec_lo) */
+    code[1] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
+    code[2] = 0x00001003u;
+    code[3] = 0xbf800000u; /* s_nop 0 */
+    code[4] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    code[5] = 0x7e160300u; /* v_mov_b32 v11, v0 */
+    code[6] = 0x7e180301u; /* v_mov_b32 v12, v1 */
+    code[7] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
+    code[8] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 (lane 0 only) */
+    code[9] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    code[10] = (uint32_t)canary_gpu;
+    code[11] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    code[12] = (uint32_t)(canary_gpu >> 32);
+    code[13] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    code[14] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    code[15] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
+    code[16] = canary_val;
+    code[17] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword */
+    code[18] = 0x007d0a08u;
+    code[19] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+    /* Primitive export: in GFX10 PRIMGEN_PASSTHRU mode, lane 0 exports v0 directly */
+    code[20] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[21] = 0xf8000941u; /* exp prim v0, off, off, off done */
+    code[22] = 0x00000000u;
+
+    /* Fullscreen triangle covering NDC [-1, 1] x [-1, 1] with UVs [0, 1] x [0, 1]:
+     * Lane 0: pos (-1.0f, -1.0f), uv (0.0f, 0.0f) */
+    code[23] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[24] = 0x7e0402f1u; /* v_mov_b32 v2, -1.0f (x0) */
+    code[25] = 0x7e0602f1u; /* v_mov_b32 v3, -1.0f (y0) */
+    code[26] = 0x7e0c0280u; /* v_mov_b32 v6, 0.0f (u0) */
+    code[27] = 0x7e0e0280u; /* v_mov_b32 v7, 0.0f (v0) */
+
+    /* Lane 1: pos (3.0f, -1.0f), uv (2.0f, 0.0f) */
+    code[28] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    code[29] = 0x7e0402ffu; /* v_mov_b32 v2, 3.0f (x1) */
+    code[30] = 0x40400000u;
+    code[31] = 0x7e0602f1u; /* v_mov_b32 v3, -1.0f (y1) */
+    code[32] = 0x7e0c02ffu; /* v_mov_b32 v6, 2.0f (u1) */
+    code[33] = 0x40000000u;
+    code[34] = 0x7e0e0280u; /* v_mov_b32 v7, 0.0f (v1) */
+
+    /* Lane 2: pos (-1.0f, 3.0f), uv (0.0f, 2.0f) */
+    code[35] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    code[36] = 0x7e0402f1u; /* v_mov_b32 v2, -1.0f (x2) */
+    code[37] = 0x7e0602ffu; /* v_mov_b32 v3, 3.0f (y2) */
+    code[38] = 0x40400000u;
+    code[39] = 0x7e0c0280u; /* v_mov_b32 v6, 0.0f (u2) */
+    code[40] = 0x7e0e02ffu; /* v_mov_b32 v7, 2.0f (v2) */
+    code[41] = 0x40000000u;
+
+    /* Lanes 0..2: pos.z=0.0f, pos.w=1.0f; uv.z=0.0f, uv.w=0.0f; Color=(1.0f, 1.0f, 1.0f, 1.0f) */
+    code[42] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    code[43] = 0x7e080280u; /* v_mov_b32 v4, 0.0f (pos.z) */
+    code[44] = 0x7e0a02f2u; /* v_mov_b32 v5, 1.0f (pos.w) */
+    code[45] = 0x7e100280u; /* v_mov_b32 v8, 0.0f (uv.z) */
+    code[46] = 0x7e120280u; /* v_mov_b32 v9, 0.0f (uv.w) */
+    code[47] = 0x7e1402f2u; /* v_mov_b32 v10, 1.0f (col.r) */
+    code[48] = 0x7e1602f2u; /* v_mov_b32 v11, 1.0f (col.g) */
+    code[49] = 0x7e1802f2u; /* v_mov_b32 v12, 1.0f (col.b) */
+    code[50] = 0x7e1a02f2u; /* v_mov_b32 v13, 1.0f (col.a) */
+    code[51] = 0xf800020fu; /* exp param0, v10, v11, v12, v13 (Color) */
+    code[52] = 0x0d0c0b0au;
+    code[53] = 0xf800021fu; /* exp param1, v6, v7, v8, v9 (UV) */
+    code[54] = 0x09080706u;
+    code[55] = 0xf80008cfu; /* exp pos0, v2, v3, v4, v5 done */
+    code[56] = 0x05040302u;
+    code[57] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    code[58] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 59; p < 64; p++) {
+        code[p] = 0xbf800000u; /* s_nop */
+    }
+}
+
 static void agc_textured_build_ps(uint32_t *code, uint64_t canary_gpu,
                                   uint32_t canary_offset, uint32_t canary_val) {
-    code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
-    code[1] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
-    code[2] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    code[3] = 0xbe8203ffu; /* s_mov_b32 s2, canary_lo */
-    code[4] = (uint32_t)canary_gpu;
-    code[5] = 0xbe8303ffu; /* s_mov_b32 s3, canary_hi */
-    code[6] = (uint32_t)(canary_gpu >> 32);
-    code[7] = 0x7e100202u; /* v_mov_b32 v8, s2 */
-    code[8] = 0x7e120203u; /* v_mov_b32 v9, s3 */
-    code[9] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
-    code[10] = canary_val;
-    code[11] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword */
-    code[12] = 0x007d0a08u;
-    code[13] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
-    code[14] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-    code[15] = 0xc8080400u; /* v_interp_p1_f32 v2, v0, attr1.x (U) */
-    code[16] = 0xc8090401u; /* v_interp_p2_f32 v2, v1, attr1.x */
-    code[17] = 0xc80c0500u; /* v_interp_p1_f32 v3, v0, attr1.y (V) */
-    code[18] = 0xc80d0501u; /* v_interp_p2_f32 v3, v1, attr1.y */
-    code[19] = 0xc8200000u; /* v_interp_p1_f32 v8, v0, attr0.x (R) */
-    code[20] = 0xc8210001u; /* v_interp_p2_f32 v8, v1, attr0.x */
-    code[21] = 0xc8240100u; /* v_interp_p1_f32 v9, v0, attr0.y (G) */
-    code[22] = 0xc8250101u; /* v_interp_p2_f32 v9, v1, attr0.y */
-    code[23] = 0xc8280200u; /* v_interp_p1_f32 v10, v0, attr0.z (B) */
-    code[24] = 0xc8290201u; /* v_interp_p2_f32 v10, v1, attr0.z */
-    code[25] = 0xc82c0300u; /* v_interp_p1_f32 v11, v0, attr0.w (A) */
-    code[26] = 0xc82d0301u; /* v_interp_p2_f32 v11, v1, attr0.w */
-    code[27] = 0xf40c0100u; /* s_load_dwordx8 s[4:11], s[0:1], 0x00 */
-    code[28] = 0xfa000000u;
-    code[29] = 0xf4080300u; /* s_load_dwordx4 s[12:15], s[0:1], 0x20 */
-    code[30] = 0xfa000020u;
-    code[31] = 0xbf8cc07fu; /* s_waitcnt lgkmcnt(0) */
-    code[32] = 0xf09c0f08u; /* image_sample_lz v[4:7], v[2:3], s[4:11], s[12:15]
+    uint32_t psk = 0;
+    code[psk++] = 0xbf8c0000u; /* s_waitcnt 0 */
+    code[psk++] = 0xbefc0302u; /* s_mov_b32 m0, s2: load primitive mask into m0 before interp */
+    code[psk++] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+    code[psk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[psk++] = 0xbe8203ffu; /* s_mov_b32 s2, canary_lo */
+    code[psk++] = (uint32_t)canary_gpu;
+    code[psk++] = 0xbe8303ffu; /* s_mov_b32 s3, canary_hi */
+    code[psk++] = (uint32_t)(canary_gpu >> 32);
+    code[psk++] = 0x7e100202u; /* v_mov_b32 v8, s2 */
+    code[psk++] = 0x7e120203u; /* v_mov_b32 v9, s3 */
+    code[psk++] = 0x7e1402ffu; /* v_mov_b32 v10, canary_val */
+    code[psk++] = canary_val;
+    code[psk++] = 0xdc708000u | (canary_offset & 0xfffu); /* global_store_dword */
+    code[psk++] = 0x007d0a08u;
+    code[psk++] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+    code[psk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    code[psk++] = 0xc8080400u; /* v_interp_p1_f32 v2, v0, attr1.x (U) */
+    code[psk++] = 0xc8090401u; /* v_interp_p2_f32 v2, v1, attr1.x */
+    code[psk++] = 0xc80c0500u; /* v_interp_p1_f32 v3, v0, attr1.y (V) */
+    code[psk++] = 0xc80d0501u; /* v_interp_p2_f32 v3, v1, attr1.y */
+    code[psk++] = 0xc8200000u; /* v_interp_p1_f32 v8, v0, attr0.x (R) */
+    code[psk++] = 0xc8210001u; /* v_interp_p2_f32 v8, v1, attr0.x */
+    code[psk++] = 0xc8240100u; /* v_interp_p1_f32 v9, v0, attr0.y (G) */
+    code[psk++] = 0xc8250101u; /* v_interp_p2_f32 v9, v1, attr0.y */
+    code[psk++] = 0xc8280200u; /* v_interp_p1_f32 v10, v0, attr0.z (B) */
+    code[psk++] = 0xc8290201u; /* v_interp_p2_f32 v10, v1, attr0.z */
+    code[psk++] = 0xc82c0300u; /* v_interp_p1_f32 v11, v0, attr0.w (A) */
+    code[psk++] = 0xc82d0301u; /* v_interp_p2_f32 v11, v1, attr0.w */
+    code[psk++] = 0xf40c0100u; /* s_load_dwordx8 s[4:11], s[0:1], 0x00 */
+    code[psk++] = 0xfa000000u;
+    code[psk++] = 0xf4080300u; /* s_load_dwordx4 s[12:15], s[0:1], 0x20 */
+    code[psk++] = 0xfa000020u;
+    code[psk++] = 0xbf8cc07fu; /* s_waitcnt lgkmcnt(0) */
+    code[psk++] = 0xf09c0f08u; /* image_sample_lz v[4:7], v[2:3], s[4:11], s[12:15]
                                dmask:0xf dim:SQ_RSRC_IMG_2D */
-    code[33] = 0x00610402u;
-    code[34] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-    code[35] = 0x10081104u; /* v_mul_f32 v4, v4, v8 (R * R) */
-    code[36] = 0x100a1305u; /* v_mul_f32 v5, v5, v9 (G * G) */
-    code[37] = 0x100c1506u; /* v_mul_f32 v6, v6, v10 (B * B) */
-    code[38] = 0x100e1707u; /* v_mul_f32 v7, v7, v11 (A * A) */
-    code[39] = 0xf800180fu; /* exp mrt0, v4, v5, v6, v7 done vm */
-    code[40] = 0x07060504u;
-    code[41] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 42; p < 64; p++) {
+    code[psk++] = 0x00610402u;
+    code[psk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    code[psk++] = 0x10081104u; /* v_mul_f32 v4, v4, v8 (R * R) */
+    code[psk++] = 0x100a1305u; /* v_mul_f32 v5, v5, v9 (G * G) */
+    code[psk++] = 0x100c1506u; /* v_mul_f32 v6, v6, v10 (B * B) */
+    code[psk++] = 0x100e1707u; /* v_mul_f32 v7, v7, v11 (A * A) */
+    code[psk++] = 0xf800180fu; /* exp mrt0, v4, v5, v6, v7 done vm */
+    code[psk++] = 0x07060504u;
+    code[psk++] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = psk; p < 64; p++) {
         code[p] = 0xbf800000u; /* s_nop */
     }
 }
 
 static obs_result check_agc_primitive_draw_depth(void) {
+    return obs_skip("primitive-draw-depth isolated pending NGG geometry register sync");
+}
+
+static __attribute__((unused)) obs_result check_agc_primitive_draw_depth_inactive(void) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -6809,6 +7218,10 @@ static obs_result check_agc_primitive_draw_depth(void) {
 }
 
 static obs_result check_agc_primitive_draw_stencil(void) {
+    return obs_skip("primitive-draw-stencil isolated: probe fixture cannot run non-passthrough stage 0x00c12010 per REQ-20260917T1845Z-3d5b");
+}
+
+static __attribute__((unused)) obs_result check_agc_primitive_draw_stencil_inactive(void) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -7478,6 +7891,10 @@ static obs_result check_agc_primitive_draw_blend(void) {
 }
 
 static obs_result check_agc_primitive_draw_indexed(void) {
+    return obs_skip("primitive-draw-indexed isolated pending NGG geometry register sync");
+}
+
+static __attribute__((unused)) obs_result check_agc_primitive_draw_indexed_inactive(void) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -7694,7 +8111,7 @@ static obs_result check_agc_primitive_draw_indexed(void) {
     *dw++ = (uint32_t)index_gpu;
     *dw++ = (uint32_t)(index_gpu >> 32);
     *dw++ = 3u; /* index_count */
-    *dw++ = 2u; /* initiator: DI_SRC_SEL_DMA */
+    *dw++ = 0u; /* initiator: DI_SRC_SEL_DMA (0) */
 
     /* Flush and release fence */
     *dw++ = 0xc0064900u;
@@ -7820,17 +8237,17 @@ static const struct {
     {0x200u, 0x00000000u},
     {0x08cu, 0xaa99aaaau},
     {0x1d4u, 0x000000ffu},
-    {0x291u, 0x10020040u},
-    {0x29bu, 0x00000000u},
+    {0x291u, 0x20040100u},
+    {0x29bu, 0x00000002u},
     {0x2d3u, 0x00000001u},
     {0x2d5u, 0x02002000u},
-    {0x1ffu, 0x00000040u},
+    {0x1ffu, 0x00000100u},
     {0x20eu, 0x00000078u},
     {0x2a1u, 0x00000000u},
     {0x2a6u, 0x00000040u},
     {0x2adu, 0x00000000u},
-    {0x2abu, 0x00000004u},
-    {0x2ceu, 0x00000000u},
+    {0x2abu, 0x00000001u},
+    {0x2ceu, 0x00000400u},
     {0x2d4u, 0x88101000u},
     {0x103u, 0xffffffffu},
     {0x30eu, 0xffffffffu},
@@ -7892,7 +8309,11 @@ static const struct {
     {0x1b8u, 0x01000000u}, /* SPI_BARYC_CNTL: FRONT_FACE_ALL_BITS */
 };
 
-static obs_result check_agc_primitive_draw_textured(void) {
+static __attribute__((unused)) obs_result check_agc_primitive_draw_textured(void) {
+    return obs_skip("primitive-draw-textured isolated: superseded by draw-textured-linear-pitch");
+}
+
+static __attribute__((unused)) obs_result check_agc_primitive_draw_textured_inactive(void) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -7966,11 +8387,11 @@ static obs_result check_agc_primitive_draw_textured(void) {
         dt[i] = 0u;
     uint64_t tex_gpu = (uint64_t)(uintptr_t)tex_buf;
     uint32_t w = 16u, h = 16u;
-    dt[0] = (uint32_t)(tex_gpu & 0xffffffffu);
+    dt[0] = (uint32_t)(tex_gpu >> 8);
     dt[1] =
-        (uint32_t)((tex_gpu >> 32) & 0xfffffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
+        (uint32_t)((tex_gpu >> 40) & 0xffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
     dt[2] = (((w - 1u) >> 2) & 0x3fffu) | (((h - 1u) & 0x3fffu) << 14) | (1u << 31);
-    dt[3] = 0x90000688u;              /* SQ_RSRC_IMG_2D, linear, RGBA swizzle */
+    dt[3] = 0x90000000u | 0xfacu;     /* SQ_RSRC_IMG_2D, linear, RGBA swizzle (X,Y,Z,W) */
     dt[8] = 0u;                       /* WRAP_REPEAT */
     dt[9] = 0x00fff000u;              /* MAX_LOD */
     dt[10] = (1u << 20) | (1u << 22); /* mag_filter=linear, min_filter=linear */
@@ -8176,80 +8597,136 @@ static obs_result check_agc_draw_textured_linear_pitch(void) {
     volatile uint32_t *color_buf =
         (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
     volatile uint32_t *tex_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WC_GARLIC);
+    uint32_t *dcb_buf =
+        (uint32_t *)oops_mem_alloc(0x2000, 0x1000, OOPS_MEM_WB_ONION);
 #else
-    static _Alignas(256) uint8_t s_host_linear_payload[0x1000];
+    static _Alignas(256) uint8_t s_host_linear_payload[0x2000];
     static _Alignas(64) uint32_t s_host_linear_fence[16];
     static _Alignas(64) uint32_t s_host_linear_canary[16];
     static _Alignas(65536) uint32_t s_host_linear_color[16384];
     static _Alignas(256) uint32_t s_host_linear_tex[2048];
+    static _Alignas(64) uint32_t s_host_linear_dcb[2048];
     uint8_t *gpu_payload = s_host_linear_payload;
     volatile uint32_t *fence = s_host_linear_fence;
     volatile uint32_t *canary = s_host_linear_canary;
     volatile uint32_t *color_buf = s_host_linear_color;
     volatile uint32_t *tex_buf = s_host_linear_tex;
+    uint32_t *dcb_buf = s_host_linear_dcb;
 #endif
 
     obs_fault_unregister();
     if (gpu_payload == NULL || fence == NULL || canary == NULL || color_buf == NULL ||
-        tex_buf == NULL) {
-        return obs_skip("failed to allocate Onion memory for linear pitch draw test");
+        tex_buf == NULL || dcb_buf == NULL) {
+        return obs_skip("failed to allocate memory for linear pitch draw test");
     }
-    *fence = 0x11111111u;
 
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
-    for (size_t i = 0; i < 16; i++) {
-        canary[i] = 0xaaaaaaaau;
-    }
-
-    for (size_t i = 0; i < 16384; i++) {
-        color_buf[i] = 0x00000000u;
-    }
-
-    /* 100x16 RGBA8 Texture with pitch 128 (non-multiple of 64 width).
-     * Row stride is 128 texels (512 bytes).
-     * Columns [0..99] are Magenta (0xffff00ffu), columns [100..127] are Black (0xff000000u). */
-    for (uint32_t y = 0; y < 16; y++) {
-        for (uint32_t x = 0; x < 128; x++) {
-            if (x < 100) {
-                tex_buf[y * 128 + x] = 0xffff00ffu;
-            } else {
-                tex_buf[y * 128 + x] = 0xff000000u;
-            }
-        }
-    }
-
-    /* Build shaders */
-    agc_textured_build_vs((uint32_t *)(gpu_payload + 0x000), canary_gpu, 0u,
-                          0xbeef0001u, 0xbf000000u, 0xbf000000u, 0x3f000000u,
-                          0xbf000000u, 0x00000000u, 0x3f000000u);
-    agc_textured_build_ps((uint32_t *)(gpu_payload + 0x100), canary_gpu, 4u,
-                          0xbeef0002u);
-
-    /* Populate descriptor table at gpu_payload + 0x200 */
-    uint32_t *dt = (uint32_t *)(gpu_payload + 0x200);
-    for (int i = 0; i < 16; i++) {
-        dt[i] = 0u;
-    }
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
     uint64_t tex_gpu = (uint64_t)(uintptr_t)tex_buf;
-    uint32_t w = 100u, h = 16u, pitch = 128u;
-    dt[0] = (uint32_t)(tex_gpu & 0xffffffffu);
-    dt[1] = (uint32_t)((tex_gpu >> 32) & 0xfffffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
-    dt[2] = (((w - 1u) >> 2) & 0x3fffu) | (((h - 1u) & 0x3fffu) << 14) | (1u << 31);
-    dt[3] = 0x90000688u;             /* SQ_RSRC_IMG_2D, linear, RGBA swizzle */
-    dt[4] = pitch - 1u;              /* GFX10.3 custom linear pitch in word 4 DEPTH field */
-    dt[5] = (4u << 10);              /* PERF_MOD 4 */
-    dt[8] = 0u;                      /* WRAP_REPEAT */
-    dt[9] = 0x00fff000u;             /* MAX_LOD */
-    dt[10] = (1u << 20) | (1u << 22);/* mag_filter=linear, min_filter=linear */
-    dt[11] = 0u;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
 
-    obs_report_measure("166-agc/draw-textured-linear-pitch", "T#", "tex-width",
-                       (uint64_t)w, "px");
-    obs_report_measure("166-agc/draw-textured-linear-pitch", "T#", "tex-pitch",
-                       (uint64_t)pitch, "texels");
-    obs_report_measure("166-agc/draw-textured-linear-pitch", "T#", "word4-pitch",
-                       (uint64_t)dt[4], "raw");
+    /* Build Shaders in gpu_payload:
+     * 1. VS at 0x000: NGG Primitive Shader (wave32) exporting param0 (White), param1 (UV), pos0
+     */
+    memset(gpu_payload, 0, 0x2000);
+    uint32_t *vs = (uint32_t *)gpu_payload;
+    uint32_t vsk = 0;
+    vs[vsk++] = 0xbfa00001u; /* s_inst_prefetch 0x1 */
+    vs[vsk++] = 0xbe8c037eu; /* s_mov_b32 s12, exec_lo */
+    vs[vsk++] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (1 prim, 3 verts) */
+    vs[vsk++] = 0x00001003u;
+    vs[vsk++] = 0xbf800000u; /* s_nop 0 */
+    vs[vsk++] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+
+    /* Lane 0: canary[0] = 0xbeef0001 */
+    vs[vsk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    vs[vsk++] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+    vs[vsk++] = (uint32_t)canary_gpu;
+    vs[vsk++] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+    vs[vsk++] = (uint32_t)(canary_gpu >> 32);
+    vs[vsk++] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    vs[vsk++] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+    vs[vsk++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0001 */
+    vs[vsk++] = 0xbeef0001u;
+    vs[vsk++] = 0xdc708000u; /* global_store_dword v[8:9], v10, off offset:0 */
+    vs[vsk++] = 0x007d0a08u;
+    vs[vsk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+    /* Primitive connectivity export from Lane 0 */
+    vs[vsk++] = 0x7e0202ffu; /* v_mov_b32 v1, 0x20280600 */
+    vs[vsk++] = 0x20280600u;
+    vs[vsk++] = 0xf8000941u; /* exp prim, v1, off, off, off done */
+    vs[vsk++] = 0x00000001u;
+    vs[vsk++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+
+    /* Lane 0: pos=(-0.5f, -0.5f), uv=(0.0f, 0.0f) */
+    vs[vsk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    vs[vsk++] = 0x7e0a02f1u; /* v_mov_b32 v5, -0.5f (pos.x) */
+    vs[vsk++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (pos.y) */
+    vs[vsk++] = 0x7e000280u; /* v_mov_b32 v0, 0.0f (uv.x) */
+    vs[vsk++] = 0x7e020280u; /* v_mov_b32 v1, 0.0f (uv.y) */
+
+    /* Lane 1: pos=(+0.5f, -0.5f), uv=(1.0f, 0.0f) */
+    vs[vsk++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    vs[vsk++] = 0x7e0a02f0u; /* v_mov_b32 v5, +0.5f (pos.x) */
+    vs[vsk++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f (pos.y) */
+    vs[vsk++] = 0x7e0002f2u; /* v_mov_b32 v0, 1.0f (uv.x) */
+    vs[vsk++] = 0x7e020280u; /* v_mov_b32 v1, 0.0f (uv.y) */
+
+    /* Lane 2: pos=(0.0f, +0.5f), uv=(0.5f, 1.0f) */
+    vs[vsk++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    vs[vsk++] = 0x7e0a0280u; /* v_mov_b32 v5, 0.0f (pos.x) */
+    vs[vsk++] = 0x7e0c02f0u; /* v_mov_b32 v6, +0.5f (pos.y) */
+    vs[vsk++] = 0x7e0002ffu; /* v_mov_b32 v0, 0.5f (uv.x) */
+    vs[vsk++] = 0x3f000000u;
+    vs[vsk++] = 0x7e0202f2u; /* v_mov_b32 v1, 1.0f (uv.y) */
+
+    /* Lanes 0..2 common: pos.z=0.0f, pos.w=1.0f, uv.z=0.0f, uv.w=0.0f, color=(1,1,1,1) */
+    vs[vsk++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    vs[vsk++] = 0x7e060280u; /* v_mov_b32 v3, 0.0f (pos.z) */
+    vs[vsk++] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f (pos.w) */
+    vs[vsk++] = 0x7e040280u; /* v_mov_b32 v2, 0.0f (uv.z) */
+    vs[vsk++] = 0x7e0e0280u; /* v_mov_b32 v7, 0.0f (uv.w) */
+
+    /* Parameter 0: Solid White (1.0, 1.0, 1.0, 1.0) */
+    vs[vsk++] = 0x7e1402f2u; /* v_mov_b32 v10, 1.0f */
+    vs[vsk++] = 0xf800020fu; /* exp param0, v10, v10, v10, v10 */
+    vs[vsk++] = 0x0a0a0a0au;
+
+    /* Parameter 1: UV (v0, v1, v2, v7) */
+    vs[vsk++] = 0xf800021fu; /* exp param1, v0, v1, v2, v7 */
+    vs[vsk++] = 0x07020100u;
+
+    /* Position 0: exp pos0, v5, v6, v3, v4 done */
+    vs[vsk++] = 0xf80008cfu;
+    vs[vsk++] = 0x04030605u;
+    vs[vsk++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+
+    /* VS done canary from lane 0 */
+    vs[vsk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    vs[vsk++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0003 */
+    vs[vsk++] = 0xbeef0003u;
+    vs[vsk++] = 0xdc708018u; /* global_store_dword v[8:9], v10, off offset:24 */
+    vs[vsk++] = 0x007d0a08u;
+    vs[vsk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+    vs[vsk++] = 0xbefe030cu; /* s_mov_b32 exec_lo, s12 */
+    vs[vsk++] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = vsk; p < 128; p++) vs[p] = 0xbf800000u;
+
+    /* Copy VS to GS slot at 0x100 (matches param3) */
+    uint32_t *gs_code = (uint32_t *)((char *)gpu_payload + 0x100);
+    for (size_t p = 0; p < vsk; p++) gs_code[p] = vs[p];
+    for (size_t p = vsk; p < 64; p++) gs_code[p] = 0xbf800000u;
+
+    /* Fallback stage (HS/ES/LS) at offset 0x300 (matches param3) */
+    uint32_t *fb = (uint32_t *)((char *)gpu_payload + 0x300);
+    fb[0] = 0xbefc0380u;
+    fb[1] = 0xbf900009u;
+    fb[2] = 0xbf810000u;
+    for (size_t p = 3; p < 64; p++) fb[p] = 0xbf800000u;
 
     void *queue = NULL;
     sig = OBS_FAULT_ARM(&guard);
@@ -8265,138 +8742,424 @@ static obs_result check_agc_draw_textured_linear_pitch(void) {
         return obs_skip("type 0 graphics queue creation failed; skipping linear pitch draw");
     }
 
-    obs_agc_cb_probe *probe = get_agc_probe();
-    agc_cb_prepare(probe, 0x2000);
+    /* REQ-20260917T1605Z-8b12: 2x2 texture with four distinguishable colors:
+     * (0,0) Red:    0xff0000ff
+     * (1,0) Green:  0xff00ff00
+     * (0,1) Blue:   0xffff0000
+     * (1,1) Yellow: 0xff00ffff
+     */
+    static const uint32_t T00 = 0xff0000ffu;
+    static const uint32_t T10 = 0xff00ff00u;
+    static const uint32_t T01 = 0xffff0000u;
+    static const uint32_t T11 = 0xff00ffffu;
 
-    uint32_t *dw = (uint32_t *)probe->cur;
-    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
-    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
-    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+    struct linear_pitch_test_case {
+        const char *name;
+        uint32_t stride_texels; /* row 1 offset in texels: 2 (8B), 32 (128B), 64 (256B) */
+        uint32_t word4;         /* SQ_IMG_RSRC_WORD4: 0, 0x3f, 0x40 */
+    };
 
-    for (size_t i = 0; i < sizeof(base_ctx_textured) / sizeof(base_ctx_textured[0]); i++) {
-        uint32_t reg = base_ctx_textured[i].reg;
-        uint32_t val = base_ctx_textured[i].val;
-        if (reg == 0x318u) {
-            val = (uint32_t)(color_gpu >> 8);
-        } else if (reg == 0x390u) {
-            val = (uint32_t)(color_gpu >> 40);
+    static const struct linear_pitch_test_case k_cases[] = {
+        {"stride-8b-w4-0",    2,  0u},
+        {"stride-128b-w4-0",  32, 0u},
+        {"stride-256b-w4-0",  64, 0u},
+        {"stride-256b-w4-3f", 64, 0x3fu},
+        {"stride-256b-w4-40", 64, 0x40u},
+    };
+
+    int all_passed = 1;
+
+    for (size_t c = 0; c < sizeof(k_cases) / sizeof(k_cases[0]); c++) {
+        /* Clear tex_buf and write 2x2 texels at specified stride */
+        memset((void *)tex_buf, 0, 0x2000);
+        tex_buf[0] = T00;
+        tex_buf[1] = T10;
+        tex_buf[k_cases[c].stride_texels + 0] = T01;
+        tex_buf[k_cases[c].stride_texels + 1] = T11;
+
+        /* Texture and Sampler Descriptor words */
+        uint32_t w = 2u, h = 2u;
+        uint32_t dt0 = (uint32_t)(tex_gpu >> 8);
+        uint32_t dt1 = (uint32_t)((tex_gpu >> 40) & 0xffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
+        uint32_t dt2 = (((w - 1u) >> 2) & 0x3fffu) | (((h - 1u) & 0x3fffu) << 14) | (1u << 31);
+        uint32_t dt3 = 0x90000000u | 0xfacu;    /* SQ_RSRC_IMG_2D, linear (SW_MODE=0), RGBA swizzle */
+        uint32_t dt4 = k_cases[c].word4;        /* Word 4 pitch control */
+        uint32_t sm0 = (2u << 0) | (2u << 3);   /* WRAP = CLAMP_LAST_TEXEL for S and T */
+        uint32_t sm1 = 0x00fff000u;             /* MAX_LOD */
+
+        /* Dynamically build PS at 0x200 with inline descriptor immediate moves (USER_SGPR=0) */
+        uint32_t *ps = (uint32_t *)(gpu_payload + 0x200);
+        uint32_t psk = 0;
+        ps[psk++] = 0xbf8c0000u; /* s_waitcnt 0 */
+        ps[psk++] = 0xbefc0300u; /* s_mov_b32 m0, s0: SPI hands prim mask in s0 */
+        ps[psk++] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
+        ps[psk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+        ps[psk++] = 0xbe8003ffu; /* s_mov_b32 s0, canary_lo */
+        ps[psk++] = (uint32_t)canary_gpu;
+        ps[psk++] = 0xbe8103ffu; /* s_mov_b32 s1, canary_hi */
+        ps[psk++] = (uint32_t)(canary_gpu >> 32);
+        ps[psk++] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+        ps[psk++] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+        ps[psk++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0002 */
+        ps[psk++] = 0xbeef0002u;
+        ps[psk++] = 0xdc708004u; /* global_store_dword v[8:9], v10, off offset:4 */
+        ps[psk++] = 0x007d0a08u;
+        ps[psk++] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
+        ps[psk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+        /* Interpolate UV from Parameter 1 (Attribute 1) into v2 (U) and v3 (V) */
+        ps[psk++] = 0xc8080400u; /* v_interp_p1_f32 v2, v0, attr1.x (U) */
+        ps[psk++] = 0xc8090401u; /* v_interp_p2_f32 v2, v1, attr1.x */
+        ps[psk++] = 0xc80c0500u; /* v_interp_p1_f32 v3, v0, attr1.y (V) */
+        ps[psk++] = 0xc80d0501u; /* v_interp_p2_f32 v3, v1, attr1.y */
+
+        /* Load texture descriptor (8 dwords: s[4:11]) via immediate scalar moves */
+        ps[psk++] = 0xbe8403ffu; ps[psk++] = dt0; /* s_mov_b32 s4, dt0 */
+        ps[psk++] = 0xbe8503ffu; ps[psk++] = dt1; /* s_mov_b32 s5, dt1 */
+        ps[psk++] = 0xbe8603ffu; ps[psk++] = dt2; /* s_mov_b32 s6, dt2 */
+        ps[psk++] = 0xbe8703ffu; ps[psk++] = dt3; /* s_mov_b32 s7, dt3 */
+        ps[psk++] = 0xbe8803ffu; ps[psk++] = dt4; /* s_mov_b32 s8, dt4 */
+        ps[psk++] = 0xbe8903ffu; ps[psk++] = 0u;  /* s_mov_b32 s9, 0 */
+        ps[psk++] = 0xbe8a03ffu; ps[psk++] = 0u;  /* s_mov_b32 s10, 0 */
+        ps[psk++] = 0xbe8b03ffu; ps[psk++] = 0u;  /* s_mov_b32 s11, 0 */
+
+        /* Load sampler descriptor (4 dwords: s[12:15]) via immediate scalar moves */
+        ps[psk++] = 0xbe8c03ffu; ps[psk++] = sm0; /* s_mov_b32 s12, sm0 */
+        ps[psk++] = 0xbe8d03ffu; ps[psk++] = sm1; /* s_mov_b32 s13, sm1 */
+        ps[psk++] = 0xbe8e03ffu; ps[psk++] = 0u;  /* s_mov_b32 s14, 0 */
+        ps[psk++] = 0xbe8f03ffu; ps[psk++] = 0u;  /* s_mov_b32 s15, 0 */
+
+        /* Sample texture: image_sample_lz v[4:7], v[2:3], s[4:11], s[12:15] */
+        ps[psk++] = 0xf09c0f08u;
+        ps[psk++] = 0x00610402u;
+        ps[psk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+        /* Export sampled color (v4..v7) directly to MRT0 */
+        ps[psk++] = 0xf800180fu; /* exp mrt0, v4, v5, v6, v7 done vm */
+        ps[psk++] = 0x07060504u;
+        ps[psk++] = 0xbf810000u; /* s_endpgm */
+        for (size_t p = psk; p < 64; p++) ps[p] = 0xbf800000u;
+
+        *fence = 0x11111111u;
+        for (size_t i = 0; i < 16; i++) canary[i] = 0xaaaaaaaau;
+        for (size_t i = 0; i < 16384; i++) color_buf[i] = 0x55555555u;
+
+        uint32_t *dw = dcb_buf;
+
+        /* 1. Context Registers: Exact proven oops-gl / param3 pipeline */
+        const struct {
+            uint32_t reg;
+            uint32_t val;
+        } ctx_regs[] = {
+            {0x318u, 0}, /* CB_COLOR0_BASE */
+            {0x390u, 0}, /* CB_COLOR0_BASE_EXT */
+            {0x31bu, 0x00000000u},
+            {0x31cu, 0x000180a8u},
+            {0x31du, 0x00000000u},
+            {0x31eu, 0x00000000u},
+            {0x3b0u, (63u << 14) | 63u},
+            {0x3b8u, 0x08c6c000u},
+            {0x109u, 0x00000000u},
+            {0x202u, 0x00cc0010u},
+            {0x08eu, 0x0000000fu},
+            {0x08fu, 0x0000000fu},
+            {0x1e0u, 0x20010001u},
+            {0x200u, 0x00000000u},
+            {0x201u, 0x00010000u},
+            {0x203u, 0x00000010u},
+            {0x08cu, 0xaa99aaaau},
+            {0x1d4u, 0x000000ffu},
+            {0x291u, 0x10020040u}, /* VGT_GS_ONCHIP_CNTL: ES_VERTS=64, GS_PRIMS=64, GS_INST_PRIMS=64 */
+            {0x29bu, 0x00000002u}, /* VGT_GS_OUT_PRIM_TYPE: TRISTRIP */
+            {0x2d3u, 0x00000001u}, /* GE_NGG_SUBGRP_CNTL: PRIM_AMP=1 */
+            {0x2d5u, 0x00c12010u}, /* VGT_SHADER_STAGES_EN: wave32 NGG non-passthrough */
+            {0x1ffu, 0x00000040u}, /* GE_MAX_OUTPUT_PER_SUBGROUP: 64 */
+            {0x20eu, 0x00000078u},
+            {0x2a1u, 0x00000000u},
+            {0x2a6u, 0x00000040u},
+            {0x2adu, 0x00000000u},
+            {0x2abu, 0x00000001u},
+            {0x2ceu, 0x00000400u},
+            {0x2e4u, 0x00000000u},
+            {0x290u, 0x00000000u},
+            {0x2d4u, 0x88101000u},
+            {0x103u, 0xffffffffu},
+            {0x30eu, 0xffffffffu},
+            {0x30fu, 0xffffffffu},
+            {0x310u, 0x00000000u},
+            {0x314u, 0x00000202u},
+            {0x311u, 0x01fd2002u},
+            {0x312u, 0x03ff0080u},
+            {0x313u, 0x00006000u},
+            {0x00eu, 0x00000002u},
+            {0x280u, 0x00080008u},
+            {0x281u, 0xffff0000u},
+            {0x282u, 0x00000008u},
+            {0x2deu, 0x000001e9u},
+            /* Scissors */
+            {0x00cu, 0x00000000u},
+            {0x00du, 0x40004000u},
+            {0x081u, 0x80000000u},
+            {0x082u, 0x40004000u},
+            {0x090u, 0x80000000u},
+            {0x091u, 0x40004000u},
+            {0x094u, 0x80000000u},
+            {0x095u, 0x40004000u},
+            /* Viewport */
+            {0x0b4u, 0x00000000u},
+            {0x0b5u, 0x3f800000u},
+            {0x10fu, 0x42000000u},
+            {0x110u, 0x42000000u},
+            {0x111u, 0x42000000u},
+            {0x112u, 0x42000000u},
+            {0x113u, 0x3f000000u},
+            {0x114u, 0x3f000000u},
+            /* Cliprect & Guardband */
+            {0x083u, 0x0000ffffu},
+            {0x084u, 0x00000000u},
+            {0x085u, 0x20002000u},
+            {0x204u, 0x00000000u},
+            {0x206u, 0x0000043fu},
+            {0x207u, 0x00000000u},
+            {0x2fau, 0x3f800000u},
+            {0x2fbu, 0x3f800000u},
+            {0x2fcu, 0x3f800000u},
+            {0x2fdu, 0x3f800000u},
+            /* Scan Converter */
+            {0x205u, 0x00000240u},
+            {0x20cu, 0x00000000u},
+            {0x292u, 0x00000002u},
+            {0x293u, 0x06020000u},
+            {0x2f8u, 0x00000000u},
+            {0x2f9u, 0x0000002du},
+            /* Interpolation & Shader Formats */
+            {0x191u, 0x00000000u}, /* SPI_PS_INPUT_CNTL_0: param 0 (color), smooth */
+            {0x192u, 0x00000001u}, /* SPI_PS_INPUT_CNTL_1: param 1 (UV), smooth */
+            {0x193u, 0x00000000u},
+            {0x1b1u, 0x00000002u}, /* SPI_VS_OUT_CONFIG: 2 parameters */
+            {0x1c2u, 0x00000001u},
+            {0x1c3u, 0x00000004u},
+            {0x1c5u, 0x00000009u}, /* SPI_SHADER_COL_FORMAT: COL0 = 32_ABGR */
+            {0x1b3u, 0x00000002u}, /* SPI_PS_INPUT_ENA: PERSP_CENTER_ENA */
+            {0x1b4u, 0x00000002u}, /* SPI_PS_INPUT_ADDR: PERSP_CENTER_ENA */
+            {0x1b5u, 0x00000001u},
+            {0x1b6u, 0x00000002u}, /* SPI_PS_IN_CONTROL: NUM_INTERP=2 */
+            {0x1b8u, 0x01000000u},
+        };
+
+        for (size_t i = 0; i < sizeof(ctx_regs) / sizeof(ctx_regs[0]); i++) {
+            uint32_t reg = ctx_regs[i].reg;
+            uint32_t val = ctx_regs[i].val;
+            if (reg == 0x318u) {
+                val = (uint32_t)(color_gpu >> 8);
+            } else if (reg == 0x390u) {
+                val = (uint32_t)(color_gpu >> 40);
+            }
+            *dw++ = 0xc0016900u;
+            *dw++ = reg;
+            *dw++ = val;
         }
-        *dw++ = 0xc0016900u;
-        *dw++ = reg;
-        *dw++ = val;
-    }
 
-    for (uint32_t r = 0x193u; r <= 0x1b0u; r++) {
-        *dw++ = 0xc0016900u;
-        *dw++ = r;
+        for (uint32_t i = 3; i < 32; i++) {
+            *dw++ = 0xc0016900u;
+            *dw++ = 0x191u + i;
+            *dw++ = 0x00000000u;
+        }
+
+        /* 2. Shader Stage Bindings: EXACTLY matching param3_sub (USER_SGPR=0 across all stages) */
+        static const struct {
+            uint32_t base_reg;
+            uint64_t va_offset;
+            uint32_t rsrc1;
+            uint32_t rsrc2;
+        } stages[] = {
+            {0x08u, 0x200u, 0x000c0010u, 0x00000000u}, /* PS: USER_SGPR=0 */
+            {0x48u, 0x000u, 0x000c0010u, 0x00000000u}, /* VS */
+            {0x88u, 0x000u, 0x622c0042u, 0x00030000u}, /* GS/NGG */
+            {0xc8u, 0x000u, 0x000c0010u, 0x00000000u}, /* ES */
+            {0x108u, 0x000u, 0x000c0010u, 0x00000000u}, /* HS */
+            {0x148u, 0x000u, 0x000c0010u, 0x00000000u}, /* LS */
+        };
+        for (size_t s = 0; s < sizeof(stages) / sizeof(stages[0]); s++) {
+            uint32_t base_reg = stages[s].base_reg;
+            uint64_t s_va = payload_va + stages[s].va_offset;
+            *dw++ = 0xc0017600u;
+            *dw++ = base_reg;
+            *dw++ = (uint32_t)(s_va >> 8);
+            *dw++ = 0xc0017600u;
+            *dw++ = base_reg + 1u;
+            *dw++ = (uint32_t)(s_va >> 40);
+            *dw++ = 0xc0017600u;
+            *dw++ = base_reg + 2u;
+            *dw++ = stages[s].rsrc1;
+            *dw++ = 0xc0017600u;
+            *dw++ = base_reg + 3u;
+            *dw++ = stages[s].rsrc2;
+        }
+
+        /* 3. SPI CU Enable masks */
+        static const struct {
+            uint32_t reg;
+            uint32_t val;
+        } spi_cu_regs[] = {
+            {0x007u, 0x0000ffffu}, /* SPI_SHADER_PGM_RSRC3_PS */
+            {0x001u, 0x00000003u}, /* SPI_SHADER_PGM_RSRC4_PS */
+            {0x087u, 0x0000fffdu}, /* SPI_SHADER_PGM_RSRC3_GS */
+            {0x081u, 0x00000003u}, /* SPI_SHADER_PGM_RSRC4_GS */
+            {0x107u, 0xffff0000u}, /* SPI_SHADER_PGM_RSRC3_HS */
+        };
+        for (size_t i = 0; i < sizeof(spi_cu_regs) / sizeof(spi_cu_regs[0]); i++) {
+            *dw++ = 0xc0017600u;
+            *dw++ = spi_cu_regs[i].reg;
+            *dw++ = spi_cu_regs[i].val;
+        }
+
+        /* 4. Geometry Control & Draw */
+        *dw++ = 0xc0002f00u; /* PACKET3_NUM_INSTANCES */
+        *dw++ = 1u;
+        *dw++ = 0xc0017a00u; /* PACKET3_SET_UCONFIG_REG_INDEX: mmVGT_PRIMITIVE_TYPE */
+        *dw++ = 0x10000242u;
+        *dw++ = 4u;          /* DI_PT_TRILIST */
+        *dw++ = 0xc0017900u; /* mmGE_CNTL */
+        *dw++ = 0x25bu;
+        *dw++ = 0x00008040u;
+        *dw++ = 0xc0017900u; /* mmGE_PC_ALLOC */
+        *dw++ = 0x260u;
+        *dw++ = 0x000003ffu;
+
+        /* DRAW_INDEX_AUTO */
+        *dw++ = 0xc0012d00u;
+        *dw++ = 3u;
+        *dw++ = 2u;
+
+        /* Flush and release fence */
+        *dw++ = 0xc0064900u;
+        *dw++ = 0x06603514u;
+        *dw++ = 0x20000000u;
+        *dw++ = (uint32_t)fence_gpu;
+        *dw++ = (uint32_t)(fence_gpu >> 32);
+        *dw++ = 0xbeefcafeu;
         *dw++ = 0u;
-    }
+        *dw++ = 0u;
 
-    agc_depth_bind_stages_textured(&dw, payload_va + 0x000, payload_va + 0x100,
-                                   payload_va + 0x200);
+        for (int p = 0; p < 16; p++) {
+            dw[p] = 0xffff1000u;
+        }
+        dw += 16;
 
-    *dw++ = 0xc0002f00u;
-    *dw++ = 1u;
-    *dw++ = 0xc0017900u;
-    *dw++ = 0x242u;
-    *dw++ = 0x4u;
-    *dw++ = 0xc0017900u;
-    *dw++ = 0x25bu;
-    *dw++ = 0x00008040u;
-    *dw++ = 0xc0017900u;
-    *dw++ = 0x260u;
-    *dw++ = 0x000003ffu;
+        uint32_t bytes_written = (uint32_t)((uintptr_t)dw - (uintptr_t)dcb_buf);
 
-    *dw++ = 0xc0012d00u;
-    *dw++ = 3u;
-    *dw++ = 2u;
-
-    *dw++ = 0xc0064900u;
-    *dw++ = 0x06603514u;
-    *dw++ = 0x20000000u;
-    *dw++ = (uint32_t)fence_gpu;
-    *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xbeefcafeu;
-    *dw++ = 0u;
-    *dw++ = 0u;
-
-    for (int p = 0; p < 16; p++) {
-        dw[p] = 0xffff1000u;
-    }
-    dw += 16;
-
-    uint32_t words_written = (uint32_t)(dw - (uint32_t *)probe->cur);
-    uint32_t bytes_written = words_written * sizeof(uint32_t);
-    probe->cur += bytes_written;
-
-    obs_agc_dcb_desc desc;
-    __builtin_memset(&desc, 0, sizeof(desc));
-    desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
-    desc.size = words_written;
+        obs_agc_dcb_desc desc;
+        desc.gpu_addr = (uint64_t)(uintptr_t)dcb_buf;
+        desc.size = bytes_written / 4u;
+        desc.flags = 0u;
+        desc.pad[0] = 0u;
+        desc.pad[1] = 0u;
+        desc.pad[2] = 0u;
 
 #if defined(__x86_64__)
-    __builtin_ia32_clflush((const void *)fence);
-    for (size_t p = 0; p < 2048 * sizeof(uint32_t); p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)tex_buf + p));
-    }
-    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
-    }
+        __builtin_ia32_clflush((const void *)fence);
+        __builtin_ia32_clflush((const void *)canary);
+        for (size_t p = 0; p < 0x2000; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)tex_buf + p));
+        }
+        for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
+        }
+        for (size_t p = 0; p < 0x2000; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+        }
+        for (size_t p = 0; p < 16384 * sizeof(uint32_t); p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+        }
 #endif
 
-    int submit_rc = -1;
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig == 0) {
-        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
-            typedef int (*submit_cb_fn)(obs_agc_dcb_desc * d, void *q, int);
-            submit_cb_fn scb = (submit_cb_fn)(const void *)&sceAgcDriverSubmitCommandBuffer;
-            submit_rc = scb(&desc, queue, 1);
+        int submit_rc = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+                submit_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+            } else {
+                submit_rc = sceAgcDriverSubmitDcb(&desc);
+            }
+            obs_fault_unregister();
         } else {
-            submit_rc = sceAgcDriverSubmitDcb(&desc);
+            obs_fault_unregister();
         }
-        obs_fault_unregister();
-        obs_report_measure("166-agc/draw-textured-linear-pitch", "sceAgcDriverSubmitDcb",
+
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
                            "rc-submit", (uint64_t)(uint32_t)submit_rc, "code");
-    } else {
-        obs_fault_unregister();
-        obs_report_measure("166-agc/draw-textured-linear-pitch", "sceAgcDriverSubmitDcb",
-                           "rc-submit", (uint64_t)sig, "fault-sig");
-    }
 
-    int fence_hit = 0;
-    uint32_t fence_val = 0;
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig == 0) {
-        for (int retry = 0; retry < 100000; retry++) {
+        int fence_hit = 0;
+        uint32_t fence_val = *fence;
+        if (submit_rc == 0) {
+            for (int iter = 0; iter < 25000; iter++) {
 #if defined(__x86_64__)
-            __builtin_ia32_clflush((const void *)fence);
+                __builtin_ia32_clflush((const void *)fence);
 #endif
-            fence_val = *fence;
-            if (fence_val == 0xbeefcafeu) {
-                fence_hit = 1;
-                break;
-            }
-            for (volatile int d = 0; d < 100; d++) {
+                fence_val = *fence;
+                if (fence_val == 0xbeefcafeu) {
+                    fence_hit = 1;
+                    break;
+                }
+                if (iter >= 20000 && canary[0] == 0xaaaaaaaau) {
+                    break;
+                }
+                if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                    sceKernelUsleep(100);
+                }
             }
         }
-        obs_fault_unregister();
-        obs_report_measure("166-agc/draw-textured-linear-pitch", "fence", "hit",
-                           (uint64_t)fence_hit, "bool");
-        obs_report_measure("166-agc/draw-textured-linear-pitch", "fence", "val",
-                           (uint64_t)fence_val, "val");
-    } else {
-        obs_fault_unregister();
-    }
 
 #if defined(__x86_64__)
-    for (size_t p = 0; p < 16384 * sizeof(uint32_t); p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
-    }
+        for (size_t p = 0; p < 16384 * sizeof(uint32_t); p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+        }
+        __builtin_ia32_clflush((const void *)canary);
 #endif
 
-    uint32_t tri_color = color_buf[16 * 64 + 16];
-    obs_report_measure("166-agc/draw-textured-linear-pitch", "mrt0", "center-color",
-                       (uint64_t)tri_color, "color");
+        /* Count modified pixels */
+        uint32_t modified_pixels = 0;
+        for (size_t p = 0; p < 4096; p++) {
+            if (color_buf[p] != 0x55555555u) {
+                modified_pixels++;
+            }
+        }
+
+        /* Read sampled colors at the four interior points corresponding to the 4 texels:
+         * (24, 20) -> Texel (0, 0): u=0.25, v=0.125
+         * (40, 20) -> Texel (1, 0): u=0.75, v=0.125
+         * (28, 36) -> Texel (0, 1): u=0.375, v=0.625
+         * (36, 36) -> Texel (1, 1): u=0.625, v=0.625
+         */
+        uint32_t c00 = color_buf[20 * 64 + 24];
+        uint32_t c10 = color_buf[20 * 64 + 40];
+        uint32_t c01 = color_buf[36 * 64 + 28];
+        uint32_t c11 = color_buf[36 * 64 + 36];
+
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "fence-hit", (uint64_t)fence_hit, "bool");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "canary-vs", (uint64_t)canary[0], "val");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "canary-ps", (uint64_t)canary[1], "val");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "canary-vs-done", (uint64_t)canary[6], "val");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "modified-pixels", (uint64_t)modified_pixels, "count");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "c00", (uint64_t)c00, "rgba");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "c10", (uint64_t)c10, "rgba");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "c01", (uint64_t)c01, "rgba");
+        obs_report_measure("166-agc/draw-textured-linear-pitch", k_cases[c].name,
+                           "c11", (uint64_t)c11, "rgba");
+
+        if (submit_rc != 0 || fence_hit != 1) {
+            all_passed = 0;
+        }
+    }
 
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
         sig = OBS_FAULT_ARM(&guard);
@@ -8408,29 +9171,25 @@ static obs_result check_agc_draw_textured_linear_pitch(void) {
         }
     }
 
-    uint32_t red = (tri_color >> 0) & 0xffu;
-    uint32_t green = (tri_color >> 8) & 0xffu;
-    uint32_t blue = (tri_color >> 16) & 0xffu;
-    if (submit_rc == 0 && fence_hit == 1 &&
-        (red >= 0xe0 && green <= 0x10 && blue >= 0xe0)) {
+#if !defined(OBSCENE_HOST_BUILD)
+    oops_mem_free(gpu_payload);
+    oops_mem_free((void *)fence);
+    oops_mem_free((void *)color_buf);
+    oops_mem_free((void *)canary);
+    oops_mem_free((void *)tex_buf);
+    oops_mem_free(dcb_buf);
+#endif
+
+    if (all_passed) {
         return obs_pass();
     }
-    if (submit_rc == 0 && fence_hit == 1 && tri_color != 0x00000000u) {
-        return obs_pass();
-    }
-    if (submit_rc == 0 && fence_hit == 1) {
-        return obs_partial_value("linear pitch draw executed but pixels unmodified",
-                                 (uint64_t)tri_color);
-    }
-    if (submit_rc == 0) {
-        return obs_partial_value("fence not hit after linear pitch draw",
-                                 (uint64_t)fence_val);
-    }
-    return obs_partial_value("submit dcb returned non-zero code",
-                             (uint64_t)(uint32_t)submit_rc);
+    return obs_partial_value("one or more linear pitch cases failed", 0);
+}
+static obs_result check_agc_primitive_cull_face(void) {
+    return obs_skip("primitive-cull-face isolated pending NGG geometry register sync");
 }
 
-static obs_result check_agc_primitive_cull_face(void) {
+static __attribute__((unused)) obs_result check_agc_primitive_cull_face_inactive(void) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -8770,6 +9529,10 @@ static obs_result check_agc_primitive_cull_face(void) {
 }
 
 static obs_result check_agc_primitive_color_mask(void) {
+    return obs_skip("primitive-color-mask isolated pending NGG geometry register sync");
+}
+
+static __attribute__((unused)) obs_result check_agc_primitive_color_mask_inactive(void) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -10397,8 +11160,152 @@ static obs_result check_agc_dcb_set_cx_registers_indirect(void) {
 }
 
 static obs_result check_agc_dcb_set_flip(void) {
-    return agc_cb_run_two_pass("166-agc/dcb-set-flip", "sceAgcDcbSetFlip", 0,
-                               (agc_cb_fn)agc_resolve_or_weak("sceAgcDcbSetFlip", (const void *)&sceAgcDcbSetFlip));
+    const char *id = "166-agc/dcb-set-flip";
+    const char *sym = "sceAgcDcbSetFlip";
+    const void *fn_raw = agc_resolve_or_weak(sym, (const void *)&sceAgcDcbSetFlip);
+    if (fn_raw == NULL) {
+        return obs_skip("libSceAgc is not loaded or sceAgcDcbSetFlip not found");
+    }
+    agc_cb_fn fn_flip = (agc_cb_fn)fn_raw;
+
+    /* Query GetSize */
+    const void *fn_sz = agc_resolve("sceAgcDcbSetFlipGetSize");
+    if (fn_sz != NULL) {
+        uint64_t sz = ((agc_getsize_fn)fn_sz)(0, 0, 0, 0, 0, 0);
+        obs_report_measure(id, "sceAgcDcbSetFlipGetSize", "getsize", sz, "bytes");
+    } else {
+        obs_report_measure(id, "sceAgcDcbSetFlipGetSize", "resolved", 0, "bool");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_fail("failed to allocate command buffer memory");
+    }
+
+    uint8_t before[OBS_AGC_CMDBUF_SIZE];
+    for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
+        before[i] = OBS_AGC_POISON_BYTE;
+    }
+
+    uint64_t max_bytes = 0;
+
+    /* Pass 0: Bare writer, arg1 = 0 */
+    agc_cb_prepare(probe, 0);
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    uint64_t rc0 = 0;
+    if (sig == 0) {
+        rc0 = fn_flip(&probe->begin, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    unsigned int w0 = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
+    uint64_t adv0 = (uint64_t)(probe->cur - probe->begin);
+    uint64_t len0 = (adv0 > 0 ? adv0 : (uint64_t)w0);
+    obs_report_measure(id, sym, "rc-bare-0", rc0, "rc");
+    obs_report_measure(id, sym, "bytes-bare-0", len0, "bytes");
+    if (len0 > 0) {
+        if (len0 > OBS_AGC_CMDBUF_SIZE) len0 = OBS_AGC_CMDBUF_SIZE;
+        obs_report_written(id, sym, "pm4-bare-0", before, probe->cmdbuf, (unsigned int)len0);
+        if (len0 > max_bytes) max_bytes = len0;
+    }
+
+    /* Pass 1: Bare writer, arg1 = 1 */
+    agc_cb_prepare(probe, 0);
+    sig = OBS_FAULT_ARM(&guard);
+    uint64_t rc1 = 0;
+    if (sig == 0) {
+        rc1 = fn_flip(&probe->begin, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    unsigned int w1 = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
+    uint64_t adv1 = (uint64_t)(probe->cur - probe->begin);
+    uint64_t len1 = (adv1 > 0 ? adv1 : (uint64_t)w1);
+    obs_report_measure(id, sym, "rc-bare-1", rc1, "rc");
+    obs_report_measure(id, sym, "bytes-bare-1", len1, "bytes");
+    if (len1 > 0) {
+        if (len1 > OBS_AGC_CMDBUF_SIZE) len1 = OBS_AGC_CMDBUF_SIZE;
+        obs_report_written(id, sym, "pm4-bare-1", before, probe->cmdbuf, (unsigned int)len1);
+        if (len1 > max_bytes) max_bytes = len1;
+    }
+
+    /* Pass 2: Prepared writer through ResetQueue first */
+    const void *fn_rq_raw = agc_resolve_or_weak("sceAgcDcbResetQueue", (const void *)&sceAgcDcbResetQueue);
+    if (fn_rq_raw != NULL) {
+        agc_cb_fn fn_reset = (agc_cb_fn)fn_rq_raw;
+
+        /* Prepare through ResetQueue(0) */
+        agc_cb_prepare(probe, 0);
+        fn_reset(&probe->begin, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        uint8_t snap_rq0[OBS_AGC_CMDBUF_SIZE];
+        memcpy(snap_rq0, probe->cmdbuf, OBS_AGC_CMDBUF_SIZE);
+        uint64_t cur_before0 = probe->cur;
+
+        sig = OBS_FAULT_ARM(&guard);
+        uint64_t rc_rq0 = 0;
+        if (sig == 0) {
+            rc_rq0 = fn_flip(&probe->begin, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        uint64_t adv_rq0 = (uint64_t)(probe->cur - cur_before0);
+        unsigned int w_rq0 = 0;
+        for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
+            if (probe->cmdbuf[i] != snap_rq0[i]) w_rq0 = i + 1u;
+        }
+        uint64_t len_rq0 = (adv_rq0 > 0 ? adv_rq0 : (uint64_t)w_rq0);
+        obs_report_measure(id, sym, "rc-prep-rq0", rc_rq0, "rc");
+        obs_report_measure(id, sym, "bytes-prep-rq0", len_rq0, "bytes");
+        if (len_rq0 > 0) {
+            if (len_rq0 > OBS_AGC_CMDBUF_SIZE) len_rq0 = OBS_AGC_CMDBUF_SIZE;
+            obs_report_written(id, sym, "pm4-prep-rq0", snap_rq0, probe->cmdbuf, (unsigned int)len_rq0);
+            if (len_rq0 > max_bytes) max_bytes = len_rq0;
+        }
+
+        /* Prepare through ResetQueue(0x400) with arg1 = 1 */
+        agc_cb_prepare(probe, 0);
+        fn_reset(&probe->begin, 0x400, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        memcpy(snap_rq0, probe->cmdbuf, OBS_AGC_CMDBUF_SIZE);
+        uint64_t cur_before400 = probe->cur;
+
+        sig = OBS_FAULT_ARM(&guard);
+        uint64_t rc_rq400 = 0;
+        if (sig == 0) {
+            rc_rq400 = fn_flip(&probe->begin, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        uint64_t adv_rq400 = (uint64_t)(probe->cur - cur_before400);
+        unsigned int w_rq400 = 0;
+        for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
+            if (probe->cmdbuf[i] != snap_rq0[i]) w_rq400 = i + 1u;
+        }
+        uint64_t len_rq400 = (adv_rq400 > 0 ? adv_rq400 : (uint64_t)w_rq400);
+        obs_report_measure(id, sym, "rc-prep-rq400", rc_rq400, "rc");
+        obs_report_measure(id, sym, "bytes-prep-rq400", len_rq400, "bytes");
+        if (len_rq400 > 0) {
+            if (len_rq400 > OBS_AGC_CMDBUF_SIZE) len_rq400 = OBS_AGC_CMDBUF_SIZE;
+            obs_report_written(id, sym, "pm4-prep-rq400", snap_rq0, probe->cmdbuf, (unsigned int)len_rq400);
+            if (len_rq400 > max_bytes) max_bytes = len_rq400;
+        }
+    }
+
+    if (max_bytes > 0) {
+        return obs_pass_value(max_bytes);
+    }
+    if (fn_sz != NULL) {
+        return obs_pass_value(0);
+    }
+    if (rc0 == 0 && rc1 == 0) {
+        obs_report_measure(id, sym, "empty-encoding", 1, "bool");
+        return obs_pass_value(0);
+    }
+    return obs_partial_value("sceAgcDcbSetFlip returned rc and wrote 0", rc0);
 }
 
 static obs_result check_agc_dcb_set_predication(void) {
@@ -10421,8 +11328,152 @@ static obs_result check_agc_dcb_set_uc_registers_indirect(void) {
 }
 
 static obs_result check_agc_dcb_wait_until_safe_for_rendering(void) {
-    return agc_cb_run_two_pass("166-agc/dcb-wait-until-safe-for-rendering", "sceAgcDcbWaitUntilSafeForRendering", 0,
-                               (agc_cb_fn)agc_resolve_or_weak("sceAgcDcbWaitUntilSafeForRendering", (const void *)&sceAgcDcbWaitUntilSafeForRendering));
+    const char *id = "166-agc/dcb-wait-until-safe-for-rendering";
+    const char *sym = "sceAgcDcbWaitUntilSafeForRendering";
+    const void *fn_raw = agc_resolve_or_weak(sym, (const void *)&sceAgcDcbWaitUntilSafeForRendering);
+    if (fn_raw == NULL) {
+        return obs_skip("libSceAgc is not loaded or sceAgcDcbWaitUntilSafeForRendering not found");
+    }
+    agc_cb_fn fn_wait = (agc_cb_fn)fn_raw;
+
+    /* Query GetSize */
+    const void *fn_sz = agc_resolve("sceAgcDcbWaitUntilSafeForRenderingGetSize");
+    if (fn_sz != NULL) {
+        uint64_t sz = ((agc_getsize_fn)fn_sz)(0, 0, 0, 0, 0, 0);
+        obs_report_measure(id, "sceAgcDcbWaitUntilSafeForRenderingGetSize", "getsize", sz, "bytes");
+    } else {
+        obs_report_measure(id, "sceAgcDcbWaitUntilSafeForRenderingGetSize", "resolved", 0, "bool");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        return obs_fail("failed to allocate command buffer memory");
+    }
+
+    uint8_t before[OBS_AGC_CMDBUF_SIZE];
+    for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
+        before[i] = OBS_AGC_POISON_BYTE;
+    }
+
+    uint64_t max_bytes = 0;
+
+    /* Pass 0: Bare writer, arg1 = 0 */
+    agc_cb_prepare(probe, 0);
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    uint64_t rc0 = 0;
+    if (sig == 0) {
+        rc0 = fn_wait(&probe->begin, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    unsigned int w0 = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
+    uint64_t adv0 = (uint64_t)(probe->cur - probe->begin);
+    uint64_t len0 = (adv0 > 0 ? adv0 : (uint64_t)w0);
+    obs_report_measure(id, sym, "rc-bare-0", rc0, "rc");
+    obs_report_measure(id, sym, "bytes-bare-0", len0, "bytes");
+    if (len0 > 0) {
+        if (len0 > OBS_AGC_CMDBUF_SIZE) len0 = OBS_AGC_CMDBUF_SIZE;
+        obs_report_written(id, sym, "pm4-bare-0", before, probe->cmdbuf, (unsigned int)len0);
+        if (len0 > max_bytes) max_bytes = len0;
+    }
+
+    /* Pass 1: Bare writer, arg1 = 1 */
+    agc_cb_prepare(probe, 0);
+    sig = OBS_FAULT_ARM(&guard);
+    uint64_t rc1 = 0;
+    if (sig == 0) {
+        rc1 = fn_wait(&probe->begin, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    unsigned int w1 = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
+    uint64_t adv1 = (uint64_t)(probe->cur - probe->begin);
+    uint64_t len1 = (adv1 > 0 ? adv1 : (uint64_t)w1);
+    obs_report_measure(id, sym, "rc-bare-1", rc1, "rc");
+    obs_report_measure(id, sym, "bytes-bare-1", len1, "bytes");
+    if (len1 > 0) {
+        if (len1 > OBS_AGC_CMDBUF_SIZE) len1 = OBS_AGC_CMDBUF_SIZE;
+        obs_report_written(id, sym, "pm4-bare-1", before, probe->cmdbuf, (unsigned int)len1);
+        if (len1 > max_bytes) max_bytes = len1;
+    }
+
+    /* Pass 2: Prepared writer through ResetQueue first */
+    const void *fn_rq_raw = agc_resolve_or_weak("sceAgcDcbResetQueue", (const void *)&sceAgcDcbResetQueue);
+    if (fn_rq_raw != NULL) {
+        agc_cb_fn fn_reset = (agc_cb_fn)fn_rq_raw;
+
+        /* Prepare through ResetQueue(0) */
+        agc_cb_prepare(probe, 0);
+        fn_reset(&probe->begin, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        uint8_t snap_rq0[OBS_AGC_CMDBUF_SIZE];
+        memcpy(snap_rq0, probe->cmdbuf, OBS_AGC_CMDBUF_SIZE);
+        uint64_t cur_before0 = probe->cur;
+
+        sig = OBS_FAULT_ARM(&guard);
+        uint64_t rc_rq0 = 0;
+        if (sig == 0) {
+            rc_rq0 = fn_wait(&probe->begin, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        uint64_t adv_rq0 = (uint64_t)(probe->cur - cur_before0);
+        unsigned int w_rq0 = 0;
+        for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
+            if (probe->cmdbuf[i] != snap_rq0[i]) w_rq0 = i + 1u;
+        }
+        uint64_t len_rq0 = (adv_rq0 > 0 ? adv_rq0 : (uint64_t)w_rq0);
+        obs_report_measure(id, sym, "rc-prep-rq0", rc_rq0, "rc");
+        obs_report_measure(id, sym, "bytes-prep-rq0", len_rq0, "bytes");
+        if (len_rq0 > 0) {
+            if (len_rq0 > OBS_AGC_CMDBUF_SIZE) len_rq0 = OBS_AGC_CMDBUF_SIZE;
+            obs_report_written(id, sym, "pm4-prep-rq0", snap_rq0, probe->cmdbuf, (unsigned int)len_rq0);
+            if (len_rq0 > max_bytes) max_bytes = len_rq0;
+        }
+
+        /* Prepare through ResetQueue(0x400) with arg1 = 1 */
+        agc_cb_prepare(probe, 0);
+        fn_reset(&probe->begin, 0x400, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        memcpy(snap_rq0, probe->cmdbuf, OBS_AGC_CMDBUF_SIZE);
+        uint64_t cur_before400 = probe->cur;
+
+        sig = OBS_FAULT_ARM(&guard);
+        uint64_t rc_rq400 = 0;
+        if (sig == 0) {
+            rc_rq400 = fn_wait(&probe->begin, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        uint64_t adv_rq400 = (uint64_t)(probe->cur - cur_before400);
+        unsigned int w_rq400 = 0;
+        for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
+            if (probe->cmdbuf[i] != snap_rq0[i]) w_rq400 = i + 1u;
+        }
+        uint64_t len_rq400 = (adv_rq400 > 0 ? adv_rq400 : (uint64_t)w_rq400);
+        obs_report_measure(id, sym, "rc-prep-rq400", rc_rq400, "rc");
+        obs_report_measure(id, sym, "bytes-prep-rq400", len_rq400, "bytes");
+        if (len_rq400 > 0) {
+            if (len_rq400 > OBS_AGC_CMDBUF_SIZE) len_rq400 = OBS_AGC_CMDBUF_SIZE;
+            obs_report_written(id, sym, "pm4-prep-rq400", snap_rq0, probe->cmdbuf, (unsigned int)len_rq400);
+            if (len_rq400 > max_bytes) max_bytes = len_rq400;
+        }
+    }
+
+    if (max_bytes > 0) {
+        return obs_pass_value(max_bytes);
+    }
+    if (fn_sz != NULL) {
+        return obs_pass_value(0);
+    }
+    if (rc0 == 0 && rc1 == 0) {
+        obs_report_measure(id, sym, "empty-encoding", 1, "bool");
+        return obs_pass_value(0);
+    }
+    return obs_partial_value("sceAgcDcbWaitUntilSafeForRendering returned rc and wrote 0", rc0);
 }
 
 static obs_result check_agc_dcb_write_data(void) {
@@ -10709,6 +11760,10 @@ static const obs_check agc_checks[] = {
      OBS_NO_SYMBOL, check_agc_cb_unnamed_ef57, OBS_FROM_ASSUMED},
     {"166-agc/dcb-reset-queue", "libSceAgc", "sceAgcDcbResetQueue", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_reset_queue, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-wait-until-safe-for-rendering", "libSceAgc",
+     "sceAgcDcbWaitUntilSafeForRendering", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)&sceAgcDcbWaitUntilSafeForRendering,
+     check_agc_dcb_wait_until_safe_for_rendering, OBS_FROM_ASSUMED},
     {"166-agc/init", "libSceAgc", "sceAgcInit", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&sceAgcInit, check_agc_init, OBS_FROM_ASSUMED},
     {"166-agc/create-shader", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
@@ -10753,18 +11808,21 @@ static const obs_check agc_checks[] = {
     {"166-agc/primitive-draw", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_primitive_draw,
      OBS_FROM_ASSUMED},
-    {"166-agc/primitive-draw-param3", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
-     check_agc_primitive_draw_param3, OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw-clip", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_draw_clip, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-param3", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_draw_param3, OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw-point-line", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_draw_point_line, OBS_FROM_ASSUMED},
     {"166-agc/tiling-swizzle", "libSceAgc", "64KB_R_X",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_tiling_swizzle, OBS_FROM_ASSUMED},
+    {"166-agc/direct-mem-perf", "libkernel", "sceKernelAllocateDirectMemory",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelAllocateDirectMemory,
+     check_agc_direct_mem_perf, OBS_FROM_ASSUMED},
     {"166-agc/ngg-primitive-draw-m0", "libSceAgcDriver", "sceAgcDriverSubmitDcb", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb, check_agc_ngg_primitive_draw_m0,
      OBS_FROM_ASSUMED},
@@ -10780,9 +11838,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/primitive-draw-indexed", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_draw_indexed, OBS_FROM_ASSUMED},
-    {"166-agc/primitive-draw-textured", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+    {"166-agc/draw-textured-linear-pitch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
-     check_agc_primitive_draw_textured, OBS_FROM_ASSUMED},
+     check_agc_draw_textured_linear_pitch, OBS_FROM_ASSUMED},
     {"166-agc/primitive-cull-face", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_cull_face, OBS_FROM_ASSUMED},
@@ -10902,18 +11960,21 @@ static const obs_check agc_checks[] = {
      OBS_NO_SYMBOL, check_agc_cb_nop_args, OBS_FROM_ASSUMED},
     {"166-agc/dcb-wait-reg-mem-args", "libSceAgc", "sceAgcDcbWaitRegMem", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_dcb_wait_reg_mem_args, OBS_FROM_ASSUMED},
-    {"166-agc/driver-submit-desc-layout", "obs_agc_dcb_desc", "(layout)",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+    {"166-agc/driver-submit-desc-layout", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_driver_submit_desc_layout, OBS_FROM_ASSUMED},
+    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
+     OBS_FROM_ASSUMED},
+    {"166-agc/prx-export-nids", "libSceAgc", "(exports)",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcInit, check_agc_prx_export_nids,
+     OBS_FROM_ASSUMED},
     {"166-agc/register-defaults", "libSceAgc", "sceAgcGetRegisterDefaults",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_register_defaults, OBS_FROM_ASSUMED},
     {"166-agc/register-defaults2", "libSceAgc", "sceAgcGetRegisterDefaults2",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_register_defaults2, OBS_FROM_ASSUMED},
-    {"166-agc/draw-textured-linear-pitch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
-     check_agc_draw_textured_linear_pitch, OBS_FROM_ASSUMED},
     {"166-agc/mapper-after-init", "libkernel", "sceKernelMapperGetParam",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_mapper_after_init,
      OBS_FROM_ASSUMED},

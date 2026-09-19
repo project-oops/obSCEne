@@ -39,6 +39,9 @@ pub const DT_NULL: u64 = 0;
 /// Size of one symbol table entry.
 pub const SYM_SIZE: usize = 24;
 
+/// Symbol binding: weak. A weak undefined symbol resolves to 0 if not provided.
+pub const STB_WEAK: u8 = 2;
+
 /// A parsed ELF64 file, borrowing its bytes.
 pub struct Elf<'a> {
     /// The whole file.
@@ -252,10 +255,14 @@ impl<'a> Elf<'a> {
         let mut at = 0_usize;
         while at.saturating_add(SYM_SIZE) <= symbols.len() {
             let st_name = read_u32(symbols, at)?;
+            let st_info = symbols.get(at.saturating_add(4)).copied().unwrap_or(0);
             let st_shndx = read_u16(symbols, at.saturating_add(6))?;
             at = at.saturating_add(SYM_SIZE);
             // Undefined means the loader supplies it: an import.
-            if st_shndx != 0 || st_name == 0 {
+            // Weak undefined symbols (STB_WEAK) resolve to zero when unprovided;
+            // demanding a library for them is wrong because the caller guards their
+            // invocation with an address check (REQ-20260917T1755Z-4a91).
+            if st_shndx != 0 || st_name == 0 || (st_info >> 4) == STB_WEAK {
                 continue;
             }
             if let Some(name) = c_string(names, st_name as usize)
@@ -451,6 +458,65 @@ mod tests {
             elf.undefined_symbols().expect("symbols"),
             Vec::<String>::new()
         );
+    }
+
+    #[test]
+    fn undefined_symbols_skips_weak_imports() {
+        const SHDR: usize = 64;
+
+        let dynstr_data = b"\0strong_import\0weak_import\0";
+        let mut dynsym_data = vec![0_u8; 3 * super::SYM_SIZE];
+        // Sym 1: strong import (st_name=1, st_info=0x10 for STB_GLOBAL, st_shndx=0)
+        dynsym_data[super::SYM_SIZE..super::SYM_SIZE + 4].copy_from_slice(&1_u32.to_le_bytes());
+        dynsym_data[super::SYM_SIZE + 4] = 0x10; // STB_GLOBAL << 4
+        // Sym 2: weak import (st_name=15, st_info=0x20 for STB_WEAK, st_shndx=0)
+        let sym2_at = 2 * super::SYM_SIZE;
+        dynsym_data[sym2_at..sym2_at + 4].copy_from_slice(&15_u32.to_le_bytes());
+        dynsym_data[sym2_at + 4] = super::STB_WEAK << 4;
+
+        let shstrtab_data = b"\0.dynstr\0.dynsym\0.shstrtab\0";
+
+        let mut bytes = minimal(&[]);
+        let shoff = bytes.len();
+        let num_sections = 4;
+        bytes.resize(shoff + num_sections * SHDR, 0);
+
+        let dynstr_off = bytes.len();
+        bytes.extend_from_slice(dynstr_data);
+
+        let dynsym_off = bytes.len();
+        bytes.extend_from_slice(&dynsym_data);
+
+        let shstrtab_off = bytes.len();
+        bytes.extend_from_slice(shstrtab_data);
+
+        // Update ELF header for section headers
+        bytes[0x28..0x30].copy_from_slice(&(shoff as u64).to_le_bytes()); // e_shoff
+        bytes[0x3a..0x3c].copy_from_slice(&(SHDR as u16).to_le_bytes()); // e_shentsize
+        bytes[0x3c..0x3e].copy_from_slice(&(num_sections as u16).to_le_bytes()); // e_shnum
+        bytes[0x3e..0x40].copy_from_slice(&3_u16.to_le_bytes()); // e_shstrndx (section 3)
+
+        // Helper to populate a section header
+        let write_shdr = |buf: &mut [u8], idx: usize, name: u32, sh_type: u32, off: usize, sz: usize, link: u32, entsize: u64| {
+            let base = shoff + idx * SHDR;
+            buf[base..base + 4].copy_from_slice(&name.to_le_bytes());
+            buf[base + 4..base + 8].copy_from_slice(&sh_type.to_le_bytes());
+            buf[base + 24..base + 32].copy_from_slice(&(off as u64).to_le_bytes());
+            buf[base + 32..base + 40].copy_from_slice(&(sz as u64).to_le_bytes());
+            buf[base + 40..base + 44].copy_from_slice(&link.to_le_bytes());
+            buf[base + 56..base + 64].copy_from_slice(&entsize.to_le_bytes());
+        };
+
+        // Sec 1: .dynstr (name index 1 in shstrtab)
+        write_shdr(&mut bytes, 1, 1, 3, dynstr_off, dynstr_data.len(), 0, 0);
+        // Sec 2: .dynsym (name index 9 in shstrtab, link to sec 1, entsize 24)
+        write_shdr(&mut bytes, 2, 9, 11, dynsym_off, dynsym_data.len(), 1, super::SYM_SIZE as u64);
+        // Sec 3: .shstrtab (name index 17 in shstrtab)
+        write_shdr(&mut bytes, 3, 17, 3, shstrtab_off, shstrtab_data.len(), 0, 0);
+
+        let elf = Elf::parse(&bytes).expect("parse");
+        let undefined = elf.undefined_symbols().expect("undefined_symbols");
+        assert_eq!(undefined, vec!["strong_import".to_string()]);
     }
 
     #[test]
