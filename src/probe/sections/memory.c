@@ -549,7 +549,153 @@ static obs_result check_memory_direct_pools_sequence(void) {
     return obs_pass();
 }
 
+struct obs_batch_map_entry {
+    void *vaddr;
+    sce_off_t paddr;
+    size_t len;
+    uint8_t prot;
+    uint8_t pad[3];
+    uint32_t flags;
+};
+
+static obs_result check_gpu_va_window(void) {
+    if (!obs_address_is_callable((const void *)&sceKernelBatchMap)) {
+        return obs_skip("sceKernelBatchMap is not callable");
+    }
+    OBS_REQUIRE(&sceKernelAllocateMainDirectMemory);
+    OBS_REQUIRE(&sceKernelReleaseDirectMemory);
+    OBS_REQUIRE(&sceKernelMunmap);
+
+    sce_off_t paddr = 0;
+    size_t page_sz = 0x4000;
+    int rc_alloc = sceKernelAllocateMainDirectMemory(page_sz, page_sz,
+                                                     OBS_MEM_TYPE_WB_ONION, &paddr);
+    obs_report_measure("020-memory/gpu-va-window", "setup", "rc-alloc",
+                       (uint64_t)(uint32_t)rc_alloc, "code");
+    obs_report_measure("020-memory/gpu-va-window", "setup", "paddr",
+                       (uint64_t)paddr, "addr");
+    if (rc_alloc != 0 || paddr == 0) {
+        return obs_fail_code("direct memory allocation for GPU VA probe failed",
+                             (uint64_t)(uint32_t)rc_alloc);
+    }
+
+    static const struct {
+        const char *tag;
+        uint64_t va;
+    } candidates[] = {
+        {"va-0x40000000", 0x40000000ULL},             /* 1 GiB */
+        {"va-0x80000000", 0x80000000ULL},             /* 2 GiB */
+        {"va-0x100000000", 0x100000000ULL},           /* 4 GiB */
+        {"va-0x200000000", 0x200000000ULL},           /* 8 GiB - anchor */
+        {"va-0x240000000", 0x240000000ULL},           /* 9 GiB - unmapped anchor companion */
+        {"va-0x400000000", 0x400000000ULL},           /* 16 GiB */
+        {"va-0x800000000", 0x800000000ULL},           /* 32 GiB */
+        {"va-0x1000000000", 0x1000000000ULL},         /* 64 GiB */
+        {"va-0x2000000000", 0x2000000000ULL},         /* 128 GiB */
+        {"va-0x4000000000", 0x4000000000ULL},         /* 256 GiB */
+        {"va-0x4040000000", 0x4040000000ULL},         /* 257 GiB - unmapped 256 GiB companion */
+        {"va-0x8000000000", 0x8000000000ULL},         /* 512 GiB */
+        {"va-0x10000000000", 0x10000000000ULL},       /* 1 TiB */
+        {"va-0x20000000000", 0x20000000000ULL},       /* 2 TiB */
+        {"va-0x40000000000", 0x40000000000ULL},       /* 4 TiB */
+        {"va-0x80000000000", 0x80000000000ULL},       /* 8 TiB */
+        {"va-0x100000000000", 0x100000000000ULL},     /* 16 TiB */
+        {"va-0x400000000000", 0x400000000000ULL},     /* 64 TiB */
+        {"va-0x7ffff0000000", 0x7ffff0000000ULL},     /* ~128 TiB (top of 47-bit lower-canonical) */
+        {"va-high-0xffff800000000000", 0xffff800000000000ULL}, /* Upper canonical base */
+        {"va-high-0xffffffffe0000000", 0xffffffffe0000000ULL}, /* Upper canonical max */
+    };
+
+    uint64_t lowest_success = 0;
+    uint64_t highest_lower_canonical_success = 0;
+    int upper_canonical_success = 0;
+    int anchor_mapped = 0;
+
+    for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]); i++) {
+        uint64_t c_va = candidates[i].va;
+        const char *tag = candidates[i].tag;
+
+        int was_already_mapped = 0;
+        if (obs_address_is_callable((const void *)&sceKernelVirtualQuery)) {
+            unsigned char vq_buf[OBS_VQ_BUF_LEN];
+            if (sceKernelVirtualQuery((const void *)(uintptr_t)c_va, 0, vq_buf, sizeof(vq_buf)) == 0) {
+                was_already_mapped = 1;
+            }
+        }
+
+        int completed = 0;
+        int rc = 0;
+        int mapped = 0;
+
+        if (was_already_mapped) {
+            mapped = 1;
+            rc = 0;
+            completed = 1;
+        } else {
+            struct obs_batch_map_entry entry;
+            entry.vaddr = (void *)(uintptr_t)c_va;
+            entry.paddr = paddr;
+            entry.len = page_sz;
+            entry.prot = OBS_PROT_GPU_READ | OBS_PROT_GPU_WRITE;
+            entry.pad[0] = entry.pad[1] = entry.pad[2] = 0;
+            entry.flags = 0;
+
+            rc = sceKernelBatchMap(&entry, 1, &completed);
+            mapped = (rc == 0 && completed == 1);
+            if (mapped) {
+                sceKernelMunmap((void *)(uintptr_t)c_va, page_sz);
+            }
+        }
+
+        obs_report_measure("020-memory/gpu-va-window", tag, "va", c_va, "addr");
+        obs_report_measure("020-memory/gpu-va-window", tag, "rc", (uint64_t)(uint32_t)rc, "code");
+        obs_report_measure("020-memory/gpu-va-window", tag, "completed", (uint64_t)completed, "count");
+        obs_report_measure("020-memory/gpu-va-window", tag, "mapped", (uint64_t)mapped, "bool");
+        obs_report_measure("020-memory/gpu-va-window", tag, "pre-existing", (uint64_t)was_already_mapped, "bool");
+
+        if (mapped) {
+            if (c_va == 0x200000000ULL) {
+                anchor_mapped = 1;
+            }
+            if (c_va < 0x800000000000ULL) {
+                if (lowest_success == 0 || c_va < lowest_success) {
+                    lowest_success = c_va;
+                }
+                if (c_va > highest_lower_canonical_success) {
+                    highest_lower_canonical_success = c_va;
+                }
+            } else {
+                upper_canonical_success = 1;
+            }
+        }
+    }
+
+    obs_report_measure("020-memory/gpu-va-window", "summary", "anchor-mapped",
+                       (uint64_t)anchor_mapped, "bool");
+    obs_report_measure("020-memory/gpu-va-window", "summary", "low-bound",
+                       lowest_success, "addr");
+    obs_report_measure("020-memory/gpu-va-window", "summary", "high-lower-canonical",
+                       highest_lower_canonical_success, "addr");
+    obs_report_measure("020-memory/gpu-va-window", "summary", "upper-canonical-reachable",
+                       (uint64_t)upper_canonical_success, "bool");
+    uint64_t extent = (highest_lower_canonical_success >= lowest_success && lowest_success > 0)
+                          ? (highest_lower_canonical_success - lowest_success + page_sz)
+                          : 0;
+    obs_report_measure("020-memory/gpu-va-window", "summary", "contiguous-extent",
+                       extent, "bytes");
+
+    sceKernelReleaseDirectMemory(paddr, page_sz);
+
+    if (!anchor_mapped) {
+        return obs_fail("anchor address 0x200000000 failed to map");
+    }
+    return obs_pass_value(lowest_success);
+}
+
 static const obs_check memory_checks[] = {
+    {"020-memory/gpu-va-window", "libkernel", "sceKernelBatchMap", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceKernelBatchMap, check_gpu_va_window,
+     OBS_FROM_ASSUMED},
     {"020-memory/reserve-virtual-range", "libkernel", "sceKernelReserveVirtualRange",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelReserveVirtualRange,
      check_reserve_virtual_range, OBS_FROM_ASSUMED},

@@ -50,6 +50,9 @@ void obs_set_write_tee(void (*fn)(void *ctx, const char *bytes, size_t len), voi
 /* Writes a NUL-terminated string. */
 void obs_puts(const char *s);
 
+/* Microsecond monotonic timestamp. */
+uint64_t obs_time_now_us(void);
+
 /* Which output channel the report went out through, or "none".
  *
  * Reported rather than assumed: an emulator was found stubbing sceKernelWrite, and a

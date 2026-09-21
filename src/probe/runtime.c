@@ -17,6 +17,7 @@
 
 #if defined(OBSCENE_HOST_BUILD)
 #include <unistd.h>
+#include <time.h>
 #include "obscene/platform.h"
 #else
 #include "obscene/platform.h"
@@ -104,6 +105,14 @@ long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5, l
     (void)num; (void)a1; (void)a2; (void)a3; (void)a4; (void)a5; (void)a6;
     return -1;
 }
+
+uint64_t obs_time_now_us(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+        return (uint64_t)ts.tv_sec * 1000000ULL + (uint64_t)(ts.tv_nsec / 1000);
+    }
+    return 0;
+}
 #endif
 
 #if !defined(OBSCENE_HOST_BUILD)
@@ -190,6 +199,7 @@ typedef int (*fn_close_t)(int);
 typedef sce_ssize_t (*fn_read_t)(int, void *, size_t);
 typedef int (*fn_usleep_t)(unsigned int);
 typedef int (*fn_dlsym_t)(int, const char *, void **);
+typedef uint64_t (*fn_get_process_time_t)(void);
 
 static int obs_payload_output_bootstrapped;
 static fn_debug_out_t s_fn_debug_out;
@@ -199,6 +209,7 @@ static fn_close_t s_fn_close;
 static fn_read_t s_fn_read;
 static fn_usleep_t s_fn_usleep;
 static fn_dlsym_t s_fn_dlsym;
+static fn_get_process_time_t s_fn_get_process_time;
 
 static void obs_debug_out_write(const char *bytes, size_t len) {
     static char scratch[512];
@@ -287,6 +298,7 @@ void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
     s_fn_close = (fn_close_t)obs_payload_resolve("sceKernelClose");
     s_fn_read = (fn_read_t)obs_payload_resolve("sceKernelRead");
     s_fn_usleep = (fn_usleep_t)obs_payload_resolve("sceKernelUsleep");
+    s_fn_get_process_time = (fn_get_process_time_t)obs_payload_resolve("sceKernelGetProcessTime");
     void *getpid_ptr = obs_payload_resolve("getpid");
     if (getpid_ptr != NULL) {
         s_libkernel_syscall_gadget = (long)(uintptr_t)getpid_ptr + 0xa;
@@ -343,6 +355,12 @@ void obs_bootstrap_title_output(void) {
             s_fn_write = (fn_write_t)(uintptr_t)p;
         }
     }
+    if (s_fn_get_process_time == NULL) {
+        const void *p = obs_module_symbol(handle, "sceKernelGetProcessTime");
+        if (obs_address_is_callable(p)) {
+            s_fn_get_process_time = (fn_get_process_time_t)(uintptr_t)p;
+        }
+    }
     if (s_libkernel_syscall_gadget == 0) {
         const void *getpid_ptr = obs_module_symbol(handle, "getpid");
         if (getpid_ptr != NULL && obs_address_is_callable(getpid_ptr)) {
@@ -351,6 +369,22 @@ void obs_bootstrap_title_output(void) {
         }
     }
 }
+
+#if !defined(OBSCENE_HOST_BUILD)
+uint64_t obs_time_now_us(void) {
+    if (s_fn_get_process_time != NULL) {
+        return s_fn_get_process_time();
+    }
+    if (obs_address_is_callable((const void *)&sceKernelGetProcessTime)) {
+        return sceKernelGetProcessTime();
+    }
+#if defined(__x86_64__)
+    return __builtin_ia32_rdtsc();
+#else
+    return 0;
+#endif
+}
+#endif
 
 /* Whether the raw-import output channels (direct sceKernelWrite/write/puts/putchar) may
  * be attempted at all.

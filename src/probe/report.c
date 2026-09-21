@@ -404,7 +404,8 @@ void obs_report_symbol(const char *library, const char *symbol, int present,
     line_end(&l);
 }
 
-void obs_report_section_tally(const obs_section *section, obs_tally tally) {
+void obs_report_section_tally(const obs_section *section, obs_tally tally,
+                              uint64_t duration_us) {
     line l;
     line_start(&l, "sectiontally");
     line_field(&l, section->id);
@@ -418,6 +419,42 @@ void obs_report_section_tally(const obs_section *section, obs_tally tally) {
     line_field_u64(&l, tally.crash);
     /* Pending appended after crash, same trailing-field contract. (D328) */
     line_field_u64(&l, tally.pending);
+    /* Microseconds elapsed during this section. */
+    line_field_u64(&l, duration_us);
+    line_end(&l);
+}
+
+void obs_report_time_start(uint64_t start_us) {
+    line l;
+    line_start(&l, "time");
+    line_field(&l, "start");
+    line_field_u64(&l, start_us);
+    line_end(&l);
+}
+
+void obs_report_time_section(const char *section_id, uint64_t duration_us) {
+    line l;
+    line_start(&l, "time");
+    line_field(&l, "section");
+    line_field(&l, section_id);
+    line_field_u64(&l, duration_us);
+    line_end(&l);
+}
+
+void obs_report_time_check(const char *check_id, uint64_t duration_us) {
+    line l;
+    line_start(&l, "time");
+    line_field(&l, "check");
+    line_field(&l, check_id);
+    line_field_u64(&l, duration_us);
+    line_end(&l);
+}
+
+void obs_report_time_total(uint64_t total_us) {
+    line l;
+    line_start(&l, "time");
+    line_field(&l, "total");
+    line_field_u64(&l, total_us);
     line_end(&l);
 }
 
@@ -425,14 +462,15 @@ void obs_report_section_tally(const obs_section *section, obs_tally tally) {
  * and in a terminal, and a round number so offsets line up when several are read
  * together. */
 #define OBS_BYTES_PER_RECORD 16u
+#define OBS_BYTES_MAX_PER_RECORD 64u
 
 void obs_report_bytes(const char *id, const char *symbol, const char *what,
                       unsigned int offset, const unsigned char *bytes,
                       unsigned int len) {
     static const char digits[] = "0123456789abcdef";
-    char hex[OBS_BYTES_PER_RECORD * 2u + 1u];
+    char hex[OBS_BYTES_MAX_PER_RECORD * 2u + 1u];
     unsigned int n = 0;
-    for (unsigned int i = 0; i < len && i < OBS_BYTES_PER_RECORD; i++) {
+    for (unsigned int i = 0; i < len && i < OBS_BYTES_MAX_PER_RECORD; i++) {
         hex[n++] = digits[(bytes[i] >> 4) & 0x0Fu];
         hex[n++] = digits[bytes[i] & 0x0Fu];
     }
@@ -583,7 +621,7 @@ void obs_report_tally(obs_tally tally) {
     line_end(&l);
 }
 
-void obs_report_end(void) {
+void obs_report_end(uint64_t total_duration_us) {
     line l;
     line_start(&l, "end");
     /* Which way the report got out.
@@ -597,6 +635,7 @@ void obs_report_end(void) {
      * about the platform and not a detail of this program. A run reporting "none"
      * cannot be read at all, so that value only ever appears on a host build. */
     line_field(&l, obs_output_channel_name());
+    line_field_u64(&l, total_duration_us);
     line_end(&l);
 }
 

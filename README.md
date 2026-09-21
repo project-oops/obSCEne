@@ -82,7 +82,7 @@ On real console firmware, **system privileges, sandbox boundaries, and dynamic l
 
 ### 3. Active Probing vs. Passive Telemetry: The Tracer
 - **obSCEne is Active Probing**: We craft the C test cases, choose inputs, test boundary conditions, and measure returns.
-- **[tracer](../oops-apps/src/tracer/) is Passive Observation**: A companion tool in `oops-apps` that hooks real, running commercial games on PS5 hardware. It captures real call sequences, valid constants, actual PM4 DCB command buffers, and compiled RDNA2 shader bytecode without modifying game code. Decoded traces feed directly into `orbistoun-corpus`.
+- **[tracer](../oops-apps/src/oops-payloads/tracer/) is Passive Observation**: A companion tool in `oops-apps` that hooks real, running commercial games on PS5 hardware. It captures real call sequences, valid constants, actual PM4 DCB command buffers, and compiled RDNA2 shader bytecode without modifying game code. Decoded traces feed directly into `orbistoun-corpus`.
 
 ### 4. Run Hardware Sweeps via Prosperous
 ```bash

@@ -183,11 +183,16 @@ fn render_section(
         *index = index.saturating_add(1);
     }
 
+    let dur_suffix = report
+        .section_duration(&section.id)
+        .map(|us| format!(", {:.2}s", (us as f64) / 1_000_000.0))
+        .unwrap_or_default();
+
     out.push_str(&palette.emphasise(
         Palette::DIM,
         &format!(
-            "    {} pass, {} partial, {} fail, {} skip",
-            tally.pass, tally.partial, tally.fail, tally.skip
+            "    {} pass, {} partial, {} fail, {} skip{}",
+            tally.pass, tally.partial, tally.fail, tally.skip, dur_suffix
         ),
     ));
     out.push('\n');
@@ -301,13 +306,18 @@ fn render_provenance(out: &mut String, report: &Report, palette: &Palette) {
 fn render_totals(out: &mut String, report: &Report, palette: &Palette) {
     if let Some(tally) = report.tally {
         out.push('\n');
+        let total_time = report
+            .total_duration_us
+            .map(|us| format!("  [{:.2}s total]", (us as f64) / 1_000_000.0))
+            .unwrap_or_default();
         let _ = writeln!(
             out,
-            "{}  {}  {}  {}",
+            "{}  {}  {}  {}{}",
             palette.paint(Status::Pass, &format!("{} pass", tally.pass)),
             palette.paint(Status::Partial, &format!("{} partial", tally.partial)),
             palette.paint(Status::Fail, &format!("{} fail", tally.fail)),
             palette.paint(Status::Skip, &format!("{} skip", tally.skip)),
+            total_time,
         );
     }
 

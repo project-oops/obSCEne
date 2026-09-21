@@ -794,6 +794,13 @@ const void *obs_module_symbol(int handle, const char *name) {
         obs_address_is_callable(address)) {
         return address;
     }
+
+    /* If a specific loaded module was requested (handle > 0 and not OBS_HANDLE_SELF),
+     * do not search other modules or kernel dispatch tables. */
+    if (handle > 0 && handle != OBS_HANDLE_SELF) {
+        return NULL;
+    }
+
     /* 3. Global search handle 1 fallback */
     if (fn_dlsym(1, nid, &address) == 0 && obs_address_is_callable(address)) {
         return address;
@@ -1075,10 +1082,14 @@ obs_tally obs_run_all(void) {
         return total;
     }
 
+    uint64_t run_start_us = obs_time_now_us();
+    obs_report_time_start(run_start_us);
+
     for (unsigned int s = 0; s < obs_section_count; s++) {
         const obs_section *section = obs_sections[s];
         obs_tally section_tally = {0, 0, 0, 0, 0, 0};
         obs_report_section(section);
+        uint64_t section_start_us = obs_time_now_us();
 
         for (unsigned int c = 0; c < section->check_count; c++) {
             const obs_check *check = &section->checks[c];
@@ -1164,6 +1175,7 @@ obs_tally obs_run_all(void) {
                  * rather than leaving it dangling. (D325) */
                 obs_jmp_buf guard;
                 int faulted = OBS_FAULT_ARM(&guard);
+                uint64_t check_start_us = obs_time_now_us();
                 if (faulted == 0) {
                     result = check->run();
                     obs_fault_unregister();
@@ -1174,6 +1186,10 @@ obs_tally obs_run_all(void) {
                     obs_fault_unregister();
                     result = obs_crash(faulted);
                 }
+                uint64_t check_dur_us = obs_time_now_us() - check_start_us;
+                if (check_dur_us > 50000u) {
+                    obs_report_time_check(check->id, check_dur_us);
+                }
             }
 
             obs_report_result(check, result);
@@ -1181,7 +1197,9 @@ obs_tally obs_run_all(void) {
             tally_add(&section_tally, result.status);
             tally_add(&total, result.status);
         }
-        obs_report_section_tally(section, section_tally);
+        uint64_t section_dur_us = obs_time_now_us() - section_start_us;
+        obs_report_section_tally(section, section_tally, section_dur_us);
+        obs_report_time_section(section->id, section_dur_us);
         obs_screen_section(section->id, section_tally);
 
         /* The deepest section that came out wholly green. Sections run base-first, so
@@ -1192,6 +1210,8 @@ obs_tally obs_run_all(void) {
             deepest = s + 1u;
         }
     }
+
+    uint64_t total_run_us = obs_time_now_us() - run_start_us;
 
     /* How many capabilities the platform actually established. Counted by popcount over
      * the bitset rather than tracked separately, so it cannot drift from the thing the
@@ -1205,6 +1225,7 @@ obs_tally obs_run_all(void) {
     obs_report_frontier(established, blocked, deepest);
 
     obs_report_tally(total);
-    obs_report_end();
+    obs_report_time_total(total_run_us);
+    obs_report_end(total_run_us);
     return total;
 }

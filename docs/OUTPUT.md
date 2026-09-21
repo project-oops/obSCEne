@@ -51,16 +51,17 @@ the expectation behind the verdict:
 | `module` | module name, handle |
 | `moduleword` | offset, value |
 | `modtier` | library, status, privilege tier, detail - the verified permission tier of a reachable module (D296), see `docs/PLATFORM_LIBRARIES.md` |
-| `sectiontally` | section id, pass, partial, fail, skip, crash, pending |
+| `sectiontally` | section id, pass, partial, fail, skip, crash, pending, optional duration (us) |
 | `frontier` | capabilities established, checks blocked, deepest wholly-green section |
 | `tally` | pass, partial, fail, skip, crash, pending |
+| `time` | kind (`start`, `section`, `check`, `total`), target/id, duration (us) |
 | `bytes` | check id, symbol, label, offset, hex - one line of a buffer dump. Three labels are counts rather than data and carry an empty hex field: `extent` (last byte written, or with `written` the last byte **changed**), `changed` (how many bytes differ), `untouched` (a run inside the extent the call left alone - a field boundary a hexdump cannot show) |
 | `size` | library, symbol, argument index, size, `accepted`/`rejected`, returned code - one rung of a size ladder. The boundary between the two **is** the structure size, drawn by the platform rather than by this project |
 | `err` | library, symbol, argument description, returned value |
 | `region` | index, first, second, `advanced`/`stalled` - one memory region |
 | `resolve` | library, symbol, `present`/`absent`, address - the name oracle |
 | `resume` | checks skipped, `ok`/`full`, then zero or more ids being watched |
-| `end` | output channel |
+| `end` | output channel, optional total duration (us) |
 
 **It drifted again, and the same way.** `bytes`, `err`, `region`, `resolve` and `resume` were
 all being emitted and none was listed; `size` was added at the same time as this note. Five
@@ -108,7 +109,8 @@ OBS|end|<channel>
 ```
 
 (`sectiontally` and `tally` carry six numbers - pass, partial, fail, skip, crash, pending - and
-`end` carries the output-channel name, per the record table above.)
+optional trailing duration in microseconds on `sectiontally`; `end` carries the output-channel name and
+optional trailing total duration in microseconds, per the record table above.)
 
 ## Diffing two reports
 

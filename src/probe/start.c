@@ -283,6 +283,7 @@ void obscene_start(void) {
     obs_boot_note("obscene: running full suite\n");
     obscene_last_tally = obs_run_all();
     obs_boot_note("obscene: suite complete\n");
+    obs_boot_note("[park] work done\n");
 
     /* With a display, stay and show it. The report is already complete and on record by
      * this point, so nothing is being held back - what follows is for whoever is

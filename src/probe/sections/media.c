@@ -25,6 +25,10 @@
 #include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
+#if !defined(OBSCENE_HOST_BUILD)
+#include "oops/display.h"
+#include "oops/memory.h"
+#endif
 
 /* The main video bus. Additional buses exist for auxiliary outputs. */
 
@@ -213,6 +217,96 @@ static obs_result check_video_attribute_block(void) {
     if (off_dcc_clr >= 0) obs_report_measure("080-video/attribute-block", "fields", "dcc-clear-color-offset", (uint64_t)off_dcc_clr, "bytes");
 
     return obs_pass_value(extent1 > extent2 ? extent1 : extent2);
+}
+
+/* REQ-20260921T1349Z-8b52: Tiling mode sweep and sceVideoOutSetBufferAttribute2 inspection */
+static obs_result check_video_tiling_modes(void) {
+    if (!obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute2)) {
+        return obs_skip("sceVideoOutSetBufferAttribute2 is not callable");
+    }
+
+    const char *check_name = "080-video/tiling-modes";
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    /* 1. Code inspection / disassembly dump of sceVideoOutSetBufferAttribute2 (if readable; xotext guarded) */
+    const void *fn_ptr = (const void *)&sceVideoOutSetBufferAttribute2;
+    if (obs_linkmap_readable((uintptr_t)fn_ptr)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            obs_report_bytes(check_name, "sceVideoOutSetBufferAttribute2", "code", 0,
+                             (const unsigned char *)fn_ptr, 64);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(check_name, "sceVideoOutSetBufferAttribute2", "code-fault", (uint64_t)sig, "sig");
+        }
+    } else {
+        obs_report_measure(check_name, "sceVideoOutSetBufferAttribute2", "code-xotext", 1, "bool");
+    }
+
+    /* 2. Sweep tiling_mode argument across candidate values */
+    const uint32_t test_modes[] = {
+        0u, 1u, 2u, 3u, 4u, 8u, 16u, 27u /* 64KB_R_X */, 28u, 31u, 0xffffffffu
+    };
+    uint8_t attr[256];
+    for (size_t m = 0; m < sizeof(test_modes) / sizeof(test_modes[0]); m++) {
+        uint32_t mode = test_modes[m];
+        char var_name[32];
+        oops_snprintf(var_name, sizeof(var_name), "mode-0x%x", (unsigned int)mode);
+
+        for (size_t i = 0; i < sizeof(attr); i++) attr[i] = 0x5Au;
+
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            sceVideoOutSetBufferAttribute2(attr, 0x8000000000000000ULL, mode,
+                                           1920u, 1080u, 0u, 0u, 0u);
+            obs_fault_unregister();
+
+            uint32_t written_mode = *(const uint32_t *)(const void *)(attr + 4);
+            uint32_t written_w = *(const uint32_t *)(const void *)(attr + 12);
+            uint32_t written_h = *(const uint32_t *)(const void *)(attr + 16);
+            obs_report_measure(check_name, var_name, "input-mode", (uint64_t)mode, "val");
+            obs_report_measure(check_name, var_name, "written-mode", (uint64_t)written_mode, "val");
+            obs_report_measure(check_name, var_name, "written-width", (uint64_t)written_w, "pixels");
+            obs_report_measure(check_name, var_name, "written-height", (uint64_t)written_h, "pixels");
+            obs_report_measure(check_name, var_name, "mode-passthrough",
+                               written_mode == mode ? 1u : 0u, "bool");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(check_name, var_name, "fault", (uint64_t)sig, "sig");
+        }
+    }
+
+    /* 3. RegisterBuffers2 parameter validation on test/invalid handle (-1) */
+    if (obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers2)) {
+        struct {
+            void *data;
+            void *meta;
+            void *rsvd[2];
+        } test_buf[1];
+        memset(test_buf, 0, sizeof(test_buf));
+        test_buf[0].data = (void *)0x100000000ULL;
+
+        for (uint32_t t = 0; t <= 2; t++) {
+            char arm_name[32];
+            oops_snprintf(arm_name, sizeof(arm_name), "reg-invalid-handle-tile-%u", (unsigned int)t);
+            memset(attr, 0, sizeof(attr));
+            sceVideoOutSetBufferAttribute2(attr, 0x8000000000000000ULL, t, 1920, 1080, 0, 0, 0);
+
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                int rc = sceVideoOutRegisterBuffers2(-1, 0, 0, test_buf, 1, attr, 0, 0);
+                obs_fault_unregister();
+                obs_report_measure(check_name, arm_name, "rc", (uint64_t)(uint32_t)rc, "code");
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(check_name, arm_name, "fault", (uint64_t)sig, "sig");
+            }
+        }
+    }
+
+    return obs_pass();
 }
 
 /* Flip status and pending: dump the flip-status record and read the pending query.
@@ -413,6 +507,139 @@ static obs_result check_video_visual_flip(void) {
     return obs_pass();
 }
 
+/* REQ-20260921T1202Z-9a4c: Whether a registered buffer set can be extended after registration,
+ * what 0x80290010 means (SCE_VIDEO_OUT_ERROR_SLOT_OCCUPIED), and whether sceVideoOutUnregisterBuffers
+ * is supported on retail Prospero. */
+typedef struct obs_video_out_buffer_desc {
+    void *data;
+    void *metadata;
+    void *reserved[2];
+} obs_video_out_buffer_desc;
+
+static obs_result check_video_buffer_set_extension(void) {
+#if defined(OBSCENE_HOST_BUILD)
+    return obs_skip("video buffer set extension is a target-only probe");
+#else
+    if (!obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers2) ||
+        !obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute2)) {
+        return obs_skip("sceVideoOutRegisterBuffers2 / SetBufferAttribute2 not callable");
+    }
+
+    /* 1. Dynamic symbol census for unregister APIs */
+    const void *sym_unreg = obs_module_symbol(1, "sceVideoOutUnregisterBuffers");
+    const void *sym_unreg_one = obs_module_symbol(1, "sceVideoOutUnregisterBuffer");
+    obs_report_measure("080-video/buffer-set-extension", "sceVideoOutUnregisterBuffers",
+                       "resolved", sym_unreg != NULL ? 1 : 0, "bool");
+    obs_report_measure("080-video/buffer-set-extension", "sceVideoOutUnregisterBuffer",
+                       "resolved", sym_unreg_one != NULL ? 1 : 0, "bool");
+
+    /* 2. Retrieve live display and handle */
+    int handle = obs_display_get_video_handle();
+    oops_display_t *oops_disp = obs_display_get_oops_display();
+    if (handle <= 0 || oops_disp == NULL) {
+        return obs_pending("needs active display and video handle");
+    }
+
+    void *b0 = oops_display_scanout(oops_disp, 0);
+    void *b1 = oops_display_scanout(oops_disp, 1);
+    if (!b0 || !b1) {
+        return obs_pending("display scanout buffers not available");
+    }
+
+    /* Allocate a 3rd buffer in WC Garlic (10 MB, 2MB aligned, matching display stride) */
+    void *b2 = oops_mem_alloc(0xa00000, 0x200000, OOPS_MEM_WC_GARLIC);
+    if (!b2) {
+        b2 = oops_mem_alloc(0xa00000, 0x10000, OOPS_MEM_WC_GARLIC);
+    }
+    if (!b2) {
+        return obs_skip("failed to allocate 3rd scanout buffer in WC Garlic");
+    }
+
+    unsigned char attr[256];
+    for (size_t i = 0; i < sizeof(attr); i++) attr[i] = 0;
+    sceVideoOutSetBufferAttribute2(attr, 0x8000000000000000ULL, 0 /* tiled */,
+                                   1920, 1080, 0, 0, 0);
+
+    obs_video_out_buffer_desc bufs2[2];
+    for (size_t i = 0; i < sizeof(bufs2); i++) ((uint8_t *)bufs2)[i] = 0;
+    bufs2[0].data = b0;
+    bufs2[1].data = b1;
+
+    obs_video_out_buffer_desc bufs3[3];
+    for (size_t i = 0; i < sizeof(bufs3); i++) ((uint8_t *)bufs3)[i] = 0;
+    bufs3[0].data = b0;
+    bufs3[1].data = b1;
+    bufs3[2].data = b2;
+
+    /* Arm 1: Re-register the SAME 2 buffers at set 0, index 0 */
+    int rc1 = sceVideoOutRegisterBuffers2(handle, 0, 0, bufs2, 2, attr, 0, 0);
+    obs_report_measure("080-video/buffer-set-extension", "arm1-reregister-same-2",
+                       "rc", (uint64_t)(uint32_t)rc1, "code");
+
+    /* Arm 2: Register 3 buffers at set 0, index 0 (the 2 plus one foreign buffer) */
+    int rc2 = sceVideoOutRegisterBuffers2(handle, 0, 0, bufs3, 3, attr, 0, 0);
+    obs_report_measure("080-video/buffer-set-extension", "arm2-register-3-index-0",
+                       "rc", (uint64_t)(uint32_t)rc2, "code");
+
+    /* Arm 3: Register 1 buffer at set 0, index 2 (extending existing set by 1) */
+    int rc3 = sceVideoOutRegisterBuffers2(handle, 0, 2, &bufs3[2], 1, attr, 0, 0);
+    obs_report_measure("080-video/buffer-set-extension", "arm3-register-1-index-2",
+                       "rc", (uint64_t)(uint32_t)rc3, "code");
+
+    /* Arm 4: Register at set 1, start index 0 (new buffer set index) */
+    int rc4 = sceVideoOutRegisterBuffers2(handle, 1, 0, bufs3, 3, attr, 0, 0);
+    obs_report_measure("080-video/buffer-set-extension", "arm4-register-3-set-1",
+                       "rc", (uint64_t)(uint32_t)rc4, "code");
+
+    /* Arm 5: Test unregister if function exists */
+    if (sym_unreg != NULL) {
+        int (*fn_unreg)(int, int) = (int (*)(int, int))sym_unreg;
+        int unreg_rc = fn_unreg(handle, 0);
+        obs_report_measure("080-video/buffer-set-extension", "arm5-unregister",
+                           "rc", (uint64_t)(uint32_t)unreg_rc, "code");
+        int rc5 = sceVideoOutRegisterBuffers2(handle, 0, 0, bufs3, 3, attr, 0, 0);
+        obs_report_measure("080-video/buffer-set-extension", "arm5-register-3-after-unreg",
+                           "rc", (uint64_t)(uint32_t)rc5, "code");
+    } else {
+        obs_report_measure("080-video/buffer-set-extension", "arm5-unregister",
+                           "not-possible", 1, "bool");
+    }
+
+    /* Arm 6: Test registering 3 buffers on fresh handle before any flip */
+    int32_t user = initial_user();
+    int h_sec = -1;
+    if (user >= 0 && obs_address_is_callable((const void *)&sceVideoOutOpen)) {
+        h_sec = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 1, NULL);
+        if (h_sec <= 0) {
+            h_sec = sceVideoOutOpen(user, 1 /* OBS_VIDEO_BUS_SUB */, 0, NULL);
+        }
+    }
+    obs_report_measure("080-video/buffer-set-extension", "arm6-fresh-handle",
+                       "handle", (uint64_t)(int64_t)h_sec, "handle");
+    if (h_sec > 0) {
+        int rc6 = sceVideoOutRegisterBuffers2(h_sec, 0, 0, bufs3, 3, attr, 0, 0);
+        obs_report_measure("080-video/buffer-set-extension", "arm6-register-3-before-flip",
+                           "rc", (uint64_t)(uint32_t)rc6, "code");
+        if (obs_address_is_callable((const void *)&sceVideoOutClose)) {
+            sceVideoOutClose(h_sec);
+        }
+    } else {
+        obs_report_measure("080-video/buffer-set-extension", "arm6-register-3-before-flip",
+                           "fresh-open-refused", 1, "bool");
+    }
+
+    /* Arm 7: oops_display_adopt_buffer was removed from oops-sdk because sceVideoOutRegisterBuffers2
+     * returns SCE_VIDEO_OUT_ERROR_SLOT_OCCUPIED (0x80290010) once the handle is open.
+     * Adoption must happen at open time via oops_display_open_adopting. */
+    obs_report_measure("080-video/buffer-set-extension", "oops_display_adopt_buffer",
+                       "api-removed-slot-occupied", 1, "bool");
+
+    oops_mem_free(b2);
+
+    return obs_pass();
+#endif
+}
+
 static const obs_check video_checks[] = {
     {"080-video/close-rejects-bad-handle", "libSceVideoOut", "sceVideoOutClose",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutClose,
@@ -426,12 +653,18 @@ static const obs_check video_checks[] = {
     {"080-video/attribute-block", "libSceVideoOut", "sceVideoOutSetBufferAttribute2",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutSetBufferAttribute2,
      check_video_attribute_block, OBS_FROM_ASSUMED},
+    {"080-video/tiling-modes", "libSceVideoOut", "sceVideoOutSetBufferAttribute2",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutSetBufferAttribute2,
+     check_video_tiling_modes, OBS_FROM_ASSUMED},
     {"080-video/flip-status", "libSceVideoOut", "sceVideoOutGetFlipStatus",
      OBS_CAP_VIDEO, OBS_CAP_NONE, (const void *)&sceVideoOutGetFlipStatus,
      check_video_flip_status, OBS_FROM_ASSUMED},
     {"080-video/visual-flip", "libSceVideoOut", "sceVideoOutSubmitFlip", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceVideoOutSubmitFlip, check_video_visual_flip,
      OBS_FROM_ASSUMED},
+    {"080-video/buffer-set-extension", "libSceVideoOut", "sceVideoOutRegisterBuffers2",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutRegisterBuffers2,
+     check_video_buffer_set_extension, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_video = {

@@ -50,6 +50,7 @@
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
+#include "obscene/runtime.h"
 #include "obscene/sections.h"
 
 /* Every time source that can be read without a struct. `sceKernelClockGettime` wants a
@@ -435,6 +436,57 @@ static obs_result check_timer_ratio(void) {
     return obs_pass_value(dtsc);
 }
 
+/* REQ-20260920T1415Z-3f8a: Can an unprivileged payload read a wall clock at all? */
+static obs_result check_wall_clock(void) {
+    struct {
+        int64_t tv_sec;
+        long tv_nsec;
+    } ts_real;
+    struct {
+        int64_t tv_sec;
+        int32_t tv_usec;
+    } tv_tod;
+    struct {
+        int64_t tv_sec;
+        long tv_nsec;
+    } ts_mono;
+
+    ts_real.tv_sec = 0;
+    ts_real.tv_nsec = 0;
+    tv_tod.tv_sec = 0;
+    tv_tod.tv_usec = 0;
+    ts_mono.tv_sec = 0;
+    ts_mono.tv_nsec = 0;
+
+    /* 1. clock_gettime(CLOCK_REALTIME = 0, &ts) - syscall 232 */
+    long rc_real = obs_invoke_syscall(232, 0, (long)&ts_real, 0, 0, 0, 0);
+
+    /* 2. gettimeofday(&tv, NULL) - syscall 116 */
+    long rc_tod = obs_invoke_syscall(116, (long)&tv_tod, 0, 0, 0, 0, 0);
+
+    /* 3. clock_gettime(CLOCK_MONOTONIC = 4, &ts) - control */
+    long rc_mono = obs_invoke_syscall(232, 4, (long)&ts_mono, 0, 0, 0, 0);
+
+    obs_report_measure("120-sys/wall-clock", "clock_gettime-realtime", "rc",
+                       (uint64_t)(uint32_t)rc_real, "rc");
+    obs_report_measure("120-sys/wall-clock", "clock_gettime-realtime", "tv_sec",
+                       (uint64_t)ts_real.tv_sec, "sec");
+    obs_report_measure("120-sys/wall-clock", "clock_gettime-realtime", "tv_nsec",
+                       (uint64_t)ts_real.tv_nsec, "nsec");
+
+    obs_report_measure("120-sys/wall-clock", "gettimeofday", "rc",
+                       (uint64_t)(uint32_t)rc_tod, "rc");
+    obs_report_measure("120-sys/wall-clock", "gettimeofday", "tv_sec",
+                       (uint64_t)tv_tod.tv_sec, "sec");
+
+    obs_report_measure("120-sys/wall-clock", "clock_gettime-monotonic", "rc",
+                       (uint64_t)(uint32_t)rc_mono, "rc");
+    obs_report_measure("120-sys/wall-clock", "clock_gettime-monotonic", "tv_sec",
+                       (uint64_t)ts_mono.tv_sec, "sec");
+
+    return obs_pass();
+}
+
 static const obs_check measure_checks[] = {
     {"120-measure/frequencies", "libkernel", "sceKernelGetTscFrequency", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelGetTscFrequency, check_frequencies,
@@ -452,6 +504,9 @@ static const obs_check measure_checks[] = {
      (const void *)check_cpuid_topology, check_cpuid_topology, OBS_FROM_ASSUMED},
     {"120-measure/timer-ratio", "libkernel", "sceKernelReadTsc", OBS_CAP_TIME,
      OBS_CAP_NONE, (const void *)check_timer_ratio, check_timer_ratio,
+     OBS_FROM_ASSUMED},
+    {"120-sys/wall-clock", "libkernel", "clock_gettime", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_wall_clock,
      OBS_FROM_ASSUMED},
 };
 

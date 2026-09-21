@@ -363,6 +363,7 @@ dependencies = [
  "oops-build",
  "oops-paths",
  "pros-link",
+ "selfish-abi",
  "selfish-title",
  "serde",
  "serde_json",

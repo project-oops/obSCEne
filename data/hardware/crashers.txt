@@ -22,6 +22,7 @@
 # Every entry here is an audio or video codec or a media-server interface, without exception
 # across the whole 370-library corpus. See docs/HARDWARE.md.
 900-surface/corpus_0146_libSceM4aacEnc
+900-surface/corpus_0174_libSceNpCommon
 900-surface/corpus_0207_libSceOpusCeltDec
 900-surface/corpus_0208_libSceOpusCeltEnc
 900-surface/corpus_0209_libSceOpusDec

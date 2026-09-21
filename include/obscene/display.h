@@ -127,6 +127,8 @@ int obs_display_holds_output(void);
 int obs_display_width(void);
 int obs_display_height(void);
 int obs_display_get_video_handle(void);
+struct oops_display;
+struct oops_display *obs_display_get_oops_display(void);
 
 /* Closes the display and releases video output back to the system compositor. */
 void obs_display_close(void);

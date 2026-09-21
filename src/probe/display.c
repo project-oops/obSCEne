@@ -206,6 +206,14 @@ int obs_display_get_video_handle(void) {
 #endif
 }
 
+struct oops_display *obs_display_get_oops_display(void) {
+#if defined(OBSCENE_HOST_BUILD)
+    return 0;
+#else
+    return s_oops_disp;
+#endif
+}
+
 obs_display_state obs_display_status(void) {
     return obs_state;
 }

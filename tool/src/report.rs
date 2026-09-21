@@ -170,6 +170,12 @@ pub struct Report {
     pub responsive: Vec<Responsive>,
     /// Per-section tallies, paired with the section identifier.
     pub section_tallies: Vec<(String, Tally)>,
+    /// Section durations in microseconds, keyed by section identifier.
+    pub section_durations: Vec<(String, u64)>,
+    /// Check execution timings in microseconds, keyed by check identifier.
+    pub check_timings: Vec<(String, u64)>,
+    /// Total duration in microseconds, as declared.
+    pub total_duration_us: Option<u64>,
     /// The final tally, as declared.
     pub tally: Option<Tally>,
     /// Which output channel the run used, when the report says.
@@ -332,7 +338,38 @@ impl Report {
                         report
                             .section_tallies
                             .push((id.to_owned(), tally_from(rest, 1)));
+                        if let Some(dur) = number_u64_at(rest, 7) {
+                            if !report.section_durations.iter().any(|(s, _)| s == id) {
+                                report.section_durations.push((id.to_owned(), dur));
+                            }
+                        }
                         running = Tally::default();
+                    }
+                }
+                "time" => {
+                    match field(rest, 0) {
+                        Some("section") => {
+                            if let (Some(id), Some(dur)) =
+                                (field(rest, 1), number_u64_at(rest, 2))
+                            {
+                                if !report.section_durations.iter().any(|(s, _)| s == id) {
+                                    report.section_durations.push((id.to_owned(), dur));
+                                }
+                            }
+                        }
+                        Some("check") => {
+                            if let (Some(id), Some(dur)) =
+                                (field(rest, 1), number_u64_at(rest, 2))
+                            {
+                                report.check_timings.push((id.to_owned(), dur));
+                            }
+                        }
+                        Some("total") => {
+                            if let Some(dur) = number_u64_at(rest, 1) {
+                                report.total_duration_us = Some(dur);
+                            }
+                        }
+                        _ => {}
                     }
                 }
                 "tally" => report.tally = Some(tally_from(rest, 0)),
@@ -342,6 +379,9 @@ impl Report {
                     // Absent means "this predates the channel being reported", not
                     // "no channel" - those are different and only one is a problem.
                     report.channel = field(rest, 0).map(str::to_owned);
+                    if let Some(dur) = number_u64_at(rest, 1) {
+                        report.total_duration_us = Some(dur);
+                    }
                 }
                 _ => {}
             }
@@ -378,6 +418,15 @@ impl Report {
         }
         tally
     }
+
+    /// Duration of a section in microseconds, if recorded.
+    #[must_use]
+    pub fn section_duration(&self, id: &str) -> Option<u64> {
+        self.section_durations
+            .iter()
+            .find(|(sec_id, _)| sec_id == id)
+            .map(|(_, dur)| *dur)
+    }
 }
 
 /// Splits a record line into its fields, or `None` if it is not a record.
@@ -391,6 +440,10 @@ fn field<'a>(fields: &[&'a str], index: usize) -> Option<&'a str> {
 }
 
 fn number_at(fields: &[&str], index: usize) -> Option<u32> {
+    field(fields, index)?.trim().parse().ok()
+}
+
+fn number_u64_at(fields: &[&str], index: usize) -> Option<u64> {
     field(fields, index)?.trim().parse().ok()
 }
 
@@ -502,5 +555,24 @@ OBS|end
     fn a_malformed_status_is_dropped_rather_than_guessed() {
         let report = Report::parse("OBS|res|a|nonsense||\n");
         assert!(report.results.is_empty());
+    }
+
+    #[test]
+    fn timing_records_and_trailing_durations_parse_correctly() {
+        let text = "\
+OBS|meta|1|1|1
+OBS|build|abc123
+OBS|section|000-boot|Boot|Establishes the report can be trusted
+OBS|time|check|000-boot/a|52000
+OBS|res|000-boot/a|pass|0x10|
+OBS|sectiontally|000-boot|1|0|0|0|0|0|125000
+OBS|tally|1|0|0|0
+OBS|end|host|1234567
+";
+        let report = Report::parse(text);
+        assert_eq!(report.section_duration("000-boot"), Some(125000));
+        assert_eq!(report.check_timings, vec![("000-boot/a".to_owned(), 52000)]);
+        assert_eq!(report.total_duration_us, Some(1234567));
+        assert_eq!(report.channel.as_deref(), Some("host"));
     }
 }

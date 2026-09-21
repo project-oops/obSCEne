@@ -180,8 +180,15 @@ void obs_report_result(const obs_check *check, obs_result result);
  * not behaviour - and because there are an order of magnitude more of them. */
 void obs_report_symbol(const char *library, const char *symbol, int present,
                        obs_availability availability);
-void obs_report_section_tally(const obs_section *section, obs_tally tally);
+void obs_report_section_tally(const obs_section *section, obs_tally tally,
+                              uint64_t duration_us);
 void obs_report_tally(obs_tally tally);
+
+/* Timing records for performance telemetry and benchmark tracking. */
+void obs_report_time_start(uint64_t start_us);
+void obs_report_time_section(const char *section_id, uint64_t duration_us);
+void obs_report_time_check(const char *check_id, uint64_t duration_us);
+void obs_report_time_total(uint64_t total_us);
 
 /* How far up the stack the platform got before the floor gave out.
  *
@@ -347,7 +354,7 @@ void obs_report_error_code(const char *library, const char *symbol,
  * check on its hypothesis - see `150-memory-map`. */
 void obs_report_region(unsigned int index, uint64_t first, uint64_t second,
                        int progressing);
-void obs_report_end(void);
+void obs_report_end(uint64_t total_duration_us);
 
 /* One of this program's own imports: whether the loader bound it, and whether the name
  * resolves at run time. The two disagree, and that disagreement is the finding. */

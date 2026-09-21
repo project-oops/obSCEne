@@ -421,8 +421,11 @@ enum Command {
     /// launches and captures in one. This is what `hw logs` is for, minus the system's own noise.
     Report {
         /// How long to listen.
-        #[arg(long, default_value_t = 120)]
+        #[arg(long, default_value_t = 300)]
         seconds: u64,
+        /// Maximum seconds of silence after records start flowing before terminating early.
+        #[arg(long, default_value_t = 25)]
+        idle_timeout: u64,
         /// Where to write the captured records.
         #[arg(long, default_value = "reports/hardware/console-klog.txt")]
         into: PathBuf,
@@ -1477,9 +1480,10 @@ fn run(cli: Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
         }
         Command::Report {
             seconds,
+            idle_timeout,
             into,
             name,
-        } => run_report(seconds, &into, name.as_deref()),
+        } => run_report(seconds, idle_timeout, &into, name.as_deref()),
         Command::Drive(args) => run_drive(&args),
         other => run_gate(other),
     }
@@ -1487,61 +1491,199 @@ fn run(cli: Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
 
 /// Capture obSCEne's records from the console system log into a file.
 ///
-/// `hw logs` reads the same channel; this keeps only the `OBS|` records, so what lands on disk
-/// is ready for a parser (`pretty`, `diff`, `verify`) rather than interleaved with the system's
-/// own logging. It is the readable path for a packaged run: the file the probe also writes lands
-/// locked inside the title's sandbox (D233), and the system log is the one channel that leaves
-/// it. Extracted from the dispatcher like the other `run_*` helpers so the match stays a table.
+/// Streams records directly to disk in real time using `pros_link::log::follow`, flushing
+/// line-by-line so earlier records are preserved if a run is cut short. Terminates
+/// immediately once `OBS|end` is observed or a target crash is detected, and falls back to
+/// an idle timeout if the log falls silent, replacing unconditional blocking waits.
 fn run_report(
     seconds: u64,
+    idle_timeout: u64,
     into: &std::path::Path,
     name: Option<&str>,
 ) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    use std::io::Write as _;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Mutex};
+
     let console = hardware::resolve(hardware::load()?, name)?;
     eprintln!(
-        "listening to {} for {seconds}s -> {}",
+        "listening to {} (max {seconds}s, idle timeout {idle_timeout}s) -> {}",
         console.address,
         into.display()
     );
-    let text = pros_link::log::read(
-        &pros_link::Link::to(&console.address),
-        Duration::from_secs(seconds),
-    )?;
-    // Every line the probe emits begins `OBS|`; the system's own noise carries a `<NNN>`
-    // priority prefix, so a start-anchored match on the record prefix separates them cleanly.
-    let prefix = format!("{}{}", report::PREFIX, report::SEPARATOR);
-    let records: Vec<&str> = text
-        .lines()
-        .filter(|line| line.starts_with(&prefix))
-        .collect();
     if let Some(dir) = into.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(dir)?;
     }
-    let mut body = records.join("\n");
-    if !body.is_empty() {
-        body.push('\n');
+    let mut file = std::fs::File::create(into)?;
+
+    let (stopper, lines) = pros_link::log::follow(&pros_link::Link::to(&console.address))?;
+    let stopper = Arc::new(stopper);
+
+    let start_time = std::time::Instant::now();
+    let prefix = format!("{}{}", report::PREFIX, report::SEPARATOR);
+
+    struct WatcherState {
+        last_activity: std::time::Instant,
+        seen_first_record: bool,
+        stopped_reason: Option<String>,
     }
-    std::fs::write(into, &body)?;
-    println!(
-        "captured {} OBS record(s) -> {}",
-        records.len(),
-        into.display()
-    );
-    // The lines that name the run's shape - which build wrote them, the final tally, the end
-    // marker - printed so a capture says whether it is complete without opening the file.
-    for line in &records {
-        let kind = line.split(report::SEPARATOR).nth(1).unwrap_or_default();
-        if matches!(kind, "meta" | "build" | "tally" | "end") {
-            println!("  {line}");
+
+    let state = Arc::new(Mutex::new(WatcherState {
+        last_activity: start_time,
+        seen_first_record: false,
+        stopped_reason: None,
+    }));
+
+    let done = Arc::new(AtomicBool::new(false));
+    let state_clone = Arc::clone(&state);
+    let done_clone = Arc::clone(&done);
+    let stopper_clone = Arc::clone(&stopper);
+    let initial_wait = Duration::from_secs(45);
+    let max_duration = Duration::from_secs(seconds);
+    let idle_duration = Duration::from_secs(idle_timeout);
+
+    let watcher = std::thread::spawn(move || {
+        while !done_clone.load(Ordering::Relaxed) {
+            std::thread::sleep(Duration::from_millis(250));
+            if done_clone.load(Ordering::Relaxed) {
+                break;
+            }
+            let now = std::time::Instant::now();
+            let mut s = state_clone.lock().unwrap();
+            if now.duration_since(start_time) >= max_duration {
+                s.stopped_reason = Some(format!("maximum window elapsed ({seconds}s)"));
+                stopper_clone.stop();
+                break;
+            }
+            if s.seen_first_record {
+                if now.duration_since(s.last_activity) >= idle_duration {
+                    s.stopped_reason = Some(format!(
+                        "idle timeout ({idle_timeout}s silence after records started)"
+                    ));
+                    stopper_clone.stop();
+                    break;
+                }
+            } else if now.duration_since(start_time) >= initial_wait {
+                s.stopped_reason = Some(format!(
+                    "initial timeout (no OBS records in {}s)",
+                    initial_wait.as_secs()
+                ));
+                stopper_clone.stop();
+                break;
+            }
+        }
+    });
+
+    let mut record_count = 0usize;
+    let mut saw_end = false;
+    let mut saw_crash: Option<String> = None;
+
+    let mut crash_lines_remaining = 0usize;
+
+    for line in lines {
+        let Ok(line_str) = line else {
+            break;
+        };
+
+        if line_str.starts_with(&prefix) {
+            {
+                let mut s = state.lock().unwrap();
+                s.last_activity = std::time::Instant::now();
+                s.seen_first_record = true;
+            }
+
+            writeln!(file, "{line_str}")?;
+            file.flush()?;
+            record_count = record_count.saturating_add(1);
+
+            let elapsed = start_time.elapsed().as_secs_f32();
+            let kind = line_str.split(report::SEPARATOR).nth(1).unwrap_or_default();
+            match kind {
+                "section" => {
+                    let sec_id = line_str.split(report::SEPARATOR).nth(2).unwrap_or("");
+                    let sec_title = line_str.split(report::SEPARATOR).nth(3).unwrap_or("");
+                    eprintln!("[+{elapsed:5.1}s] Section {sec_id}: {sec_title}");
+                }
+                "meta" | "build" => {
+                    println!("  {line_str}");
+                }
+                "tally" => {
+                    println!("[+{elapsed:5.1}s]   {line_str}");
+                }
+                "end" => {
+                    println!("[+{elapsed:5.1}s]   {line_str}");
+                    saw_end = true;
+                    stopper.stop();
+                    break;
+                }
+                _ => {}
+            }
+        } else {
+            // Inspect non-OBS system logs for fatal signal, panic, or core dump signatures
+            let lower = line_str.to_lowercase();
+            if lower.contains("exited on signal")
+                || lower.contains("fatal signal")
+                || lower.contains("# fault address:")
+                || lower.contains("kernel panic")
+                || lower.contains("trap 12:")
+                || lower.contains("core dumped")
+            {
+                if saw_crash.is_none() {
+                    eprintln!(
+                        "[+{:.1}s] TARGET CRASH DETECTED: {line_str}",
+                        start_time.elapsed().as_secs_f32()
+                    );
+                    saw_crash = Some(line_str.clone());
+                    crash_lines_remaining = 35;
+                }
+            }
+            if crash_lines_remaining > 0 {
+                eprintln!("  [klog] {line_str}");
+                crash_lines_remaining -= 1;
+                if crash_lines_remaining == 0 {
+                    stopper.stop();
+                    break;
+                }
+            }
         }
     }
-    if records.is_empty() {
-        println!(
+
+    done.store(true, Ordering::Relaxed);
+    stopper.stop();
+    let _ = watcher.join();
+
+    let total_elapsed = start_time.elapsed().as_secs_f32();
+    println!(
+        "captured {} OBS record(s) -> {} in {:.1}s",
+        record_count,
+        into.display(),
+        total_elapsed
+    );
+
+    if let Some(crash) = saw_crash {
+        eprintln!("run terminated on target crash: {crash}");
+        return Ok(ExitCode::FAILURE);
+    }
+
+    if saw_end {
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    let stopped_reason = state.lock().unwrap().stopped_reason.clone();
+    if let Some(reason) = stopped_reason {
+        eprintln!("run stopped early: {reason}");
+    }
+
+    if record_count == 0 {
+        eprintln!(
             "no OBS records - was the title running during the window? \
              (`./bin/obscene deploy` launches and captures together)"
         );
+        return Ok(ExitCode::FAILURE);
     }
-    Ok(ExitCode::SUCCESS)
+
+    eprintln!("incomplete run: stream ended without an OBS|end record");
+    Ok(ExitCode::FAILURE)
 }
 
 /// Compares two GPU corpora and prints the divergences. Non-zero exit when any differ.
