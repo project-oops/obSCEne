@@ -32,9 +32,16 @@
 # `?=` would lose to make's own default of `cc`, so this is assigned outright.
 # A command-line `make CC=...` still overrides it — which is how a compiler cache is wrapped in:
 # `oops-rebuild-pkg.sh` passes `make CC="sccache clang"`, and a plain `make` stays bare clang.
+#
+# **Bare `clang` is not the pin, and used to be mistaken for one.** Which compiler this
+# resolves to depends on the runner - it was clang 21 under WSL `oops-builder` and clang 18
+# under Docker `silkeh/clang:18` on the same day. `toolchain.mk` below turns the pin from a
+# spelling into a check. (oops-mesa#D013)
 CC := clang
 AR ?= ar
 BUILD ?= build
+
+include $(dir $(lastword $(MAKEFILE_LIST)))toolchain.mk
 # The four axes of a build and a run (OOPS/docs/CONVENTIONS.md section 2):
 #   * Target:   orbis | neo | prospero | trinity (hardware compiled for; default: prospero)
 #   * Format:   elf | eboot | title | pkg (shape delivered as)
