@@ -94,10 +94,16 @@ pros.exe check
 ```
 
 ### 5. Read Hardware Telemetry Reports
-Hardware logs are saved to `reports/hardware/<timestamp>-<context>.obs.log`:
+Hardware logs are saved to `reports/hardware/<timestamp>-<context>.obs.log` or retrieved directly from persistent console sinks:
 - `OBS|sym`: Symbol census record (present vs absent in firmware).
 - `OBS|measure`: Numeric return code or benchmark measurement.
 - `OBS|bytes`: Hex dump of memory buffers or PM4 command packet streams.
+
+Pull the latest report file from physical console storage via prosperous FTP:
+```bash
+./bin/obscene pull-log                         # auto-discovers newest report-<ts>.txt into reports/obscene-report.txt
+./bin/obscene verify reports/obscene-report.txt # verify conformance against format contract
+```
 
 ---
 

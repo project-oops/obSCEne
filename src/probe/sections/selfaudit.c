@@ -171,6 +171,61 @@ typedef struct {
 
 #define OBS_MAX_CONTAINERS 32
 
+static int obs_parse_dirent(const unsigned char *p, size_t rem,
+                            unsigned int *reclen_out, unsigned char *type_out,
+                            unsigned int *namlen_out, const char **name_out) {
+    if (rem < 8) {
+        return 0;
+    }
+
+    /* Try FreeBSD 11 dirent layout:
+     *   0x00 d_fileno (u32)
+     *   0x04 d_reclen (u16)
+     *   0x06 d_type   (u8)
+     *   0x07 d_namlen (u8)
+     *   0x08 d_name   (char[])
+     */
+    unsigned int r11 = (unsigned int)obs_le(p, 4, 2);
+    if (r11 >= 8 && r11 <= rem) {
+        unsigned char t11 = p[6];
+        unsigned int nl11 = p[7];
+        if (nl11 > 0 && nl11 + 8 <= r11) {
+            *reclen_out = r11;
+            *type_out = t11;
+            *namlen_out = nl11;
+            *name_out = (const char *)(p + 8);
+            return 1;
+        }
+    }
+
+    /* Try FreeBSD 12 dirent layout:
+     *   0x00 d_fileno (u64)
+     *   0x08 d_off    (u64)
+     *   0x10 d_reclen (u16)
+     *   0x12 d_type   (u8)
+     *   0x13 d_pad0   (u8)
+     *   0x14 d_namlen (u16)
+     *   0x16 d_pad1   (u16)
+     *   0x18 d_name   (char[])
+     */
+    if (rem >= 24) {
+        unsigned int r12 = (unsigned int)obs_le(p, 16, 2);
+        if (r12 >= 24 && r12 <= rem) {
+            unsigned char t12 = p[18];
+            unsigned int nl12 = (unsigned int)obs_le(p, 20, 2);
+            if (nl12 > 0 && nl12 + 24 <= r12) {
+                *reclen_out = r12;
+                *type_out = t12;
+                *namlen_out = nl12;
+                *name_out = (const char *)(p + 24);
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 static int obs_locate_containers(obs_found_container_t *out, int max_count) {
     int count = 0;
     unsigned char test_buf[OBS_SELFAUDIT_LEN];
@@ -209,17 +264,20 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
             if (n <= 0)
                 break;
             long pos = 0;
-            while (pos + OBS_DIRENT_NAME < n && count < max_count) {
-                unsigned int reclen = (unsigned int)obs_le(
-                    (const unsigned char *)dents + pos, OBS_DIRENT_RECLEN, 2);
-                if (reclen == 0)
+            int stop_dir = 0;
+            while (pos + 8 <= n && count < max_count) {
+                unsigned int reclen = 0;
+                unsigned char type = 0;
+                unsigned int namlen = 0;
+                const char *name = NULL;
+                if (!obs_parse_dirent((const unsigned char *)dents + pos, (size_t)(n - pos),
+                                      &reclen, &type, &namlen, &name)) {
+                    stop_dir = 1;
                     break;
-                unsigned char type = (unsigned char)dents[pos + OBS_DIRENT_TYPE];
-                unsigned int namlen = (unsigned char)dents[pos + OBS_DIRENT_NAMLEN];
-                const char *name = dents + pos + OBS_DIRENT_NAME;
+                }
                 int dot = (namlen == 1 && name[0] == '.') ||
                           (namlen == 2 && name[0] == '.' && name[1] == '.');
-                if (type == OBS_DT_DIR && !dot && namlen > 0) {
+                if ((type == OBS_DT_DIR || type == 0) && !dot && namlen > 0) {
                     char candidate[1024];
                     size_t k = obs_append(candidate, 0, sizeof(candidate), root);
                     k = obs_append(candidate, k, sizeof(candidate), "/");
@@ -245,6 +303,9 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
                     }
                 }
                 pos += (long)reclen;
+            }
+            if (stop_dir || count >= max_count) {
+                break;
             }
         }
         sceKernelClose(dir);
@@ -529,18 +590,20 @@ static obs_result check_metadata_differential(void) {
                 break;
             }
             long pos = 0;
-            while (pos + OBS_DIRENT_NAME < n) {
-                unsigned int reclen = (unsigned int)obs_le(
-                    (const unsigned char *)dents + pos, OBS_DIRENT_RECLEN, 2);
-                if (reclen == 0) {
+            int stop_dir = 0;
+            while (pos + 8 <= n) {
+                unsigned int reclen = 0;
+                unsigned char type = 0;
+                unsigned int namlen = 0;
+                const char *name = NULL;
+                if (!obs_parse_dirent((const unsigned char *)dents + pos, (size_t)(n - pos),
+                                      &reclen, &type, &namlen, &name)) {
+                    stop_dir = 1;
                     break;
                 }
-                unsigned char type = (unsigned char)dents[pos + OBS_DIRENT_TYPE];
-                unsigned int namlen = (unsigned char)dents[pos + OBS_DIRENT_NAMLEN];
-                const char *name = dents + pos + OBS_DIRENT_NAME;
                 int dot = (namlen == 1 && name[0] == '.') ||
                           (namlen == 2 && name[0] == '.' && name[1] == '.');
-                if (type == OBS_DT_DIR && !dot && namlen > 0) {
+                if ((type == OBS_DT_DIR || type == 0) && !dot && namlen > 0) {
                     char path[1024];
                     unsigned char header[32];
 
@@ -580,6 +643,9 @@ static obs_result check_metadata_differential(void) {
                     }
                 }
                 pos += (long)reclen;
+            }
+            if (stop_dir) {
+                break;
             }
         }
         sceKernelClose(dir);

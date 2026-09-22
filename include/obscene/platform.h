@@ -632,6 +632,7 @@ OBS_WEAK int sceKernelGetModuleInfo(int handle, void *info);
 
 /* ---- libSceSysmodule: system module control ------------------------------- */
 OBS_WEAK int sceSysmoduleLoadModule(uint16_t id);
+OBS_WEAK int sceSysmoduleUnloadModule(uint16_t id);
 OBS_WEAK int sceSysmoduleIsLoaded(uint16_t id);
 
 /* ---- libSceLibcInternal: the C runtime -------------------------------------
@@ -862,6 +863,7 @@ OBS_WEAK int sceSysmoduleIsLoaded(uint16_t id);
 
 OBS_WEAK int sceUserServiceInitialize(const void *params);
 OBS_WEAK int sceUserServiceGetInitialUser(int32_t *user_id_out);
+OBS_WEAK int sceUserServiceGetAgeLevel(int32_t user_id, int32_t *age_level_out);
 OBS_WEAK int sceUserServiceTerminate(void);
 
 /* ---- libSceVideoOut -------------------------------------------------------- */
@@ -1001,7 +1003,10 @@ OBS_WEAK int scePadRead(int handle, void *data, int num);
 OBS_WEAK int sceKeyboardInit(void);
 OBS_WEAK int sceKeyboardOpen(int user_id, int type, int index, void *param);
 OBS_WEAK int sceKeyboardClose(int handle);
+OBS_WEAK int sceKeyboardRead(int handle, void *data, int num);
 OBS_WEAK int sceKeyboardReadState(int handle, void *data);
+OBS_WEAK int sceKeyboardSetProcessPrivilege(int privilege);
+OBS_WEAK int sceKeyboardSetProcessFocus(int focus);
 
 /* ---- libSceMouse ----------------------------------------------------------- */
 OBS_WEAK int sceMouseInit(void);

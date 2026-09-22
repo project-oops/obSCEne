@@ -1084,6 +1084,11 @@ int sceSysmoduleLoadModule(uint16_t id) {
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 
+int sceSysmoduleUnloadModule(uint16_t id) {
+    (void)id;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
 int sceSysmoduleIsLoaded(uint16_t id) {
     (void)id;
     return OBS_HOST_NOT_IMPLEMENTED;
@@ -1096,6 +1101,12 @@ int sceUserServiceInitialize(const void *params) {
 
 int sceUserServiceGetInitialUser(int32_t *user_id_out) {
     (void)user_id_out;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceUserServiceGetAgeLevel(int32_t user_id, int32_t *age_level_out) {
+    (void)user_id;
+    (void)age_level_out;
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 

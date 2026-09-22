@@ -709,7 +709,7 @@ int obs_linkmap_readable(uintptr_t p) {
 #else
     /* Never attempt to read from eboot text segment (xotext), which is execute-only on
      * PS5 */
-    if (p >= 0x400000UL && p < 0x440000UL) {
+    if (p >= 0x400000UL && p < 0x500000UL) {
         return 0;
     }
     char info[96];
@@ -1054,6 +1054,7 @@ typedef struct {
     int64_t r_addend;
 } obs_elf64_rela;
 
+#if !defined(OBSCENE_TARGET_EBOOT)
 static uintptr_t obs_find_own_base(void) {
     uintptr_t addr = (uintptr_t)&obs_bind_dynamic_symbols;
     addr &= ~0x3fffUL;
@@ -1061,7 +1062,7 @@ static uintptr_t obs_find_own_base(void) {
         if (addr < 0x10000UL) {
             break;
         }
-        if ((obs_get_payload_args() != NULL || obs_linkmap_readable(addr)) &&
+        if (obs_linkmap_readable(addr) &&
             *(const uint32_t *)addr == 0x464c457f) {
             return addr;
         }
@@ -1091,8 +1092,15 @@ static const void *const s_weak_posix_refs[] = {
     (const void *)&__error,
 };
 #endif
+#endif
 
 static void obs_relocate_payload_got(void) {
+#if defined(OBSCENE_TARGET_EBOOT)
+    return;
+#else
+    if (obs_get_payload_args() == NULL) {
+        return;
+    }
 #if !defined(OBSCENE_HOST_BUILD)
     (void)s_weak_posix_refs;
 #endif
@@ -1235,6 +1243,7 @@ static void obs_relocate_payload_got(void) {
             }
         }
     }
+#endif
 }
 
 void obs_bind_dynamic_symbols(void) {

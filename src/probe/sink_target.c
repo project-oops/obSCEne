@@ -15,6 +15,8 @@
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/sink.h"
+#include "oops/syscall.h"
+#include "oops/system.h"
 
 struct sce_timeval {
     int64_t tv_sec;
@@ -50,57 +52,116 @@ OBS_WEAK int sceKernelMkdir(const char *path, uint16_t mode);
  */
 #define OBS_SINK_MODE ((uint16_t)0666)
 
+static void obs_sink_target_init_privilege(void) {
+    static int s_done = 0;
+    if (!s_done) {
+        s_done = 1;
+#if !defined(OBSCENE_HOST_BUILD)
+        sys_call_init(NULL);
+#if defined(OBSCENE_TARGET_EBOOT)
+        /* On native title eboot, escape sandbox via resident daemon (D004) */
+        (void)oops_system_escape_sandbox();
+#endif
+#endif
+    }
+}
+
 int obs_sink_backend_open(const char *path) {
+    obs_sink_target_init_privilege();
     /* Weak, like every platform declaration, so a platform without file support
      * resolves these to null. Tested before the call rather than after: jumping to zero
      * would end the run before a single record had been written anywhere, including to
      * the text channel that was about to work. */
-    if (!obs_address_is_callable((const void *)&sceKernelOpen) ||
-        !obs_address_is_callable((const void *)&sceKernelWrite)) {
-        return -1;
+    if (obs_address_is_callable((const void *)&sceKernelOpen) &&
+        obs_address_is_callable((const void *)&sceKernelWrite)) {
+        int fd = sceKernelOpen(path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC, OBS_SINK_MODE);
+        if (fd >= 0) {
+            return fd;
+        }
     }
-    return sceKernelOpen(path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC, OBS_SINK_MODE);
+#if !defined(OBSCENE_HOST_BUILD)
+    long fd = sys_call(SYS_open, (long)path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC, OBS_SINK_MODE, 0, 0, 0);
+    if (fd >= 0) {
+        return (int)fd;
+    }
+#endif
+    return -1;
 }
 
 long obs_sink_backend_write(int fd, const void *bytes, size_t len) {
-    if (!obs_address_is_callable((const void *)&sceKernelWrite)) {
-        return -1;
+    if (obs_address_is_callable((const void *)&sceKernelWrite)) {
+        long n = (long)sceKernelWrite(fd, bytes, len);
+        if (n >= 0) {
+            return n;
+        }
     }
-    return (long)sceKernelWrite(fd, bytes, len);
+#if !defined(OBSCENE_HOST_BUILD)
+    return sys_call(SYS_write, fd, (long)bytes, (long)len, 0, 0, 0);
+#else
+    return -1;
+#endif
 }
 
 void obs_sink_backend_close(int fd) {
     if (obs_address_is_callable((const void *)&sceKernelClose)) {
         sceKernelClose(fd);
+        return;
     }
+#if !defined(OBSCENE_HOST_BUILD)
+    sys_call(SYS_close, fd, 0, 0, 0, 0, 0);
+#endif
 }
 
 int obs_sink_backend_open_read(const char *path) {
+    obs_sink_target_init_privilege();
     /* Guarded like every other platform call here: a loader without file support
      * resolves these to null, and jumping to zero while looking for an *optional*
      * previous report would end a run that had nothing wrong with it. */
-    if (!obs_address_is_callable((const void *)&sceKernelOpen) ||
-        !obs_address_is_callable((const void *)&sceKernelRead)) {
-        return -1;
+    if (obs_address_is_callable((const void *)&sceKernelOpen) &&
+        obs_address_is_callable((const void *)&sceKernelRead)) {
+        int fd = sceKernelOpen(path, OBS_O_RDONLY, 0);
+        if (fd >= 0) {
+            return fd;
+        }
     }
-    /* No `O_CREAT`: a report that is not there is the ordinary first-run case, and
-     * creating an empty one would turn "nothing to learn" into "a file that says
-     * nothing", which the caller cannot tell from a run that finished cleanly. */
-    return sceKernelOpen(path, OBS_O_RDONLY, 0);
+#if !defined(OBSCENE_HOST_BUILD)
+    long fd = sys_call(SYS_open, (long)path, OBS_O_RDONLY, 0, 0, 0, 0);
+    if (fd >= 0) {
+        return (int)fd;
+    }
+#endif
+    return -1;
 }
 
 long obs_sink_backend_read(int fd, void *bytes, size_t len) {
-    if (!obs_address_is_callable((const void *)&sceKernelRead)) {
-        return -1;
+    if (obs_address_is_callable((const void *)&sceKernelRead)) {
+        long n = (long)sceKernelRead(fd, bytes, len);
+        if (n >= 0) {
+            return n;
+        }
     }
-    return (long)sceKernelRead(fd, bytes, len);
+#if !defined(OBSCENE_HOST_BUILD)
+    return sys_call(SYS_read, fd, (long)bytes, (long)len, 0, 0, 0);
+#else
+    return -1;
+#endif
 }
 
 int obs_sink_backend_mkdir(const char *path) {
-    if (!obs_address_is_callable((const void *)&sceKernelMkdir)) {
-        return -1;
+    obs_sink_target_init_privilege();
+    if (obs_address_is_callable((const void *)&sceKernelMkdir)) {
+        int rc = sceKernelMkdir(path, OBS_SINK_MODE);
+        if (rc == 0) {
+            return 0;
+        }
     }
-    return sceKernelMkdir(path, OBS_SINK_MODE);
+#if !defined(OBSCENE_HOST_BUILD)
+    long rc = sys_call(SYS_mkdir, (long)path, OBS_SINK_MODE, 0, 0, 0, 0);
+    if (rc == 0) {
+        return 0;
+    }
+#endif
+    return -1;
 }
 
 uint64_t obs_sink_backend_time(void) {
@@ -110,6 +171,15 @@ uint64_t obs_sink_backend_time(void) {
             return (uint64_t)tv.tv_sec;
         }
     }
+#if !defined(OBSCENE_HOST_BUILD)
+    struct {
+        int64_t sec;
+        long nsec;
+    } ts;
+    if (sys_call(SYS_clock_gettime, 0, (long)&ts, 0, 0, 0, 0) == 0 && ts.sec > 0) {
+        return (uint64_t)ts.sec;
+    }
+#endif
     if (obs_address_is_callable((const void *)&sceKernelGetProcessTime)) {
         return sceKernelGetProcessTime();
     }

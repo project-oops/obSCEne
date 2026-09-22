@@ -2701,10 +2701,13 @@ fn run_hw_install_native(
     let mut session = pros_link::files::Session::open(&pros_link::Link::to(&console.address))?;
     let _ = session.make_directory(base);
     let _ = session.make_directory(&remote);
+    let mut ledger = pros_core::deployed::Ledger::default();
     let summary = pros_core::transfer::upload(
         &mut session,
         dir,
         &remote,
+        &mut ledger,
+        pros_core::transfer::Resend::Everything,
         &mut |progress| println!("  {}", progress.current),
         &|| false,
     );

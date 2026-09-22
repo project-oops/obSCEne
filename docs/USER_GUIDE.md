@@ -121,8 +121,23 @@ OBS|bytes|130-layout/kquery|sceKernelVirtualQueryInfo|extent|0x0|001000000000000
 
 ---
 
-## 5. Capturing Reports with `obscene-tool`
+## 5. Capturing Reports with `obscene-tool` and `pull-log`
 
+There are two primary ways to retrieve obSCEne reports from physical hardware:
+
+### Method 1: Pulling Completed Log Files via Prosperous FTP (`pull-log`)
+When obSCEne runs, the sink writes report logs to persistent console mounts (e.g. `/mnt/usb0/obscene/`, `/data/homebrew/PPSA90000`, `/data/`).
+You can pull the latest run directly using the front-door CLI:
+
+```bash
+# Auto-discovers the newest report on console and saves to reports/obscene-report.txt:
+./bin/obscene pull-log
+
+# Or explicitly specify destination:
+./bin/obscene pull-log reports/run30-report.txt
+```
+
+### Method 2: Capturing Live over Kernel Log Stream (`report`)
 `obscene-tool report` captures obscene's own `OBS|`-prefixed records off the console system log
 into a plain text file - not JSON, and not a conversion of an existing log:
 

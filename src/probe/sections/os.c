@@ -7,6 +7,7 @@
 
 #include "obscene/harness.h"
 #include "obscene/platform.h"
+#include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 
@@ -383,6 +384,34 @@ static obs_result check_initial_user(void) {
     return obs_pass_value((uint64_t)(uint32_t)user);
 }
 
+static obs_result check_user_age_level(void) {
+    if (!obs_address_is_callable((const void *)&sceUserServiceGetAgeLevel)) {
+        return obs_skip("the loader did not resolve sceUserServiceGetAgeLevel");
+    }
+    int32_t user = -1;
+    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
+        sceUserServiceGetInitialUser(&user);
+    }
+    obs_report_measure("070-user/age-level", "initial-user", "user_id",
+                       (uint64_t)(uint32_t)user, "id");
+    if (user >= 0) {
+        int32_t age_level = -999;
+        int rc = sceUserServiceGetAgeLevel(user, &age_level);
+        obs_report_measure("070-user/age-level", "initial-user", "return_code",
+                           (uint64_t)(uint32_t)rc, "code");
+        obs_report_measure("070-user/age-level", "initial-user", "age_level",
+                           (uint64_t)(uint32_t)age_level, "val");
+    }
+    int32_t inv_age = -999;
+    int rc_inv = sceUserServiceGetAgeLevel(-1, &inv_age);
+    obs_report_measure("070-user/age-level", "invalid-user", "return_code",
+                       (uint64_t)(uint32_t)rc_inv, "code");
+    obs_report_measure("070-user/age-level", "invalid-user", "age_level",
+                       (uint64_t)(uint32_t)inv_age, "val");
+
+    return obs_pass();
+}
+
 static const obs_check user_checks[] = {
     {"070-user/initialise", "libSceUserService", "sceUserServiceInitialize",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceUserServiceInitialize,
@@ -390,6 +419,9 @@ static const obs_check user_checks[] = {
     {"070-user/initial-user", "libSceUserService", "sceUserServiceGetInitialUser",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceUserServiceGetInitialUser,
      check_initial_user, OBS_FROM_ASSUMED},
+    {"070-user/age-level", "libSceUserService", "sceUserServiceGetAgeLevel",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceUserServiceGetAgeLevel,
+     check_user_age_level, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_user = {

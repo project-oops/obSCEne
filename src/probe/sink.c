@@ -46,6 +46,22 @@
 #include "obscene/runtime.h"
 #include "obscene/sink.h"
 
+#if defined(OBSCENE_TARGET_EBOOT)
+#include "oops/savedata.h"
+
+static char s_savedata_mount[64] = {0};
+
+static void obs_sink_ensure_savedata(void) {
+    if (s_savedata_mount[0] == '\0') {
+        (void)oops_savedata_mount("obscene",
+                                  (oops_savedata_mode_t)(OOPS_SAVEDATA_MODE_CREATE | OOPS_SAVEDATA_MODE_READ_WRITE),
+                                  s_savedata_mount, sizeof(s_savedata_mount));
+    }
+}
+#else
+static void obs_sink_ensure_savedata(void) {}
+#endif
+
 /* Where the report is written, in order of preference.
  *
  * `/data` first because it is the conventional writable location for an unsigned
@@ -59,8 +75,11 @@ static const char *const obs_sink_paths[] = {
     "/mnt/usb0/obscene-report.txt",
     "/mnt/usb1/obscene/report.txt",
     "/mnt/usb1/obscene-report.txt",
+    "/data/homebrew/PPSA90000/report.txt",
     "/data/obscene/report.txt",
     "/data/obscene-report.txt",
+    "/savedata0/report.txt",
+    "/savedata0/obscene-report.txt",
     "/download0/obscene-report.txt",
     "reports/obscene-report.txt",
     "obscene-report.txt",
@@ -96,11 +115,19 @@ const char *obs_sink_open(void) {
     }
     obs_sink_tried = 1;
 
+    obs_sink_ensure_savedata();
+
     /* Ensure dedicated persistent directories exist if supported */
     (void)obs_sink_backend_mkdir("/mnt/usb0/obscene");
     (void)obs_sink_backend_mkdir("/mnt/usb1/obscene");
+    (void)obs_sink_backend_mkdir("/data/homebrew/PPSA90000");
     (void)obs_sink_backend_mkdir("/data/obscene");
     (void)obs_sink_backend_mkdir("reports");
+#if defined(OBSCENE_TARGET_EBOOT)
+    if (s_savedata_mount[0] != '\0') {
+        (void)obs_sink_backend_mkdir(s_savedata_mount);
+    }
+#endif
 
     /* Try to open a timestamped archive sink first so this run never clobbers previous
      * ones */
@@ -109,7 +136,9 @@ const char *obs_sink_open(void) {
         static const char *const ts_prefixes[] = {
             "/mnt/usb0/obscene/report-", "/mnt/usb0/obscene-report-",
             "/mnt/usb1/obscene/report-", "/mnt/usb1/obscene-report-",
+            "/data/homebrew/PPSA90000/report-",
             "/data/obscene/report-",     "/data/obscene-report-",
+            "/savedata0/report-",
             "reports/report-",           "obscene-report-",
         };
         char ts_candidate[128];
@@ -187,6 +216,12 @@ void obs_sink_close(void) {
         obs_sink_backend_close(obs_sink_ts_fd);
         obs_sink_ts_fd = -1;
     }
+#if defined(OBSCENE_TARGET_EBOOT)
+    if (s_savedata_mount[0] != '\0') {
+        (void)oops_savedata_unmount(s_savedata_mount, true);
+        s_savedata_mount[0] = '\0';
+    }
+#endif
 }
 
 int obs_sink_is_open(void) {
@@ -548,6 +583,7 @@ static void obs_resume_consider(const char *line, const char *build_id) {
 }
 
 void obs_resume_load(const char *build_id, unsigned int checks) {
+    obs_sink_ensure_savedata();
     obs_resume_count = 0;
     obs_resume_full = 0;
     obs_resume_watch_count = 0;

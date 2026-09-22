@@ -737,11 +737,16 @@ static obs_result check_user_service_layout(void) {
     int32_t (*fn_get_user_name)(int32_t userId, char *userName, size_t size) =
         (int32_t (*)(int32_t, char *, size_t))layout_resolve_sym(
             "libSceUserService", "sceUserServiceGetUserName");
+    int32_t (*fn_get_age_level)(int32_t userId, int32_t *ageLevel) =
+        (int32_t (*)(int32_t, int32_t *))layout_resolve_sym(
+            "libSceUserService", "sceUserServiceGetAgeLevel");
 
     obs_report_measure("130-layout/user-service", "sceUserServiceGetLoginUserIdList",
                        "resolved", (uint64_t)(fn_get_user_list != NULL ? 1 : 0), "bool");
+    obs_report_measure("130-layout/user-service", "sceUserServiceGetAgeLevel",
+                       "resolved", (uint64_t)(fn_get_age_level != NULL ? 1 : 0), "bool");
 
-    if (fn_get_user_list == NULL && fn_get_initial_user == NULL) {
+    if (fn_get_user_list == NULL && fn_get_initial_user == NULL && fn_get_age_level == NULL) {
         return obs_skip("libSceUserService symbols not available in this context");
     }
 
@@ -753,6 +758,26 @@ static obs_result check_user_service_layout(void) {
                            "user_id", (uint64_t)(uint32_t)initial_user_id, "id");
         obs_report_measure("130-layout/user-service", "sceUserServiceGetInitialUser",
                            "return_code", (uint64_t)(uint32_t)rc, "code");
+    }
+
+    if (fn_get_age_level != NULL &&
+        obs_address_is_callable((const void *)fn_get_age_level)) {
+        if (initial_user_id >= 0) {
+            int32_t age_lvl = -999;
+            int rc = fn_get_age_level(initial_user_id, &age_lvl);
+            obs_report_measure("130-layout/user-service", "sceUserServiceGetAgeLevel",
+                               "user_id", (uint64_t)(uint32_t)initial_user_id, "id");
+            obs_report_measure("130-layout/user-service", "sceUserServiceGetAgeLevel",
+                               "return_code", (uint64_t)(uint32_t)rc, "code");
+            obs_report_measure("130-layout/user-service", "sceUserServiceGetAgeLevel",
+                               "age_level", (uint64_t)(uint32_t)age_lvl, "val");
+        }
+        int32_t inv_age = -999;
+        int rc_inv = fn_get_age_level(-1, &inv_age);
+        obs_report_measure("130-layout/user-service", "sceUserServiceGetAgeLevel_invalid",
+                           "return_code", (uint64_t)(uint32_t)rc_inv, "code");
+        obs_report_measure("130-layout/user-service", "sceUserServiceGetAgeLevel_invalid",
+                           "age_level", (uint64_t)(uint32_t)inv_age, "val");
     }
 
     layout_probe probe;

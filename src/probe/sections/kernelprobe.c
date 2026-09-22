@@ -65,6 +65,7 @@ static int s_have_payload_args = 0;
 void obs_capture_payload_args(unsigned long args);
 void obs_capture_payload_args(unsigned long args) {
     obs_payload_args = args;
+#if !defined(OBSCENE_TARGET_EBOOT)
     if (args >= 0x10000UL && args < 0x0000800000000000UL && (args & 0x7UL) == 0) {
         const payload_args_t *src = (const payload_args_t *)args;
         s_local_payload_args.sys_dynlib_dlsym = src->sys_dynlib_dlsym;
@@ -85,11 +86,11 @@ void obs_capture_payload_args(unsigned long args) {
          * its callers: no primitive is issued against a struct that is not a
          * payload_args. (D324) */
         if (obs_address_is_callable(
-                (const void *)s_local_payload_args.sys_dynlib_dlsym) ||
-            s_local_payload_args.kexport_table != NULL) {
+                (const void *)s_local_payload_args.sys_dynlib_dlsym)) {
             s_have_payload_args = 1;
         }
     }
+#endif
 }
 
 void obs_set_payload_kexport_table(void *table) {

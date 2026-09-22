@@ -1227,5 +1227,6 @@ obs_tally obs_run_all(void) {
     obs_report_tally(total);
     obs_report_time_total(total_run_us);
     obs_report_end(total_run_us);
+    obs_sink_close();
     return total;
 }

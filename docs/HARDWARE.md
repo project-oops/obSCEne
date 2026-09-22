@@ -282,8 +282,14 @@ Two separate things, both of which look like a broken retrieval path.
 `obscene-report.txt`, and a minute after the run the whole path is `No such file or directory`.
 Retrieval happens *during* a run or through a channel that leaves the sandbox as it goes - the
 system log (D233), which is the second reason that is written unconditionally rather than
-chosen between. (D238) In practice you never chase the file: `./bin/obscene report` reads the
-records off that log, and `./bin/obscene deploy` captures them across the launch (D269).
+chosen between. (D238) In practice you can read records off the live log with `./bin/obscene report`,
+or capture them across launch with `./bin/obscene deploy` (D269).
+
+**Persistent sinks survive title exit.** For native runs (`eboot` / `BIG_APP`) or payload runs,
+the sink probe also mounts persistent storage candidates (`/mnt/usb0/obscene`, `/data/homebrew/PPSA90000`,
+`/data`). When reachable, obSCEne writes both a timestamped run archive (`report-<timestamp>.txt`) and
+`report.txt` with mode `0666`. These persist indefinitely and can be pulled post-run via prosperous FTP
+using `./bin/obscene pull-log`.
 
 **The file was created `0600`.** A title writes it as whatever user the platform runs titles
 as; the shell server and the file-transfer server are somebody else, and both got

@@ -975,6 +975,59 @@ static obs_result check_unwind_abi(void) {
     return obs_pass_value((uint64_t)resolved_count);
 }
 
+/* REQ-20260921T1830Z-b4d1: DWARF unwinder frame resolution symbol bindability sweep */
+static obs_result check_unwind_frame_abi(void) {
+    static const char *symbols[] = {
+        /* Primary FreeBSD/ELF route libunwind prefers */
+        "dl_iterate_phdr",
+        /* Explicit frame registration fallback family */
+        "__register_frame",
+        "__deregister_frame",
+        "__register_frame_info",
+        "__deregister_frame_info",
+        /* Modern ELF route */
+        "_dl_find_object",
+        /* Dynamic linker introspection controls */
+        "dladdr",
+        "dlsym",
+    };
+
+    static const struct {
+        const char *name;
+        int handle_hint;
+    } targets[] = {
+        {"libkernel", 0x2001},
+        {"libSceLibcInternal", 1},
+        {"self", OBS_HANDLE_SELF},
+    };
+
+    int h_kernel = obs_module_open("libkernel");
+    if (h_kernel < 0) h_kernel = 0x2001;
+    int h_libc = obs_module_open("libSceLibcInternal");
+    if (h_libc < 0) h_libc = 1;
+
+    unsigned int resolved_count = 0;
+    for (size_t m = 0; m < OBS_COUNT(targets); m++) {
+        int h = targets[m].handle_hint;
+        if (m == 0 && h_kernel > 0) h = h_kernel;
+        if (m == 1 && h_libc > 0) h = h_libc;
+
+        for (size_t i = 0; i < OBS_COUNT(symbols); i++) {
+            const char *sym = symbols[i];
+            const void *addr = obs_module_symbol(h, sym);
+            int present = (addr != NULL && obs_address_is_callable(addr)) ? 1 : 0;
+            obs_report_symbol(targets[m].name, sym, present, OBS_SHARED);
+            obs_report_measure("035-libc/unwind-frame-abi", sym, targets[m].name, (uint64_t)present, "bool");
+            if (present) {
+                resolved_count++;
+                obs_report_measure("035-libc/unwind-frame-abi", sym, "vaddr", (uint64_t)(uintptr_t)addr, "address");
+            }
+        }
+    }
+
+    return obs_pass_value((uint64_t)resolved_count);
+}
+
 static const obs_check libc_checks[] = {
     {"035-libc/strlen", "libSceLibcInternal", "strlen", OBS_CAP_NONE, OBS_CAP_LIBC,
      (const void *)&strlen, check_strlen, OBS_FROM_SPEC},
@@ -1047,6 +1100,9 @@ static const obs_check libc_checks[] = {
      OBS_FROM_ASSUMED},
     {"035-libc/unwind-abi", "libSceLibcInternal", "_Unwind_RaiseException", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_unwind_abi, check_unwind_abi,
+     OBS_FROM_ASSUMED},
+    {"035-libc/unwind-frame-abi", "libSceLibcInternal", "dl_iterate_phdr", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)check_unwind_frame_abi, check_unwind_frame_abi,
      OBS_FROM_ASSUMED},
 };
 

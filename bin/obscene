@@ -27,6 +27,7 @@
 #   ./bin/obscene injector-build  build the injector and stop, no console
 #   ./bin/obscene payload   build the plain-ELF payload, run it via elfldr, capture the system log
 #   ./bin/obscene report    capture obscene's records from the console system log to a file
+#   ./bin/obscene pull-log  pull newest run log/report from console via prosperous FTP (aliases: pull, pull-report)
 #   ./bin/obscene recover   read-only: what the console recorded, after a crash
 #   ./bin/obscene hwsweep   iterate against hardware, excluding each call that does not return
 #   ./bin/obscene minbuild  build the minimal diagnostic package
@@ -133,6 +134,9 @@ case "${1:-help}" in
     # launch it separately or use `deploy`, which launches and captures together.
     report)   shift; _obscene_tool report "$@" ;;
     klog)     shift; _obscene_tool report "$@" ;;   # the channel's name, kept as an alias
+    # `pull-log` pulls the newest obSCEne log/report file from the target console via prosperous FTP.
+    # Discovers reports across persistent mounts (/mnt/usb0/obscene, /data, etc.) and populates reports/.
+    pull-log|pull|pull-report) shift; bash scripts/pull-log.sh "$@" ;;
     # Read-only forensics and the hardware sweep, each one script behind one verb.
     recover)  shift; bash scripts/oops-recover.sh "$@" ;;
     hwsweep)  shift; bash scripts/oops-hwsweep.sh "$@" ;;

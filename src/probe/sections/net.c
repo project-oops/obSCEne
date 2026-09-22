@@ -844,6 +844,44 @@ static obs_result check_net_recv_would_block(void) {
 /* ---- Ask 2.4: does an accepted socket inherit the listener's non-blocking mode?
  * ---------- */
 
+typedef struct {
+    volatile int done;
+    const net_fns *f;
+    volatile int listener;
+    volatile int client;
+    volatile int accepted;
+} obs_net_watchdog_t;
+
+static void *obs_net_accept_watchdog(void *arg) {
+    obs_net_watchdog_t *w = (obs_net_watchdog_t *)arg;
+    for (int i = 0; i < 20; i++) {
+        if (w->done) {
+            return NULL;
+        }
+        if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+            sceKernelUsleep(50000); /* 50ms * 20 = 1000ms max */
+        }
+    }
+    if (!w->done) {
+        int a = w->accepted;
+        w->accepted = -1;
+        if (a >= 0) {
+            net_close_wrapper(w->f, a);
+        }
+        int c = w->client;
+        w->client = -1;
+        if (c >= 0) {
+            net_close_wrapper(w->f, c);
+        }
+        int l = w->listener;
+        w->listener = -1;
+        if (l >= 0) {
+            net_close_wrapper(w->f, l);
+        }
+    }
+    return NULL;
+}
+
 static obs_result check_net_accept_inherits(void) {
     net_fns f;
     if (!net_resolve_all(&f)) {
@@ -862,15 +900,69 @@ static obs_result check_net_accept_inherits(void) {
     }
     net_set_nonblocking(&f, listener);
 
+    /* Timeout guard on listener so accept cannot block indefinitely */
+    struct {
+        int64_t tv_sec;
+        int64_t tv_usec;
+    } rcvtimeo16 = {0, 200000}; /* 200ms */
+    int rrc16 = net_setsockopt_wrapper(&f, listener, OBS_NET_SOL_SOCKET, 0x1006 /* SO_RCVTIMEO */,
+                                       &rcvtimeo16, (uint32_t)sizeof(rcvtimeo16));
+    if (rrc16 != 0) {
+        struct {
+            int32_t tv_sec;
+            int32_t tv_usec;
+        } rcvtimeo8 = {0, 200000};
+        (void)net_setsockopt_wrapper(&f, listener, OBS_NET_SOL_SOCKET, 0x1006 /* SO_RCVTIMEO */,
+                                     &rcvtimeo8, (uint32_t)sizeof(rcvtimeo8));
+    }
+
+    obs_net_watchdog_t w;
+    w.done = 0;
+    w.f = &f;
+    w.listener = listener;
+    w.client = -1;
+    w.accepted = -1;
+
+    ScePthread watchdog_th;
+    int have_watchdog = 0;
+    if (obs_address_is_callable((const void *)&scePthreadCreate)) {
+        have_watchdog = (scePthreadCreate(&watchdog_th, NULL, obs_net_accept_watchdog, &w,
+                                          "obs-net-wd") == 0);
+    }
+
     /* Loopback self-connect */
     int client = net_open_socket(&f, "obscene");
     if (client < 0) {
+        w.done = 1;
+        if (have_watchdog && obs_address_is_callable((const void *)&scePthreadJoin)) {
+            scePthreadJoin(watchdog_th, NULL);
+        }
         net_close_wrapper(&f, listener);
         return obs_pending("no client socket for the self-connect; re-run");
     }
+    w.client = client;
+
     obs_net_sockaddr_in dst;
     net_fill_addr(&dst, OBS_NET_PORT_ACCEPT, OBS_NET_LOOPBACK, (uint8_t)sizeof(dst));
-    (void)net_connect_wrapper(&f, client, &dst, (uint32_t)sizeof(dst));
+    int conn_rc = net_connect_wrapper(&f, client, &dst, (uint32_t)sizeof(dst));
+    obs_report_measure("102-net/accept-inherits", "connect", "rc",
+                       (uint64_t)(uint32_t)conn_rc, "rc");
+    if (conn_rc != 0) {
+        w.done = 1;
+        if (have_watchdog && obs_address_is_callable((const void *)&scePthreadJoin)) {
+            scePthreadJoin(watchdog_th, NULL);
+        }
+        if (w.client >= 0) {
+            net_close_wrapper(&f, client);
+            w.client = -1;
+        }
+        if (w.listener >= 0) {
+            net_close_wrapper(&f, listener);
+            w.listener = -1;
+        }
+        return obs_fail_code("the client could not connect to the listener",
+                             (uint64_t)(uint32_t)conn_rc);
+    }
 
     int accepted = -1;
     for (int i = 0; i < 20 && accepted < 0; i++) {
@@ -880,11 +972,24 @@ static obs_result check_net_accept_inherits(void) {
         }
     }
     if (accepted < 0) {
-        net_close_wrapper(&f, client);
-        net_close_wrapper(&f, listener);
+        w.done = 1;
+        if (have_watchdog && obs_address_is_callable((const void *)&scePthreadJoin)) {
+            scePthreadJoin(watchdog_th, NULL);
+        }
+        if (w.client >= 0) {
+            net_close_wrapper(&f, client);
+            w.client = -1;
+        }
+        if (w.listener >= 0) {
+            net_close_wrapper(&f, listener);
+            w.listener = -1;
+        }
         return obs_pending(
             "the self-connect did not complete; loopback may be closed here");
     }
+    w.accepted = accepted;
+    obs_report_measure("102-net/accept-inherits", "accept", "accepted-fd",
+                       (uint64_t)(uint32_t)accepted, "fd");
 
     if (f.is_payload && f.fcntl != NULL) {
         long aflags = f.fcntl(accepted, 3 /* F_GETFL */, 0);
@@ -893,13 +998,24 @@ static obs_result check_net_accept_inherits(void) {
     }
 
     /* Guard against indefinite blocking if accepted socket did not inherit non-blocking
-     * mode */
+     * mode. Standard 64-bit FreeBSD/PS5 struct timeval is 16 bytes (int64_t tv_sec, tv_usec).
+     * Try 16-byte first, fallback to 8-byte if rejected. */
     struct {
-        uint32_t tv_sec;
-        uint32_t tv_usec;
-    } sndtimeo = {0, 100000}; /* 100ms timeout */
-    net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET, 0x1005 /* SO_SNDTIMEO */,
-                           &sndtimeo, (uint32_t)sizeof(sndtimeo));
+        int64_t tv_sec;
+        int64_t tv_usec;
+    } sndtimeo16 = {0, 100000}; /* 100ms timeout */
+    int so_rc16 = net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET, 0x1005 /* SO_SNDTIMEO */,
+                                         &sndtimeo16, (uint32_t)sizeof(sndtimeo16));
+    if (so_rc16 != 0) {
+        struct {
+            int32_t tv_sec;
+            int32_t tv_usec;
+        } sndtimeo8 = {0, 100000}; /* 100ms timeout */
+        (void)net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET, 0x1005 /* SO_SNDTIMEO */,
+                                     &sndtimeo8, (uint32_t)sizeof(sndtimeo8));
+    }
+    obs_report_measure("102-net/accept-inherits", "setsockopt", "SO_SNDTIMEO-rc",
+                       (uint64_t)(uint32_t)so_rc16, "rc");
 
     /* Send until write buffer saturation to definitively test non-blocking inheritance
      * vs blocking */
@@ -925,6 +1041,11 @@ static obs_result check_net_accept_inherits(void) {
         total_sent += last_rc;
     }
 
+    w.done = 1;
+    if (have_watchdog && obs_address_is_callable((const void *)&scePthreadJoin)) {
+        scePthreadJoin(watchdog_th, NULL);
+    }
+
     obs_report_measure("102-net/accept-inherits", f.is_payload ? "send" : "sceNetSend",
                        last_rc < 0 ? "would-block-code" : "sent",
                        (uint64_t)(uint32_t)last_rc, "raw-code");
@@ -942,9 +1063,18 @@ static obs_result check_net_accept_inherits(void) {
                            (uint64_t)(uint32_t)err, "errno");
     }
 
-    net_close_wrapper(&f, accepted);
-    net_close_wrapper(&f, client);
-    net_close_wrapper(&f, listener);
+    if (w.accepted >= 0) {
+        net_close_wrapper(&f, accepted);
+        w.accepted = -1;
+    }
+    if (w.client >= 0) {
+        net_close_wrapper(&f, client);
+        w.client = -1;
+    }
+    if (w.listener >= 0) {
+        net_close_wrapper(&f, listener);
+        w.listener = -1;
+    }
 
     if (last_rc < 0) {
         return obs_pass_value((uint64_t)(uint32_t)last_rc);
