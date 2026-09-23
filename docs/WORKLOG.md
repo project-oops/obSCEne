@@ -183,3 +183,8 @@ slow way.
 | 2026-09-21 | [Hardware Run 23: Machine-Compiled GFX1030 Pixel Shaders & Uniform Block Retirement](worklog/171-hardware-run23-compiled-pixel-shaders-and-uniform-blocks.md) |
 | 2026-09-21 | [Hardware Run 26: Compiled Texture Sampling (`image_sample`), Whole-Quad Mode (`s_wqm_b32`), Parameter 3 Telemetry, and DWARF Frame Resolution ABI Sweep](worklog/172-hardware-run26-compiled-texture-sampling-wqm-and-unwind-frame-abi.md) |
 | 2026-09-22 | [Hardware Run 28: Parameter Cache Addressing (`m0` Preamble) Settlement, Verified Texel Sampling, and `sceUserServiceGetAgeLevel` Resolution](worklog/173-hardware-run28-m0-parameter-cache-settlement-and-user-age-level.md) |
+| - | [174 - suspend lifecycle census (141-suspend) and button-bits edge capture](worklog/174-suspend-lifecycle-census-and-button-bits-edges.md) |
+| - | [175 - separate-alpha blend: positional-pairing arms (arm13/14/15)](worklog/175-separate-alpha-blend-pairing-arms.md) |
+| - | [176 - a GPU wedge killed the console; hardening the suite to blargg-reliable](worklog/176-gpu-wedge-console-kill-and-blargg-hardening.md) |
+| - | [177 - CP read extent measured past DCB declared size; inputext reachability on hardware](worklog/177-dcb-extent-and-inputext-hardware-measurements.md) |
+| 2026-09-23 | [178 - Blend quad lattice census measured on hardware; SEPARATE_ALPHA_BLEND eliminated](worklog/178-blend-quad-lattice-census-hardware-measurements.md) |

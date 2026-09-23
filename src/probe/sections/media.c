@@ -1447,9 +1447,16 @@ static obs_result check_pad_batched_read(void) {
     return obs_pass_value((uint64_t)extent);
 }
 
-/* Button bits: sample for a few seconds while Create, PS, touchpad-click and mic are
- * pressed in turn, and report the OR of every button word (offset 0) seen. Settles
- * whether Create is bit 16 and whether the others arrive at all. */
+/* Button bits: sample for a few seconds while each button is pressed in turn, and
+ * report both the OR of every button word (offset 0) seen and, in press order, the
+ * bit each new press set. The OR alone cannot map a button to a bit - pressing all of
+ * them yields one merged mask - so this also records a rising edge: the first sample a
+ * bit appears in emits an `edge` row carrying that bit's index. An operator pressing
+ * in a documented order (Cross, Circle, Square, Triangle, then L1/R1/L2/R3/... and the
+ * D-pad) reads those rows off in the same order, which answers REQ-...-d1c4's "for each
+ * button, the offset and bit that changed" from a single run. Offset is byte 0-3 of the
+ * 120-byte record (the button word); the paired stick-trigger-range check covers the
+ * axis bytes. */
 static obs_result check_pad_button_bits(void) {
     if (!obs_address_is_callable((const void *)&scePadReadState)) {
         return obs_skip("scePadReadState is not callable");
@@ -1458,15 +1465,28 @@ static obs_result check_pad_button_bits(void) {
     if (handle < 0) {
         return obs_pending("no controller attached: connect one and re-run");
     }
+    /* ~8s at 50ms: bounded, non-blocking, and long enough to press every button in
+     * turn with a beat between each so the edges land in distinct samples. */
     obs_report_measure("100-input/button-bits", "scePadReadState",
-                       "press-create-ps-touchpad-mic-now", 4, "prompt-seconds");
+                       "press-each-button-in-turn-now", 8, "prompt-seconds");
     uint32_t seen = 0;
-    /* ~4s at 50ms: bounded, non-blocking, and long enough to press four buttons in
-     * turn. */
-    for (int i = 0; i < 80; i++) {
+    unsigned int edges = 0;
+    for (int i = 0; i < 160; i++) {
         obs_probe_fill();
         if (scePadReadState(handle, s_probe_buf) == 0 || obs_probe_extent() >= 4u) {
-            seen |= obs_probe_word(0);
+            uint32_t word = obs_probe_word(0);
+            uint32_t risen = word & ~seen; /* bits newly set this sample */
+            seen |= word;
+            /* Emit one edge row per newly-set bit, in press order. The report
+             * preserves emission order, so the Nth edge is the Nth distinct button. */
+            for (int b = 0; b < 32 && risen != 0u; b++) {
+                if ((risen & (1u << b)) != 0u) {
+                    obs_report_measure("100-input/button-bits", "scePadReadState",
+                                       "edge", (uint64_t)b, "bit");
+                    risen &= ~(1u << b);
+                    edges++;
+                }
+            }
         }
         if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
             sceKernelUsleep(50000);
@@ -1478,6 +1498,8 @@ static obs_result check_pad_button_bits(void) {
     }
     obs_report_measure("100-input/button-bits", "scePadReadState", "button-or",
                        (uint64_t)seen, "bits");
+    obs_report_measure("100-input/button-bits", "scePadReadState", "edges",
+                       (uint64_t)edges, "count");
     return obs_pass_value((uint64_t)seen);
 }
 

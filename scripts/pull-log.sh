@@ -170,3 +170,4 @@ if [ -f "$DEST" ]; then
     echo "pull-log: complete ($bytes bytes, $obs_lines OBS records: $passes pass, $fails fail, $skips skip, $measures measurements)"
     echo "pull-log: verify with: ./bin/obscene verify $DEST"
 fi
+

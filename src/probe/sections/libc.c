@@ -963,7 +963,6 @@ static obs_result check_unwind_abi(void) {
             const char *sym = symbols[i];
             const void *addr = obs_module_symbol(h, sym);
             int present = (addr != NULL && obs_address_is_callable(addr)) ? 1 : 0;
-            obs_report_symbol(targets[m].name, sym, present, OBS_SHARED);
             obs_report_measure("035-libc/unwind-abi", sym, targets[m].name, (uint64_t)present, "bool");
             if (present) {
                 resolved_count++;
@@ -1016,7 +1015,6 @@ static obs_result check_unwind_frame_abi(void) {
             const char *sym = symbols[i];
             const void *addr = obs_module_symbol(h, sym);
             int present = (addr != NULL && obs_address_is_callable(addr)) ? 1 : 0;
-            obs_report_symbol(targets[m].name, sym, present, OBS_SHARED);
             obs_report_measure("035-libc/unwind-frame-abi", sym, targets[m].name, (uint64_t)present, "bool");
             if (present) {
                 resolved_count++;

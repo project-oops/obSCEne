@@ -70,6 +70,10 @@ extern const obs_section obs_section_relational;
 extern const obs_section obs_section_measure;
 extern const obs_section obs_section_layout;
 extern const obs_section obs_section_oracle;
+/* The suspend/resume lifecycle surface (REQ-...-5e8c). Beside the oracle because it
+ * asks the platform about itself - which entry points a big-app must call to be
+ * suspended cleanly - rather than testing an answer. Resolves, never calls. */
+extern const obs_section obs_section_suspend;
 extern const obs_section obs_section_memmap;
 extern const obs_section obs_section_jit;
 /* How many section rows the screen can hold.

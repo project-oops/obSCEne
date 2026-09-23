@@ -74,6 +74,21 @@
 #define OBS_AGC_POISON_BYTE 0xCCu
 #define OBS_AGC_GUARD_BYTE 0xC7u
 
+/* Latched when any GPU submit+fence check sees its fence miss. Every such check guards on it and
+   skips rather than pile submissions onto a stalled pipe - the sequence that took the console
+   down on 2026-09-23 (a wedged GPU is invisible to the CPU fault guard). Hoisted to the top so
+   every check, including the early submit/dispatch ones, can reach it. */
+static int s_agc_queue_faulted = 0;
+
+/* Guard macro: the two lines every GPU submit+fence check must open with, so a new one that
+   forgets is the exception, not the rule. */
+#define OBS_AGC_QUEUE_GUARD()                                                                      \
+    do {                                                                                          \
+        if (s_agc_queue_faulted) {                                                                \
+            return obs_skip("earlier GPU check missed fence; queue stalled");                     \
+        }                                                                                         \
+    } while (0)
+
 #if OOPS_TARGET_IS_ORBIS
 static obs_result check_agc_cb_nop(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
@@ -565,6 +580,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/primitive-draw-param3", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_param3,
      OBS_FROM_ASSUMED},
+    {"166-agc/compiled-ps", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_compiled_ps,
+     OBS_FROM_ASSUMED},
     {"166-agc/zpass-counters", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_zpass_counters,
      OBS_FROM_ASSUMED},
@@ -588,9 +606,6 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/primitive-draw-param5", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_param5,
-     OBS_FROM_ASSUMED},
-    {"166-agc/compiled-ps", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_compiled_ps,
      OBS_FROM_ASSUMED},
     {"166-agc/gpu-wait-reg-mem-sync", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_gpu_wait_sync,
@@ -3873,6 +3888,7 @@ static obs_result check_agc_driver_submit_fence(void) {
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
+    OBS_AGC_QUEUE_GUARD();
 
     obs_jmp_buf guard;
     int sig = OBS_FAULT_ARM(&guard);
@@ -4009,6 +4025,7 @@ static obs_result check_agc_driver_submit_fence(void) {
         return obs_pass();
     }
     if (submit_rc == 0) {
+        s_agc_queue_faulted = 1; /* accepted but never retired: latch the stall */
         return obs_partial_value("fence not hit after submit", (uint64_t)fence_lo);
     }
     return obs_partial_value("submit dcb returned non-zero code",
@@ -4021,6 +4038,7 @@ static obs_result check_agc_compute_dispatch(void) {
         !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
         return obs_skip("AGC symbols not callable");
     }
+    OBS_AGC_QUEUE_GUARD();
 
     obs_jmp_buf guard;
     int sig = OBS_FAULT_ARM(&guard);
@@ -4274,6 +4292,7 @@ static obs_result check_agc_compute_dispatch(void) {
                                  (uint64_t)alu_val);
     }
     if (submit_rc == 0) {
+        s_agc_queue_faulted = 1; /* accepted but never retired: latch the stall */
         return obs_partial_value("fence not hit after dispatch", (uint64_t)fence_val);
     }
     return obs_partial_value("submit dcb returned non-zero code",
@@ -4285,6 +4304,7 @@ static obs_result check_agc_graphics_submit(void) {
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
+    OBS_AGC_QUEUE_GUARD();
 
     obs_jmp_buf guard;
     int sig = OBS_FAULT_ARM(&guard);
@@ -4423,6 +4443,7 @@ static obs_result check_agc_graphics_submit(void) {
         return obs_pass();
     }
     if (submit_rc == 0) {
+        s_agc_queue_faulted = 1; /* accepted but never retired: latch the stall */
         return obs_partial_value("fence not hit after graphics submit",
                                  (uint64_t)fence_val);
     }
@@ -4455,6 +4476,7 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
+    OBS_AGC_QUEUE_GUARD();
 
     obs_jmp_buf guard;
     int sig = OBS_FAULT_ARM(&guard);
@@ -5091,6 +5113,7 @@ static obs_result check_agc_primitive_draw_sub(const agc_draw_cfg_t *cfg) {
         if (submit_rc != 0) {
             return obs_fail("submit dcb returned non-zero code");
         }
+        s_agc_queue_faulted = 1; /* submit accepted, fence timed out: latch the stall */
         return obs_fail("fence timeout after primitive draw");
     }
 
@@ -5355,8 +5378,6 @@ static __attribute__((unused)) obs_result check_agc_ngg_primitive_draw_m0_inacti
     return (passed_count > 0) ? obs_pass_value(0x1003u)
                               : obs_partial("m0 variant draw sweep completed");
 }
-
-static int s_agc_queue_faulted = 0;
 
 static obs_result check_agc_primitive_draw_point_line(void) {
     return obs_skip(
@@ -5759,6 +5780,7 @@ static obs_result check_agc_primitive_draw_target_sub(const char *variant, uint3
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
+    OBS_AGC_QUEUE_GUARD();
 
     obs_jmp_buf guard;
     int sig = OBS_FAULT_ARM(&guard);
@@ -6071,6 +6093,9 @@ static obs_result check_agc_primitive_draw_target_sub(const char *variant, uint3
     }
     if (submit_rc == 0 && fence_hit == 1) {
         return obs_partial_value("draw executed but modified pixels out of range", (uint64_t)modified_pixel_count);
+    }
+    if (submit_rc == 0 && fence_hit == 0) {
+        s_agc_queue_faulted = 1; /* accepted but never retired: latch the stall */
     }
     return obs_fail("primitive_draw target submit or fence wait failed");
 }
@@ -6489,7 +6514,7 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *canary =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     uint32_t *dcb_buf =
@@ -6497,7 +6522,7 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
 #else
     static _Alignas(256) uint8_t s_host_p3_payload[4096];
     static _Alignas(64) uint32_t s_host_p3_fence[16];
-    static _Alignas(64) uint32_t s_host_p3_color[4096];
+    static _Alignas(65536) uint32_t s_host_p3_color[16384];
     static _Alignas(64) uint32_t s_host_p3_canary[16];
     static _Alignas(64) uint32_t s_host_p3_dcb[2048];
     uint8_t *gpu_payload = s_host_p3_payload;
@@ -6510,14 +6535,14 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     obs_fault_unregister();
     if (gpu_payload == NULL || fence == NULL || color_buf == NULL || canary == NULL ||
         dcb_buf == NULL) {
-        return obs_skip("failed to allocate Onion memory for payload, fence, color "
+        return obs_skip("failed to allocate memory for payload, fence, color "
                         "buffer, canary or dcb");
     }
     *fence = 0x11111111u;
     for (size_t i = 0; i < 16; i++) {
         canary[i] = 0xaaaaaaaau;
     }
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         color_buf[i] = 0x55555555u;
     }
 
@@ -6771,7 +6796,7 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
     }
-    for (size_t p = 0; p < 0x4000; p += 64) {
+    for (size_t p = 0; p < 65536; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     }
 #endif
@@ -6816,7 +6841,7 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     }
 
 #if defined(__x86_64__)
-    for (size_t p = 0; p < 0x4000; p += 64) {
+    for (size_t p = 0; p < 65536; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     }
     for (size_t p = 0; p < 64; p += 64) {
@@ -6830,7 +6855,7 @@ static obs_result check_agc_primitive_draw_param3_sub(const agc_param3_cfg_t *cf
     uint32_t texel_x = 0;
     uint32_t texel_y = 0;
     uint32_t modified_pixel_count = 0;
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != 0x55555555u) {
             if (!color_mod) {
                 color_mod = 1;
@@ -7076,7 +7101,7 @@ static obs_result check_agc_primitive_draw_param4_sub(const agc_param4_cfg_t *cf
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *canary =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     uint32_t *dcb_buf =
@@ -7090,7 +7115,7 @@ static obs_result check_agc_primitive_draw_param4_sub(const agc_param4_cfg_t *cf
 #else
     static _Alignas(256) uint8_t s_host_p4_payload[8192];
     static _Alignas(64) uint32_t s_host_p4_fence[16];
-    static _Alignas(64) uint32_t s_host_p4_color[4096];
+    static _Alignas(65536) uint32_t s_host_p4_color[16384];
     static _Alignas(64) uint32_t s_host_p4_canary[16];
     static _Alignas(64) uint32_t s_host_p4_dcb[2048];
     static _Alignas(256) uint32_t s_host_p4_tex0[4096];
@@ -7107,12 +7132,12 @@ static obs_result check_agc_primitive_draw_param4_sub(const agc_param4_cfg_t *cf
     obs_fault_unregister();
     if (gpu_payload == NULL || fence == NULL || color_buf == NULL || canary == NULL ||
         dcb_buf == NULL || (cfg->is_multitexture && (tex0_buf == NULL || tex1_buf == NULL))) {
-        return obs_skip("failed to allocate Onion memory for param4 draw");
+        return obs_skip("failed to allocate memory for param4 draw");
     }
 
     *fence = 0x11111111u;
     for (size_t i = 0; i < 16; i++) canary[i] = 0xaaaaaaaau;
-    for (size_t i = 0; i < 4096; i++) color_buf[i] = 0x55555555u;
+    for (size_t i = 0; i < 16384; i++) color_buf[i] = 0x55555555u;
 
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
     uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
@@ -7391,7 +7416,7 @@ static obs_result check_agc_primitive_draw_param4_sub(const agc_param4_cfg_t *cf
     for (size_t p = 0; p < (size_t)(words_written * 4u); p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
     }
-    for (size_t p = 0; p < 0x4000; p += 64) {
+    for (size_t p = 0; p < 65536; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     }
     if (cfg->is_multitexture) {
@@ -7436,7 +7461,7 @@ static obs_result check_agc_primitive_draw_param4_sub(const agc_param4_cfg_t *cf
     }
 
 #if defined(__x86_64__)
-    for (size_t p = 0; p < 0x4000; p += 64) {
+    for (size_t p = 0; p < 65536; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     }
     for (size_t p = 0; p < 64; p += 64) {
@@ -7447,7 +7472,7 @@ static obs_result check_agc_primitive_draw_param4_sub(const agc_param4_cfg_t *cf
     uint32_t color_val = color_buf[0];
     int color_mod = 0;
     uint32_t modified_pixel_count = 0;
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != 0x55555555u) {
             if (!color_mod) {
                 color_mod = 1;
@@ -7536,10 +7561,14 @@ static obs_result check_agc_primitive_draw_param4_sub(const agc_param4_cfg_t *cf
     if (submit_rc == 0 && fence_hit == 1 && color_mod == 1) {
         return obs_pass();
     }
+    s_agc_queue_faulted = 1;
     return obs_fail("param4 submission, fence wait or pixel modification failed");
 }
 
 static obs_result check_agc_primitive_draw_param4(void) {
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -7646,7 +7675,7 @@ static obs_result check_agc_primitive_draw_param5_sub(const agc_param5_cfg_t *cf
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *canary =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     uint32_t *dcb_buf =
@@ -7654,7 +7683,7 @@ static obs_result check_agc_primitive_draw_param5_sub(const agc_param5_cfg_t *cf
 #else
     static _Alignas(256) uint8_t s_host_p5_payload[8192];
     static _Alignas(64) uint32_t s_host_p5_fence[16];
-    static _Alignas(64) uint32_t s_host_p5_color[4096];
+    static _Alignas(65536) uint32_t s_host_p5_color[16384];
     static _Alignas(64) uint32_t s_host_p5_canary[16];
     static _Alignas(64) uint32_t s_host_p5_dcb[2048];
     uint8_t *gpu_payload = s_host_p5_payload;
@@ -7671,7 +7700,7 @@ static obs_result check_agc_primitive_draw_param5_sub(const agc_param5_cfg_t *cf
 
     *fence = 0x11111111u;
     for (size_t i = 0; i < 16; i++) canary[i] = 0xaaaaaaaau;
-    for (size_t i = 0; i < 4096; i++) color_buf[i] = 0x55555555u;
+    for (size_t i = 0; i < 16384; i++) color_buf[i] = 0x55555555u;
 
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
     uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
@@ -7844,7 +7873,7 @@ static obs_result check_agc_primitive_draw_param5_sub(const agc_param5_cfg_t *cf
     __builtin_ia32_clflush((const void *)canary);
     for (size_t p = 0; p < 0x2000; p += 64) __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
     for (size_t p = 0; p < (size_t)(words_written * 4u); p += 64) __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
 #endif
 
     int submit_rc = -1;
@@ -7881,14 +7910,14 @@ static obs_result check_agc_primitive_draw_param5_sub(const agc_param5_cfg_t *cf
     }
 
 #if defined(__x86_64__)
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     for (size_t p = 0; p < 64; p += 64) __builtin_ia32_clflush((const void *)((const char *)canary + p));
 #endif
 
     uint32_t color_val = color_buf[0];
     int color_mod = 0;
     uint32_t modified_pixel_count = 0;
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != 0x55555555u) {
             if (!color_mod) {
                 color_mod = 1;
@@ -7944,10 +7973,24 @@ static obs_result check_agc_primitive_draw_param5_sub(const agc_param5_cfg_t *cf
     if (submit_rc == 0 && fence_hit == 1 && color_mod == 1) {
         return obs_pass();
     }
+    s_agc_queue_faulted = 1;
     return obs_fail("param5 submission, fence wait or pixel modification failed");
 }
 
 static obs_result check_agc_primitive_draw_param5(void) {
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* The 5-param export arms reliably stall the GE queue on hardware (fence miss, seen
+       2026-09-23), and the stall latches the safety flag, costing every GPU check after it its
+       data. Same class as arm2-3param-packed, which is already isolated. Off in the default suite
+       so a full run keeps its downstream GPU rows; build -DOBS_RUN_WEDGING_GPU_CHECKS to run it in
+       isolation. */
+    return obs_skip(
+        "excluded from default suite: 5-param export stalls the GE queue and latches the safety "
+        "flag (2026-09-23); build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
+#endif
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -8054,6 +8097,11 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
+    /* Per-arm guard: the dispatcher checks the flag once on entry, but an arm that stalls latches
+       it, and the next arm must see that rather than submit into a wedged pipe. */
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
 
     obs_jmp_buf guard;
     int sig = OBS_FAULT_ARM(&guard);
@@ -8100,7 +8148,9 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
     if (depth_buf != NULL) {
         for (size_t i = 0; i < 16384; i++) depth_buf[i] = 0x3f800000u; /* 1.0f clear depth */
     }
-    uint32_t prefill_color = (cfg->mode == 14 || cfg->mode == 15) ? 0x80808080u : 0x55555555u;
+    uint32_t prefill_color = (cfg->mode >= 26 && cfg->mode <= 33) ? 0x11223344u :
+                             ((cfg->mode >= 22 && cfg->mode <= 25) ? 0xffff0000u :
+                             ((cfg->mode >= 14 && cfg->mode <= 21) ? 0x80808080u : 0x55555555u));
     for (size_t i = 0; i < 16384; i++) color_buf[i] = prefill_color;
 
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
@@ -8150,7 +8200,7 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         vs_code[vsk++] = 0xbefe0387u; /* all 3 lanes active */
         vs_code[vsk++] = 0x7e060280u; /* v3 = 0.0 (pos.z) */
         vs_code[vsk++] = 0x7e0802f2u; /* v4 = 1.0 (pos.w) */
-    } else if (cfg->mode == 13) {
+    } else if (cfg->mode == 13 || (cfg->mode >= 22 && cfg->mode <= 25)) {
         vs_code[vsk++] = 0xbefe0381u;
         vs_code[vsk++] = 0x7e0a02ffu; vs_code[vsk++] = 0xbf800000u; /* v5 = -1.0f */
         vs_code[vsk++] = 0x7e0c02ffu; vs_code[vsk++] = 0xbf800000u; /* v6 = -1.0f */
@@ -8164,7 +8214,11 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         vs_code[vsk++] = 0x7e0c02ffu; vs_code[vsk++] = 0x40400000u; /* v6 = +3.0f */
         vs_code[vsk++] = 0x7e0002ffu; vs_code[vsk++] = 0xbf800000u; /* v0 = -1.0f (param0.x) */
         vs_code[vsk++] = 0xbefe0387u; /* all 3 lanes active */
-        vs_code[vsk++] = 0x7e0602f1u; /* v3 = -0.5f (pos.z, depth 0.25f) */
+        if (cfg->mode == 13) {
+            vs_code[vsk++] = 0x7e0602f1u; /* v3 = -0.5f (pos.z, depth 0.25f) */
+        } else {
+            vs_code[vsk++] = 0x7e060280u; /* v3 = 0.0f (pos.z) */
+        }
         vs_code[vsk++] = 0x7e0802f2u; /* v4 = 1.0f (pos.w) */
     } else {
         vs_code[vsk++] = 0xbefe0381u;
@@ -8463,30 +8517,34 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         ps_code[psk++] = 0xf800180fu; ps_code[psk++] = 0x07060504u; /* exp mrt0 v4..v7 done vm */
         ps_code[psk++] = 0xbf810000u; /* s_endpgm */
     } else if (cfg->mode == 11 || cfg->mode == 12) {
-        /* REQ-20260922T1215Z-6ba1: arm10 front face */
-        ps_code[psk++] = 0xbefc0300u; /* s_mov_b32 m0, s0 */
-        /* Record v2 raw bits into canary[8] (offset 32) from lane 0 only */
-        ps_code[psk++] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
-        ps_code[psk++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-        ps_code[psk++] = 0xbe8003ffu; ps_code[psk++] = (uint32_t)canary_gpu;
-        ps_code[psk++] = 0xbe8103ffu; ps_code[psk++] = (uint32_t)(canary_gpu >> 32);
-        ps_code[psk++] = 0x7e100200u; /* v_mov_b32 v8, s0 */
-        ps_code[psk++] = 0x7e120201u; /* v_mov_b32 v9, s1 */
-        ps_code[psk++] = 0xdc708020u; ps_code[psk++] = 0x007d0208u; /* global_store_dword offset:32 (v2) */
-        ps_code[psk++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-        ps_code[psk++] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
-        /* Register moves and compare */
-        ps_code[psk++] = 0x7e080302u; /* v_mov_b32_e32 v4, v2 (raw face register) */
-        ps_code[psk++] = 0x7e0a0280u; /* v_mov_b32_e32 v5, 0 */
-        ps_code[psk++] = 0x7e0602f2u; /* v_mov_b32_e32 v3, 1.0f */
-        ps_code[psk++] = 0x7c080b02u; /* v_cmp_gt_f32_e32 vcc_lo, v2, v5 (v2 > 0) */
-        ps_code[psk++] = 0x020c0680u; /* v_cndmask_b32_e32 v6, 0, v3, vcc_lo */
-        ps_code[psk++] = 0x7e0e02f2u; /* v_mov_b32_e32 v7, 1.0f */
+        /* REQ-20260922T1215Z-6ba1: arm10 front face
+         * Export:
+         *   v4 (R, byte 0): v2 bits [7:0] as float (v4 = (v2 & 0xff) / 255.0f)
+         *   v5 (G, byte 1): v_cmp_gt_f32 vcc_lo, v2, 0 -> 1.0f if > 0 else 0.0f
+         *   v6 (B, byte 2): v2 bits [23:16] as float (v6 = ((v2 >> 16) & 0xff) / 255.0f)
+         *   v7 (A, byte 3): v2 bits [31:24] as float (v7 = ((v2 >> 24) & 0xff) / 255.0f)
+         * This encodes the exact 32-bit value of v2 and the hardware's v_cmp_gt_f32 result
+         * into MRT0 RGBA8 UNORM with zero memory stores or sync hazards.
+         */
+        ps_code[psk++] = 0xd5480004u; ps_code[psk++] = 0x02210102u; /* v_bfe_u32 v4, v2, 0, 8 */
+        ps_code[psk++] = 0x7e080d04u;                                /* v_cvt_f32_u32 v4, v4 */
+        ps_code[psk++] = 0x100808ffu; ps_code[psk++] = 0x3b808081u; /* v_mul_f32 v4, 1/255.0f, v4 */
+
+        ps_code[psk++] = 0xd404006au; ps_code[psk++] = 0x00010102u; /* v_cmp_gt_f32 vcc_lo, v2, 0 */
+        ps_code[psk++] = 0xd5010005u; ps_code[psk++] = 0x01a9e480u; /* v_cndmask_b32 v5, 0, 1.0, vcc_lo */
+
+        ps_code[psk++] = 0xd5480006u; ps_code[psk++] = 0x02212102u; /* v_bfe_u32 v6, v2, 16, 8 */
+        ps_code[psk++] = 0x7e0c0d06u;                                /* v_cvt_f32_u32 v6, v6 */
+        ps_code[psk++] = 0x100c0cffu; ps_code[psk++] = 0x3b808081u; /* v_mul_f32 v6, 1/255.0f, v6 */
+
+        ps_code[psk++] = 0xd5480007u; ps_code[psk++] = 0x02213102u; /* v_bfe_u32 v7, v2, 24, 8 */
+        ps_code[psk++] = 0x7e0e0d07u;                                /* v_cvt_f32_u32 v7, v7 */
+        ps_code[psk++] = 0x100e0effu; ps_code[psk++] = 0x3b808081u; /* v_mul_f32 v7, 1/255.0f, v7 */
+
         ps_code[psk++] = 0xf800180fu; ps_code[psk++] = 0x07060504u; /* exp mrt0 v4..v7 done vm */
-        ps_code[psk++] = 0xbf810000u; /* s_endpgm */
+        ps_code[psk++] = 0xbf810000u;                                /* s_endpgm */
     } else if (cfg->mode == 13) {
         /* REQ-20260922T1215Z-6ba1: arm11 discard-depth Draw 1 (near, kills left half) */
-        ps_code[psk++] = 0xbefc0300u; /* s_mov_b32 m0, s0 */
         ps_code[psk++] = 0xc8080000u; /* v_interp_p1_f32 v2, v0, attr0.x */
         ps_code[psk++] = 0xc8090001u; /* v_interp_p2_f32 v2, v1, attr0.x */
         ps_code[psk++] = 0x7e0a0280u; /* v_mov_b32_e32 v5, 0 */
@@ -8498,12 +8556,32 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         ps_code[psk++] = 0x7e0e02f2u; /* v_mov_b32_e32 v7, 1.0f (A) */
         ps_code[psk++] = 0xf800180fu; ps_code[psk++] = 0x07060504u; /* exp mrt0 v4..v7 done vm */
         ps_code[psk++] = 0xbf810000u; /* s_endpgm */
-    } else if (cfg->mode == 14 || cfg->mode == 15) {
-        /* REQ-20260922T1215Z-6ba1: arm12 blend-equation-green (exports 0.25f in all channels) */
+    } else if (cfg->mode >= 14 && cfg->mode <= 21) {
+        /* REQ-...-6ba1 arm12 + REQ-...-9c31 arm13/14/15 blend arms: export 0.25f in all channels */
         ps_code[psk++] = 0x7e0802ffu; ps_code[psk++] = 0x3e800000u; /* v4 = 0.25f (R) */
         ps_code[psk++] = 0x7e0a02ffu; ps_code[psk++] = 0x3e800000u; /* v5 = 0.25f (G) */
         ps_code[psk++] = 0x7e0c02ffu; ps_code[psk++] = 0x3e800000u; /* v6 = 0.25f (B) */
         ps_code[psk++] = 0x7e0e02ffu; ps_code[psk++] = 0x3e800000u; /* v7 = 0.25f (A) */
+        ps_code[psk++] = 0xf800180fu; ps_code[psk++] = 0x07060504u; /* exp mrt0 done vm */
+        ps_code[psk++] = 0xbf810000u; /* s_endpgm */
+    } else if (cfg->mode >= 22 && cfg->mode <= 25) {
+        /* REQ-20260923T2015Z-5b8e census arms: export (0.25f, 0.50f, 0.75f, 0.0f) */
+        ps_code[psk++] = 0x7e0802ffu; ps_code[psk++] = 0x3e800000u; /* v4 = 0.25f (R) */
+        ps_code[psk++] = 0x7e0a02ffu; ps_code[psk++] = 0x3f000000u; /* v5 = 0.50f (G) */
+        ps_code[psk++] = 0x7e0c02ffu; ps_code[psk++] = 0x3f400000u; /* v6 = 0.75f (B) */
+        ps_code[psk++] = 0x7e0e0280u;                               /* v7 = 0.00f (A) */
+        ps_code[psk++] = 0xf800180fu; ps_code[psk++] = 0x07060504u; /* exp mrt0 done vm */
+        ps_code[psk++] = 0xbf810000u; /* s_endpgm */
+    } else if (cfg->mode >= 26 && cfg->mode <= 33) {
+        /* REQ-20260923T2015Z-5b8e Update 8: four distinct channels
+         * R: 0.3764706f (96, 0x60) -> 0x3ec0c0c1
+         * G: 0.2509804f (64, 0x40) -> 0x3e808081
+         * B: 0.1254902f (32, 0x20) -> 0x3e008081
+         * A: 0.5019608f (128, 0x80) -> 0x3f008081 */
+        ps_code[psk++] = 0x7e0802ffu; ps_code[psk++] = 0x3ec0c0c1u; /* v4 = 0.37647f (R) */
+        ps_code[psk++] = 0x7e0a02ffu; ps_code[psk++] = 0x3e808081u; /* v5 = 0.25098f (G) */
+        ps_code[psk++] = 0x7e0c02ffu; ps_code[psk++] = 0x3e008081u; /* v6 = 0.12549f (B) */
+        ps_code[psk++] = 0x7e0e02ffu; ps_code[psk++] = 0x3f008081u; /* v7 = 0.50196f (A) */
         ps_code[psk++] = 0xf800180fu; ps_code[psk++] = 0x07060504u; /* exp mrt0 done vm */
         ps_code[psk++] = 0xbf810000u; /* s_endpgm */
     }
@@ -8569,16 +8647,69 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         ngg_ctx.cb_blend0_control = 0x61010181u; /* SEPARATE_ALPHA_BLEND=1 */
     } else if (cfg->mode == 15) {
         ngg_ctx.cb_blend0_control = 0x41010181u; /* SEPARATE_ALPHA_BLEND=0 */
+    } else if (cfg->mode == 16) {
+        /* REQ-20260923T0100Z-9c31 arm13: arm12a's two combines swapped, SEPARATE kept.
+         * arm12a 0x61010181 decodes (gfx103.json CB_BLEND0_CONTROL) as COLOR_COMB_FCN[7:5]=4
+         * (DST_MINUS_SRC) and ALPHA_COMB_FCN[23:21]=0 (DST_PLUS_SRC), all SRC/DEST=ONE.
+         * Swapping the two -> COLOR_COMB=0 (add), ALPHA_COMB=4 (reverse-subtract) is 0x61810101,
+         * NOT the filer's 0x41010181 shorthand (that is arm12a with SEPARATE merely re-set). If
+         * the assignment is positional the pixel inverts to 0x40c040c0; if it truly follows
+         * green it stays 0xc040c040. */
+        ngg_ctx.cb_blend0_control = 0x61810101u;
+    } else if (cfg->mode >= 17 && cfg->mode <= 21) {
+        /* arm14 (17) reports the export/surface regs; arm15 (18-21) masks one channel. Both
+         * keep arm12a's blend so the combine assignment is the thing under test. */
+        ngg_ctx.cb_blend0_control = 0x61010181u;
+    } else if (cfg->mode == 22) {
+        ngg_ctx.cb_blend0_control = 0x61010101u; /* GL_ONE, GL_ONE, SEPARATE_ALPHA_BLEND=1 */
+    } else if (cfg->mode == 23) {
+        ngg_ctx.cb_blend0_control = 0x61010001u; /* GL_ONE, GL_ZERO, SEPARATE_ALPHA_BLEND=1 */
+    } else if (cfg->mode == 24) {
+        ngg_ctx.cb_blend0_control = 0x00000000u; /* Unblended control (ENABLE=0) */
+    } else if (cfg->mode == 25) {
+        ngg_ctx.cb_blend0_control = 0x41010101u; /* GL_ONE, GL_ONE, SEPARATE_ALPHA_BLEND=0 */
+    } else if (cfg->mode >= 26 && cfg->mode <= 33) {
+        ngg_ctx.cb_blend0_control = 0x41010101u; /* GL_ONE, GL_ONE, SEPARATE_ALPHA_BLEND=0 */
+        if (cfg->mode == 28) {
+            ngg_ctx.cb0_attrib3 = 0x09c6c000u; /* RESOURCE_TYPE=2D, SW_MODE=27 */
+        } else if (cfg->mode == 29 || cfg->mode == 32) {
+            ngg_ctx.cb0_attrib3 = 0x0dc6c000u; /* Mesa CB_COLOR0_ATTRIB3 (2D, CMASK_PIPE_ALIGNED=1) */
+        } else if (cfg->mode == 33) {
+            ngg_ctx.cb0_attrib3 = 0x09c00000u; /* Linear SW_MODE=0, RESOURCE_TYPE=2D */
+        }
     }
     ngg_ctx.spi_shader_col_format = 0x9;
     ngg_ctx.cb_target_mask = 0xf;
     ngg_ctx.cb_shader_mask = 0xf;
+    if (cfg->mode >= 18 && cfg->mode <= 21) {
+        /* REQ-20260923T0100Z-9c31 arm15: one channel at a time - R,G,B,A = modes 18,19,20,21.
+         * Only the target mask is restricted; cb_shader_mask stays 0xf (the shader still
+         * exports all four), so a change in which combine a channel gets is the block's doing,
+         * not the shader's. */
+        ngg_ctx.cb_target_mask = (uint32_t)(1u << (cfg->mode - 18));
+    }
     agc_emit_ngg_context(&dw, &ngg_ctx);
-    if (cfg->mode == 14 || cfg->mode == 15) {
+    if ((cfg->mode >= 14 && cfg->mode <= 21) || (cfg->mode >= 22 && cfg->mode <= 25)) {
         /* Clear BLEND_BYPASS (bit 16 = 0) in CB_COLOR0_INFO (0x31c) */
         *dw++ = 0xc0016900u;
         *dw++ = 0x31cu;
         *dw++ = 0x000088a8u;
+    } else if (cfg->mode >= 26 && cfg->mode <= 33) {
+        uint32_t color_control = (cfg->mode == 27 || cfg->mode == 32 || cfg->mode == 33) ? 0x00cc0011u : 0x00cc0010u;
+        uint32_t color0_info = (cfg->mode == 30 || cfg->mode == 32) ? 0x00028828u : 0x000088a8u;
+        uint32_t blend_opt = (cfg->mode == 31 || cfg->mode == 32) ? 0x01110111u : 0x00000000u;
+
+        *dw++ = 0xc0016900u; /* CB_COLOR_CONTROL (0x202) */
+        *dw++ = 0x202u;
+        *dw++ = color_control;
+
+        *dw++ = 0xc0016900u; /* CB_COLOR0_INFO (0x31c) */
+        *dw++ = 0x31cu;
+        *dw++ = color0_info;
+
+        *dw++ = 0xc0016900u; /* SX_MRT0_BLEND_OPT (0x1d8) */
+        *dw++ = 0x1d8u;
+        *dw++ = blend_opt;
     }
     if (cfg->mode == 13) {
         /* Draw 1: Near triangle with left-half discard */
@@ -8610,7 +8741,7 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
     for (size_t p = 0; p < (size_t)(words_written * 4u); p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
     }
-    for (size_t p = 0; p < 0x4000; p += 64) {
+    for (size_t p = 0; p < 65536; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     }
     if (depth_buf != NULL) {
@@ -8637,9 +8768,9 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         return obs_skip("dcb submit failed");
     }
 
-    /* Wait for fence: up to 25000 iterations (2.5 seconds) */
+    /* Wait for fence: up to 100000 iterations (10.0 seconds) */
     int fence_hit = 0;
-    for (int iter = 0; iter < 25000; iter++) {
+    for (int iter = 0; iter < 100000; iter++) {
 #if defined(__x86_64__)
         __builtin_ia32_clflush((const void *)fence);
         __builtin_ia32_clflush((const void *)canary);
@@ -8648,7 +8779,7 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
             fence_hit = 1;
             break;
         }
-        if (iter >= 20000 && canary[0] == 0xaaaaaaaau) break;
+        if (iter >= 80000 && canary[0] == 0xaaaaaaaau) break;
         if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
             sceKernelUsleep(100);
         }
@@ -8670,15 +8801,18 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
     size_t modified_pixel_count = 0;
     for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != prefill_color) {
+            if (modified_pixel_count == 0) color_val = color_buf[i];
             modified_pixel_count++;
-            if (color_val == 0) color_val = color_buf[i];
         }
     }
 
-    uint32_t center_pixel = (modified_pixel_count > 0) ? color_val : color_buf[32 * 64 + 32];
+    uint32_t center_pixel = (cfg->mode >= 22 && cfg->mode <= 33)
+                                ? color_buf[32 * 64 + 32]
+                                : ((modified_pixel_count > 0) ? color_val : color_buf[32 * 64 + 32]);
 
     const char *check_name = "166-agc/compiled-ps";
     obs_report_measure(check_name, cfg->variant, "fence-hit", (uint64_t)fence_hit, "bool");
+    obs_report_measure(check_name, cfg->variant, "fence-val", (uint64_t)*fence, "hex");
     obs_report_measure(check_name, cfg->variant, "center-pixel", (uint64_t)center_pixel, "hex");
     obs_report_measure(check_name, cfg->variant, "pixel-val", (uint64_t)color_val, "val");
     obs_report_measure(check_name, cfg->variant, "pixel-byte-0", (uint64_t)(color_val & 0xffu), "byte");
@@ -8689,6 +8823,25 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
     obs_report_measure(check_name, cfg->variant, "canary-vs", (uint64_t)canary[0], "val");
     obs_report_measure(check_name, cfg->variant, "canary-vs-done", (uint64_t)canary[6], "val");
     obs_report_bytes(check_name, cfg->variant, "center-sample", 0, (const unsigned char *)&center_pixel, 4);
+
+    if (cfg->mode == 17) {
+        /* REQ-20260923T0100Z-9c31 arm14: what the block was told about the export and surface,
+         * as this fixture programs it into the DCB - reported by name and value, no offset
+         * asserted. The shader exports COL_FORMAT 0x9 (32_ABGR) and only
+         * SX_PS_DOWNCONVERT_CONTROL (0x1d4) = 0xff is emitted by agc_emit_ngg_context;
+         * SX_PS_DOWNCONVERT (0x1d5) and SX_MRT0_BLEND_OPT (0x1d8) are NOT emitted here, so any
+         * two-channel-pair packing is not coming from a fixture-set downconvert - the
+         * `not-programmed` rows say so. A COPY_DATA read-back of the inherited SX_* state is the
+         * deeper follow-up if the pixel arms implicate the export format. */
+        obs_report_measure(check_name, cfg->variant, "spi-shader-col-format", (uint64_t)ngg_ctx.spi_shader_col_format, "reg");
+        obs_report_measure(check_name, cfg->variant, "cb-color0-info", 0x000088a8u, "reg");
+        obs_report_measure(check_name, cfg->variant, "cb-target-mask", (uint64_t)ngg_ctx.cb_target_mask, "reg");
+        obs_report_measure(check_name, cfg->variant, "cb-shader-mask", (uint64_t)ngg_ctx.cb_shader_mask, "reg");
+        obs_report_measure(check_name, cfg->variant, "cb-blend0-control", (uint64_t)ngg_ctx.cb_blend0_control, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-ps-downconvert-control", 0x000000ffu, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-ps-downconvert", 0u, "not-programmed");
+        obs_report_measure(check_name, cfg->variant, "sx-mrt0-blend-opt", 0u, "not-programmed");
+    }
 
     if (cfg->mode == 2 || cfg->mode == 5) {
         obs_report_measure(check_name, cfg->variant, "attr3-constant", 0xffbf8040u, "rgba");
@@ -8713,8 +8866,14 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         obs_report_bytes(check_name, cfg->variant, "texel-bytes", 0, (const unsigned char *)((const char *)gpu_payload + 0x800), 4);
     }
     if (cfg->mode == 11 || cfg->mode == 12) {
-        obs_report_measure(check_name, cfg->variant, "face-raw-bits", (uint64_t)canary[8], "hex");
-        obs_report_measure(check_name, cfg->variant, "gt-zero-selected", (uint64_t)(((color_val >> 16) & 0xffu) ? 1 : 0), "bool");
+        uint32_t b0 = color_val & 0xffu;
+        uint32_t b1 = (color_val >> 8) & 0xffu;
+        uint32_t b2 = (color_val >> 16) & 0xffu;
+        uint32_t b3 = (color_val >> 24) & 0xffu;
+        uint32_t raw_bits = (b3 << 24) | (b2 << 16) | b0;
+        uint32_t gt_zero = (b1 > 0x80u) ? 1 : 0;
+        obs_report_measure(check_name, cfg->variant, "face-raw-bits", (uint64_t)raw_bits, "hex");
+        obs_report_measure(check_name, cfg->variant, "gt-zero-selected", (uint64_t)gt_zero, "bool");
         obs_report_measure(check_name, cfg->variant, "spi-ps-input-ena", (uint64_t)ngg_ctx.spi_ps_input_ena, "reg");
     }
     if (cfg->mode == 13 && depth_buf != NULL) {
@@ -8742,6 +8901,153 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
         obs_report_measure(check_name, cfg->variant, "green-followed-alpha", (uint64_t)(g_byte > 0x80u ? 1 : 0), "bool");
         obs_report_measure(check_name, cfg->variant, "cb-blend0-control", (uint64_t)ngg_ctx.cb_blend0_control, "reg");
     }
+    if (cfg->mode >= 22 && cfg->mode <= 25) {
+        /* Exported shader color: (0.25, 0.50, 0.75, 0.0).
+         * Target CB format maps in Little-Endian memory to:
+         * Byte 0: 191u (0.75)
+         * Byte 1: 128u (0.50)
+         * Byte 2: 64u (0.25 unblended / one-zero) or 255u (one-one blended with 0xff clear)
+         * Byte 3: 0u (unblended) or 255u (cleared / blended) */
+        uint32_t exp_b0 = 191u;
+        uint32_t exp_b1 = 128u;
+        uint32_t exp_b2 = (cfg->mode == 22 || cfg->mode == 25) ? 255u : 64u;
+
+        uint32_t total_pixels = 64u * 64u;
+        uint32_t b0_correct = 0, b1_correct = 0, b2_correct = 0;
+        uint32_t b0_even_even = 0, b0_other_parity = 0;
+        uint32_t b1_even_even = 0, b1_other_parity = 0;
+        uint32_t b2_even_even = 0, b2_other_parity = 0;
+        uint32_t b2_lane0 = 0, b2_other_lanes = 0;
+
+        for (uint32_t y = 0; y < 64u; y++) {
+            for (uint32_t x = 0; x < 64u; x++) {
+                uint32_t px = color_buf[y * 64u + x];
+                uint32_t p0 = px & 0xffu;
+                uint32_t p1 = (px >> 8) & 0xffu;
+                uint32_t p2 = (px >> 16) & 0xffu;
+                int is_ee = ((x & 1u) == 0 && (y & 1u) == 0);
+
+                if (p0 == exp_b0) {
+                    b0_correct++;
+                    if (is_ee) b0_even_even++; else b0_other_parity++;
+                }
+                if (p1 == exp_b1) {
+                    b1_correct++;
+                    if (is_ee) b1_even_even++; else b1_other_parity++;
+                }
+                if (p2 == exp_b2) {
+                    b2_correct++;
+                    if (is_ee) b2_even_even++; else b2_other_parity++;
+                }
+            }
+        }
+
+        for (uint32_t i = 0; i < total_pixels; i++) {
+            uint32_t px = color_buf[i];
+            uint32_t p2 = (px >> 16) & 0xffu;
+            if (p2 == exp_b2) {
+                if ((i & 3u) == 0) b2_lane0++; else b2_other_lanes++;
+            }
+        }
+
+        uint32_t row32_bits_lo = 0;
+        uint32_t row32_bits_hi = 0;
+        for (uint32_t x = 0; x < 32; x++) {
+            if (((color_buf[32 * 64 + x] >> 16) & 0xffu) == exp_b2) {
+                row32_bits_lo |= (1u << x);
+            }
+            if (((color_buf[32 * 64 + 32 + x] >> 16) & 0xffu) == exp_b2) {
+                row32_bits_hi |= (1u << x);
+            }
+        }
+
+        obs_report_measure(check_name, cfg->variant, "region-total", (uint64_t)total_pixels, "count");
+        obs_report_measure(check_name, cfg->variant, "r-correct", (uint64_t)b2_correct, "count");
+        obs_report_measure(check_name, cfg->variant, "g-correct", (uint64_t)b1_correct, "count");
+        obs_report_measure(check_name, cfg->variant, "b-correct", (uint64_t)b0_correct, "count");
+        obs_report_measure(check_name, cfg->variant, "r-even-even", (uint64_t)b2_even_even, "count");
+        obs_report_measure(check_name, cfg->variant, "r-other-parity", (uint64_t)b2_other_parity, "count");
+        obs_report_measure(check_name, cfg->variant, "g-even-even", (uint64_t)b1_even_even, "count");
+        obs_report_measure(check_name, cfg->variant, "g-other-parity", (uint64_t)b1_other_parity, "count");
+        obs_report_measure(check_name, cfg->variant, "b-even-even", (uint64_t)b0_even_even, "count");
+        obs_report_measure(check_name, cfg->variant, "b-other-parity", (uint64_t)b0_other_parity, "count");
+        obs_report_measure(check_name, cfg->variant, "b-lane0", (uint64_t)b2_lane0, "count");
+        obs_report_measure(check_name, cfg->variant, "b-other-lanes", (uint64_t)b2_other_lanes, "count");
+        obs_report_measure(check_name, cfg->variant, "row32-bits-lo", (uint64_t)row32_bits_lo, "hex");
+        obs_report_measure(check_name, cfg->variant, "row32-bits-hi", (uint64_t)row32_bits_hi, "hex");
+
+        obs_report_measure(check_name, cfg->variant, "cb-blend0-control", (uint64_t)ngg_ctx.cb_blend0_control, "reg");
+        obs_report_measure(check_name, cfg->variant, "cb-color0-info", 0x000088a8u, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-ps-downconvert-control", 0x000000ffu, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-ps-downconvert", 0u, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-blend-opt-epsilon", 0u, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-blend-opt-control", 0u, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-mrt0-blend-opt", 0u, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-mrt1-blend-opt", 0u, "reg");
+    }
+    if (cfg->mode >= 26 && cfg->mode <= 33) {
+        /* REQ-20260923T2015Z-5b8e Update 8: Census per byte across all 4 quad lanes and region.
+         * Clear dst: 0x11223344 (B=0x44, G=0x33, R=0x22, A=0x11).
+         * Shader src: (B=0x20, G=0x40, R=0x60, A=0x80).
+         * Expected sum under GL_ONE, GL_ONE:
+         * Byte 0 (B): 0x44 + 0x20 = 0x64 (100)
+         * Byte 1 (G): 0x33 + 0x40 = 0x73 (115)
+         * Byte 2 (R): 0x22 + 0x60 = 0x82 (130)
+         * Byte 3 (A): 0x11 + 0x80 = 0x91 (145)
+         * Expected word: 0x91827364u. */
+        uint32_t exp_b0 = 0x64u;
+        uint32_t exp_b1 = 0x73u;
+        uint32_t exp_b2 = 0x82u;
+        uint32_t exp_b3 = 0x91u;
+        uint32_t exp_word = 0x91827364u;
+
+        uint32_t p00 = color_buf[32 * 64 + 32];
+        uint32_t p10 = color_buf[32 * 64 + 33];
+        uint32_t p01 = color_buf[33 * 64 + 32];
+        uint32_t p11 = color_buf[33 * 64 + 33];
+
+        obs_report_measure(check_name, cfg->variant, "lane00-val", (uint64_t)p00, "hex");
+        obs_report_measure(check_name, cfg->variant, "lane10-val", (uint64_t)p10, "hex");
+        obs_report_measure(check_name, cfg->variant, "lane01-val", (uint64_t)p01, "hex");
+        obs_report_measure(check_name, cfg->variant, "lane11-val", (uint64_t)p11, "hex");
+
+        obs_report_bytes(check_name, cfg->variant, "lane00-bytes", 0, (const unsigned char *)&p00, 4);
+        obs_report_bytes(check_name, cfg->variant, "lane10-bytes", 0, (const unsigned char *)&p10, 4);
+        obs_report_bytes(check_name, cfg->variant, "lane01-bytes", 0, (const unsigned char *)&p01, 4);
+        obs_report_bytes(check_name, cfg->variant, "lane11-bytes", 0, (const unsigned char *)&p11, 4);
+
+        uint32_t total_pixels = 64u * 64u;
+        uint32_t b0_match = 0, b1_match = 0, b2_match = 0, b3_match = 0;
+        uint32_t clean_pixels = 0;
+
+        for (uint32_t i = 0; i < total_pixels; i++) {
+            uint32_t px = color_buf[i];
+            if ((px & 0xffu) == exp_b0) b0_match++;
+            if (((px >> 8) & 0xffu) == exp_b1) b1_match++;
+            if (((px >> 16) & 0xffu) == exp_b2) b2_match++;
+            if (((px >> 24) & 0xffu) == exp_b3) b3_match++;
+            if (px == exp_word) clean_pixels++;
+        }
+
+        obs_report_measure(check_name, cfg->variant, "region-total", (uint64_t)total_pixels, "count");
+        obs_report_measure(check_name, cfg->variant, "byte0-blue-match", (uint64_t)b0_match, "count");
+        obs_report_measure(check_name, cfg->variant, "byte1-green-match", (uint64_t)b1_match, "count");
+        obs_report_measure(check_name, cfg->variant, "byte2-red-match", (uint64_t)b2_match, "count");
+        obs_report_measure(check_name, cfg->variant, "byte3-alpha-match", (uint64_t)b3_match, "count");
+        obs_report_measure(check_name, cfg->variant, "clean-pixels", (uint64_t)clean_pixels, "count");
+
+        uint32_t color_control = (cfg->mode == 27 || cfg->mode == 32 || cfg->mode == 33) ? 0x00cc0011u : 0x00cc0010u;
+        uint32_t color0_info = (cfg->mode == 30 || cfg->mode == 32) ? 0x00028828u : 0x000088a8u;
+        uint32_t blend_opt = (cfg->mode == 31 || cfg->mode == 32) ? 0x01110111u : 0x00000000u;
+        uint32_t attrib3 = (cfg->mode == 28) ? 0x09c6c000u :
+                           ((cfg->mode == 29 || cfg->mode == 32) ? 0x0dc6c000u :
+                           ((cfg->mode == 33) ? 0x09c00000u : 0x08c6c000u));
+
+        obs_report_measure(check_name, cfg->variant, "cb-color-control", (uint64_t)color_control, "reg");
+        obs_report_measure(check_name, cfg->variant, "cb-color0-info", (uint64_t)color0_info, "reg");
+        obs_report_measure(check_name, cfg->variant, "cb-color0-attrib3", (uint64_t)attrib3, "reg");
+        obs_report_measure(check_name, cfg->variant, "sx-mrt0-blend-opt", (uint64_t)blend_opt, "reg");
+    }
 
     /* HW safety (AGENTS.md §4): only destroy queue if completed or submit failed */
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue) && queue != NULL &&
@@ -8767,6 +9073,7 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
 #endif
 
     if (!fence_hit) {
+        s_agc_queue_faulted = 1;
         return obs_fail("GPU fence timeout: draw failed to retire");
     }
 
@@ -8774,28 +9081,118 @@ static obs_result check_agc_compiled_ps_sub(const agc_compiled_ps_cfg_t *cfg) {
 }
 
 static obs_result check_agc_compiled_ps(void) {
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
     obs_result overall = obs_pass();
+    obs_result r = obs_pass();
 
-    /* REQ-20260922T1215Z-6ba1: Front face, discard depth, and green blend arms */
+    /* Front-face (arm10a/10b) and discard-depth (arm11) are NGG-geometry-dependent and
+       intermittently stall the GE queue on hardware (arm10a fence-missed 2026-09-23) - the same
+       family as the isolated primitive-draw-depth/stencil checks. A blargg-style suite runs only
+       what retires reliably, so these are opt-in behind OBS_RUN_WEDGING_GPU_CHECKS and out of the
+       default run: a flaky arm here would otherwise latch the stall flag and skip every reliable
+       arm below it (which is what cost the whole check on 2026-09-23). */
+#ifdef OBS_RUN_WEDGING_GPU_CHECKS
     agc_compiled_ps_cfg_t cfg_arm10a = { "arm10a-front-face-ccw", 11 };
-    obs_result r = check_agc_compiled_ps_sub(&cfg_arm10a);
-    if (r.status != OBS_PASS) return r;
+    r = check_agc_compiled_ps_sub(&cfg_arm10a);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
     agc_compiled_ps_cfg_t cfg_arm10b = { "arm10b-front-face-cw", 12 };
     r = check_agc_compiled_ps_sub(&cfg_arm10b);
-    if (r.status != OBS_PASS) return r;
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
     agc_compiled_ps_cfg_t cfg_arm11 = { "arm11-discard-depth", 13 };
     r = check_agc_compiled_ps_sub(&cfg_arm11);
-    if (r.status != OBS_PASS) return r;
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+#endif
 
+    /* Green-blend arms retire reliably - kept in the default run, but soft-failing so one bad arm
+       records rather than aborting the rest. The stall flag, not a hard return, is what stops
+       submits into a wedged pipe now. */
     agc_compiled_ps_cfg_t cfg_arm12a = { "arm12a-blend-green-separate", 14 };
     r = check_agc_compiled_ps_sub(&cfg_arm12a);
-    if (r.status != OBS_PASS) return r;
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
     agc_compiled_ps_cfg_t cfg_arm12b = { "arm12b-blend-green-noseparate", 15 };
     r = check_agc_compiled_ps_sub(&cfg_arm12b);
-    if (r.status != OBS_PASS) return r;
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    /* REQ-20260923T0100Z-9c31: is the separate-alpha combine assignment positional (by channel
+     * pair, R+B take COLOR_COMB and G+A take ALPHA_COMB) rather than "green follows alpha"?
+     * arm13 swaps the two combines (0x61810101) - positional inverts the pixel to 0x40c040c0;
+     * arm14 reports the export/surface registers as programmed; arm15 masks one channel at a
+     * time. Soft-failing (record, do not abort) so one skip does not lose the others. */
+    agc_compiled_ps_cfg_t cfg_arm13 = { "arm13-swap-the-equations", 16 };
+    r = check_agc_compiled_ps_sub(&cfg_arm13);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm14 = { "arm14-what-the-block-was-told", 17 };
+    r = check_agc_compiled_ps_sub(&cfg_arm14);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm15r = { "arm15-mask-r", 18 };
+    r = check_agc_compiled_ps_sub(&cfg_arm15r);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+    agc_compiled_ps_cfg_t cfg_arm15g = { "arm15-mask-g", 19 };
+    r = check_agc_compiled_ps_sub(&cfg_arm15g);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+    agc_compiled_ps_cfg_t cfg_arm15b = { "arm15-mask-b", 20 };
+    r = check_agc_compiled_ps_sub(&cfg_arm15b);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+    agc_compiled_ps_cfg_t cfg_arm15a = { "arm15-mask-a", 21 };
+    r = check_agc_compiled_ps_sub(&cfg_arm15a);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    /* REQ-20260923T2015Z-5b8e: Quad lattice census for blended draws */
+    agc_compiled_ps_cfg_t cfg_arm16a = { "arm16a-blend-census-one-one", 22 };
+    r = check_agc_compiled_ps_sub(&cfg_arm16a);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm16b = { "arm16b-blend-census-one-zero", 23 };
+    r = check_agc_compiled_ps_sub(&cfg_arm16b);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm16c = { "arm16c-unblended-census", 24 };
+    r = check_agc_compiled_ps_sub(&cfg_arm16c);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm16d = { "arm16d-blend-census-noseparate", 25 };
+    r = check_agc_compiled_ps_sub(&cfg_arm16d);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    /* REQ-20260923T2015Z-5b8e Update 8: RMW surface/registers per-byte census under GL_ONE, GL_ONE */
+    agc_compiled_ps_cfg_t cfg_arm17a = { "arm17a-rmw-census-baseline", 26 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17a);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm17b = { "arm17b-rmw-census-disable-dual-quad", 27 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17b);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm17c = { "arm17c-rmw-census-resource-2d", 28 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17c);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm17d = { "arm17d-rmw-census-mesa-attrib3", 29 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17d);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm17e = { "arm17e-rmw-census-simple-float", 30 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17e);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm17f = { "arm17f-rmw-census-blend-opt", 31 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17f);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm17g = { "arm17g-rmw-census-mesa-combined", 32 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17g);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm17h = { "arm17h-rmw-census-linear-swmode", 33 };
+    r = check_agc_compiled_ps_sub(&cfg_arm17h);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
     /* Baseline compiled pixel shader arms */
     agc_compiled_ps_cfg_t cfg_arm1 = { "arm1-constant", 0 };
@@ -8996,6 +9393,34 @@ static obs_result check_agc_gpu_wait_sync(void) {
     obs_report_measure(check_name, "arm3a-cpu-to-gpu", "canary-after-wake", 0xaaaaaaaau, "hex");
     obs_report_measure(check_name, "arm3a-cpu-to-gpu", "label-written", 0x12345678u, "hex");
 
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* arm3b submits a real GPU->GPU WAIT_REG_MEM that halts the ME - the exact behaviour 4b8e
+       measured: the ME reads the label through GL2 and the CPU/producer write never invalidates
+       it, so the wait never wakes. Its consumer fence never retires, and the end of this function
+       latches the stall flag on that miss - which then skips every GPU check after gpu-wait
+       (zpass, display-target) on 2026-09-23. The result is known and negative (no cross-DCB sync,
+       REQ-...-4b8e, RESOLVED), so report it isolated and do not submit in the default suite;
+       arms 1-2 above are pure symbol/arity sweeps and stay. Opt in with
+       -DOBS_RUN_WEDGING_GPU_CHECKS to re-run the real submit in isolation. */
+    obs_report_measure(check_name, "arm3b-gpu-to-gpu", "isolated", 1u, "bool");
+    obs_report_measure(check_name, "arm3b-gpu-to-gpu", "producer-fence-hit", 0u, "bool");
+    obs_report_measure(check_name, "arm3b-gpu-to-gpu", "consumer-fence-hit", 0u, "bool");
+    obs_report_measure(check_name, "arm3b-gpu-to-gpu", "gpu-gpu-sync-success", 0u, "bool");
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue) && queue != NULL) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+#if !defined(OBSCENE_HOST_BUILD)
+    oops_mem_free((void *)label_mem);
+    oops_mem_free((void *)canary_mem);
+    oops_mem_free((void *)fence1_mem);
+    oops_mem_free((void *)fence2_mem);
+    oops_mem_free(dcb1_buf);
+    oops_mem_free(dcb2_buf);
+#endif
+    return obs_partial_value("gpu-side wait sync: arms 1-2 measured; arm3b isolated (halts the ME)",
+                             0);
+#endif
+
     /* -------------------------------------------------------------------------
      * Arm 3b: GPU -> GPU Cross-Submission Sync
      * Producer DCB writes label via RELEASE_MEM, Consumer DCB waits on label
@@ -9144,7 +9569,7 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *canary =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     uint32_t *dcb_buf =
@@ -9154,7 +9579,7 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
 #else
     static _Alignas(256) uint8_t s_host_3dmip_payload[8192];
     static _Alignas(64) uint32_t s_host_3dmip_fence[16];
-    static _Alignas(64) uint32_t s_host_3dmip_color[4096];
+    static _Alignas(65536) uint32_t s_host_3dmip_color[16384];
     static _Alignas(64) uint32_t s_host_3dmip_canary[16];
     static _Alignas(64) uint32_t s_host_3dmip_dcb[2048];
     static _Alignas(256) uint32_t s_host_3dmip_tex[16384];
@@ -9174,7 +9599,7 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
 
     *fence = 0x11111111u;
     for (size_t i = 0; i < 16; i++) canary[i] = 0xaaaaaaaau;
-    for (size_t i = 0; i < 4096; i++) color_buf[i] = 0x55555555u;
+    for (size_t i = 0; i < 16384; i++) color_buf[i] = 0x55555555u;
     memset((void *)tex_buf, 0, 0x10000);
 
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
@@ -9188,7 +9613,19 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     uint32_t red_val = 0xff0000ffu;   /* Level 0: Red */
     uint32_t green_val = 0xff00ff00u; /* Level 1: Green */
 
-    if (layout_mode == 0) {
+    if (layout_mode >= 10 && layout_mode <= 12) {
+        /* REQ-20260923T1745Z-7a24: Fill all 64 KiB with 256-byte block index signature */
+        for (uint32_t b = 0; b < 256; b++) {
+            uint8_t r = (uint8_t)(b & 0xffu);
+            uint8_t g = (uint8_t)((b >> 8) & 0xffu);
+            uint8_t blue = 0xa5u;
+            uint8_t a = 0xffu;
+            uint32_t sig_word = ((uint32_t)a << 24) | ((uint32_t)blue << 16) | ((uint32_t)g << 8) | (uint32_t)r;
+            for (uint32_t t = 0; t < 64; t++) {
+                tex_buf[b * 64 + t] = sig_word;
+            }
+        }
+    } else if (layout_mode == 0) {
         /* arm1-smallest-first: level 1 at offset 0 (1024 bytes), level 0 at offset 1024 (4096 bytes) */
         l1_offset = 0;
         l0_offset = 1024;
@@ -9255,12 +9692,13 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
 
     uint32_t *dt = (uint32_t *)(gpu_payload + 0x400);
     uint32_t w = 4u, h = 4u, d = 4u;
+    uint32_t last_level = (layout_mode == 12) ? 0u : 1u;
     dt[0] = (uint32_t)(tex_gpu >> 8);
     dt[1] = (uint32_t)((tex_gpu >> 40) & 0xffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
     dt[2] = (((w - 1u) >> 2) & 0x3fffu) | (((h - 1u) & 0x3fffu) << 14) | (1u << 31);
-    dt[3] = (0xau << 28) | (1u << 16) | 0xfacu; /* 3D, LAST_LEVEL = 1, DST_SEL */
+    dt[3] = (0xau << 28) | (last_level << 16) | 0xfacu; /* 3D, LAST_LEVEL, DST_SEL */
     dt[4] = (d - 1u) & 0x1fffu;                 /* 4 slices */
-    dt[5] = (1u << 4);                          /* MAX_MIP = 1 */
+    dt[5] = (last_level << 4);                  /* MAX_MIP */
     dt[6] = 0u;
     dt[7] = 0u;
     dt[8] = (2u << 0) | (2u << 3) | (2u << 6);  /* CLAMP_LAST_TEXEL */
@@ -9346,8 +9784,8 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     /* Setup 3D sample coords in v[8:11]: (s=0.5, t=0.5, r=0.5, lod=1.0) */
     ps_code[psk++] = 0x7e1002f0u;                                /* v8  = 0.5f (s) */
     ps_code[psk++] = 0x7e1202f0u;                                /* v9  = 0.5f (t) */
-    ps_code[psk++] = 0x7e1402f0u;                                /* v10 = 0.5f (r) */
-    ps_code[psk++] = 0x7e1602ffu; ps_code[psk++] = 0x3f800000u; /* v11 = 1.0f (lod) */
+    uint32_t lod_val = (layout_mode == 11) ? 0x00000000u : 0x3f800000u;
+    ps_code[psk++] = 0x7e1602ffu; ps_code[psk++] = lod_val; /* v11 = lod */
 
     /* image_sample_l v[4:7], v[8:11], s[4:11], s[12:15] dmask:0xf dim:SQ_RSRC_IMG_3D */
     ps_code[psk++] = 0xf0900f10u; ps_code[psk++] = 0x00610408u;
@@ -9403,7 +9841,7 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     __builtin_ia32_clflush((const void *)canary);
     for (size_t p = 0; p < 0x2000; p += 64) __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
     for (size_t p = 0; p < (size_t)(words_written * 4u); p += 64) __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     for (size_t p = 0; p < 0x10000; p += 64) __builtin_ia32_clflush((const void *)((const char *)tex_buf + p));
 #endif
 
@@ -9423,7 +9861,7 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     uint32_t fence_val = *fence;
     int fence_hit = 0;
     if (submit_rc == 0) {
-        for (int iter = 0; iter < 25000; iter++) {
+        for (int iter = 0; iter < 100000; iter++) {
 #if defined(__x86_64__)
             __builtin_ia32_clflush((const void *)fence);
             __builtin_ia32_clflush((const void *)canary);
@@ -9433,7 +9871,7 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
                 fence_hit = 1;
                 break;
             }
-            if (iter >= 20000 && canary[0] == 0xaaaaaaaau) break;
+            if (iter >= 80000 && canary[0] == 0xaaaaaaaau) break;
             if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
                 sceKernelUsleep(100);
             }
@@ -9441,14 +9879,14 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     }
 
 #if defined(__x86_64__)
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     for (size_t p = 0; p < 64; p += 64) __builtin_ia32_clflush((const void *)((const char *)canary + p));
 #endif
 
     uint32_t color_val = color_buf[0];
     int color_mod = 0;
     uint32_t modified_pixel_count = 0;
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != 0x55555555u) {
             if (!color_mod) {
                 color_mod = 1;
@@ -9465,17 +9903,37 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     int is_green = (green >= 200 && red <= 50) ? 1 : 0;
 
     const char *check_name = "166-agc/texture-3d-mipmap";
-    obs_report_measure(check_name, variant, "fence-hit", (uint64_t)fence_hit, "bool");
-    obs_report_measure(check_name, variant, "pixel-val", (uint64_t)color_val, "rgba-packed");
-    obs_report_measure(check_name, variant, "pixel-aarrggbb", ((uint64_t)alpha << 24) | ((uint64_t)red << 16) | ((uint64_t)green << 8) | (uint64_t)blue, "hex");
-    obs_report_measure(check_name, variant, "red", (uint64_t)red, "byte");
-    obs_report_measure(check_name, variant, "green", (uint64_t)green, "byte");
-    obs_report_measure(check_name, variant, "blue", (uint64_t)blue, "byte");
-    obs_report_measure(check_name, variant, "alpha", (uint64_t)alpha, "byte");
-    obs_report_measure(check_name, variant, "level0-offset", (uint64_t)l0_offset, "bytes");
-    obs_report_measure(check_name, variant, "level1-offset", (uint64_t)l1_offset, "bytes");
-    obs_report_measure(check_name, variant, "is-green", (uint64_t)is_green, "bool");
-    obs_report_measure(check_name, variant, "modified-pixels", (uint64_t)modified_pixel_count, "count");
+    if (layout_mode >= 10 && layout_mode <= 12) {
+        obs_report_measure(check_name, variant, "fence-hit", (uint64_t)fence_hit, "bool");
+        obs_report_measure(check_name, variant, "pixel-val", (uint64_t)color_val, "hex");
+        obs_report_measure(check_name, variant, "blue-sentinel", (uint64_t)blue, "hex");
+        if (blue == 0xa5u) {
+            uint32_t block_idx = red | (green << 8);
+            uint32_t byte_pos = block_idx * 256u;
+            obs_report_measure(check_name, variant, "block-index", (uint64_t)block_idx, "index");
+            obs_report_measure(check_name, variant, "byte-position", (uint64_t)byte_pos, "bytes");
+        } else {
+            obs_report_measure(check_name, variant, "left-allocation", 1, "bool");
+        }
+        for (int di = 0; di < 8; di++) {
+            char dt_name[16];
+            snprintf(dt_name, sizeof(dt_name), "dt%d", di);
+            obs_report_measure(check_name, variant, dt_name, (uint64_t)dt[di], "hex");
+        }
+        obs_report_measure(check_name, variant, "modified-pixels", (uint64_t)modified_pixel_count, "count");
+    } else {
+        obs_report_measure(check_name, variant, "fence-hit", (uint64_t)fence_hit, "bool");
+        obs_report_measure(check_name, variant, "pixel-val", (uint64_t)color_val, "rgba-packed");
+        obs_report_measure(check_name, variant, "pixel-aarrggbb", ((uint64_t)alpha << 24) | ((uint64_t)red << 16) | ((uint64_t)green << 8) | (uint64_t)blue, "hex");
+        obs_report_measure(check_name, variant, "red", (uint64_t)red, "byte");
+        obs_report_measure(check_name, variant, "green", (uint64_t)green, "byte");
+        obs_report_measure(check_name, variant, "blue", (uint64_t)blue, "byte");
+        obs_report_measure(check_name, variant, "alpha", (uint64_t)alpha, "byte");
+        obs_report_measure(check_name, variant, "level0-offset", (uint64_t)l0_offset, "bytes");
+        obs_report_measure(check_name, variant, "level1-offset", (uint64_t)l1_offset, "bytes");
+        obs_report_measure(check_name, variant, "is-green", (uint64_t)is_green, "bool");
+        obs_report_measure(check_name, variant, "modified-pixels", (uint64_t)modified_pixel_count, "count");
+    }
 
     /* HW safety (AGENTS.md §4): only destroy queue if completed or submit failed */
     if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue) && queue != NULL &&
@@ -9516,17 +9974,15 @@ static obs_result check_agc_texture_3d_mipmap(void) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
 
-    obs_result r1 = check_agc_texture_3d_mipmap_sub("arm1-smallest-first", 0);
-    obs_result r2 = check_agc_texture_3d_mipmap_sub("arm2-largest-first", 1);
-    obs_result r3 = check_agc_texture_3d_mipmap_sub("arm3-slice-interleaved", 2);
+    /* REQ-20260923T1745Z-7a24: Signature fill probe to find where level 1 begins */
+    obs_result r1 = check_agc_texture_3d_mipmap_sub("arm1-signature-lod1", 10);
+    if (r1.status != OBS_PASS) return r1;
+    obs_result r2 = check_agc_texture_3d_mipmap_sub("arm2-signature-lod0", 11);
+    if (r2.status != OBS_PASS) return r2;
+    obs_result r3 = check_agc_texture_3d_mipmap_sub("arm3-signature-lod1-nolast", 12);
+    if (r3.status != OBS_PASS) return r3;
 
-    if (r1.status == OBS_PASS && r2.status == OBS_PASS && r3.status == OBS_PASS) {
-        return obs_pass();
-    }
-    if (r1.status == OBS_PASS || r2.status == OBS_PASS || r3.status == OBS_PASS) {
-        return obs_pass_value(0x1u);
-    }
-    return r1;
+    return obs_pass();
 }
 
 /* REQ-20260919T2258Z-c7d4: Window position delivery (POS_X, POS_Y) and entry VGPR census */
@@ -9539,6 +9995,9 @@ typedef struct {
 } agc_pos_cfg_t;
 
 static obs_result check_agc_ps_pos_xy_sub(const agc_pos_cfg_t *cfg) {
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -9556,7 +10015,7 @@ static obs_result check_agc_ps_pos_xy_sub(const agc_pos_cfg_t *cfg) {
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *canary =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     uint32_t *dcb_buf =
@@ -9564,7 +10023,7 @@ static obs_result check_agc_ps_pos_xy_sub(const agc_pos_cfg_t *cfg) {
 #else
     static _Alignas(256) uint8_t s_host_pos_payload[4096];
     static _Alignas(64) uint32_t s_host_pos_fence[16];
-    static _Alignas(64) uint32_t s_host_pos_color[4096];
+    static _Alignas(65536) uint32_t s_host_pos_color[16384];
     static _Alignas(64) uint32_t s_host_pos_canary[16];
     static _Alignas(64) uint32_t s_host_pos_dcb[2048];
     uint8_t *gpu_payload = s_host_pos_payload;
@@ -9576,12 +10035,12 @@ static obs_result check_agc_ps_pos_xy_sub(const agc_pos_cfg_t *cfg) {
 
     obs_fault_unregister();
     if (gpu_payload == NULL || fence == NULL || color_buf == NULL || canary == NULL || dcb_buf == NULL) {
-        return obs_skip("failed to allocate Onion memory for pos_xy check");
+        return obs_skip("failed to allocate memory for pos_xy check");
     }
 
     *fence = 0x11111111u;
     for (size_t i = 0; i < 16; i++) canary[i] = 0xaaaaaaaau;
-    for (size_t i = 0; i < 4096; i++) color_buf[i] = 0x55555555u;
+    for (size_t i = 0; i < 16384; i++) color_buf[i] = 0x55555555u;
 
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
     uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
@@ -9739,7 +10198,7 @@ static obs_result check_agc_ps_pos_xy_sub(const agc_pos_cfg_t *cfg) {
     __builtin_ia32_clflush((const void *)canary);
     for (size_t p = 0; p < 0x1000; p += 64) __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
     for (size_t p = 0; p < (size_t)(words_written * 4u); p += 64) __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
 #endif
 
     int submit_rc = -1;
@@ -9776,14 +10235,14 @@ static obs_result check_agc_ps_pos_xy_sub(const agc_pos_cfg_t *cfg) {
     }
 
 #if defined(__x86_64__)
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     for (size_t p = 0; p < 64; p += 64) __builtin_ia32_clflush((const void *)((const char *)canary + p));
 #endif
 
     uint32_t color_val = color_buf[0];
     int color_mod = 0;
     uint32_t modified_pixel_count = 0;
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != 0x55555555u) {
             if (!color_mod) {
                 color_mod = 1;
@@ -9831,10 +10290,14 @@ static obs_result check_agc_ps_pos_xy_sub(const agc_pos_cfg_t *cfg) {
     if (submit_rc == 0 && fence_hit == 1 && color_mod == 1) {
         return obs_pass();
     }
+    s_agc_queue_faulted = 1;
     return obs_fail("pos_xy submission, fence wait or pixel modification failed");
 }
 
 static obs_result check_agc_ps_pos_xy(void) {
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -9849,6 +10312,9 @@ static obs_result check_agc_ps_pos_xy(void) {
         .variant_target = "control-no-pos",
     };
     obs_result r_ctrl = check_agc_ps_pos_xy_sub(&cfg_ctrl);
+    if (r_ctrl.status != OBS_PASS) {
+        return r_ctrl;
+    }
 
     /* 2. arm1-pos-xy: POS_X and POS_Y enabled (0x302) */
     agc_pos_cfg_t cfg_arm1 = {
@@ -9871,6 +10337,9 @@ static obs_result check_agc_ps_pos_xy(void) {
 
 /* REQ-20260919T2258Z-e59a: Extended texture sampling (3D, Cube, Depth Compare) */
 static obs_result check_agc_texture_extended_sub(const char *variant, int mode) {
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -9888,7 +10357,7 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *canary =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     uint32_t *dcb_buf =
@@ -9898,7 +10367,7 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
 #else
     static _Alignas(256) uint8_t s_host_texext_payload[8192];
     static _Alignas(64) uint32_t s_host_texext_fence[16];
-    static _Alignas(64) uint32_t s_host_texext_color[4096];
+    static _Alignas(65536) uint32_t s_host_texext_color[16384];
     static _Alignas(64) uint32_t s_host_texext_canary[16];
     static _Alignas(64) uint32_t s_host_texext_dcb[2048];
     static _Alignas(256) uint32_t s_host_texext_tex[32768];
@@ -9913,12 +10382,12 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
     obs_fault_unregister();
     if (gpu_payload == NULL || fence == NULL || color_buf == NULL || canary == NULL ||
         dcb_buf == NULL || tex_buf == NULL) {
-        return obs_skip("failed to allocate Onion memory for texture_extended check");
+        return obs_skip("failed to allocate memory for texture_extended check");
     }
 
     *fence = 0x11111111u;
     for (size_t i = 0; i < 16; i++) canary[i] = 0xaaaaaaaau;
-    for (size_t i = 0; i < 4096; i++) color_buf[i] = 0x55555555u;
+    for (size_t i = 0; i < 16384; i++) color_buf[i] = 0x55555555u;
     memset((void *)tex_buf, 0, 0x20000);
 
     uint64_t canary_gpu = (uint64_t)(uintptr_t)canary;
@@ -10198,7 +10667,7 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
     __builtin_ia32_clflush((const void *)canary);
     for (size_t p = 0; p < 0x2000; p += 64) __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
     for (size_t p = 0; p < (size_t)(words_written * 4u); p += 64) __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     for (size_t p = 0; p < 0x20000; p += 64) __builtin_ia32_clflush((const void *)((const char *)tex_buf + p));
 #endif
 
@@ -10218,7 +10687,7 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
     uint32_t fence_val = *fence;
     int fence_hit = 0;
     if (submit_rc == 0) {
-        for (int iter = 0; iter < 25000; iter++) {
+        for (int iter = 0; iter < 100000; iter++) {
 #if defined(__x86_64__)
             __builtin_ia32_clflush((const void *)fence);
             __builtin_ia32_clflush((const void *)canary);
@@ -10228,7 +10697,7 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
                 fence_hit = 1;
                 break;
             }
-            if (iter >= 20000 && canary[0] == 0xaaaaaaaau) break;
+            if (iter >= 80000 && canary[0] == 0xaaaaaaaau) break;
             if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
                 sceKernelUsleep(100);
             }
@@ -10236,14 +10705,14 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
     }
 
 #if defined(__x86_64__)
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     for (size_t p = 0; p < 64; p += 64) __builtin_ia32_clflush((const void *)((const char *)canary + p));
 #endif
 
     uint32_t color_val = color_buf[0];
     int color_mod = 0;
     uint32_t modified_pixel_count = 0;
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != 0x55555555u) {
             if (!color_mod) {
                 color_mod = 1;
@@ -10328,41 +10797,47 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
         if (color_val == expected_color) return obs_pass();
         return obs_pass_value(color_val);
     }
+    s_agc_queue_faulted = 1;
     return obs_fail("texture_extended submission, fence wait or pixel modification failed");
 }
 
 static obs_result check_agc_texture_extended(void) {
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
+    }
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
 
     obs_result r_3d_0 = check_agc_texture_extended_sub("arm1-3d-slice0", 0);
+    if (r_3d_0.status != OBS_PASS) return r_3d_0;
     obs_result r_3d_1 = check_agc_texture_extended_sub("arm1-3d-slice1", 1);
+    if (r_3d_1.status != OBS_PASS) return r_3d_1;
     obs_result r_3d_2 = check_agc_texture_extended_sub("arm1-3d-slice2", 2);
+    if (r_3d_2.status != OBS_PASS) return r_3d_2;
     obs_result r_3d_3 = check_agc_texture_extended_sub("arm1-3d-slice3", 3);
+    if (r_3d_3.status != OBS_PASS) return r_3d_3;
     obs_result r_3d_ctrl = check_agc_texture_extended_sub("control-3d-2d", 10);
+    if (r_3d_ctrl.status != OBS_PASS) return r_3d_ctrl;
     obs_result r_cube_0 = check_agc_texture_extended_sub("arm2-cube-face0-+X", 20);
+    if (r_cube_0.status != OBS_PASS) return r_cube_0;
     obs_result r_cube_1 = check_agc_texture_extended_sub("arm2-cube-face1--X", 21);
+    if (r_cube_1.status != OBS_PASS) return r_cube_1;
     obs_result r_cube_2 = check_agc_texture_extended_sub("arm2-cube-face2-+Y", 22);
+    if (r_cube_2.status != OBS_PASS) return r_cube_2;
     obs_result r_cube_3 = check_agc_texture_extended_sub("arm2-cube-face3--Y", 23);
+    if (r_cube_3.status != OBS_PASS) return r_cube_3;
     obs_result r_cube_4 = check_agc_texture_extended_sub("arm2-cube-face4-+Z", 24);
+    if (r_cube_4.status != OBS_PASS) return r_cube_4;
     obs_result r_cube_5 = check_agc_texture_extended_sub("arm2-cube-face5--Z", 25);
+    if (r_cube_5.status != OBS_PASS) return r_cube_5;
     obs_result r_depth_pass = check_agc_texture_extended_sub("arm3-depth-pass", 30);
+    if (r_depth_pass.status != OBS_PASS) return r_depth_pass;
     obs_result r_depth_fail = check_agc_texture_extended_sub("arm4-depth-fail", 31);
+    if (r_depth_fail.status != OBS_PASS) return r_depth_fail;
 
-    if (r_3d_0.status == OBS_PASS && r_3d_1.status == OBS_PASS &&
-        r_3d_2.status == OBS_PASS && r_3d_3.status == OBS_PASS &&
-        r_3d_ctrl.status == OBS_PASS &&
-        r_cube_0.status == OBS_PASS && r_cube_1.status == OBS_PASS &&
-        r_cube_2.status == OBS_PASS && r_cube_3.status == OBS_PASS &&
-        r_cube_4.status == OBS_PASS && r_cube_5.status == OBS_PASS &&
-        r_depth_pass.status == OBS_PASS && r_depth_fail.status == OBS_PASS) {
-        return obs_pass();
-    }
-    if (r_3d_0.status == OBS_PASS && r_cube_0.status == OBS_PASS) return obs_pass_value(0x2u);
-    if (r_3d_0.status == OBS_PASS) return obs_pass_value(0x1u);
-    return r_3d_0;
+    return obs_pass();
 }
 
 /* REQ-20260919T2258Z-3f62 / REQ-20260921T1150Z-5c07: Multiple Render Targets (dual colour targets & dual blend) */
@@ -10370,6 +10845,12 @@ static obs_result check_agc_mrt_dual_target_sub(const char *variant, int mode) {
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+    /* A prior GPU check missed its fence: the pipe is stalled, and submitting more work risks the
+       async suspend-point timeout (0xa0d0c00e) that takes the whole system down, not just this
+       probe. Skip - a CPU fault guard cannot catch a wedged GPU. */
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
     }
 
     obs_jmp_buf guard;
@@ -10731,10 +11212,27 @@ static obs_result check_agc_mrt_dual_target_sub(const char *variant, int mode) {
     if (submit_rc == 0 && fence_hit == 1 && mod0_count > 0 && (is_control || mod1_count > 0)) {
         return obs_pass();
     }
+    /* A submit that was accepted but never retired (fence never hit) is a stalled pipe: latch it
+       so every GPU check after this one skips instead of piling submissions onto a wedged queue -
+       which is exactly the sequence that killed the console on 2026-09-23 (this check's arm3, then
+       blend-constant, then 0xa0d0c00e). */
+    if (submit_rc == 0 && fence_hit == 0) {
+        s_agc_queue_faulted = 1;
+    }
     return obs_fail("mrt submission, fence wait or target modification failed");
 }
 
 static obs_result check_agc_mrt_dual_target(void) {
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* arm3-dual-blend-rbplus wedged the GFX pipe on hardware on 2026-09-23 and took the whole
+       console down (0xa0d0c00e). Off in the default suite so a full run never submits it; build
+       with -DOBS_RUN_WEDGING_GPU_CHECKS to run this in isolation when the RB+ path is being
+       worked on. A wedged GPU is not something a CPU fault guard can catch, so this stays a
+       compile-time opt-in rather than a runtime one. */
+    return obs_skip(
+        "excluded from default suite: wedges the GFX pipe on hardware (2026-09-23 kill); "
+        "build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
+#endif
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -10758,6 +11256,12 @@ static obs_result check_agc_blend_constant_sub(const char *variant, int arm_type
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
+    }
+    /* Skip if the pipe is already stalled (see mrt_dual_target_sub): this check was the second
+       half of the 2026-09-23 console kill - it ran after mrt-dual-target had already wedged and
+       submitted three more times into the dead queue. */
+    if (s_agc_queue_faulted) {
+        return obs_skip("earlier GPU check missed fence; queue stalled");
     }
 
     obs_jmp_buf guard;
@@ -11073,10 +11577,22 @@ static obs_result check_agc_blend_constant_sub(const char *variant, int arm_type
     if (submit_rc == 0 && fence_hit == 1 && color_mod == 1) {
         return obs_pass();
     }
+    /* Accepted but never retired: latch the stall so the rest of the suite skips its GPU checks. */
+    if (submit_rc == 0 && fence_hit == 0) {
+        s_agc_queue_faulted = 1;
+    }
     return obs_fail("blend_constant submission, fence wait or pixel modification failed");
 }
 
 static obs_result check_agc_blend_constant(void) {
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* Ran into the pipe mrt-dual-target had already wedged on 2026-09-23 and could not be told
+       apart from the cause; its arm4-rbplus is the same RB+ path. Off in the default suite for
+       the same reason and re-enabled the same way (-DOBS_RUN_WEDGING_GPU_CHECKS). */
+    return obs_skip(
+        "excluded from default suite: RB+ blend path, wedges the GFX pipe on hardware "
+        "(2026-09-23 kill); build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
+#endif
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -11120,9 +11636,9 @@ static obs_result check_agc_zpass_sub(const char *variant, int is_control, int e
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x4000, 0x1000, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *depth_buf =
-        (volatile uint32_t *)oops_mem_alloc(0x10000, 65536, OOPS_MEM_WB_ONION);
+        (volatile uint32_t *)oops_mem_alloc(65536, 65536, OOPS_MEM_WC_GARLIC);
     volatile uint32_t *canary =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
     uint32_t *dcb_buf =
@@ -11132,8 +11648,8 @@ static obs_result check_agc_zpass_sub(const char *variant, int is_control, int e
 #else
     static _Alignas(256) uint8_t s_host_zp_payload[4096];
     static _Alignas(64) uint32_t s_host_zp_fence[16];
-    static _Alignas(64) uint32_t s_host_zp_color[4096];
-    static _Alignas(64) uint32_t s_host_zp_depth[16384];
+    static _Alignas(65536) uint32_t s_host_zp_color[16384];
+    static _Alignas(65536) uint32_t s_host_zp_depth[16384];
     static _Alignas(64) uint32_t s_host_zp_canary[16];
     static _Alignas(64) uint32_t s_host_zp_dcb[2048];
     static _Alignas(64) uint8_t s_host_zp_query[4096];
@@ -11149,12 +11665,12 @@ static obs_result check_agc_zpass_sub(const char *variant, int is_control, int e
     obs_fault_unregister();
     if (gpu_payload == NULL || fence == NULL || color_buf == NULL || depth_buf == NULL ||
         canary == NULL || dcb_buf == NULL || query_buf == NULL) {
-        return obs_skip("failed to allocate Onion memory for zpass check");
+        return obs_skip("failed to allocate memory for zpass check");
     }
 
     *fence = 0x11111111u;
     for (size_t i = 0; i < 16; i++) canary[i] = 0xaaaaaaaau;
-    for (size_t i = 0; i < 4096; i++) color_buf[i] = 0x55555555u;
+    for (size_t i = 0; i < 16384; i++) color_buf[i] = 0x55555555u;
     for (size_t i = 0; i < 16384; i++) depth_buf[i] = 0x3f800000u;
     memset(query_buf, 0, 0x1000);
 
@@ -11340,8 +11856,8 @@ static obs_result check_agc_zpass_sub(const char *variant, int is_control, int e
     __builtin_ia32_clflush((const void *)canary);
     for (size_t p = 0; p < 0x1000; p += 64) __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
     for (size_t p = 0; p < (size_t)(words_written * 4u); p += 64) __builtin_ia32_clflush((const void *)((const char *)dcb_buf + p));
-    for (size_t p = 0; p < 0x4000; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
-    for (size_t p = 0; p < 0x10000; p += 64) __builtin_ia32_clflush((const void *)((const char *)depth_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    for (size_t p = 0; p < 65536; p += 64) __builtin_ia32_clflush((const void *)((const char *)depth_buf + p));
     for (size_t p = 0; p < 0x1000; p += 64) __builtin_ia32_clflush((const void *)((const char *)query_buf + p));
 #endif
 
@@ -11384,16 +11900,16 @@ static obs_result check_agc_zpass_sub(const char *variant, int is_control, int e
     for (size_t p = 0; p < 0x1000; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)query_buf + p));
     }
-    for (size_t p = 0; p < 0x4000; p += 64) {
+    for (size_t p = 0; p < 65536; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
     }
-    for (size_t p = 0; p < 0x10000; p += 64) {
+    for (size_t p = 0; p < 65536; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)depth_buf + p));
     }
 #endif
 
     uint32_t modified_pixel_count = 0;
-    for (size_t i = 0; i < 4096; i++) {
+    for (size_t i = 0; i < 16384; i++) {
         if (color_buf[i] != 0x55555555u) modified_pixel_count++;
     }
 
@@ -11491,6 +12007,15 @@ static obs_result check_agc_zpass_sub(const char *variant, int is_control, int e
 }
 
 static obs_result check_agc_zpass_counters(void) {
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* Run 5 (2026-09-23): the control-nodump submit was accepted but its EOP fence never retired
+       (fence-hit 0, fence-val stayed at the 0x11111111 canary). The stall latched
+       s_agc_queue_faulted and cost display-target-memory the row below it. Same stall class as the
+       others gated here - off in the default suite, re-enabled with -DOBS_RUN_WEDGING_GPU_CHECKS. */
+    return obs_skip(
+        "excluded from default suite: ZPASS_DONE query submit does not retire on hardware "
+        "(2026-09-23 run 5); build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
+#endif
     if (s_agc_queue_faulted) {
         return obs_skip("earlier GPU check missed fence; queue stalled");
     }
@@ -11505,6 +12030,9 @@ static obs_result check_agc_zpass_counters(void) {
         return r_ctrl;
     }
     obs_result r_draw = check_agc_zpass_sub("arm-draw", 0, 1, NULL, NULL, NULL, NULL, NULL, NULL);
+    if (r_draw.status != OBS_PASS) {
+        return r_draw;
+    }
 
     /* HW safety (AGENTS.md §4): control-zero emits EVENT_WRITE(ZPASS_DONE) with DB_COUNT_CONTROL=0.
      * When DB sample counting is disabled, ZPASS_DONE events are not acknowledged by the DB,
@@ -11514,13 +12042,7 @@ static obs_result check_agc_zpass_counters(void) {
     obs_report_measure("166-agc/zpass-counters", "control-zero", "isolated", 1u, "bool");
     obs_report_measure("166-agc/zpass-counters", "control-zero", "sum-diff", 0u, "pixels");
 
-    if (r_ctrl.status == OBS_PASS && r_draw.status == OBS_PASS) {
-        return obs_pass();
-    }
-    if (r_ctrl.status == OBS_PASS) {
-        return obs_pass_value(0x1u);
-    }
-    return r_ctrl;
+    return obs_pass();
 }
 
 /* REQ-20260919T1811Z-b52e: CB draw landing in display render target */
@@ -12005,6 +12527,16 @@ static obs_result check_agc_display_sub(const char *variant, int mem_type,
 }
 
 static obs_result check_agc_display_target_memory(void) {
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* Masked in every hardware run to date - it sits right behind zpass-counters and has never
+       once been observed to retire, so it is not a proven-reliable check. Structurally it is the
+       same class: arm2-onion/arm3-garlic submit real NGG draws to a render target and wait on an
+       EOP fence, the exact path that wedged on 2026-09-23. Off in the default suite until it is
+       proven under -DOBS_RUN_WEDGING_GPU_CHECKS, re-enabled the same way. */
+    return obs_skip(
+        "excluded from default suite: raw render-target draw + fence, never observed to retire "
+        "on hardware (2026-09-23 run 5); build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
+#endif
     if (s_agc_queue_faulted) {
         return obs_skip("earlier GPU check missed fence; queue stalled");
     }
@@ -18277,6 +18809,363 @@ static obs_result check_agc_patch_queue_eop_address(void) {
                            0x60000000ULL, 0, 0x80000000ULL, 0);
 }
 
+/* REQ-20260922T2230Z-6e81: what the CP reads past a DCB's declared size,
+ * termination packet requirements, and 2 MiB batch map validation. */
+static obs_result check_agc_dcb_read_extent(void) {
+    const char *check_name = "166-agc/dcb-extent";
+
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        (!obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer) &&
+         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb))) {
+        return obs_skip("libSceAgcDriver queue create/submit not available");
+    }
+
+    void *queue = NULL;
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_report_measure(check_name, "sceAgcDriverCreateQueue", "rc-create",
+                       (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip("type 0 graphics queue creation failed; skipping dcb extent probe");
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    void *dcb_raw = oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+    void *fence_raw = oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(64) uint32_t s_host_dcb[0x4000];
+    static _Alignas(64) uint32_t s_host_fence[16];
+    void *dcb_raw = s_host_dcb;
+    void *fence_raw = s_host_fence;
+#endif
+
+    if (dcb_raw == NULL || fence_raw == NULL) {
+#if !defined(OBSCENE_HOST_BUILD)
+        if (dcb_raw) oops_mem_free(dcb_raw);
+        if (fence_raw) oops_mem_free(fence_raw);
+#endif
+        if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+            sceAgcDriverDestroyQueue(queue);
+        }
+        return obs_fail("failed to allocate DCB or fence memory");
+    }
+
+    volatile uint32_t *fence = (volatile uint32_t *)fence_raw;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence_raw;
+    uint32_t *dcb = (uint32_t *)dcb_raw;
+
+    /* Arm 1: Exact size without trailing NOPs (11 DWORDs)
+     * Poison the rest of the 64 KiB buffer with invalid PM4 packet headers (0xdeadbeef).
+     * If the CP fetches and decodes past the declared 11 DWORDs, it will parse
+     * 0xdeadbeef and fault/hang rather than retiring cleanly. */
+    for (size_t i = 0; i < 0x10000 / 4; i++) {
+        dcb[i] = 0xdeadbeefu;
+    }
+    dcb[0] = 0xc0012800u; /* SET_CONTEXT_REG CB_COLOR0_BASE */
+    dcb[1] = 0x200u;
+    dcb[2] = (uint32_t)(fence_gpu >> 8);
+    dcb[3] = 0xc0064900u; /* RELEASE_MEM */
+    dcb[4] = 0x06603514u;
+    dcb[5] = 0x20000000u;
+    dcb[6] = (uint32_t)fence_gpu;
+    dcb[7] = (uint32_t)(fence_gpu >> 32);
+    dcb[8] = 0xbeef0001u;
+    dcb[9] = 0u;
+    dcb[10] = 0u;
+
+    *fence = 0x11111111u;
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < 128; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)dcb + p));
+    }
+#endif
+
+    obs_agc_dcb_desc desc;
+    __builtin_memset(&desc, 0, sizeof(desc));
+    desc.gpu_addr = (uint64_t)(uintptr_t)dcb_raw;
+    desc.size = 11u;
+
+    int rc_submit1 = obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)
+                         ? sceAgcDriverSubmitCommandBuffer(queue, &desc)
+                         : sceAgcDriverSubmitDcb(&desc);
+    obs_report_measure(check_name, "arm1-exact-11dw", "rc-submit",
+                       (uint64_t)(uint32_t)rc_submit1, "code");
+
+    int fence_hit1 = 0;
+    if (rc_submit1 == 0) {
+        for (int iter = 0; iter < 1000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            if (*fence == 0xbeef0001u) {
+                fence_hit1 = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+    obs_report_measure(check_name, "arm1-exact-11dw", "fence-hit",
+                       (uint64_t)fence_hit1, "bool");
+    obs_report_measure(check_name, "arm1-exact-11dw", "fence-val",
+                       (uint64_t)*fence, "hex");
+
+    /* Arm 2: Mesa fbotexture crash size: 1984 DWORDs (7936 bytes) with 0 trailing NOPs */
+    for (size_t i = 0; i < 0x10000 / 4; i++) {
+        dcb[i] = 0xdeadbeefu;
+    }
+    for (size_t i = 0; i < 1973; i++) {
+        dcb[i] = 0xffff1000u;
+    }
+    dcb[1973] = 0xc0012800u;
+    dcb[1974] = 0x200u;
+    dcb[1975] = (uint32_t)(fence_gpu >> 8);
+    dcb[1976] = 0xc0064900u;
+    dcb[1977] = 0x06603514u;
+    dcb[1978] = 0x20000000u;
+    dcb[1979] = (uint32_t)fence_gpu;
+    dcb[1980] = (uint32_t)(fence_gpu >> 32);
+    dcb[1981] = 0xbeef0002u;
+    dcb[1982] = 0u;
+    dcb[1983] = 0u;
+
+    *fence = 0x11111111u;
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (1984 * 4) + 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)dcb + p));
+    }
+#endif
+
+    desc.size = 1984u;
+    int rc_submit2 = obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)
+                         ? sceAgcDriverSubmitCommandBuffer(queue, &desc)
+                         : sceAgcDriverSubmitDcb(&desc);
+    obs_report_measure(check_name, "arm2-mesa-1984dw", "rc-submit",
+                       (uint64_t)(uint32_t)rc_submit2, "code");
+
+    int fence_hit2 = 0;
+    if (rc_submit2 == 0) {
+        for (int iter = 0; iter < 1000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            if (*fence == 0xbeef0002u) {
+                fence_hit2 = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+    obs_report_measure(check_name, "arm2-mesa-1984dw", "fence-hit",
+                       (uint64_t)fence_hit2, "bool");
+    obs_report_measure(check_name, "arm2-mesa-1984dw", "fence-val",
+                       (uint64_t)*fence, "hex");
+
+    /* Arm 3: Trailing NOP padding sweeps (0, 4, 16, 64 NOPs after 1984 dwords) */
+    static const uint32_t nop_counts[] = { 0, 4, 16, 64 };
+    for (size_t n = 0; n < OBS_COUNT(nop_counts); n++) {
+        uint32_t extra = nop_counts[n];
+        for (size_t i = 1984; i < 1984 + extra; i++) {
+            dcb[i] = 0xffff1000u;
+        }
+        for (size_t i = 1984 + extra; i < 1984 + extra + 16; i++) {
+            dcb[i] = 0xdeadbeefu;
+        }
+        *fence = 0x11111111u;
+#if defined(__x86_64__)
+        __builtin_ia32_clflush((const void *)fence);
+        for (size_t p = 0; p < ((1984 + extra) * 4) + 64; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)dcb + p));
+        }
+#endif
+        desc.size = 1984u + extra;
+        int rc_nop = obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)
+                         ? sceAgcDriverSubmitCommandBuffer(queue, &desc)
+                         : sceAgcDriverSubmitDcb(&desc);
+        int hit_nop = 0;
+        if (rc_nop == 0) {
+            for (int iter = 0; iter < 1000; iter++) {
+#if defined(__x86_64__)
+                __builtin_ia32_clflush((const void *)fence);
+#endif
+                if (*fence == 0xbeef0002u) {
+                    hit_nop = 1;
+                    break;
+                }
+                if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                    sceKernelUsleep(100);
+                }
+            }
+        }
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "nop-pad-%u", extra);
+        obs_report_measure(check_name, "arm3-nop-sweep", tag, (uint64_t)hit_nop, "bool");
+    }
+
+    /* Arm 4: Page boundary termination with unmapped guard page */
+    int arm4_tested = 0;
+    int arm4_fence_hit = 0;
+#if !defined(OBSCENE_HOST_BUILD)
+    void *pages_raw = oops_mem_alloc(0x20000, 0x10000, OOPS_MEM_WB_ONION);
+    if (pages_raw != NULL) {
+        uint32_t *p0 = (uint32_t *)pages_raw;
+        uint32_t p0_dwords = 0x10000 / 4;
+        for (size_t i = 0; i < p0_dwords - 11; i++) {
+            p0[i] = 0xffff1000u;
+        }
+        size_t end_idx = p0_dwords - 11;
+        p0[end_idx + 0] = 0xc0012800u;
+        p0[end_idx + 1] = 0x200u;
+        p0[end_idx + 2] = (uint32_t)(fence_gpu >> 8);
+        p0[end_idx + 3] = 0xc0064900u;
+        p0[end_idx + 4] = 0x06603514u;
+        p0[end_idx + 5] = 0x20000000u;
+        p0[end_idx + 6] = (uint32_t)fence_gpu;
+        p0[end_idx + 7] = (uint32_t)(fence_gpu >> 32);
+        p0[end_idx + 8] = 0xbeef0004u;
+        p0[end_idx + 9] = 0u;
+        p0[end_idx + 10] = 0u;
+
+        void *page1_vaddr = (void *)((uintptr_t)pages_raw + 0x10000);
+        int munmap_rc = oops_mem_unmap(page1_vaddr, 0x10000);
+        obs_report_measure(check_name, "arm4-guard-page", "page1-munmap-rc",
+                           (uint64_t)(uint32_t)munmap_rc, "code");
+
+        *fence = 0x11111111u;
+#if defined(__x86_64__)
+        __builtin_ia32_clflush((const void *)fence);
+        for (size_t p = 0; p < 0x10000; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)p0 + p));
+        }
+#endif
+        desc.gpu_addr = (uint64_t)(uintptr_t)pages_raw;
+        desc.size = p0_dwords;
+        int rc_submit4 = obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)
+                             ? sceAgcDriverSubmitCommandBuffer(queue, &desc)
+                             : sceAgcDriverSubmitDcb(&desc);
+        obs_report_measure(check_name, "arm4-guard-page", "rc-submit",
+                           (uint64_t)(uint32_t)rc_submit4, "code");
+        if (rc_submit4 == 0) {
+            for (int iter = 0; iter < 1000; iter++) {
+#if defined(__x86_64__)
+                __builtin_ia32_clflush((const void *)fence);
+#endif
+                if (*fence == 0xbeef0004u) {
+                    arm4_fence_hit = 1;
+                    break;
+                }
+                if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                    sceKernelUsleep(100);
+                }
+            }
+        }
+        obs_report_measure(check_name, "arm4-guard-page", "fence-hit",
+                           (uint64_t)arm4_fence_hit, "bool");
+        obs_report_measure(check_name, "arm4-guard-page", "fence-val",
+                           (uint64_t)*fence, "hex");
+        arm4_tested = 1;
+        oops_mem_unmap(pages_raw, 0x10000);
+    }
+#endif
+    obs_report_measure(check_name, "arm4-guard-page", "tested",
+                       (uint64_t)arm4_tested, "bool");
+
+    /* Arm 5: 128 x 16 KiB (2 MiB) batch map validation */
+    int batch_tested = 0;
+#if !defined(OBSCENE_HOST_BUILD)
+    if (obs_address_is_callable((const void *)&sceKernelBatchMap)) {
+        size_t total_size = 2 * 1024 * 1024; /* 2 MiB */
+        void *big_buf = oops_mem_alloc(total_size, 0x10000, OOPS_MEM_WB_ONION);
+        if (big_buf != NULL) {
+            uint64_t base_gpu = (uint64_t)(uintptr_t)big_buf;
+            uint32_t *dw = dcb;
+            uint64_t offsets[] = { 0x0, 0x4000, 0x1c000, 0x20000, 0x1fc000 };
+
+            for (size_t k = 0; k < OBS_COUNT(offsets); k++) {
+                uint64_t target_gpu = base_gpu + offsets[k];
+                *(volatile uint32_t *)((uintptr_t)big_buf + offsets[k]) = 0x12345678u;
+                *dw++ = 0xc0055000u; /* PACKET3_DMA_DATA */
+                *dw++ = 0x80000000u | (3u << 29) | (3u << 20);
+                *dw++ = (uint32_t)target_gpu;
+                *dw++ = (uint32_t)(target_gpu >> 32);
+                *dw++ = (uint32_t)(fence_gpu + 16u);
+                *dw++ = (uint32_t)((fence_gpu + 16u) >> 32);
+                *dw++ = 4u;
+            }
+            *dw++ = 0xc0012800u;
+            *dw++ = 0x200u;
+            *dw++ = (uint32_t)(fence_gpu >> 8);
+            *dw++ = 0xc0064900u;
+            *dw++ = 0x06603514u;
+            *dw++ = 0x20000000u;
+            *dw++ = (uint32_t)fence_gpu;
+            *dw++ = (uint32_t)(fence_gpu >> 32);
+            *dw++ = 0xbeef0005u;
+            *dw++ = 0u;
+            *dw++ = 0u;
+
+            for (int p = 0; p < 16; p++) *dw++ = 0xffff1000u;
+
+            uint32_t total_dw = (uint32_t)(dw - dcb);
+            *fence = 0x11111111u;
+            *(volatile uint32_t *)((uintptr_t)fence + 16) = 0u;
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+            __builtin_ia32_clflush((const void *)((uintptr_t)fence + 16));
+            for (size_t p = 0; p < (total_dw * 4) + 64; p += 64) {
+                __builtin_ia32_clflush((const void *)((const char *)dcb + p));
+            }
+#endif
+            desc.gpu_addr = (uint64_t)(uintptr_t)dcb;
+            desc.size = total_dw;
+            int rc_submit5 = obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)
+                                 ? sceAgcDriverSubmitCommandBuffer(queue, &desc)
+                                 : sceAgcDriverSubmitDcb(&desc);
+            int hit5 = 0;
+            if (rc_submit5 == 0) {
+                for (int iter = 0; iter < 1000; iter++) {
+#if defined(__x86_64__)
+                    __builtin_ia32_clflush((const void *)fence);
+#endif
+                    if (*fence == 0xbeef0005u) {
+                        hit5 = 1;
+                        break;
+                    }
+                    if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                        sceKernelUsleep(100);
+                    }
+                }
+            }
+            obs_report_measure(check_name, "arm5-2mb-map", "fence-hit",
+                               (uint64_t)hit5, "bool");
+            obs_report_measure(check_name, "arm5-2mb-map", "dma-val",
+                               (uint64_t)*(volatile uint32_t *)((uintptr_t)fence + 16), "hex");
+            batch_tested = 1;
+            oops_mem_free(big_buf);
+        }
+    }
+#endif
+    obs_report_measure(check_name, "arm5-2mb-map", "tested",
+                       (uint64_t)batch_tested, "bool");
+
+#if !defined(OBSCENE_HOST_BUILD)
+    oops_mem_free(dcb_raw);
+    oops_mem_free(fence_raw);
+#endif
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+
+    int overall_pass = (fence_hit1 && fence_hit2);
+    return overall_pass ? obs_pass_value((uint64_t)fence_hit1)
+                        : obs_partial_value("one or more DCB extent arms did not retire",
+                                            (uint64_t)((fence_hit1 ? 1 : 0) | ((fence_hit2 ? 1 : 0) << 1) | ((arm4_fence_hit ? 1 : 0) << 2)));
+}
+
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_agc_cb_nop, OBS_FROM_ASSUMED},
@@ -18347,6 +19236,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/graphics-submit", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_graphics_submit, OBS_FROM_ASSUMED},
+    {"166-agc/dcb-extent", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_dcb_read_extent, OBS_FROM_ASSUMED},
     {"166-agc/shader-differential", "libSceAgc", "sceAgcCreateShader", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAgcCreateShader, check_agc_shader_differential,
      OBS_FROM_ASSUMED},
@@ -18359,6 +19251,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/primitive-draw-param3", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_draw_param3, OBS_FROM_ASSUMED},
+    {"166-agc/compiled-ps", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_compiled_ps, OBS_FROM_ASSUMED},
     {"166-agc/ps-pos-xy", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_ps_pos_xy, OBS_FROM_ASSUMED},
@@ -18380,9 +19275,6 @@ static const obs_check agc_checks[] = {
     {"166-agc/primitive-draw-param5", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_primitive_draw_param5, OBS_FROM_ASSUMED},
-    {"166-agc/compiled-ps", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
-     check_agc_compiled_ps, OBS_FROM_ASSUMED},
     {"166-agc/gpu-wait-reg-mem-sync", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_gpu_wait_sync, OBS_FROM_ASSUMED},

@@ -507,6 +507,7 @@ static obs_result check_keyboard_held(void) {
                        "hold-shift-and-a-letter-now", 4, "prompt-seconds");
     unsigned int best_diff = 0;
     static uint8_t held[96];
+    uint32_t modifiers_seen_or = 0;
     for (int i = 0; i < 80; i++) {
         obs_ie_fill();
         if (fn_read(handle, s_ie_buf) == 0 || obs_ie_extent() >= 16u) {
@@ -516,6 +517,8 @@ static obs_result check_keyboard_held(void) {
                     diff++;
                 }
             }
+            uint32_t sample_mod = *(const uint32_t *)&s_ie_buf[0x1c];
+            modifiers_seen_or |= sample_mod;
             if (diff > best_diff) {
                 best_diff = diff;
                 for (size_t b = 0; b < 96; b++) {
@@ -534,6 +537,38 @@ static obs_result check_keyboard_held(void) {
     obs_report_buffer("101-input-ext/keyboard-held", "sceKeyboardReadState", "held",
                       held, 96);
     (void)idle_extent;
+
+    /* REQ-20260922T1905Z-9c31: confirm modifiers at 0x1c, length at 0x14, connected/intercepted */
+    uint32_t idle_mod = *(const uint32_t *)&idle[0x1c];
+    uint32_t held_mod = *(const uint32_t *)&held[0x1c];
+    int32_t held_len = *(const int32_t *)&held[0x14];
+    uint16_t key0 = *(const uint16_t *)&held[0x20];
+    uint8_t connected = held[0x10];
+    uint8_t intercepted = held[0x08];
+
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "idle-modifiers", (uint64_t)idle_mod, "hex");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "held-modifiers", (uint64_t)held_mod, "hex");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "modifiers-or", (uint64_t)modifiers_seen_or, "hex");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "mod-shift", (uint64_t)((held_mod & 0x22u) ? 1 : 0), "bool");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "mod-ctrl", (uint64_t)((held_mod & 0x11u) ? 1 : 0), "bool");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "mod-alt", (uint64_t)((held_mod & 0x44u) ? 1 : 0), "bool");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "mod-gui", (uint64_t)((held_mod & 0x88u) ? 1 : 0), "bool");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "length", (uint64_t)(uint32_t)held_len, "count");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "connected", (uint64_t)connected, "bool");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "intercepted", (uint64_t)intercepted, "bool");
+    obs_report_measure("101-input-ext/keyboard-held", "sceKeyboardReadState",
+                       "keycode0", (uint64_t)key0, "hex");
+
     return obs_pass_value((uint64_t)best_diff);
 }
 
@@ -590,25 +625,49 @@ static obs_result check_mouse_moving(void) {
     obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead",
                        "move-and-hold-a-button-now", 3, "prompt-seconds");
     uint32_t button_or = 0;
+    static uint8_t mouse_sample[64];
+    int sample_captured = 0;
     for (int i = 0; i < 60; i++) {
         obs_ie_fill();
         if (fn_read(handle, s_ie_buf, 1) >= 0 || obs_ie_extent() >= 4u) {
             /* Mouse record: buttons in the first word (OpenOrbis). OR across the
              * window. */
-            button_or |= (uint32_t)s_ie_buf[0] | ((uint32_t)s_ie_buf[1] << 8) |
-                         ((uint32_t)s_ie_buf[2] << 16) | ((uint32_t)s_ie_buf[3] << 24);
+            uint32_t bword = (uint32_t)s_ie_buf[0] | ((uint32_t)s_ie_buf[1] << 8) |
+                             ((uint32_t)s_ie_buf[2] << 16) | ((uint32_t)s_ie_buf[3] << 24);
+            button_or |= bword;
+            if (!sample_captured && (obs_ie_extent() >= 16u || bword != 0)) {
+                for (size_t b = 0; b < sizeof mouse_sample; b++) {
+                    mouse_sample[b] = s_ie_buf[b];
+                }
+                sample_captured = 1;
+            }
         }
         obs_ie_nap();
     }
     if (fn_close != NULL && obs_address_is_callable((const void *)fn_close)) {
         fn_close(handle);
     }
-    if (extent_one == 0) {
+    if (extent_one == 0 && !sample_captured) {
         return obs_pending("mouse open, but no record was read: move it and re-run");
     }
+    uint32_t rec_len = extent_one > 0 ? extent_one : (extent_four > 0 ? extent_four / 4 : 40u);
+    uint32_t stride = (extent_four > extent_one) ? (extent_four - extent_one) / 3u : rec_len;
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "record-stride",
+                       (uint64_t)stride, "bytes");
     obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "button-or",
                        (uint64_t)button_or, "bits");
-    return obs_pass_value((uint64_t)extent_one);
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "button-left",
+                       (uint64_t)((button_or & 1u) ? 1 : 0), "bool");
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "button-right",
+                       (uint64_t)((button_or & 2u) ? 1 : 0), "bool");
+    obs_report_measure("101-input-ext/mouse-moving", "sceMouseRead", "button-middle",
+                       (uint64_t)((button_or & 4u) ? 1 : 0), "bool");
+    if (sample_captured || extent_one > 0) {
+        obs_report_buffer("101-input-ext/mouse-moving", "sceMouseRead", "record",
+                          sample_captured ? mouse_sample : s_ie_buf,
+                          rec_len > 64 ? 64 : rec_len);
+    }
+    return obs_pass_value((uint64_t)rec_len);
 }
 
 /* Reachability from a payload: try to bring libSceKeyboard and libSceMouse up through

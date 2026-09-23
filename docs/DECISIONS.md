@@ -339,6 +339,8 @@ principles six weeks later.
 | 🟢 | D330 | [Audio format selectors, mouse stubs in unsigned payloads, and POSIX sockets for Porthole](decisions/D330-audio-format-selector-mouse-in-payload-and-posix-sockets.md) | decided | 2026-09-08 |
 | 🟢 | D331 | [The `*GetSize` family is measured against its own builder, not against a borrowed number](decisions/D331-the-getsize-family-is-measured-against-its-own-builder.md) | decided | 2026-09-12 |
 | 🟢 | D332 | [Hardware AGC Requests, Clean-Room Container Generation, and Sandbox POSIX Probing](decisions/D332-hardware-agc-requests-and-sandbox-posix-probing.md) | decided | 2026-09-14 |
+| 🟡 | D333 | [the suspend lifecycle is a resolution census, and button-bits records edges](decisions/D333-the-suspend-lifecycle-is-a-resolution-census.md) | assumed | 2026-09-23 |
+| 🟡 | D334 | [the default suite is blargg-reliable; GPU checks that stall are opt-in](decisions/D334-the-default-suite-is-blargg-reliable-gpu-stallers-are-opt-in.md) | assumed | 2026-09-23 |
 
 | | meaning |
 |---|---|
