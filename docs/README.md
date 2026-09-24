@@ -1,4 +1,4 @@
-# Documentation
+# obSCEne documentation
 
 Every file here is listed, and `obscene-tool doccheck` fails if one is not - an index that
 silently stops covering the directory is worse than no index, because it reads as complete.

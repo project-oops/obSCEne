@@ -4,7 +4,7 @@ Welcome to the **obSCEne** operator guide.
 
 This guide explains how **hardware testers, homebrew operators, and researchers** can build, deploy, run, and interpret obSCEne conformance probes on physical console hardware.
 
-If you are an AI coding agent, compiler architect, or low-level systems engineer seeking the formal wire protocol, sysctl offset tables, or decision records, consult the **[Technical Reference](README.md)**, **[PROTOCOL.md](PROTOCOL.md)**, and **[DECISIONS.md](DECISIONS.md)** instead.
+For the wire protocol, the register tables and the decision records, see the **[Technical Reference](README.md)**, **[PROTOCOL.md](PROTOCOL.md)** and **[DECISIONS.md](DECISIONS.md)**.
 
 ---
 
