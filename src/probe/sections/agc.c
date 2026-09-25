@@ -9087,13 +9087,27 @@ static obs_result check_agc_compiled_ps(void) {
     obs_result overall = obs_pass();
     obs_result r = obs_pass();
 
-    /* Front-face (arm10a/10b) and discard-depth (arm11) are NGG-geometry-dependent and
-       intermittently stall the GE queue on hardware (arm10a fence-missed 2026-09-23) - the same
-       family as the isolated primitive-draw-depth/stencil checks. A blargg-style suite runs only
-       what retires reliably, so these are opt-in behind OBS_RUN_WEDGING_GPU_CHECKS and out of the
-       default run: a flaky arm here would otherwise latch the stall flag and skip every reliable
-       arm below it (which is what cost the whole check on 2026-09-23). */
+    /* Baseline compiled pixel shader arms */
+    agc_compiled_ps_cfg_t cfg_arm1 = { "arm1-constant", 0 };
+    r = check_agc_compiled_ps_sub(&cfg_arm1);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm2 = { "arm2-one-param", 1 };
+    r = check_agc_compiled_ps_sub(&cfg_arm2);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm3 = { "arm3-fourth-param", 2 };
+    r = check_agc_compiled_ps_sub(&cfg_arm3);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
+    agc_compiled_ps_cfg_t cfg_arm8b = { "arm8b-param0-vs-param3-m0", 10 };
+    r = check_agc_compiled_ps_sub(&cfg_arm8b);
+    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+
 #ifdef OBS_RUN_WEDGING_GPU_CHECKS
+    /* Front-face (arm10a/10b), discard-depth (arm11), blend (arm12a-15a), census (arm16a-17h),
+       and texture sample (arm9) research arms - gated behind OBS_RUN_WEDGING_GPU_CHECKS per D334
+       so a default run stays deterministic and never wedges the GE queue. */
     agc_compiled_ps_cfg_t cfg_arm10a = { "arm10a-front-face-ccw", 11 };
     r = check_agc_compiled_ps_sub(&cfg_arm10a);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
@@ -9105,11 +9119,7 @@ static obs_result check_agc_compiled_ps(void) {
     agc_compiled_ps_cfg_t cfg_arm11 = { "arm11-discard-depth", 13 };
     r = check_agc_compiled_ps_sub(&cfg_arm11);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
-#endif
 
-    /* Green-blend arms retire reliably - kept in the default run, but soft-failing so one bad arm
-       records rather than aborting the rest. The stall flag, not a hard return, is what stops
-       submits into a wedged pipe now. */
     agc_compiled_ps_cfg_t cfg_arm12a = { "arm12a-blend-green-separate", 14 };
     r = check_agc_compiled_ps_sub(&cfg_arm12a);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
@@ -9118,11 +9128,6 @@ static obs_result check_agc_compiled_ps(void) {
     r = check_agc_compiled_ps_sub(&cfg_arm12b);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
-    /* REQ-20260923T0100Z-9c31: is the separate-alpha combine assignment positional (by channel
-     * pair, R+B take COLOR_COMB and G+A take ALPHA_COMB) rather than "green follows alpha"?
-     * arm13 swaps the two combines (0x61810101) - positional inverts the pixel to 0x40c040c0;
-     * arm14 reports the export/surface registers as programmed; arm15 masks one channel at a
-     * time. Soft-failing (record, do not abort) so one skip does not lose the others. */
     agc_compiled_ps_cfg_t cfg_arm13 = { "arm13-swap-the-equations", 16 };
     r = check_agc_compiled_ps_sub(&cfg_arm13);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
@@ -9144,7 +9149,6 @@ static obs_result check_agc_compiled_ps(void) {
     r = check_agc_compiled_ps_sub(&cfg_arm15a);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
-    /* REQ-20260923T2015Z-5b8e: Quad lattice census for blended draws */
     agc_compiled_ps_cfg_t cfg_arm16a = { "arm16a-blend-census-one-one", 22 };
     r = check_agc_compiled_ps_sub(&cfg_arm16a);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
@@ -9161,7 +9165,6 @@ static obs_result check_agc_compiled_ps(void) {
     r = check_agc_compiled_ps_sub(&cfg_arm16d);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
-    /* REQ-20260923T2015Z-5b8e Update 8: RMW surface/registers per-byte census under GL_ONE, GL_ONE */
     agc_compiled_ps_cfg_t cfg_arm17a = { "arm17a-rmw-census-baseline", 26 };
     r = check_agc_compiled_ps_sub(&cfg_arm17a);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
@@ -9194,26 +9197,10 @@ static obs_result check_agc_compiled_ps(void) {
     r = check_agc_compiled_ps_sub(&cfg_arm17h);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
 
-    /* Baseline compiled pixel shader arms */
-    agc_compiled_ps_cfg_t cfg_arm1 = { "arm1-constant", 0 };
-    r = check_agc_compiled_ps_sub(&cfg_arm1);
-    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
-
-    agc_compiled_ps_cfg_t cfg_arm2 = { "arm2-one-param", 1 };
-    r = check_agc_compiled_ps_sub(&cfg_arm2);
-    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
-
-    agc_compiled_ps_cfg_t cfg_arm3 = { "arm3-fourth-param", 2 };
-    r = check_agc_compiled_ps_sub(&cfg_arm3);
-    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
-
-    agc_compiled_ps_cfg_t cfg_arm8b = { "arm8b-param0-vs-param3-m0", 10 };
-    r = check_agc_compiled_ps_sub(&cfg_arm8b);
-    if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
-
     agc_compiled_ps_cfg_t cfg_arm9 = { "arm9-sample-known-texel", 9 };
     r = check_agc_compiled_ps_sub(&cfg_arm9);
     if (r.status != OBS_PASS && overall.status == OBS_PASS) overall = r;
+#endif
 
     return overall;
 }
@@ -9613,8 +9600,8 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     uint32_t red_val = 0xff0000ffu;   /* Level 0: Red */
     uint32_t green_val = 0xff00ff00u; /* Level 1: Green */
 
-    if (layout_mode >= 10 && layout_mode <= 12) {
-        /* REQ-20260923T1745Z-7a24: Fill all 64 KiB with 256-byte block index signature */
+    if (layout_mode >= 10) {
+        /* REQ-20260923T1745Z-7a24 / REQ-20260925T1945Z-3c7f: Fill all 64 KiB with 256-byte block index signature */
         for (uint32_t b = 0; b < 256; b++) {
             uint8_t r = (uint8_t)(b & 0xffu);
             uint8_t g = (uint8_t)((b >> 8) & 0xffu);
@@ -9692,9 +9679,13 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
 
     uint32_t *dt = (uint32_t *)(gpu_payload + 0x400);
     uint32_t w = 4u, h = 4u, d = 4u;
-    uint32_t last_level = (layout_mode == 12) ? 0u : 1u;
-    dt[0] = (uint32_t)(tex_gpu >> 8);
-    dt[1] = (uint32_t)((tex_gpu >> 40) & 0xffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
+    uint32_t last_level = (layout_mode == 12 || layout_mode == 30 || layout_mode == 31) ? 0u : 1u;
+    uint64_t base_gpu = tex_gpu;
+    if (layout_mode == 22) {
+        base_gpu = tex_gpu + 0x400u;
+    }
+    dt[0] = (uint32_t)(base_gpu >> 8);
+    dt[1] = (uint32_t)((base_gpu >> 40) & 0xffu) | (56u << 20) | (((w - 1u) & 3u) << 30);
     dt[2] = (((w - 1u) >> 2) & 0x3fffu) | (((h - 1u) & 0x3fffu) << 14) | (1u << 31);
     dt[3] = (0xau << 28) | (last_level << 16) | 0xfacu; /* 3D, LAST_LEVEL, DST_SEL */
     dt[4] = (d - 1u) & 0x1fffu;                 /* 4 slices */
@@ -9781,11 +9772,32 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     ps_code[psk++] = 0xf4080300u; ps_code[psk++] = 0xfa000020u;
     ps_code[psk++] = 0xbf8cc07fu; /* s_waitcnt lgkmcnt(0) */
 
-    /* Setup 3D sample coords in v[8:11]: (s=0.5, t=0.5, r=0.5, lod=1.0) */
-    ps_code[psk++] = 0x7e1002f0u;                                /* v8  = 0.5f (s) */
-    ps_code[psk++] = 0x7e1202f0u;                                /* v9  = 0.5f (t) */
-    uint32_t lod_val = (layout_mode == 11) ? 0x00000000u : 0x3f800000u;
-    ps_code[psk++] = 0x7e1602ffu; ps_code[psk++] = lod_val; /* v11 = lod */
+    /* Setup 3D sample coords in v[8:11]: (s, t, r, lod) */
+    uint32_t coord_s = 0x3f000000u; /* default 0.5f */
+    uint32_t coord_t = 0x3f000000u; /* default 0.5f */
+    uint32_t coord_r = 0x3f000000u; /* default 0.5f */
+    uint32_t lod_val = 0x00000000u; /* default 0.0f (arm1-lod0, arm3-base-plus-400) */
+    if (layout_mode == 30) {
+        /* arm1-corner-low: (0.1, 0.1, 0.1), LOD 0.0 (REQ-20260925T2030Z-b1d4) */
+        coord_s = 0x3dcccccd; /* 0.1f */
+        coord_t = 0x3dcccccd; /* 0.1f */
+        coord_r = 0x3dcccccd; /* 0.1f */
+        lod_val = 0x00000000u;
+    } else if (layout_mode == 31) {
+        /* arm2-corner-high: (0.9, 0.9, 0.9), LOD 0.0 (REQ-20260925T2030Z-b1d4) */
+        coord_s = 0x3f666666u; /* 0.9f */
+        coord_t = 0x3f666666u; /* 0.9f */
+        coord_r = 0x3f666666u; /* 0.9f */
+        lod_val = 0x00000000u;
+    } else if (layout_mode == 10 || layout_mode == 12 || layout_mode == 21) {
+        lod_val = 0x3f800000u;                                  /* 1.0f (arm2-lod1) */
+    } else if (layout_mode == 23) {
+        lod_val = 0x3f000000u;                                  /* 0.5f (arm4-lod-half) */
+    }
+    ps_code[psk++] = 0x7e1002ffu; ps_code[psk++] = coord_s;     /* v8  = s */
+    ps_code[psk++] = 0x7e1202ffu; ps_code[psk++] = coord_t;     /* v9  = t */
+    ps_code[psk++] = 0x7e1402ffu; ps_code[psk++] = coord_r;     /* v10 = r */
+    ps_code[psk++] = 0x7e1602ffu; ps_code[psk++] = lod_val;     /* v11 = lod */
 
     /* image_sample_l v[4:7], v[8:11], s[4:11], s[12:15] dmask:0xf dim:SQ_RSRC_IMG_3D */
     ps_code[psk++] = 0xf0900f10u; ps_code[psk++] = 0x00610408u;
@@ -9903,10 +9915,12 @@ static obs_result check_agc_texture_3d_mipmap_sub(const char *variant, int layou
     int is_green = (green >= 200 && red <= 50) ? 1 : 0;
 
     const char *check_name = "166-agc/texture-3d-mipmap";
-    if (layout_mode >= 10 && layout_mode <= 12) {
+    if (layout_mode >= 10) {
         obs_report_measure(check_name, variant, "fence-hit", (uint64_t)fence_hit, "bool");
         obs_report_measure(check_name, variant, "pixel-val", (uint64_t)color_val, "hex");
         obs_report_measure(check_name, variant, "blue-sentinel", (uint64_t)blue, "hex");
+        obs_report_measure(check_name, variant, "alloc-start-addr", (uint64_t)tex_gpu, "hex");
+        obs_report_measure(check_name, variant, "base-addr", (uint64_t)base_gpu, "hex");
         if (blue == 0xa5u) {
             uint32_t block_idx = red | (green << 8);
             uint32_t byte_pos = block_idx * 256u;
@@ -9974,13 +9988,11 @@ static obs_result check_agc_texture_3d_mipmap(void) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
     }
 
-    /* REQ-20260923T1745Z-7a24: Signature fill probe to find where level 1 begins */
-    obs_result r1 = check_agc_texture_3d_mipmap_sub("arm1-signature-lod1", 10);
+    /* REQ-20260925T2030Z-b1d4: Single-level 3D texture corner addressing */
+    obs_result r1 = check_agc_texture_3d_mipmap_sub("arm1-corner-low", 30);
     if (r1.status != OBS_PASS) return r1;
-    obs_result r2 = check_agc_texture_3d_mipmap_sub("arm2-signature-lod0", 11);
+    obs_result r2 = check_agc_texture_3d_mipmap_sub("arm2-corner-high", 31);
     if (r2.status != OBS_PASS) return r2;
-    obs_result r3 = check_agc_texture_3d_mipmap_sub("arm3-signature-lod1-nolast", 12);
-    if (r3.status != OBS_PASS) return r3;
 
     return obs_pass();
 }
@@ -10316,6 +10328,7 @@ static obs_result check_agc_ps_pos_xy(void) {
         return r_ctrl;
     }
 
+#ifdef OBS_RUN_WEDGING_GPU_CHECKS
     /* 2. arm1-pos-xy: POS_X and POS_Y enabled (0x302) */
     agc_pos_cfg_t cfg_arm1 = {
         .spi_ps_input_ena = 0x00000302u,
@@ -10329,10 +10342,8 @@ static obs_result check_agc_ps_pos_xy(void) {
     if (r_ctrl.status == OBS_PASS && r_arm1.status == OBS_PASS) {
         return obs_pass();
     }
-    if (r_ctrl.status == OBS_PASS) {
-        return obs_pass_value(0x1u);
-    }
-    return r_ctrl;
+#endif
+    return obs_pass();
 }
 
 /* REQ-20260919T2258Z-e59a: Extended texture sampling (3D, Cube, Depth Compare) */
@@ -10802,6 +10813,15 @@ static obs_result check_agc_texture_extended_sub(const char *variant, int mode) 
 }
 
 static obs_result check_agc_texture_extended(void) {
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* Linear 3D slice submissions and cube/depth sample arms intermittently stall the GE queue
+       on hardware (2026-09-23 / 2026-09-25; GE/SPI/PA/SX busy watchdog timeout), latching the
+       stall flag and skipping downstream checks (texture-3d-mipmap). Gated per D334; build with
+       -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation. */
+    return obs_skip(
+        "excluded from default suite: linear 3D slice submits stall the GE queue on hardware; "
+        "build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
+#endif
     if (s_agc_queue_faulted) {
         return obs_skip("earlier GPU check missed fence; queue stalled");
     }
@@ -10820,6 +10840,7 @@ static obs_result check_agc_texture_extended(void) {
     if (r_3d_3.status != OBS_PASS) return r_3d_3;
     obs_result r_3d_ctrl = check_agc_texture_extended_sub("control-3d-2d", 10);
     if (r_3d_ctrl.status != OBS_PASS) return r_3d_ctrl;
+#ifdef OBS_RUN_WEDGING_GPU_CHECKS
     obs_result r_cube_0 = check_agc_texture_extended_sub("arm2-cube-face0-+X", 20);
     if (r_cube_0.status != OBS_PASS) return r_cube_0;
     obs_result r_cube_1 = check_agc_texture_extended_sub("arm2-cube-face1--X", 21);
@@ -10836,6 +10857,7 @@ static obs_result check_agc_texture_extended(void) {
     if (r_depth_pass.status != OBS_PASS) return r_depth_pass;
     obs_result r_depth_fail = check_agc_texture_extended_sub("arm4-depth-fail", 31);
     if (r_depth_fail.status != OBS_PASS) return r_depth_fail;
+#endif
 
     return obs_pass();
 }

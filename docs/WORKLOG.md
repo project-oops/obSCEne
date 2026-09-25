@@ -188,3 +188,9 @@ slow way.
 | - | [176 - a GPU wedge killed the console; hardening the suite to blargg-reliable](worklog/176-gpu-wedge-console-kill-and-blargg-hardening.md) |
 | - | [177 - CP read extent measured past DCB declared size; inputext reachability on hardware](worklog/177-dcb-extent-and-inputext-hardware-measurements.md) |
 | 2026-09-23 | [178 - Blend quad lattice census measured on hardware; SEPARATE_ALPHA_BLEND eliminated](worklog/178-blend-quad-lattice-census-hardware-measurements.md) |
+| 2026-09-25 | [179 - Texture 3D mipmap layout measured on hardware (REQ-20260923T1745Z-7a24)](worklog/179-texture-3d-mipmap-hardware-resolution.md) |
+| 2026-09-25 | [180 - `sceKernelAprResolveFilepathsToIdsAndFileSizes` out-parameter probe measured on hardware (REQ-20260925T1834Z-a7e2)](worklog/180-apr-resolve-filepaths-out-params-staged.md) |
+| 2026-09-25 | [181 - Linear 3D Texture Mipmapping Settled on Hardware (REQ-20260925T1945Z-3c7f)](worklog/181-linear-3d-texture-mipmapping-measured.md) |
+| 2026-09-25 | [182 - Single-Level Linear 3D Texture Corner Addressing Settled on Hardware (REQ-20260925T2030Z-b1d4)](worklog/182-linear-3d-texture-addressing-corner-measured.md) |
+
+

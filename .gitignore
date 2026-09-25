@@ -107,3 +107,12 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# **A packaged title's own layout, when `make` leaves one in the root.** `eboot.bin`,
+# `sce_module/` and `sce_sys/` are what a title *is* once it is built - a 5.9 MB payload and the
+# metadata beside it - and they landed here rather than under `build/` because the packaging
+# step writes where it is run. They are output. Named here because `git add -A` does not know a
+# built payload from a source file, and one was nearly committed.
+/eboot.bin
+/sce_module/
+/sce_sys/
