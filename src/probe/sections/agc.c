@@ -3343,9 +3343,18 @@ static obs_result check_agc_driver_symbols(void) {
                                (uint64_t)(uintptr_t)fn, "addr");
             if (strcmp(name, "sceAgcDriverGetWaitRenderingPacketSizeInDwords") == 0) {
                 uint32_t (*sz_fn)(void) = (uint32_t (*)(void))fn;
-                uint32_t dwords = sz_fn();
-                obs_report_measure("166-agc/driver-symbols", name, "dwords",
-                                   (uint64_t)dwords, "dwords");
+                obs_jmp_buf guard;
+                int sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    uint32_t dwords = sz_fn();
+                    obs_fault_unregister();
+                    obs_report_measure("166-agc/driver-symbols", name, "dwords",
+                                       (uint64_t)dwords, "dwords");
+                } else {
+                    obs_fault_unregister();
+                    obs_report_measure("166-agc/driver-symbols", name, "faulted",
+                                       (uint64_t)(uint32_t)sig, "sig");
+                }
             } else if (strcmp(name, "sceAgcDriverWaitUntilSafeForRendering") == 0) {
                 uint32_t words[64];
                 uint32_t before_w[64];
@@ -3356,29 +3365,46 @@ static obs_result check_agc_driver_symbols(void) {
                 uint32_t *up = words;
                 int (*wait_fn)(uint32_t **, uint32_t *, uint32_t, int, uint32_t) =
                     (int (*)(uint32_t **, uint32_t *, uint32_t, int, uint32_t))fn;
-                int rc0 = wait_fn(&up, words + 64, 0, 1, 0);
-                uint64_t dw_written0 = (uint64_t)(up - words);
-                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0", "rc",
-                                   (uint64_t)(uint32_t)rc0, "rc");
-                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0",
-                                   "up-delta", dw_written0, "dwords");
-                obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx0",
-                                   (const uint8_t *)before_w, (const uint8_t *)words,
-                                   (unsigned int)(dw_written0 * sizeof(uint32_t)));
+                obs_jmp_buf guard;
+                int sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    int rc0 = wait_fn(&up, words + 64, 0, 1, 0);
+                    obs_fault_unregister();
+                    uint64_t dw_written0 = (uint64_t)(up - words);
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0", "rc",
+                                       (uint64_t)(uint32_t)rc0, "rc");
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0",
+                                       "up-delta", dw_written0, "dwords");
+                    obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx0",
+                                       (const uint8_t *)before_w, (const uint8_t *)words,
+                                       (unsigned int)(dw_written0 * sizeof(uint32_t)));
+                } else {
+                    obs_fault_unregister();
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0",
+                                       "faulted", (uint64_t)(uint32_t)sig, "sig");
+                }
 
                 for (int k = 0; k < 64; k++) {
                     words[k] = 0xC7C7C7C7u;
                 }
                 up = words;
-                int rc1 = wait_fn(&up, words + 64, 0, 1, 1);
-                uint64_t dw_written1 = (uint64_t)(up - words);
-                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1", "rc",
-                                   (uint64_t)(uint32_t)rc1, "rc");
-                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1",
-                                   "up-delta", dw_written1, "dwords");
-                obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx1",
-                                   (const uint8_t *)before_w, (const uint8_t *)words,
-                                   (unsigned int)(dw_written1 * sizeof(uint32_t)));
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    int rc1 = wait_fn(&up, words + 64, 0, 1, 1);
+                    obs_fault_unregister();
+                    uint64_t dw_written1 = (uint64_t)(up - words);
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1", "rc",
+                                       (uint64_t)(uint32_t)rc1, "rc");
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1",
+                                       "up-delta", dw_written1, "dwords");
+                    obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx1",
+                                       (const uint8_t *)before_w, (const uint8_t *)words,
+                                       (unsigned int)(dw_written1 * sizeof(uint32_t)));
+                } else {
+                    obs_fault_unregister();
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1",
+                                       "faulted", (uint64_t)(uint32_t)sig, "sig");
+                }
             }
         }
         obs_report_measure("166-agc/driver-symbols", name, "resolved",
@@ -20165,9 +20191,6 @@ static obs_result check_agc_dcb_set_flip(void) {
         if (sceUserServiceGetInitialUser(&vo_user) == 0) {
             vo_handle = sceVideoOutOpen(vo_user, OBS_VIDEO_BUS_MAIN, 0, NULL);
         }
-    }
-    if (vo_handle <= 0 && obs_address_is_callable((const void *)&sceVideoOutOpen)) {
-        vo_handle = sceVideoOutOpen(0xff, 0, 0, NULL);
     }
     obs_report_measure(id, sym, "video-handle", (uint64_t)(int64_t)vo_handle, "handle");
 

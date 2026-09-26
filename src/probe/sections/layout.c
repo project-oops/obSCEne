@@ -570,11 +570,23 @@ static obs_result check_video_out_output_status(void) {
     memset(before, 0xC7, sizeof(before));
 
     int rc_unreg = -1;
+    obs_jmp_buf guard;
+    int sig = 0;
+
     if (obs_address_is_callable((const void *)&sceVideoOutGetOutputStatus)) {
-        rc_unreg = sceVideoOutGetOutputStatus(handle, buf);
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_unreg = sceVideoOutGetOutputStatus(handle, buf);
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-unregistered", (uint64_t)(uint32_t)rc_unreg,
+                               "rc");
+            obs_report_written(id, sym, "status-unregistered", before, buf, 64);
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-unreg-faulted", (uint64_t)(uint32_t)sig,
+                               "sig");
+        }
     }
-    obs_report_measure(id, sym, "rc-unregistered", (uint64_t)(uint32_t)rc_unreg, "rc");
-    obs_report_written(id, sym, "status-unregistered", before, buf, 64);
 
     /* Arm with buffer registered if direct memory is available */
     if (obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory) &&
@@ -604,32 +616,70 @@ static obs_result check_video_out_output_status(void) {
 
             uint8_t buf_reg[64];
             memset(buf_reg, 0xC7, sizeof(buf_reg));
-            int rc_reg = sceVideoOutGetOutputStatus(handle, buf_reg);
-            obs_report_measure(id, sym, "rc-registered", (uint64_t)(uint32_t)rc_reg,
-                               "rc");
-            obs_report_written(id, sym, "status-registered", before, buf_reg, 64);
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                int rc_reg = sceVideoOutGetOutputStatus(handle, buf_reg);
+                obs_fault_unregister();
+                obs_report_measure(id, sym, "rc-registered", (uint64_t)(uint32_t)rc_reg,
+                                   "rc");
+                obs_report_written(id, sym, "status-registered", before, buf_reg, 64);
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, sym, "rc-reg-faulted", (uint64_t)(uint32_t)sig,
+                                   "sig");
+            }
 
+            /* Clean teardown order per videobuf convention:
+             * 1. Close video out handle to unregister buffers from display controller
+             * 2. Unmap virtual address range
+             * 3. Release physical direct memory pages */
+            (void)sceVideoOutClose(handle);
+            handle = -1;
+
+            if (obs_address_is_callable((const void *)&sceKernelMunmap)) {
+                sceKernelMunmap(mapped, vb_bytes);
+                mapped = NULL;
+            }
             if (obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
                 sceKernelReleaseDirectMemory(physical, vb_bytes);
+                physical = 0;
             }
         }
     }
 
-    /* NULL buffer test */
-    int rc_null = -1;
-    if (obs_address_is_callable((const void *)&sceVideoOutGetOutputStatus)) {
-        rc_null = sceVideoOutGetOutputStatus(handle, NULL);
+    /* NULL buffer test (guarded with OBS_FAULT_ARM against userland faults) */
+    if (handle > 0 &&
+        obs_address_is_callable((const void *)&sceVideoOutGetOutputStatus)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc_null = sceVideoOutGetOutputStatus(handle, NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-null", (uint64_t)(uint32_t)rc_null, "rc");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-null-faulted", (uint64_t)(uint32_t)sig,
+                               "sig");
+        }
     }
-    obs_report_measure(id, sym, "rc-null", (uint64_t)(uint32_t)rc_null, "rc");
 
     /* Bad handle test */
-    int rc_bad = -1;
     if (obs_address_is_callable((const void *)&sceVideoOutGetOutputStatus)) {
-        rc_bad = sceVideoOutGetOutputStatus(-1, buf);
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc_bad = sceVideoOutGetOutputStatus(-1, buf);
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-bad-handle", (uint64_t)(uint32_t)rc_bad,
+                               "rc");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-bad-handle-faulted",
+                               (uint64_t)(uint32_t)sig, "sig");
+        }
     }
-    obs_report_measure(id, sym, "rc-bad-handle", (uint64_t)(uint32_t)rc_bad, "rc");
 
-    (void)sceVideoOutClose(handle);
+    if (handle > 0) {
+        (void)sceVideoOutClose(handle);
+    }
     return obs_pass();
 }
 
@@ -658,18 +708,28 @@ static obs_result check_video_out_vblank_status(void) {
     memset(buf2, 0xC7, sizeof(buf2));
     memset(before, 0xC7, sizeof(before));
 
+    obs_jmp_buf guard;
+    int sig = 0;
+
     int rc1 = -1;
     if (obs_address_is_callable((const void *)&sceVideoOutGetVblankStatus)) {
-        rc1 = sceVideoOutGetVblankStatus(handle, buf1);
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc1 = sceVideoOutGetVblankStatus(handle, buf1);
+            obs_fault_unregister();
+            uint64_t count1 = *(const uint64_t *)(buf1 + 0);
+            uint64_t proc_time1 = *(const uint64_t *)(buf1 + 8);
+            uint64_t tsc1 = *(const uint64_t *)(buf1 + 16);
+            obs_report_measure(id, sym, "rc-1", (uint64_t)(uint32_t)rc1, "rc");
+            obs_report_measure(id, sym, "count-1", count1, "count");
+            obs_report_measure(id, sym, "process-time-1", proc_time1, "us");
+            obs_report_measure(id, sym, "tsc-1", tsc1, "tsc");
+            obs_report_written(id, sym, "status-1", before, buf1, 64);
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-1-faulted", (uint64_t)(uint32_t)sig, "sig");
+        }
     }
-    uint64_t count1 = *(const uint64_t *)(buf1 + 0);
-    uint64_t proc_time1 = *(const uint64_t *)(buf1 + 8);
-    uint64_t tsc1 = *(const uint64_t *)(buf1 + 16);
-    obs_report_measure(id, sym, "rc-1", (uint64_t)(uint32_t)rc1, "rc");
-    obs_report_measure(id, sym, "count-1", count1, "count");
-    obs_report_measure(id, sym, "process-time-1", proc_time1, "us");
-    obs_report_measure(id, sym, "tsc-1", tsc1, "tsc");
-    obs_report_written(id, sym, "status-1", before, buf1, 64);
 
     if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
         sceKernelUsleep(100000);
@@ -677,25 +737,42 @@ static obs_result check_video_out_vblank_status(void) {
 
     int rc2 = -1;
     if (obs_address_is_callable((const void *)&sceVideoOutGetVblankStatus)) {
-        rc2 = sceVideoOutGetVblankStatus(handle, buf2);
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc2 = sceVideoOutGetVblankStatus(handle, buf2);
+            obs_fault_unregister();
+            uint64_t count2 = *(const uint64_t *)(buf2 + 0);
+            uint64_t proc_time2 = *(const uint64_t *)(buf2 + 8);
+            uint64_t tsc2 = *(const uint64_t *)(buf2 + 16);
+            obs_report_measure(id, sym, "rc-2", (uint64_t)(uint32_t)rc2, "rc");
+            obs_report_measure(id, sym, "count-2", count2, "count");
+            obs_report_measure(id, sym, "process-time-2", proc_time2, "us");
+            obs_report_measure(id, sym, "tsc-2", tsc2, "tsc");
+            obs_report_written(id, sym, "status-2", before, buf2, 64);
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-2-faulted", (uint64_t)(uint32_t)sig, "sig");
+        }
     }
-    uint64_t count2 = *(const uint64_t *)(buf2 + 0);
-    uint64_t proc_time2 = *(const uint64_t *)(buf2 + 8);
-    uint64_t tsc2 = *(const uint64_t *)(buf2 + 16);
-    obs_report_measure(id, sym, "rc-2", (uint64_t)(uint32_t)rc2, "rc");
-    obs_report_measure(id, sym, "count-2", count2, "count");
-    obs_report_measure(id, sym, "process-time-2", proc_time2, "us");
-    obs_report_measure(id, sym, "tsc-2", tsc2, "tsc");
-    obs_report_written(id, sym, "status-2", before, buf2, 64);
 
+    /* WaitVblank call: only attempt if callable, guarded with OBS_FAULT_ARM */
     if (obs_address_is_callable((const void *)&sceVideoOutWaitVblank) &&
         obs_address_is_callable((const void *)&sceKernelReadTsc)) {
-        uint64_t t0 = sceKernelReadTsc();
-        int rc_wait = sceVideoOutWaitVblank(handle);
-        uint64_t t1 = sceKernelReadTsc();
-        obs_report_measure(id, "sceVideoOutWaitVblank", "rc",
-                           (uint64_t)(uint32_t)rc_wait, "rc");
-        obs_report_measure(id, "sceVideoOutWaitVblank", "duration-tsc", t1 - t0, "tsc");
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            uint64_t t0 = sceKernelReadTsc();
+            int rc_wait = sceVideoOutWaitVblank(handle);
+            uint64_t t1 = sceKernelReadTsc();
+            obs_fault_unregister();
+            obs_report_measure(id, "sceVideoOutWaitVblank", "rc",
+                               (uint64_t)(uint32_t)rc_wait, "rc");
+            obs_report_measure(id, "sceVideoOutWaitVblank", "duration-tsc", t1 - t0,
+                               "tsc");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "sceVideoOutWaitVblank", "faulted",
+                               (uint64_t)(uint32_t)sig, "sig");
+        }
     }
 
     (void)sceVideoOutClose(handle);
@@ -715,6 +792,9 @@ static obs_result check_module_info_for_unwind(void) {
     }
     int (*fn_unwind)(const void *, void *) = (int (*)(const void *, void *))fn_raw;
 
+    obs_jmp_buf guard;
+    int sig = 0;
+
     /* Arm 1: probe text with 0x130 buffer */
     uint8_t buf[0x140];
     uint8_t before[0x140];
@@ -724,20 +804,43 @@ static obs_result check_module_info_for_unwind(void) {
     *(size_t *)before = 0x130;
 
     const void *text_addr = (const void *)&check_module_info_for_unwind;
-    int rc_text = fn_unwind(text_addr, buf);
-    obs_report_measure(id, sym, "rc-text", (uint64_t)(uint32_t)rc_text, "rc");
-    obs_report_written(id, sym, "unwind-info", before, buf, 0x130);
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc_text = fn_unwind(text_addr, buf);
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-text", (uint64_t)(uint32_t)rc_text, "rc");
+        obs_report_written(id, sym, "unwind-info", before, buf, 0x130);
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-text-faulted", (uint64_t)(uint32_t)sig, "sig");
+    }
 
     /* Arm 2: unmapped address */
     uint8_t buf2[0x140];
     memset(buf2, 0xC7, sizeof(buf2));
     *(size_t *)buf2 = 0x130;
-    int rc_unmapped = fn_unwind((const void *)0xdeadbeef000ULL, buf2);
-    obs_report_measure(id, sym, "rc-unmapped", (uint64_t)(uint32_t)rc_unmapped, "rc");
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc_unmapped = fn_unwind((const void *)0xdeadbeef000ULL, buf2);
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-unmapped", (uint64_t)(uint32_t)rc_unmapped,
+                           "rc");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-unmapped-faulted", (uint64_t)(uint32_t)sig,
+                           "sig");
+    }
 
     /* Arm 3: null buffer */
-    int rc_null = fn_unwind(text_addr, NULL);
-    obs_report_measure(id, sym, "rc-null", (uint64_t)(uint32_t)rc_null, "rc");
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc_null = fn_unwind(text_addr, NULL);
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-null", (uint64_t)(uint32_t)rc_null, "rc");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-null-faulted", (uint64_t)(uint32_t)sig, "sig");
+    }
 
     return obs_pass();
 }
@@ -750,12 +853,21 @@ static void query_prot_arm(const char *id, const char *name, const void *addr,
     uint64_t start = 0xAAAAAAAAAAAAAAAAULL;
     uint64_t end = 0xBBBBBBBBBBBBBBBBULL;
     uint32_t prot = 0xCCCCCCCCu;
-    int rc = fn(addr, &start, &end, &prot);
-    obs_report_measure(id, name, "rc", (uint64_t)(uint32_t)rc, "rc");
-    obs_report_measure(id, name, "start", start, "addr");
-    obs_report_measure(id, name, "end", end, "addr");
-    obs_report_measure(id, name, "prot", (uint64_t)prot, "prot");
-    obs_report_measure(id, name, "bit-0x80", (uint64_t)((prot & 0x80) ? 1 : 0), "bool");
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc = fn(addr, &start, &end, &prot);
+        obs_fault_unregister();
+        obs_report_measure(id, name, "rc", (uint64_t)(uint32_t)rc, "rc");
+        obs_report_measure(id, name, "start", start, "addr");
+        obs_report_measure(id, name, "end", end, "addr");
+        obs_report_measure(id, name, "prot", (uint64_t)prot, "prot");
+        obs_report_measure(id, name, "bit-0x80", (uint64_t)((prot & 0x80) ? 1 : 0),
+                           "bool");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, name, "faulted", (uint64_t)(uint32_t)sig, "sig");
+    }
 }
 
 static obs_result check_query_memory_protection(void) {
@@ -785,9 +897,19 @@ static obs_result check_query_memory_protection(void) {
     query_prot_arm(id, "unmapped", (const void *)0xdeadbeef000ULL, query_fn);
 
     /* 5. NULL params */
-    int rc_null =
-        query_fn((const void *)&check_query_memory_protection, NULL, NULL, NULL);
-    obs_report_measure(id, sym, "rc-null-params", (uint64_t)(uint32_t)rc_null, "rc");
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc_null =
+            query_fn((const void *)&check_query_memory_protection, NULL, NULL, NULL);
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-null-params", (uint64_t)(uint32_t)rc_null,
+                           "rc");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "rc-null-params-faulted", (uint64_t)(uint32_t)sig,
+                           "sig");
+    }
 
     return obs_pass();
 }
