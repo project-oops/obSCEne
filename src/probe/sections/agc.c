@@ -1754,8 +1754,37 @@ static obs_result check_agc_create_shader(void) {
         obs_report_measure("166-agc/create-shader", "sceAgcCreateShader", "hdr-extent",
                            (uint64_t)highest_touched, "bytes");
 
+        /* REQ-20260925T2056Z-5d19: full 0x130 (304 bytes) before and after */
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-before", 0,
+                         (const unsigned char *)agc_retail_hdr_full_0, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-before", 64,
+                         (const unsigned char *)agc_retail_hdr_full_0 + 64, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-before", 128,
+                         (const unsigned char *)agc_retail_hdr_full_0 + 128, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-before", 192,
+                         (const unsigned char *)agc_retail_hdr_full_0 + 192, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-before", 256,
+                         (const unsigned char *)agc_retail_hdr_full_0 + 256, 48);
+
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-after", 0,
+                         (const unsigned char *)hdr_buf, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-after", 64,
+                         (const unsigned char *)hdr_buf + 64, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-after", 128,
+                         (const unsigned char *)hdr_buf + 128, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-after", 192,
+                         (const unsigned char *)hdr_buf + 192, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "hdr-after", 256,
+                         (const unsigned char *)hdr_buf + 256, 48);
+
+        obs_report_written("166-agc/create-shader", "sceAgcCreateShader", "hdr-written",
+                           (const unsigned char *)agc_retail_hdr_full_0,
+                           (const unsigned char *)hdr_buf, sizeof(agc_retail_hdr_full_0));
+
         obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "shader-obj", 0,
-                         (const unsigned char *)shader_obj, 0x80u);
+                         (const unsigned char *)shader_obj, 64);
+        obs_report_bytes("166-agc/create-shader", "sceAgcCreateShader", "shader-obj", 64,
+                         (const unsigned char *)shader_obj + 64, 64);
 
         uint64_t field_10 = *(const uint64_t *)((const char *)shader_obj + 0x10);
         uint64_t field_30 = *(const uint64_t *)((const char *)shader_obj + 0x30);
@@ -1881,6 +1910,27 @@ static void init_stage_hdr(uint8_t *hdr, uint8_t stage, uint32_t reg) {
     }
 }
 
+static void report_stage_hdr_after(unsigned int stage, const uint8_t *before,
+                                   const uint8_t *after) {
+    char what[32];
+    oops_snprintf(what, sizeof(what), "stage%u-hdr-after", stage);
+    obs_report_bytes("166-agc/shader-graphics-stages", "sceAgcCreateShader", what, 0,
+                     after, 64);
+    obs_report_bytes("166-agc/shader-graphics-stages", "sceAgcCreateShader", what, 64,
+                     after + 64, 64);
+    obs_report_bytes("166-agc/shader-graphics-stages", "sceAgcCreateShader", what, 128,
+                     after + 128, 64);
+    obs_report_bytes("166-agc/shader-graphics-stages", "sceAgcCreateShader", what, 192,
+                     after + 192, 64);
+    obs_report_bytes("166-agc/shader-graphics-stages", "sceAgcCreateShader", what, 256,
+                     after + 256, 48);
+
+    char what_w[32];
+    oops_snprintf(what_w, sizeof(what_w), "stage%u-written", stage);
+    obs_report_written("166-agc/shader-graphics-stages", "sceAgcCreateShader", what_w,
+                       before, after, sizeof(agc_retail_hdr_full_0));
+}
+
 /* Graphics Shader Stages probe: systematically probe all 8 shader stages (0..7)
  * supported by sceAgcCreateShader, reading hardware registers and verifying patching.
  */
@@ -1892,6 +1942,7 @@ static obs_result check_agc_shader_graphics_stages(void) {
     obs_jmp_buf guard;
     int sig = 0;
     uint8_t hdr[384];
+    uint8_t before[384];
     const void *payload = (const void *)agc_retail_payload_0;
 
     /* 1. Safely read live library register variables from libSceAgc data segment */
@@ -1929,6 +1980,7 @@ static obs_result check_agc_shader_graphics_stages(void) {
     void *cs_obj = NULL;
     int rc_cs = -1;
     init_stage_hdr(hdr, 0u, mem_cs_reg ? mem_cs_reg : 0x20cu);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_cs = (int)sceAgcCreateShader(&cs_obj, hdr, payload, 0);
@@ -1940,11 +1992,15 @@ static obs_result check_agc_shader_graphics_stages(void) {
                        (uint64_t)(uint32_t)rc_cs, "code");
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "cs-obj-valid", (uint64_t)(cs_obj != NULL), "bool");
+    if (rc_cs == 0) {
+        report_stage_hdr_after(0u, before, hdr);
+    }
 
     /* Stage 1: Pixel Shader */
     void *ps_obj = NULL;
     int rc_ps = -1;
     init_stage_hdr(hdr, 1u, mem_ps_reg ? mem_ps_reg : 0x08u);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_ps = (int)sceAgcCreateShader(&ps_obj, hdr, payload, 0);
@@ -1959,11 +2015,15 @@ static obs_result check_agc_shader_graphics_stages(void) {
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "ps-patched-lo", (uint64_t)((const uint32_t *)(hdr + 0x90))[1],
                        "val");
+    if (rc_ps == 0) {
+        report_stage_hdr_after(1u, before, hdr);
+    }
 
     /* Stage 2: Vertex Shader */
     void *vs_obj = NULL;
     int rc_vs = -1;
     init_stage_hdr(hdr, 2u, mem_vs_reg ? mem_vs_reg : 0xc8u);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_vs = (int)sceAgcCreateShader(&vs_obj, hdr, payload, 0);
@@ -1978,11 +2038,15 @@ static obs_result check_agc_shader_graphics_stages(void) {
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "vs-patched-lo", (uint64_t)((const uint32_t *)(hdr + 0x90))[1],
                        "val");
+    if (rc_vs == 0) {
+        report_stage_hdr_after(2u, before, hdr);
+    }
 
     /* Stage 3: Geometry Shader */
     void *gs_obj = NULL;
     int rc_gs = -1;
     init_stage_hdr(hdr, 3u, mem_gs_reg ? mem_gs_reg : 0x148u);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_gs = (int)sceAgcCreateShader(&gs_obj, hdr, payload, 0);
@@ -1994,11 +2058,15 @@ static obs_result check_agc_shader_graphics_stages(void) {
                        (uint64_t)(uint32_t)rc_gs, "code");
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "gs-obj-valid", (uint64_t)(gs_obj != NULL), "bool");
+    if (rc_gs == 0) {
+        report_stage_hdr_after(3u, before, hdr);
+    }
 
     /* Stage 4: Unfused Local Shader (LS) */
     void *s4_obj = NULL;
     int rc_s4 = -1;
     init_stage_hdr(hdr, 4u, 0);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_s4 = (int)sceAgcCreateShader(&s4_obj, hdr, payload, 0);
@@ -2010,11 +2078,15 @@ static obs_result check_agc_shader_graphics_stages(void) {
                        (uint64_t)(uint32_t)rc_s4, "code");
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "s4-obj-valid", (uint64_t)(s4_obj != NULL), "bool");
+    if (rc_s4 == 0) {
+        report_stage_hdr_after(4u, before, hdr);
+    }
 
     /* Stage 5: Unfused Hull Shader Half (HS) */
     void *s5_obj = NULL;
     int rc_s5 = -1;
     init_stage_hdr(hdr, 5u, 0);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_s5 = (int)sceAgcCreateShader(&s5_obj, hdr, payload, 0);
@@ -2026,11 +2098,15 @@ static obs_result check_agc_shader_graphics_stages(void) {
                        (uint64_t)(uint32_t)rc_s5, "code");
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "s5-obj-valid", (uint64_t)(s5_obj != NULL), "bool");
+    if (rc_s5 == 0) {
+        report_stage_hdr_after(5u, before, hdr);
+    }
 
     /* Stage 6: Export Shader (ES) */
     void *es_obj = NULL;
     int rc_es = -1;
     init_stage_hdr(hdr, 6u, mem_es_reg ? mem_es_reg : 0x88u);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_es = (int)sceAgcCreateShader(&es_obj, hdr, payload, 0);
@@ -2042,11 +2118,15 @@ static obs_result check_agc_shader_graphics_stages(void) {
                        (uint64_t)(uint32_t)rc_es, "code");
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "es-obj-valid", (uint64_t)(es_obj != NULL), "bool");
+    if (rc_es == 0) {
+        report_stage_hdr_after(6u, before, hdr);
+    }
 
     /* Stage 7: Hull Shader (HS) */
     void *hs_obj = NULL;
     int rc_hs = -1;
     init_stage_hdr(hdr, 7u, mem_hs_reg ? mem_hs_reg : 0x108u);
+    memcpy(before, hdr, sizeof(agc_retail_hdr_full_0));
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_hs = (int)sceAgcCreateShader(&hs_obj, hdr, payload, 0);
@@ -2058,6 +2138,9 @@ static obs_result check_agc_shader_graphics_stages(void) {
                        (uint64_t)(uint32_t)rc_hs, "code");
     obs_report_measure("166-agc/shader-graphics-stages", "sceAgcCreateShader",
                        "hs-obj-valid", (uint64_t)(hs_obj != NULL), "bool");
+    if (rc_hs == 0) {
+        report_stage_hdr_after(7u, before, hdr);
+    }
 
     if (rc_cs == 0 && rc_ps == 0 && rc_vs == 0 && rc_gs == 0 && rc_s4 == 0 &&
         rc_s5 == 0 && rc_es == 0 && rc_hs == 0) {

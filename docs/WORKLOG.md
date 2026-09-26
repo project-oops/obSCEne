@@ -192,5 +192,6 @@ slow way.
 | 2026-09-25 | [180 - `sceKernelAprResolveFilepathsToIdsAndFileSizes` out-parameter probe measured on hardware (REQ-20260925T1834Z-a7e2)](worklog/180-apr-resolve-filepaths-out-params-staged.md) |
 | 2026-09-25 | [181 - Linear 3D Texture Mipmapping Settled on Hardware (REQ-20260925T1945Z-3c7f)](worklog/181-linear-3d-texture-mipmapping-measured.md) |
 | 2026-09-25 | [182 - Single-Level Linear 3D Texture Corner Addressing Settled on Hardware (REQ-20260925T2030Z-b1d4)](worklog/182-linear-3d-texture-addressing-corner-measured.md) |
-
+| 2026-09-25 | [183 - `sceAgcCreateShader` Header Extent, Relocation Diffs, and Stage Sweep (REQ-20260925T2056Z-5d19)](worklog/183-sceAgcCreateShader-header-relocation-extent-and-stage-sweep.md) |
+| 2026-09-25 | [184 - `sceKernelAprResolveFilepathsToIdsAndFileSizes` Path Spelling Matrix & Resolution (REQ-20260925T2130Z-e61a)](worklog/184-apr-resolve-filepaths-spelling-matrix-hardware-resolution.md) |
 

@@ -89,6 +89,10 @@ selfish --input "$elf_abs" \
     "${deeplink_arg[@]}" \
     --content-id "$CONTENT_ID"
 
+if [ -f "$BUILD/eboot.bin" ]; then
+    cp "$BUILD/eboot.bin" "$out/$TITLE_ID/eboot.bin"
+fi
+
 if [ -d "$BUILD/sce_module" ]; then
     cp -r "$BUILD/sce_module" "$out/$TITLE_ID/sce_module"
 fi
