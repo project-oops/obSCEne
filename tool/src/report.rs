@@ -239,6 +239,13 @@ impl Tally {
 }
 
 impl Report {
+    /// Records a section's duration; the first one recorded for a section wins.
+    fn note_section_duration(&mut self, id: &str, dur: u64) {
+        if !self.section_durations.iter().any(|(s, _)| s == id) {
+            self.section_durations.push((id.to_owned(), dur));
+        }
+    }
+
     /// Parses a whole report.
     ///
     /// Never fails: a malformed report is still parsed as far as it goes, because
@@ -339,39 +346,29 @@ impl Report {
                             .section_tallies
                             .push((id.to_owned(), tally_from(rest, 1)));
                         if let Some(dur) = number_u64_at(rest, 7) {
-                            if !report.section_durations.iter().any(|(s, _)| s == id) {
-                                report.section_durations.push((id.to_owned(), dur));
-                            }
+                            report.note_section_duration(id, dur);
                         }
                         running = Tally::default();
                     }
                 }
-                "time" => {
-                    match field(rest, 0) {
-                        Some("section") => {
-                            if let (Some(id), Some(dur)) =
-                                (field(rest, 1), number_u64_at(rest, 2))
-                            {
-                                if !report.section_durations.iter().any(|(s, _)| s == id) {
-                                    report.section_durations.push((id.to_owned(), dur));
-                                }
-                            }
+                "time" => match field(rest, 0) {
+                    Some("section") => {
+                        if let (Some(id), Some(dur)) = (field(rest, 1), number_u64_at(rest, 2)) {
+                            report.note_section_duration(id, dur);
                         }
-                        Some("check") => {
-                            if let (Some(id), Some(dur)) =
-                                (field(rest, 1), number_u64_at(rest, 2))
-                            {
-                                report.check_timings.push((id.to_owned(), dur));
-                            }
-                        }
-                        Some("total") => {
-                            if let Some(dur) = number_u64_at(rest, 1) {
-                                report.total_duration_us = Some(dur);
-                            }
-                        }
-                        _ => {}
                     }
-                }
+                    Some("check") => {
+                        if let (Some(id), Some(dur)) = (field(rest, 1), number_u64_at(rest, 2)) {
+                            report.check_timings.push((id.to_owned(), dur));
+                        }
+                    }
+                    Some("total") => {
+                        if let Some(dur) = number_u64_at(rest, 1) {
+                            report.total_duration_us = Some(dur);
+                        }
+                    }
+                    _ => {}
+                },
                 "tally" => report.tally = Some(tally_from(rest, 0)),
                 "end" => {
                     report.ended = true;
@@ -463,13 +460,6 @@ fn tally_from(fields: &[&str], from: usize) -> Tally {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::indexing_slicing,
-    clippy::arithmetic_side_effects,
-    clippy::cast_possible_truncation,
-    reason = "test fixtures build known-size buffers; a panic here is the failure \
-              signal, which is the opposite of what these lints guard in the tool"
-)]
 mod tests {
     use super::{Report, Status};
 
@@ -570,9 +560,9 @@ OBS|tally|1|0|0|0
 OBS|end|host|1234567
 ";
         let report = Report::parse(text);
-        assert_eq!(report.section_duration("000-boot"), Some(125000));
+        assert_eq!(report.section_duration("000-boot"), Some(125_000));
         assert_eq!(report.check_timings, vec![("000-boot/a".to_owned(), 52000)]);
-        assert_eq!(report.total_duration_us, Some(1234567));
+        assert_eq!(report.total_duration_us, Some(1_234_567));
         assert_eq!(report.channel.as_deref(), Some("host"));
     }
 }

@@ -283,12 +283,6 @@ impl std::fmt::Display for ImportsError {
 impl std::error::Error for ImportsError {}
 
 #[cfg(test)]
-#[allow(
-    clippy::indexing_slicing,
-    clippy::arithmetic_side_effects,
-    reason = "test fixtures build known-size buffers; a panic here is the failure \
-              signal, which is the opposite of what these lints guard in the tool"
-)]
 mod tests {
     use super::{Imports, ImportsError, corpus_libraries};
     use std::collections::BTreeMap;

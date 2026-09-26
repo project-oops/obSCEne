@@ -13,6 +13,7 @@
 //! whole reason the announcement exists.
 
 use std::fmt::Write as _;
+use std::time::Duration;
 
 use crate::report::{Report, Status, Tally};
 
@@ -185,7 +186,7 @@ fn render_section(
 
     let dur_suffix = report
         .section_duration(&section.id)
-        .map(|us| format!(", {:.2}s", (us as f64) / 1_000_000.0))
+        .map(|us| format!(", {:.2}s", Duration::from_micros(us).as_secs_f64()))
         .unwrap_or_default();
 
     out.push_str(&palette.emphasise(
@@ -308,7 +309,7 @@ fn render_totals(out: &mut String, report: &Report, palette: &Palette) {
         out.push('\n');
         let total_time = report
             .total_duration_us
-            .map(|us| format!("  [{:.2}s total]", (us as f64) / 1_000_000.0))
+            .map(|us| format!("  [{:.2}s total]", Duration::from_micros(us).as_secs_f64()))
             .unwrap_or_default();
         let _ = writeln!(
             out,
@@ -336,13 +337,6 @@ fn render_totals(out: &mut String, report: &Report, palette: &Palette) {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::indexing_slicing,
-    clippy::arithmetic_side_effects,
-    clippy::cast_possible_truncation,
-    reason = "test fixtures build known-size buffers; a panic here is the failure \
-              signal, which is the opposite of what these lints guard in the tool"
-)]
 mod tests {
     use super::render;
     use crate::report::Report;

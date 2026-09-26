@@ -79,22 +79,11 @@ else
     note_failure "cargo test"
 fi
 
-printf '=== tool lints\n'
-if sh scripts/lint.sh; then
+printf '=== formatting and lints\n'
+if bash scripts/lint.sh; then
     :
 else
-    note_failure "clippy"
-fi
-
-# CI runs this and nothing local did, so the tree drifted out of format and stayed there.
-# A gate that is weaker than CI produces exactly this: a change that passes locally and
-# fails on push, which trains people to distrust the local gate.
-printf '=== tool formatting\n'
-if (cd tool && cargo fmt --check >"$log" 2>&1); then
-    printf 'formatted\n'
-else
-    head -20 "$log"
-    note_failure "cargo fmt --check"
+    note_failure "scripts/lint.sh"
 fi
 
 # The rule in CLAUDE.md that nothing enforced. Thirty-eight checks violated it, and the

@@ -1,0 +1,3 @@
+allow-unwrap-in-tests = true
+# STYLE section 2: a function over 150 lines is split.
+too-many-lines-threshold = 150

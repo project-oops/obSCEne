@@ -93,7 +93,7 @@ impl Derivation {
 ///
 /// Measured from the headers rather than assumed, so a module laid out either way is checked
 /// against how it actually is.
-fn dynamic_tail(elf: &Elf, segment: &crate::elf::ProgramHeader) -> u64 {
+fn dynamic_tail(elf: &Elf<'_>, segment: &crate::elf::ProgramHeader) -> u64 {
     elf.program_headers
         .iter()
         .find(|header| header.p_type == PT_DYNAMIC)
@@ -142,7 +142,7 @@ fn fixed_values(out: &mut Derivation, t: &Tags, value: &impl Fn(u64) -> Option<u
 /// `run_with`; a caller inspecting someone else's module does not, and guessing wrong there
 /// reports "nothing to derive from" about a perfectly good module. (D193)
 #[must_use]
-pub fn run(elf: &Elf) -> Derivation {
+pub fn run(elf: &Elf<'_>) -> Derivation {
     // Legacy when a module declares neither convention. A reader handed something that is
     // not a vendor module at all has nothing to derive from either way, and the legacy
     // tables are what this project writes.
@@ -167,7 +167,7 @@ pub fn run(elf: &Elf) -> Derivation {
 /// here. Passing the wrong one produces a wall of failed relations, which is the correct
 /// outcome: it means the module is not laid out the way the caller thinks. (D193)
 #[must_use]
-pub fn run_with(elf: &Elf, table: Table) -> Derivation {
+pub fn run_with(elf: &Elf<'_>, table: Table) -> Derivation {
     let t = Tags::of(table);
     let mut out = Derivation::default();
 
@@ -480,11 +480,8 @@ fn chain_relations(
 
 #[cfg(test)]
 #[allow(
-    clippy::indexing_slicing,
-    clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    reason = "test fixtures build known-size buffers; a panic here is the failure \
-              signal, which is the opposite of what these lints guard in the tool"
+    reason = "fixture sizes are small constants"
 )]
 mod tests {
     use super::run;

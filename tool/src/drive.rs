@@ -505,10 +505,6 @@ pub fn run_session(
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::indexing_slicing,
-    reason = "test fixtures build known-size inputs; a panic here is the failure signal"
-)]
 mod tests {
     use super::*;
 

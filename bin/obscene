@@ -3,10 +3,10 @@
 #
 #   ./bin/obscene build     module, payload, injector, host
 #   ./bin/obscene test      the tooling's own tests
-#   ./bin/obscene lint      the tooling's lints, in full
-#   ./bin/obscene fmt       format the C in place
-#   ./bin/obscene check     the full gate: all three shapes, tooling tests, host harness,
-#                           report verification, imports. What CI runs.
+#   ./bin/obscene lint      formatting in check mode, then clippy with warnings as errors
+#   ./bin/obscene fmt       format the C and the tool in place
+#   ./bin/obscene check     the full gate: all three shapes, tooling tests, lints, host
+#                           harness, report verification, imports. What CI runs.
 #   ./bin/obscene clean     remove build output
 #   ./bin/obscene pkg       the installable package (ps4-format, previous-generation)
 #   ./bin/obscene native    the ps5 native title directory: prospero eboot + param.json + icon0
@@ -75,8 +75,8 @@ _obscene_tool() {
 case "${1:-help}" in
     build) shift; make module payload host injector "$@" ;;
     test)  shift; ( cd tool && cargo test "$@" ) ;;
-    lint)  shift; sh scripts/lint.sh "$@" ;;
-    fmt)   shift; sh scripts/format.sh "$@" ;;
+    lint)  shift; bash scripts/lint.sh "$@" ;;
+    fmt)   shift; bash scripts/format.sh "$@" ;;
     check) shift; make check "$@" ;;
     clean) shift; make clean "$@" ;;
     pkg)   shift; make pkg "$@" ;;

@@ -43,10 +43,7 @@ use crate::gpudiff::GpuCorpus;
 /// wrong way, at a power-of-two boundary.
 #[allow(
     clippy::cast_possible_truncation,
-    clippy::float_arithmetic,
-    clippy::arithmetic_side_effects,
-    reason = "exponent extraction and power-of-two scaling: the casts and arithmetic are the \
-              operation, and the scaling is exact so no precision is lost"
+    reason = "exponent extraction: the cast is the operation"
 )]
 fn frexpf(x: f32) -> Option<(f32, i32)> {
     if !x.is_finite() {
@@ -77,8 +74,6 @@ fn frexpf(x: f32) -> Option<(f32, i32)> {
 /// subnormals are `mant * 2^-24`, which is an exact normal f32; inf/NaN carry the mantissa up.
 #[allow(
     clippy::cast_precision_loss,
-    clippy::float_arithmetic,
-    clippy::arithmetic_side_effects,
     reason = "bit assembly and an exact power-of-two scale for the subnormal case"
 )]
 fn f16_to_f32(h: u32) -> f32 {
@@ -113,11 +108,8 @@ fn f16_to_f32(h: u32) -> f32 {
     clippy::cast_possible_wrap,
     clippy::cast_lossless,
     clippy::cast_sign_loss,
-    clippy::float_arithmetic,
-    clippy::arithmetic_side_effects,
-    reason = "this function is deliberate float and int conversion - the casts and the \
-              arithmetic are its whole job, and each is the operation the kernel names; the \
-              signed<->unsigned casts are the intBitsToFloat / snorm sign reinterpretations"
+    reason = "each cast is the conversion the kernel names; the signed/unsigned casts are \
+              the intBitsToFloat and snorm sign reinterpretations"
 )]
 fn reference(kernel: &str, inputs: &[f32]) -> Option<f32> {
     let a = inputs.first().copied()?;
@@ -300,10 +292,6 @@ pub fn render_reference(corpus: &GpuCorpus) -> (String, usize) {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::indexing_slicing,
-    reason = "test fixtures build known-size inputs; a panic here is the failure signal"
-)]
 mod tests {
     use super::*;
 

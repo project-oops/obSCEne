@@ -404,10 +404,8 @@ impl std::error::Error for ElfError {}
 
 #[cfg(test)]
 #[allow(
-    clippy::indexing_slicing,
-    clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    reason = "test fixtures build known-size buffers; a panic here is the failure               signal, which is the opposite of what these lints guard in the tool"
+    reason = "fixture sizes are small constants"
 )]
 mod tests {
     use super::{Elf, ElfError, PT_DYNAMIC, PT_LOAD};
@@ -497,7 +495,14 @@ mod tests {
         bytes[0x3e..0x40].copy_from_slice(&3_u16.to_le_bytes()); // e_shstrndx (section 3)
 
         // Helper to populate a section header
-        let write_shdr = |buf: &mut [u8], idx: usize, name: u32, sh_type: u32, off: usize, sz: usize, link: u32, entsize: u64| {
+        let write_shdr = |buf: &mut [u8],
+                          idx: usize,
+                          name: u32,
+                          sh_type: u32,
+                          off: usize,
+                          sz: usize,
+                          link: u32,
+                          entsize: u64| {
             let base = shoff + idx * SHDR;
             buf[base..base + 4].copy_from_slice(&name.to_le_bytes());
             buf[base + 4..base + 8].copy_from_slice(&sh_type.to_le_bytes());
@@ -510,9 +515,27 @@ mod tests {
         // Sec 1: .dynstr (name index 1 in shstrtab)
         write_shdr(&mut bytes, 1, 1, 3, dynstr_off, dynstr_data.len(), 0, 0);
         // Sec 2: .dynsym (name index 9 in shstrtab, link to sec 1, entsize 24)
-        write_shdr(&mut bytes, 2, 9, 11, dynsym_off, dynsym_data.len(), 1, super::SYM_SIZE as u64);
+        write_shdr(
+            &mut bytes,
+            2,
+            9,
+            11,
+            dynsym_off,
+            dynsym_data.len(),
+            1,
+            super::SYM_SIZE as u64,
+        );
         // Sec 3: .shstrtab (name index 17 in shstrtab)
-        write_shdr(&mut bytes, 3, 17, 3, shstrtab_off, shstrtab_data.len(), 0, 0);
+        write_shdr(
+            &mut bytes,
+            3,
+            17,
+            3,
+            shstrtab_off,
+            shstrtab_data.len(),
+            0,
+            0,
+        );
 
         let elf = Elf::parse(&bytes).expect("parse");
         let undefined = elf.undefined_symbols().expect("undefined_symbols");

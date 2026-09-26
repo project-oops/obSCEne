@@ -33,10 +33,6 @@ use crate::gpudiff::GpuCorpus;
 /// -0 to the same point (both map to 0), so they read as zero ULP apart. They compare equal as
 /// numbers, and the *sign* of a zero is a bit-level fact that gpudiff catches - not an
 /// approximation error, which is all this tool measures.
-#[allow(
-    clippy::arithmetic_side_effects,
-    reason = "the magnitude is 31 bits, so negating it stays well inside i64"
-)]
 fn ordered(bits: u32) -> i64 {
     let magnitude = i64::from(bits & 0x7fff_ffff);
     if bits & 0x8000_0000 != 0 {
@@ -48,10 +44,6 @@ fn ordered(bits: u32) -> i64 {
 
 /// ULP distance between two float bit patterns, or `None` when exactly one is NaN - there is no
 /// meaningful distance to a NaN. Two NaNs are zero apart: equally not-a-number.
-#[allow(
-    clippy::arithmetic_side_effects,
-    reason = "ordered() bounds both operands to [0, 2^32], so the difference stays in i64"
-)]
 fn ulp(a: u32, b: u32) -> Option<u64> {
     let (fa, fb) = (f32::from_bits(a), f32::from_bits(b));
     match (fa.is_nan(), fb.is_nan()) {
@@ -118,11 +110,6 @@ pub struct KernelStat {
 /// Lanes only one side has are ignored here: gpudiff is the tool that reports coverage
 /// differences, and folding them in would confuse "this kernel is approximate" with "these runs
 /// probed different things".
-#[allow(
-    clippy::arithmetic_side_effects,
-    reason = "the counters are lane tallies over a finite corpus; they cannot realistically \
-              overflow usize/u128, and a saturating add would only hide a bug if they did"
-)]
 pub fn analyze(device: &GpuCorpus, reference: &GpuCorpus) -> Vec<KernelStat> {
     let mut by_kernel: BTreeMap<String, KernelStat> = BTreeMap::new();
     for (key, dev_out) in &device.lanes {
@@ -243,10 +230,6 @@ pub fn render(stats: &[KernelStat], device: &str, reference: &str) -> String {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::indexing_slicing,
-    reason = "test fixtures build known-size inputs; a panic here is the failure signal"
-)]
 mod tests {
     use super::*;
 

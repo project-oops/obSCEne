@@ -115,13 +115,6 @@ fn ordering(report: &Report, problems: &mut Vec<Problem>) {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::indexing_slicing,
-    clippy::arithmetic_side_effects,
-    clippy::cast_possible_truncation,
-    reason = "test fixtures build known-size buffers; a panic here is the failure \
-              signal, which is the opposite of what these lints guard in the tool"
-)]
 mod tests {
     use super::check;
     use crate::report::Report;

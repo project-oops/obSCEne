@@ -57,6 +57,7 @@ mod verify;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::sync::PoisonError;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
@@ -73,7 +74,7 @@ struct Cli {
 ///
 /// A struct rather than inline fields: the command has enough of them that the match
 /// arm was the longest in the dispatcher, and clippy was right about it.
-#[derive(clap::Args)]
+#[derive(Debug, clap::Args)]
 pub struct MkmoduleArgs {
     /// The linked ELF, modified in place.
     file: PathBuf,
@@ -140,7 +141,7 @@ pub struct MkmoduleArgs {
 /// A struct rather than inline fields, matching `MkmoduleArgs`: enough options that the
 /// match arm would be the longest in the dispatcher, and clippy is right that a dispatcher
 /// arm which is a whole procedure stops the dispatcher reading as a table.
-#[derive(clap::Args)]
+#[derive(Debug, clap::Args)]
 pub struct DriveArgs {
     /// Where the probe is listening, as `host:port`. The probe listens and this connects:
     /// a console has no DNS and no configuration file, but it has an address somebody can
@@ -706,7 +707,7 @@ enum Command {
 
 /// Where `crack` reads from. Its own struct so the command dispatch stays short enough
 /// to read in one go.
-#[derive(clap::Args)]
+#[derive(Debug, clap::Args)]
 struct CrackArgs {
     /// Encoded NIDs to recover, one per line. `<nid>#lib#mod` is accepted, so a symbol
     /// table can be used directly.
@@ -1183,12 +1184,7 @@ See CLAUDE.md and D058. The fix is to test the address and obs_skip."
     Ok(ExitCode::FAILURE)
 }
 
-/// A deadline `secs` from now.
-///
-/// `Instant + Duration` panics on overflow, which `arithmetic_side_effects` reports and this
-/// crate treats as a defect rather than a nuisance: the lint is set to warn on purpose because
-/// "arithmetic on offsets and sizes is the whole job here". Three callers wrote the same
-/// addition, so the check lives in one place instead of three.
+/// A deadline `secs` from now. `Instant + Duration` panics on overflow, so the add is checked.
 fn deadline_in(secs: u64) -> std::time::Instant {
     std::time::Instant::now()
         .checked_add(Duration::from_secs(secs))
@@ -1489,6 +1485,73 @@ fn run(cli: Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
     }
 }
 
+/// What the report watcher thread and the capture loop share.
+struct WatcherState {
+    last_activity: std::time::Instant,
+    seen_first_record: bool,
+    stopped_reason: Option<String>,
+}
+
+/// Stops a report capture at the maximum window, after `idle_timeout` seconds of silence
+/// once records have started, or after 45 seconds with no record at all.
+fn spawn_report_watcher(
+    start_time: std::time::Instant,
+    seconds: u64,
+    idle_timeout: u64,
+    state: std::sync::Arc<std::sync::Mutex<WatcherState>>,
+    done: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    stopper: std::sync::Arc<pros_link::log::Stopper>,
+) -> std::thread::JoinHandle<()> {
+    use std::sync::atomic::Ordering;
+
+    let initial_wait = Duration::from_secs(45);
+    let max_duration = Duration::from_secs(seconds);
+    let idle_duration = Duration::from_secs(idle_timeout);
+    std::thread::spawn(move || {
+        while !done.load(Ordering::Relaxed) {
+            std::thread::sleep(Duration::from_millis(250));
+            if done.load(Ordering::Relaxed) {
+                break;
+            }
+            let now = std::time::Instant::now();
+            let mut s = state.lock().unwrap_or_else(PoisonError::into_inner);
+            let reason = if now.duration_since(start_time) >= max_duration {
+                format!("maximum window elapsed ({seconds}s)")
+            } else if s.seen_first_record {
+                if now.duration_since(s.last_activity) < idle_duration {
+                    continue;
+                }
+                format!("idle timeout ({idle_timeout}s silence after records started)")
+            } else if now.duration_since(start_time) >= initial_wait {
+                format!(
+                    "initial timeout (no OBS records in {}s)",
+                    initial_wait.as_secs()
+                )
+            } else {
+                continue;
+            };
+            s.stopped_reason = Some(reason);
+            stopper.stop();
+            break;
+        }
+    })
+}
+
+/// Whether a non-record system log line reports a fatal signal, panic or core dump.
+fn is_crash_line(line: &str) -> bool {
+    let lower = line.to_lowercase();
+    [
+        "exited on signal",
+        "fatal signal",
+        "# fault address:",
+        "kernel panic",
+        "trap 12:",
+        "core dumped",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
+}
+
 /// Capture obSCEne's records from the console system log into a file.
 ///
 /// Streams records directly to disk in real time using `pros_link::log::follow`, flushing
@@ -1502,8 +1565,8 @@ fn run_report(
     name: Option<&str>,
 ) -> Result<ExitCode, Box<dyn std::error::Error>> {
     use std::io::Write as _;
+    use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
-    use std::sync::{Arc, Mutex};
 
     let console = hardware::resolve(hardware::load()?, name)?;
     eprintln!(
@@ -1522,57 +1585,20 @@ fn run_report(
     let start_time = std::time::Instant::now();
     let prefix = format!("{}{}", report::PREFIX, report::SEPARATOR);
 
-    struct WatcherState {
-        last_activity: std::time::Instant,
-        seen_first_record: bool,
-        stopped_reason: Option<String>,
-    }
-
-    let state = Arc::new(Mutex::new(WatcherState {
+    let state = Arc::new(std::sync::Mutex::new(WatcherState {
         last_activity: start_time,
         seen_first_record: false,
         stopped_reason: None,
     }));
-
     let done = Arc::new(AtomicBool::new(false));
-    let state_clone = Arc::clone(&state);
-    let done_clone = Arc::clone(&done);
-    let stopper_clone = Arc::clone(&stopper);
-    let initial_wait = Duration::from_secs(45);
-    let max_duration = Duration::from_secs(seconds);
-    let idle_duration = Duration::from_secs(idle_timeout);
-
-    let watcher = std::thread::spawn(move || {
-        while !done_clone.load(Ordering::Relaxed) {
-            std::thread::sleep(Duration::from_millis(250));
-            if done_clone.load(Ordering::Relaxed) {
-                break;
-            }
-            let now = std::time::Instant::now();
-            let mut s = state_clone.lock().unwrap();
-            if now.duration_since(start_time) >= max_duration {
-                s.stopped_reason = Some(format!("maximum window elapsed ({seconds}s)"));
-                stopper_clone.stop();
-                break;
-            }
-            if s.seen_first_record {
-                if now.duration_since(s.last_activity) >= idle_duration {
-                    s.stopped_reason = Some(format!(
-                        "idle timeout ({idle_timeout}s silence after records started)"
-                    ));
-                    stopper_clone.stop();
-                    break;
-                }
-            } else if now.duration_since(start_time) >= initial_wait {
-                s.stopped_reason = Some(format!(
-                    "initial timeout (no OBS records in {}s)",
-                    initial_wait.as_secs()
-                ));
-                stopper_clone.stop();
-                break;
-            }
-        }
-    });
+    let watcher = spawn_report_watcher(
+        start_time,
+        seconds,
+        idle_timeout,
+        Arc::clone(&state),
+        Arc::clone(&done),
+        Arc::clone(&stopper),
+    );
 
     let mut record_count = 0usize;
     let mut saw_end = false;
@@ -1587,7 +1613,7 @@ fn run_report(
 
         if line_str.starts_with(&prefix) {
             {
-                let mut s = state.lock().unwrap();
+                let mut s = state.lock().unwrap_or_else(PoisonError::into_inner);
                 s.last_activity = std::time::Instant::now();
                 s.seen_first_record = true;
             }
@@ -1619,23 +1645,13 @@ fn run_report(
                 _ => {}
             }
         } else {
-            // Inspect non-OBS system logs for fatal signal, panic, or core dump signatures
-            let lower = line_str.to_lowercase();
-            if lower.contains("exited on signal")
-                || lower.contains("fatal signal")
-                || lower.contains("# fault address:")
-                || lower.contains("kernel panic")
-                || lower.contains("trap 12:")
-                || lower.contains("core dumped")
-            {
-                if saw_crash.is_none() {
-                    eprintln!(
-                        "[+{:.1}s] TARGET CRASH DETECTED: {line_str}",
-                        start_time.elapsed().as_secs_f32()
-                    );
-                    saw_crash = Some(line_str.clone());
-                    crash_lines_remaining = 35;
-                }
+            if saw_crash.is_none() && is_crash_line(&line_str) {
+                eprintln!(
+                    "[+{:.1}s] TARGET CRASH DETECTED: {line_str}",
+                    start_time.elapsed().as_secs_f32()
+                );
+                saw_crash = Some(line_str.clone());
+                crash_lines_remaining = 35;
             }
             if crash_lines_remaining > 0 {
                 eprintln!("  [klog] {line_str}");
@@ -1669,7 +1685,11 @@ fn run_report(
         return Ok(ExitCode::SUCCESS);
     }
 
-    let stopped_reason = state.lock().unwrap().stopped_reason.clone();
+    let stopped_reason = state
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .stopped_reason
+        .clone();
     if let Some(reason) = stopped_reason {
         eprintln!("run stopped early: {reason}");
     }

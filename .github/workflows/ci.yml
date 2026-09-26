@@ -52,7 +52,7 @@ jobs:
       - name: Test the tooling
         run: ./bin/obscene test --quiet
         working-directory: OOPS/obscene
-      - name: Lint the tooling
+      - name: Formatting and lints
         run: ./bin/obscene lint
         working-directory: OOPS/obscene
       - name: Build the module

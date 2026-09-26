@@ -1063,6 +1063,8 @@ pretty: host tool
 check: module payload host
 	@echo "--- tooling tests ---"
 	@cd tool && CARGO_TARGET_DIR=$(TOOL_TARGET) OOPS_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo dev) $(CARGO) test --quiet
+	@echo "--- formatting and lints ---"
+	@CARGO_TARGET_DIR=$(TOOL_TARGET) bash scripts/lint.sh
 	@echo "--- host harness ---"
 	-cd $(BUILD) && ./obscene-host > host-report.txt
 	@$(TOOL) verify $(BUILD)/host-report.txt
