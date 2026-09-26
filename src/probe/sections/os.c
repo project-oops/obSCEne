@@ -266,10 +266,37 @@ static obs_result check_dlsym_resolves_a_known_symbol(void) {
 }
 
 static obs_result check_sysmodule_reports_unloaded(void) {
+    const char *id = "060-module/sysmodule-query";
+    const char *sym = "sceSysmoduleIsLoaded";
+
     /* Identifier 0 is not a loadable system module. The question is whether the
      * query answers at all, not what it answers. */
-    int rc = sceSysmoduleIsLoaded(0);
-    return obs_pass_value((uint64_t)(uint32_t)rc);
+    int rc0 = sceSysmoduleIsLoaded(0);
+    obs_report_measure(id, sym, "rc-id-0", (uint64_t)(uint32_t)rc0, "rc");
+
+    /* Optional module ID 0x0080 (libSceJson2) lifecycle: before load, load, after load,
+     * unload, after unload */
+    uint16_t opt_id = 0x0080;
+    int rc_before = sceSysmoduleIsLoaded(opt_id);
+    obs_report_measure(id, sym, "rc-before-load", (uint64_t)(uint32_t)rc_before, "rc");
+
+    int rc_load = sceSysmoduleLoadModule(opt_id);
+    obs_report_measure(id, "sceSysmoduleLoadModule", "rc", (uint64_t)(uint32_t)rc_load,
+                       "rc");
+
+    int rc_after_load = sceSysmoduleIsLoaded(opt_id);
+    obs_report_measure(id, sym, "rc-after-load", (uint64_t)(uint32_t)rc_after_load,
+                       "rc");
+
+    int rc_unload = sceSysmoduleUnloadModule(opt_id);
+    obs_report_measure(id, "sceSysmoduleUnloadModule", "rc",
+                       (uint64_t)(uint32_t)rc_unload, "rc");
+
+    int rc_after_unload = sceSysmoduleIsLoaded(opt_id);
+    obs_report_measure(id, sym, "rc-after-unload", (uint64_t)(uint32_t)rc_after_unload,
+                       "rc");
+
+    return obs_pass_value((uint64_t)(uint32_t)rc0);
 }
 
 /* Does loading a module at run time resolve an import the loader left unresolved?

@@ -136,6 +136,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceSysmodule", "sceSysmoduleLoadModule"},
     {"libSceSysmodule", "sceSysmoduleUnloadModule"},
     {"libSceSysmodule", "sceSysmoduleIsLoaded"},
+    {"libSceSysmodule", "sceSysmoduleLoadModuleInternal"},
+    {"libSceSysmodule", "sceSysmoduleLoadModuleByNameInternal"},
+    {"libSceSysmodule", "sceSysmoduleGetModuleHandleInternal"},
     {"libSceUserService", "sceUserServiceInitialize"},
     {"libSceUserService", "sceUserServiceGetInitialUser"},
     {"libSceUserService", "sceUserServiceGetAgeLevel"},
@@ -399,6 +402,11 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "sceKernelGetSystemSwVersion"},
     {"libSceVideoOut", "sceVideoOutGetResolutionStatus"},
     {"libSceVideoOut", "sceVideoOutGetFlipStatus"},
+    {"libSceVideoOut", "sceVideoOutGetOutputStatus"},
+    {"libSceVideoOut", "sceVideoOutGetVblankStatus"},
+    {"libSceVideoOut", "sceVideoOutWaitVblank"},
+    {"libkernel", "sceKernelGetModuleInfoForUnwind"},
+    {"libkernel", "sceKernelQueryMemoryProtection"},
 
     /* Escaping the sandbox to write the report where ftp can read it (mkdir a path
      * outside the jail; a timestamp for it). Added for the second thread's disk-escape

@@ -49,6 +49,14 @@
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 #include "oops/krw.h"
+void *memset(void *dest, int c, size_t n);
+
+OBS_WEAK int sceVideoOutGetOutputStatus(int handle, void *status);
+OBS_WEAK int sceVideoOutGetVblankStatus(int handle, void *status);
+OBS_WEAK int sceVideoOutWaitVblank(int handle);
+OBS_WEAK int sceKernelGetModuleInfoForUnwind(const void *addr, void *info);
+OBS_WEAK int sceKernelQueryMemoryProtection(const void *addr, uint64_t *start,
+                                            uint64_t *end, uint32_t *prot);
 
 /* Far larger than anything these calls are documented to write. */
 #define OBS_LAYOUT_BUFFER 256u
@@ -536,6 +544,252 @@ static obs_result check_resolution_status(void) {
                       "status", &probe, rc);
     (void)sceVideoOutClose(handle);
     return result;
+}
+
+static obs_result check_video_out_output_status(void) {
+    OBS_REQUIRE(&sceVideoOutOpen, &sceVideoOutClose, &sceUserServiceGetInitialUser);
+
+    int32_t user = 0;
+    if (sceUserServiceGetInitialUser(&user) != 0) {
+        return obs_skip("no initial user to open an output for");
+    }
+    int handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
+    if (handle <= 0) {
+        if (obs_display_holds_output()) {
+            return obs_skip("display path holds output, second open refused");
+        }
+        return obs_skip("no video output to query");
+    }
+
+    const char *id = "130-layout/video-out-output-status";
+    const char *sym = "sceVideoOutGetOutputStatus";
+
+    uint8_t buf[64];
+    uint8_t before[64];
+    memset(buf, 0xC7, sizeof(buf));
+    memset(before, 0xC7, sizeof(before));
+
+    int rc_unreg = -1;
+    if (obs_address_is_callable((const void *)&sceVideoOutGetOutputStatus)) {
+        rc_unreg = sceVideoOutGetOutputStatus(handle, buf);
+    }
+    obs_report_measure(id, sym, "rc-unregistered", (uint64_t)(uint32_t)rc_unreg, "rc");
+    obs_report_written(id, sym, "status-unregistered", before, buf, 64);
+
+    /* Arm with buffer registered if direct memory is available */
+    if (obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory) &&
+        obs_address_is_callable((const void *)&sceKernelMapDirectMemory) &&
+        obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers) &&
+        obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute)) {
+        size_t vb_bytes = 1920u * 1088u * 4u;
+        size_t vb_align = 2u * 1024u * 1024u;
+        sce_off_t physical = 0;
+        int mem_rc = sceKernelAllocateDirectMemory(
+            0, (sce_off_t)sceKernelGetDirectMemorySize(), vb_bytes, vb_align,
+            OBS_MEM_TYPE_WC_GARLIC, &physical);
+        void *mapped = NULL;
+        if (mem_rc == 0) {
+            sceKernelMapDirectMemory(&mapped, vb_bytes,
+                                     OBS_PROT_CPU_RW | OBS_PROT_GPU_READ |
+                                         OBS_PROT_GPU_WRITE,
+                                     0, physical, vb_align);
+        }
+        if (mapped != NULL) {
+            unsigned char attr[256];
+            memset(attr, 0, sizeof(attr));
+            sceVideoOutSetBufferAttribute(attr, 0x80000000u, 1u, 0u, 1920u, 1080u,
+                                          1920u);
+            void *addresses[1] = {mapped};
+            (void)sceVideoOutRegisterBuffers(handle, 0, addresses, 1, attr);
+
+            uint8_t buf_reg[64];
+            memset(buf_reg, 0xC7, sizeof(buf_reg));
+            int rc_reg = sceVideoOutGetOutputStatus(handle, buf_reg);
+            obs_report_measure(id, sym, "rc-registered", (uint64_t)(uint32_t)rc_reg,
+                               "rc");
+            obs_report_written(id, sym, "status-registered", before, buf_reg, 64);
+
+            if (obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
+                sceKernelReleaseDirectMemory(physical, vb_bytes);
+            }
+        }
+    }
+
+    /* NULL buffer test */
+    int rc_null = -1;
+    if (obs_address_is_callable((const void *)&sceVideoOutGetOutputStatus)) {
+        rc_null = sceVideoOutGetOutputStatus(handle, NULL);
+    }
+    obs_report_measure(id, sym, "rc-null", (uint64_t)(uint32_t)rc_null, "rc");
+
+    /* Bad handle test */
+    int rc_bad = -1;
+    if (obs_address_is_callable((const void *)&sceVideoOutGetOutputStatus)) {
+        rc_bad = sceVideoOutGetOutputStatus(-1, buf);
+    }
+    obs_report_measure(id, sym, "rc-bad-handle", (uint64_t)(uint32_t)rc_bad, "rc");
+
+    (void)sceVideoOutClose(handle);
+    return obs_pass();
+}
+
+static obs_result check_video_out_vblank_status(void) {
+    OBS_REQUIRE(&sceVideoOutOpen, &sceVideoOutClose, &sceUserServiceGetInitialUser);
+
+    int32_t user = 0;
+    if (sceUserServiceGetInitialUser(&user) != 0) {
+        return obs_skip("no initial user to open an output for");
+    }
+    int handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
+    if (handle <= 0) {
+        if (obs_display_holds_output()) {
+            return obs_skip("display path holds output, second open refused");
+        }
+        return obs_skip("no video output to query");
+    }
+
+    const char *id = "130-layout/video-out-vblank-status";
+    const char *sym = "sceVideoOutGetVblankStatus";
+
+    uint8_t buf1[64];
+    uint8_t buf2[64];
+    uint8_t before[64];
+    memset(buf1, 0xC7, sizeof(buf1));
+    memset(buf2, 0xC7, sizeof(buf2));
+    memset(before, 0xC7, sizeof(before));
+
+    int rc1 = -1;
+    if (obs_address_is_callable((const void *)&sceVideoOutGetVblankStatus)) {
+        rc1 = sceVideoOutGetVblankStatus(handle, buf1);
+    }
+    uint64_t count1 = *(const uint64_t *)(buf1 + 0);
+    uint64_t proc_time1 = *(const uint64_t *)(buf1 + 8);
+    uint64_t tsc1 = *(const uint64_t *)(buf1 + 16);
+    obs_report_measure(id, sym, "rc-1", (uint64_t)(uint32_t)rc1, "rc");
+    obs_report_measure(id, sym, "count-1", count1, "count");
+    obs_report_measure(id, sym, "process-time-1", proc_time1, "us");
+    obs_report_measure(id, sym, "tsc-1", tsc1, "tsc");
+    obs_report_written(id, sym, "status-1", before, buf1, 64);
+
+    if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+        sceKernelUsleep(100000);
+    }
+
+    int rc2 = -1;
+    if (obs_address_is_callable((const void *)&sceVideoOutGetVblankStatus)) {
+        rc2 = sceVideoOutGetVblankStatus(handle, buf2);
+    }
+    uint64_t count2 = *(const uint64_t *)(buf2 + 0);
+    uint64_t proc_time2 = *(const uint64_t *)(buf2 + 8);
+    uint64_t tsc2 = *(const uint64_t *)(buf2 + 16);
+    obs_report_measure(id, sym, "rc-2", (uint64_t)(uint32_t)rc2, "rc");
+    obs_report_measure(id, sym, "count-2", count2, "count");
+    obs_report_measure(id, sym, "process-time-2", proc_time2, "us");
+    obs_report_measure(id, sym, "tsc-2", tsc2, "tsc");
+    obs_report_written(id, sym, "status-2", before, buf2, 64);
+
+    if (obs_address_is_callable((const void *)&sceVideoOutWaitVblank) &&
+        obs_address_is_callable((const void *)&sceKernelReadTsc)) {
+        uint64_t t0 = sceKernelReadTsc();
+        int rc_wait = sceVideoOutWaitVblank(handle);
+        uint64_t t1 = sceKernelReadTsc();
+        obs_report_measure(id, "sceVideoOutWaitVblank", "rc",
+                           (uint64_t)(uint32_t)rc_wait, "rc");
+        obs_report_measure(id, "sceVideoOutWaitVblank", "duration-tsc", t1 - t0, "tsc");
+    }
+
+    (void)sceVideoOutClose(handle);
+    return obs_pass();
+}
+
+static obs_result check_module_info_for_unwind(void) {
+    const char *id = "130-layout/unwind-module-info";
+    const char *sym = "sceKernelGetModuleInfoForUnwind";
+
+    const void *fn_raw = (const void *)&sceKernelGetModuleInfoForUnwind;
+    if (!obs_address_is_callable(fn_raw)) {
+        fn_raw = obs_module_symbol(1, sym);
+    }
+    if (!obs_address_is_callable(fn_raw)) {
+        return obs_skip("sceKernelGetModuleInfoForUnwind not callable");
+    }
+    int (*fn_unwind)(const void *, void *) = (int (*)(const void *, void *))fn_raw;
+
+    /* Arm 1: probe text with 0x130 buffer */
+    uint8_t buf[0x140];
+    uint8_t before[0x140];
+    memset(buf, 0xC7, sizeof(buf));
+    memset(before, 0xC7, sizeof(before));
+    *(size_t *)buf = 0x130;
+    *(size_t *)before = 0x130;
+
+    const void *text_addr = (const void *)&check_module_info_for_unwind;
+    int rc_text = fn_unwind(text_addr, buf);
+    obs_report_measure(id, sym, "rc-text", (uint64_t)(uint32_t)rc_text, "rc");
+    obs_report_written(id, sym, "unwind-info", before, buf, 0x130);
+
+    /* Arm 2: unmapped address */
+    uint8_t buf2[0x140];
+    memset(buf2, 0xC7, sizeof(buf2));
+    *(size_t *)buf2 = 0x130;
+    int rc_unmapped = fn_unwind((const void *)0xdeadbeef000ULL, buf2);
+    obs_report_measure(id, sym, "rc-unmapped", (uint64_t)(uint32_t)rc_unmapped, "rc");
+
+    /* Arm 3: null buffer */
+    int rc_null = fn_unwind(text_addr, NULL);
+    obs_report_measure(id, sym, "rc-null", (uint64_t)(uint32_t)rc_null, "rc");
+
+    return obs_pass();
+}
+
+static uint8_t s_query_bss[4096];
+
+static void query_prot_arm(const char *id, const char *name, const void *addr,
+                           int (*fn)(const void *, uint64_t *, uint64_t *,
+                                     uint32_t *)) {
+    uint64_t start = 0xAAAAAAAAAAAAAAAAULL;
+    uint64_t end = 0xBBBBBBBBBBBBBBBBULL;
+    uint32_t prot = 0xCCCCCCCCu;
+    int rc = fn(addr, &start, &end, &prot);
+    obs_report_measure(id, name, "rc", (uint64_t)(uint32_t)rc, "rc");
+    obs_report_measure(id, name, "start", start, "addr");
+    obs_report_measure(id, name, "end", end, "addr");
+    obs_report_measure(id, name, "prot", (uint64_t)prot, "prot");
+    obs_report_measure(id, name, "bit-0x80", (uint64_t)((prot & 0x80) ? 1 : 0), "bool");
+}
+
+static obs_result check_query_memory_protection(void) {
+    const char *id = "130-layout/query-memory-protection";
+    const char *sym = "sceKernelQueryMemoryProtection";
+
+    const void *fn_raw = (const void *)&sceKernelQueryMemoryProtection;
+    if (!obs_address_is_callable(fn_raw)) {
+        fn_raw = obs_module_symbol(1, sym);
+    }
+    if (!obs_address_is_callable(fn_raw)) {
+        return obs_skip("sceKernelQueryMemoryProtection not callable");
+    }
+    int (*query_fn)(const void *, uint64_t *, uint64_t *, uint32_t *) =
+        (int (*)(const void *, uint64_t *, uint64_t *, uint32_t *))fn_raw;
+
+    /* 1. Text */
+    query_prot_arm(id, "text", (const void *)&check_query_memory_protection, query_fn);
+
+    /* 2. Data */
+    query_prot_arm(id, "data", (const void *)&obs_section_layout, query_fn);
+
+    /* 3. BSS */
+    query_prot_arm(id, "bss", (const void *)s_query_bss, query_fn);
+
+    /* 4. Unmapped */
+    query_prot_arm(id, "unmapped", (const void *)0xdeadbeef000ULL, query_fn);
+
+    /* 5. NULL params */
+    int rc_null =
+        query_fn((const void *)&check_query_memory_protection, NULL, NULL, NULL);
+    obs_report_measure(id, sym, "rc-null-params", (uint64_t)(uint32_t)rc_null, "rc");
+
+    return obs_pass();
 }
 
 /* How big is that structure? Asked of the platform, one size at a time.
@@ -1137,97 +1391,121 @@ static void custom_json_dealloc(void *this_ptr, void *ptr) {
     s_json_dealloc_calls++;
 }
 
-extern OBS_WEAK void _ZN3sce4Json12MemAllocatorC2Ev(void *);
-extern OBS_WEAK void _ZN3sce4Json12MemAllocatorD2Ev(void *);
-extern OBS_WEAK void _ZN3sce4Json11InitializerC1Ev(void *);
-extern OBS_WEAK void _ZN3sce4Json11InitializerD1Ev(void *);
-extern OBS_WEAK int
-_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE(void *, const void *);
-extern OBS_WEAK int _ZN3sce4Json11Initializer9terminateEv(void *);
+static void *layout_resolve_json_sym(int mod_h, const char *name, const char *nid) {
+    void *ptr = NULL;
+    if (mod_h > 0 && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        if (nid != NULL && sceKernelDlsym(mod_h, nid, &ptr) == 0 &&
+            obs_address_is_callable(ptr)) {
+            return ptr;
+        }
+        if (name != NULL && sceKernelDlsym(mod_h, name, &ptr) == 0 &&
+            obs_address_is_callable(ptr)) {
+            return ptr;
+        }
+    }
+    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        if (nid != NULL && sceKernelDlsym(1, nid, &ptr) == 0 &&
+            obs_address_is_callable(ptr)) {
+            return ptr;
+        }
+        if (name != NULL && sceKernelDlsym(1, name, &ptr) == 0 &&
+            obs_address_is_callable(ptr)) {
+            return ptr;
+        }
+    }
+    if (mod_h > 0) {
+        const void *sym = obs_module_symbol(mod_h, name);
+        if (sym != NULL && obs_address_is_callable(sym)) {
+            return (void *)(uintptr_t)sym;
+        }
+    }
+    const void *sym = obs_module_symbol(1, name);
+    if (sym != NULL && obs_address_is_callable(sym)) {
+        return (void *)(uintptr_t)sym;
+    }
+#if !defined(OBSCENE_HOST_BUILD)
+    if (krw_is_ready()) {
+        pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+        if (nid != NULL) {
+            uintptr_t kaddr = krw_dynlib_resolve_any(pid, nid);
+            if (kaddr >= 0x10000UL && obs_address_is_callable((const void *)kaddr)) {
+                return (void *)kaddr;
+            }
+        }
+        if (name != NULL) {
+            uintptr_t kaddr = krw_dynlib_resolve_any(pid, name);
+            if (kaddr >= 0x10000UL && obs_address_is_callable((const void *)kaddr)) {
+                return (void *)kaddr;
+            }
+        }
+    }
+#endif
+    return NULL;
+}
 
 /* clang-format off */
 static obs_result check_json2_init_layout(void) {
-    /* 1. Ensure libSceJson2 / libSceJson is loaded / opened */
+    /* 1. Ensure libSceJson2 / libSceJson is loaded / opened via sysmodule */
+    int mod_h = -1;
     if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
-        (void)sceSysmoduleLoadModule(0x0080); /* OOPS_SYSMODULE_JSON */
+        int r = sceSysmoduleLoadModule(0x0080); /* OOPS_SYSMODULE_JSON */
+        obs_report_measure("130-layout/json2-init", "sysmodule_load_0x0080", "rc",
+                           (uint64_t)(uint32_t)r, "code");
     }
-    int mod_h = obs_module_open("libSceJson2");
-    if (mod_h < 0) {
-        mod_h = obs_module_open("libSceJson2.sprx");
+    if (obs_address_is_callable((const void *)&sceSysmoduleGetModuleHandleInternal)) {
+        int r = sceSysmoduleGetModuleHandleInternal(0x0080, &mod_h);
+        obs_report_measure("130-layout/json2-init", "sysmodule_get_handle_0x0080", "rc",
+                           (uint64_t)(uint32_t)r, "code");
+        obs_report_measure("130-layout/json2-init", "sysmodule_get_handle_0x0080", "handle",
+                           (uint64_t)(int64_t)mod_h, "val");
     }
-    if (mod_h < 0) {
+    if (mod_h <= 0 && obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        int r = sceSysmoduleLoadModule(0x00e7);
+        obs_report_measure("130-layout/json2-init", "sysmodule_load_0x00e7", "rc",
+                           (uint64_t)(uint32_t)r, "code");
+    }
+    if (mod_h <= 0 && obs_address_is_callable((const void *)&sceSysmoduleGetModuleHandleInternal)) {
+        int r = sceSysmoduleGetModuleHandleInternal(0x00e7, &mod_h);
+        obs_report_measure("130-layout/json2-init", "sysmodule_get_handle_0x00e7", "rc",
+                           (uint64_t)(uint32_t)r, "code");
+        obs_report_measure("130-layout/json2-init", "sysmodule_get_handle_0x00e7", "handle",
+                           (uint64_t)(int64_t)mod_h, "val");
+    }
+    if (mod_h <= 0 && obs_address_is_callable((const void *)&sceSysmoduleLoadModuleByNameInternal)) {
+        int r = sceSysmoduleLoadModuleByNameInternal("libSceJson2.sprx", 0, 0, 0, 0, 0);
+        obs_report_measure("130-layout/json2-init", "sysmodule_load_by_name", "rc",
+                           (uint64_t)(uint32_t)r, "code");
+    }
+    if (mod_h <= 0) {
+        mod_h = obs_module_open("libSceJson2");
+    }
+    if (mod_h <= 0) {
         mod_h = obs_module_open("libSceJson");
     }
-    if (mod_h < 0) {
-        mod_h = obs_module_open("libSceJson.sprx");
-    }
-    if (mod_h < 0 && obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-        int res = 0;
-        mod_h = sceKernelLoadStartModule("/system/common/lib/libSceJson2.sprx", 0, NULL, 0, NULL, &res);
-        if (mod_h < 0) {
-            mod_h = sceKernelLoadStartModule("/system/common/lib/libSceJson.sprx", 0, NULL, 0, NULL, &res);
-        }
+    if (mod_h > 0) {
+        obs_sysmodule_cache_handle("libSceJson2", mod_h);
+        obs_sysmodule_cache_handle("libSceJson", mod_h);
     }
     obs_report_measure("130-layout/json2-init", "libSceJson2", "handle",
                        (uint64_t)(int64_t)mod_h, "val");
 
-    /* 2. Resolve target symbols: first direct imports, then dynamic resolution */
-    void (*fn_memalloc_ctor)(void *) = NULL;
-    void (*fn_memalloc_dtor)(void *) = NULL;
-    void (*fn_init_ctor)(void *) = NULL;
-    void (*fn_init_dtor)(void *) = NULL;
-    int (*fn_initialize)(void *, const void *) = NULL;
-    int (*fn_terminate)(void *) = NULL;
-
-    if (obs_address_is_callable((const void *)&_ZN3sce4Json12MemAllocatorC2Ev)) {
-        fn_memalloc_ctor = _ZN3sce4Json12MemAllocatorC2Ev;
-    }
-    if (obs_address_is_callable((const void *)&_ZN3sce4Json12MemAllocatorD2Ev)) {
-        fn_memalloc_dtor = _ZN3sce4Json12MemAllocatorD2Ev;
-    }
-    if (obs_address_is_callable((const void *)&_ZN3sce4Json11InitializerC1Ev)) {
-        fn_init_ctor = _ZN3sce4Json11InitializerC1Ev;
-    }
-    if (obs_address_is_callable((const void *)&_ZN3sce4Json11InitializerD1Ev)) {
-        fn_init_dtor = _ZN3sce4Json11InitializerD1Ev;
-    }
-    if (obs_address_is_callable((const void *)&_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE)) {
-        fn_initialize = _ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE;
-    }
-    if (obs_address_is_callable((const void *)&_ZN3sce4Json11Initializer9terminateEv)) {
-        fn_terminate = _ZN3sce4Json11Initializer9terminateEv;
-    }
-
-    if (!fn_memalloc_ctor) fn_memalloc_ctor = (void (*)(void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json12MemAllocatorC2Ev");
-    if (!fn_memalloc_dtor) fn_memalloc_dtor = (void (*)(void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json12MemAllocatorD2Ev");
-    if (!fn_init_ctor) fn_init_ctor = (void (*)(void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json11InitializerC1Ev");
-    if (!fn_init_dtor) fn_init_dtor = (void (*)(void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json11InitializerD1Ev");
-    if (!fn_initialize) fn_initialize = (int (*)(void *, const void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE");
-    if (!fn_terminate) fn_terminate = (int (*)(void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json11Initializer9terminateEv");
+    /* 2. Resolve target symbols dynamically */
+    void (*fn_memalloc_ctor)(void *) =
+        (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json12MemAllocatorC2Ev", "-hJRce8wn1U");
+    void (*fn_memalloc_dtor)(void *) =
+        (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json12MemAllocatorD2Ev", "OcAgPxcq5Vk");
+    void (*fn_init_ctor)(void *) =
+        (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11InitializerC1Ev", "cK6bYHf-Q5E");
+    void (*fn_init_dtor)(void *) =
+        (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11InitializerD1Ev", "RujUxbr3haM");
+    int (*fn_initialize)(void *, const void *) =
+        (int (*)(void *, const void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE", "Cxwy7wHq4J0");
+    int (*fn_terminate)(void *) =
+        (int (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11Initializer9terminateEv", "PR5k1penBLM");
     void (*fn_param2_ctor)(void *) =
-        (void (*)(void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json14InitParameter2C1Ev");
+        (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json14InitParameter2C1Ev", "WSOuge5IsCg");
     void (*fn_param2_setalloc)(void *, void *, void *) =
-        (void (*)(void *, void *, void *))layout_resolve_sym("libSceJson2", "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv");
-
-    if (!fn_memalloc_ctor) fn_memalloc_ctor = (void (*)(void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json12MemAllocatorC2Ev");
-    if (!fn_memalloc_dtor) fn_memalloc_dtor = (void (*)(void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json12MemAllocatorD2Ev");
-    if (!fn_init_ctor) fn_init_ctor = (void (*)(void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json11InitializerC1Ev");
-    if (!fn_init_dtor) fn_init_dtor = (void (*)(void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json11InitializerD1Ev");
-    if (!fn_initialize) fn_initialize = (int (*)(void *, const void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE");
-    if (!fn_terminate) fn_terminate = (int (*)(void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json11Initializer9terminateEv");
-    if (!fn_param2_ctor) fn_param2_ctor = (void (*)(void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json14InitParameter2C1Ev");
-    if (!fn_param2_setalloc) fn_param2_setalloc = (void (*)(void *, void *, void *))layout_resolve_sym("libSceJson", "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv");
-
-    if (mod_h > 0 && obs_address_is_callable((const void *)&sceKernelDlsym)) {
-        if (!fn_memalloc_ctor) sceKernelDlsym(mod_h, "_ZN3sce4Json12MemAllocatorC2Ev", (void **)&fn_memalloc_ctor);
-        if (!fn_memalloc_dtor) sceKernelDlsym(mod_h, "_ZN3sce4Json12MemAllocatorD2Ev", (void **)&fn_memalloc_dtor);
-        if (!fn_init_ctor) sceKernelDlsym(mod_h, "_ZN3sce4Json11InitializerC1Ev", (void **)&fn_init_ctor);
-        if (!fn_init_dtor) sceKernelDlsym(mod_h, "_ZN3sce4Json11InitializerD1Ev", (void **)&fn_init_dtor);
-        if (!fn_initialize) sceKernelDlsym(mod_h, "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE", (void **)&fn_initialize);
-        if (!fn_terminate) sceKernelDlsym(mod_h, "_ZN3sce4Json11Initializer9terminateEv", (void **)&fn_terminate);
-        if (!fn_param2_ctor) sceKernelDlsym(mod_h, "_ZN3sce4Json14InitParameter2C1Ev", (void **)&fn_param2_ctor);
-        if (!fn_param2_setalloc) sceKernelDlsym(mod_h, "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv", (void **)&fn_param2_setalloc);
-    }
+        (void (*)(void *, void *, void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv", "I2QC8PYhJWY");
 
     obs_report_measure("130-layout/json2-init", "resolve", "memalloc_ctor",
                        (uint64_t)(fn_memalloc_ctor != NULL), "bool");
@@ -1281,15 +1559,27 @@ static obs_result check_json2_init_layout(void) {
             obs_report_bytes("130-layout/json2-init", "MemAllocator::MemAllocator",
                              "bytes_64_128", 64, memalloc_probe.buffer + 64, 64);
 
-            void **vptr = *(void ***)memalloc_probe.buffer;
+            void **vptr = NULL;
+            if (memcmp(memalloc_probe.before, memalloc_probe.buffer, sizeof(void *)) != 0) {
+                vptr = *(void ***)memalloc_probe.buffer;
+            }
             obs_report_measure("130-layout/json2-init", "MemAllocator_vtable", "vptr",
                                (uint64_t)(uintptr_t)vptr, "addr");
             if (vptr != NULL) {
                 for (unsigned int v = 0; v < 8; v++) {
                     char vslot_name[16];
                     oops_snprintf(vslot_name, sizeof(vslot_name), "slot_%u", v);
+                    uint64_t slot_val = 0;
+                    sig = OBS_FAULT_ARM(&guard);
+                    if (sig == 0) {
+                        slot_val = (uint64_t)(uintptr_t)vptr[v];
+                        obs_fault_unregister();
+                    } else {
+                        obs_fault_unregister();
+                        break;
+                    }
                     obs_report_measure("130-layout/json2-init", "MemAllocator_vtable",
-                                       vslot_name, (uint64_t)(uintptr_t)vptr[v], "addr");
+                                       vslot_name, slot_val, "addr");
                 }
             }
         } else {
@@ -1416,14 +1706,31 @@ static obs_result check_json2_init_layout(void) {
         }
 
         /* 9. Subclass allocator test (with virtual allocate/deallocate implementations) */
-        void **base_vptr = *(void ***)memalloc_probe.buffer;
+        void **base_vptr = NULL;
+        if (memcmp(memalloc_probe.before, memalloc_probe.buffer, sizeof(void *)) != 0) {
+            base_vptr = *(void ***)memalloc_probe.buffer;
+        }
         if (base_vptr != NULL) {
             static void *subclass_vtable[16];
+            int vtable_ok = 1;
             for (unsigned int s = 0; s < 16; s++) {
-                subclass_vtable[s] = (s < 8) ? base_vptr[s] : NULL;
+                if (s < 8) {
+                    sig = OBS_FAULT_ARM(&guard);
+                    if (sig == 0) {
+                        subclass_vtable[s] = base_vptr[s];
+                        obs_fault_unregister();
+                    } else {
+                        obs_fault_unregister();
+                        vtable_ok = 0;
+                        break;
+                    }
+                } else {
+                    subclass_vtable[s] = NULL;
+                }
             }
-            subclass_vtable[2] = (void *)&custom_json_alloc;
-            subclass_vtable[3] = (void *)&custom_json_dealloc;
+            if (vtable_ok) {
+                subclass_vtable[2] = (void *)&custom_json_alloc;
+                subclass_vtable[3] = (void *)&custom_json_dealloc;
 
             layout_probe subclass_alloc_probe;
             layout_prepare_with(&subclass_alloc_probe, 0xAAu);
@@ -1459,6 +1766,7 @@ static obs_result check_json2_init_layout(void) {
                 obs_fault_unregister();
                 obs_report_measure("130-layout/json2-init", "initialize_subclass", "faulted",
                                    (uint64_t)(uint32_t)sig, "signal");
+            }
             }
         }
 
@@ -1593,6 +1901,21 @@ static const obs_check layout_checks[] = {
     {"130-layout/json2-init-layout", "libSceJson2",
      "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_json2_init_layout, check_json2_init_layout,
+     OBS_FROM_ASSUMED},
+    {"130-layout/video-out-output-status", "libSceVideoOut",
+     "sceVideoOutGetOutputStatus", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_video_out_output_status, check_video_out_output_status,
+     OBS_FROM_ASSUMED},
+    {"130-layout/video-out-vblank-status", "libSceVideoOut",
+     "sceVideoOutGetVblankStatus", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_video_out_vblank_status, check_video_out_vblank_status,
+     OBS_FROM_ASSUMED},
+    {"130-layout/unwind-module-info", "libkernel", "sceKernelGetModuleInfoForUnwind",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_module_info_for_unwind,
+     check_module_info_for_unwind, OBS_FROM_ASSUMED},
+    {"130-layout/query-memory-protection", "libkernel",
+     "sceKernelQueryMemoryProtection", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_query_memory_protection, check_query_memory_protection,
      OBS_FROM_ASSUMED},
 };
 

@@ -634,6 +634,11 @@ OBS_WEAK int sceKernelGetModuleInfo(int handle, void *info);
 OBS_WEAK int sceSysmoduleLoadModule(uint16_t id);
 OBS_WEAK int sceSysmoduleUnloadModule(uint16_t id);
 OBS_WEAK int sceSysmoduleIsLoaded(uint16_t id);
+OBS_WEAK int sceSysmoduleLoadModuleInternal(uint32_t id);
+OBS_WEAK int sceSysmoduleLoadModuleByNameInternal(const char *name, uint64_t a2,
+                                                  uint64_t a3, uint64_t a4, uint64_t a5,
+                                                  uint64_t a6);
+OBS_WEAK int sceSysmoduleGetModuleHandleInternal(uint32_t id, int *handle);
 
 /* ---- libSceLibcInternal: the C runtime -------------------------------------
  *

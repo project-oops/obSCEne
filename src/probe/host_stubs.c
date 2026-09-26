@@ -1094,6 +1094,28 @@ int sceSysmoduleIsLoaded(uint16_t id) {
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 
+int sceSysmoduleLoadModuleInternal(uint32_t id) {
+    (void)id;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceSysmoduleLoadModuleByNameInternal(const char *name, uint64_t a2, uint64_t a3,
+                                         uint64_t a4, uint64_t a5, uint64_t a6) {
+    (void)name;
+    (void)a2;
+    (void)a3;
+    (void)a4;
+    (void)a5;
+    (void)a6;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceSysmoduleGetModuleHandleInternal(uint32_t id, int *handle) {
+    (void)id;
+    (void)handle;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
 int sceUserServiceInitialize(const void *params) {
     (void)params;
     return OBS_HOST_NOT_IMPLEMENTED;
@@ -1130,6 +1152,45 @@ int sceVideoOutClose(int handle) {
 int sceVideoOutSetFlipRate(int handle, int rate) {
     (void)handle;
     (void)rate;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceVideoOutGetOutputStatus(int handle, void *status);
+int sceVideoOutGetVblankStatus(int handle, void *status);
+int sceVideoOutWaitVblank(int handle);
+int sceKernelGetModuleInfoForUnwind(const void *addr, void *info);
+int sceKernelQueryMemoryProtection(const void *addr, uint64_t *start, uint64_t *end,
+                                   uint32_t *prot);
+
+int sceVideoOutGetOutputStatus(int handle, void *status) {
+    (void)handle;
+    (void)status;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceVideoOutGetVblankStatus(int handle, void *status) {
+    (void)handle;
+    (void)status;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceVideoOutWaitVblank(int handle) {
+    (void)handle;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelGetModuleInfoForUnwind(const void *addr, void *info) {
+    (void)addr;
+    (void)info;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelQueryMemoryProtection(const void *addr, uint64_t *start, uint64_t *end,
+                                   uint32_t *prot) {
+    (void)addr;
+    (void)start;
+    (void)end;
+    (void)prot;
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 

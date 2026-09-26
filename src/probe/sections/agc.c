@@ -3290,6 +3290,7 @@ static obs_result check_agc_register_defaults2(void) {
 }
 
 static obs_result check_agc_driver_symbols(void) {
+    const char *sym = "sceAgcDriverWaitUntilSafeForRendering";
     static const char *const driver_syms[] = {
         "sceAgcDriverCreateQueue",
         "sceAgcDriverDestroyQueue",
@@ -3299,6 +3300,7 @@ static obs_result check_agc_driver_symbols(void) {
         "sceAgcDriverGetEqEventType",
         "sceAgcDriverGetEqContextId",
         "sceAgcDriverGetWaitRenderingPacketSizeInDwords",
+        "sceAgcDriverWaitUntilSafeForRendering",
         "sceAgcDriverAgrSubmitMultiDcbs",
     };
 
@@ -3335,10 +3337,77 @@ static obs_result check_agc_driver_symbols(void) {
             }
         }
         int ok = obs_address_is_callable(fn);
-        if (ok)
+        if (ok) {
             resolved++;
+            obs_report_measure("166-agc/driver-symbols", name, "address",
+                               (uint64_t)(uintptr_t)fn, "addr");
+            if (strcmp(name, "sceAgcDriverGetWaitRenderingPacketSizeInDwords") == 0) {
+                uint32_t (*sz_fn)(void) = (uint32_t (*)(void))fn;
+                uint32_t dwords = sz_fn();
+                obs_report_measure("166-agc/driver-symbols", name, "dwords",
+                                   (uint64_t)dwords, "dwords");
+            } else if (strcmp(name, "sceAgcDriverWaitUntilSafeForRendering") == 0) {
+                uint32_t words[64];
+                uint32_t before_w[64];
+                for (int k = 0; k < 64; k++) {
+                    words[k] = 0xC7C7C7C7u;
+                    before_w[k] = 0xC7C7C7C7u;
+                }
+                uint32_t *up = words;
+                int (*wait_fn)(uint32_t **, uint32_t *, uint32_t, int, uint32_t) =
+                    (int (*)(uint32_t **, uint32_t *, uint32_t, int, uint32_t))fn;
+                int rc0 = wait_fn(&up, words + 64, 0, 1, 0);
+                uint64_t dw_written0 = (uint64_t)(up - words);
+                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0", "rc",
+                                   (uint64_t)(uint32_t)rc0, "rc");
+                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0",
+                                   "up-delta", dw_written0, "dwords");
+                obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx0",
+                                   (const uint8_t *)before_w, (const uint8_t *)words,
+                                   (unsigned int)(dw_written0 * sizeof(uint32_t)));
+
+                for (int k = 0; k < 64; k++) {
+                    words[k] = 0xC7C7C7C7u;
+                }
+                up = words;
+                int rc1 = wait_fn(&up, words + 64, 0, 1, 1);
+                uint64_t dw_written1 = (uint64_t)(up - words);
+                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1", "rc",
+                                   (uint64_t)(uint32_t)rc1, "rc");
+                obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1",
+                                   "up-delta", dw_written1, "dwords");
+                obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx1",
+                                   (const uint8_t *)before_w, (const uint8_t *)words,
+                                   (unsigned int)(dw_written1 * sizeof(uint32_t)));
+            }
+        }
         obs_report_measure("166-agc/driver-symbols", name, "resolved",
                            (uint64_t)(ok ? 1 : 0), "bool");
+    }
+
+    /* Sweep in libSceAgc as well for prior art check */
+    int agc_h = obs_module_open("libSceAgc");
+    if (agc_h < 0) {
+        agc_h = obs_module_open("libSceAgc.sprx");
+    }
+    for (size_t i = 0; i < sizeof(driver_syms) / sizeof(driver_syms[0]); i++) {
+        const char *name = driver_syms[i];
+        const void *fn = (agc_h >= 0) ? obs_module_symbol(agc_h, name) : NULL;
+        if (fn == NULL && obs_address_is_callable((const void *)&sceKernelDlsym) &&
+            agc_h >= 0) {
+            void *addr = NULL;
+            if (sceKernelDlsym(agc_h, name, &addr) == 0 &&
+                obs_address_is_callable(addr)) {
+                fn = addr;
+            }
+        }
+        int ok = obs_address_is_callable(fn);
+        obs_report_measure("166-agc/driver-symbols-in-agc", name, "resolved",
+                           (uint64_t)(ok ? 1 : 0), "bool");
+        if (ok) {
+            obs_report_measure("166-agc/driver-symbols-in-agc", name, "address",
+                               (uint64_t)(uintptr_t)fn, "addr");
+        }
     }
 
     if (resolved == 0) {
@@ -20085,6 +20154,64 @@ static obs_result check_agc_dcb_set_flip(void) {
                                (unsigned int)len_rq400);
             if (len_rq400 > max_bytes)
                 max_bytes = len_rq400;
+        }
+    }
+
+    /* Pass 3: With VideoOut port open (REQ-20260926T1927Z-1d54) */
+    int vo_user = 0;
+    int vo_handle = -1;
+    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser) &&
+        obs_address_is_callable((const void *)&sceVideoOutOpen)) {
+        if (sceUserServiceGetInitialUser(&vo_user) == 0) {
+            vo_handle = sceVideoOutOpen(vo_user, OBS_VIDEO_BUS_MAIN, 0, NULL);
+        }
+    }
+    if (vo_handle <= 0 && obs_address_is_callable((const void *)&sceVideoOutOpen)) {
+        vo_handle = sceVideoOutOpen(0xff, 0, 0, NULL);
+    }
+    obs_report_measure(id, sym, "video-handle", (uint64_t)(int64_t)vo_handle, "handle");
+
+    if (vo_handle > 0) {
+        static const int flip_indices[] = {0, 1, 4};
+        for (size_t idx_i = 0; idx_i < 3; idx_i++) {
+            int b_idx = flip_indices[idx_i];
+            for (int call_num = 1; call_num <= 2; call_num++) {
+                char arm_tag[64];
+                snprintf(arm_tag, sizeof(arm_tag), "flip-open-idx%d-c%d", b_idx, call_num);
+                agc_cb_prepare(probe, 0);
+                uint64_t cur_before_vo = probe->cur;
+                sig = OBS_FAULT_ARM(&guard);
+                uint64_t rc_flip = 0;
+                if (sig == 0) {
+                    rc_flip = fn_flip(&probe->begin, (uint64_t)vo_handle, (uint64_t)b_idx,
+                                      1, 0x1122334455667788ULL, 0, 0, 0, 0, 0, 0, 0);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                uint64_t adv_vo = (uint64_t)(probe->cur - cur_before_vo);
+                unsigned int w_vo = 0;
+                for (unsigned int i = 0; i < OBS_AGC_CMDBUF_SIZE; i++) {
+                    if (probe->cmdbuf[i] != before[i])
+                        w_vo = i + 1u;
+                }
+                uint64_t len_vo = (adv_vo > 0 ? adv_vo : (uint64_t)w_vo);
+                obs_report_measure(id, sym, arm_tag, rc_flip, "rc");
+                char len_tag[64];
+                snprintf(len_tag, sizeof(len_tag), "%s-bytes", arm_tag);
+                obs_report_measure(id, sym, len_tag, len_vo, "bytes");
+                if (len_vo > 0) {
+                    if (len_vo > OBS_AGC_CMDBUF_SIZE)
+                        len_vo = OBS_AGC_CMDBUF_SIZE;
+                    obs_report_written(id, sym, arm_tag, before, probe->cmdbuf,
+                                       (unsigned int)len_vo);
+                    if (len_vo > max_bytes)
+                        max_bytes = len_vo;
+                }
+            }
+        }
+        if (obs_address_is_callable((const void *)&sceVideoOutClose)) {
+            sceVideoOutClose(vo_handle);
         }
     }
 

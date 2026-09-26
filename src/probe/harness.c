@@ -314,7 +314,8 @@ static obs_sysmodule_id_map obs_sysmodules[] = {
     {"libSceAudiodec", 0x0088, -1},     {"libSceAudio3d", 0x00a7, -1},
     {"libSceKeyboard", 0x0106, -1},     {"libSceMouse", 0x00a9, -1},
     {"libSceAppContent", 0x00b4, -1},   {"libSceCommonDialog", 0x00a4, -1},
-    {"libSceCommonDialog", 0x0096, -1},
+    {"libSceCommonDialog", 0x0096, -1}, {"libSceJson2", 0x00e7, -1},
+    {"libSceJson", 0x0080, -1},
 };
 
 void obs_sysmodule_cache_handle(const char *name, int handle) {
@@ -496,6 +497,7 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
     int (*fn_sysmodule_load)(uint16_t) = NULL;
     int (*fn_sysmodule_internal)(uint32_t) = NULL;
     int (*fn_sysmodule_by_name)(const char *, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) = NULL;
+    int (*fn_sysmodule_get_handle)(uint32_t, int *) = NULL;
     if (obs_get_payload_args() == NULL) {
         if (obs_address_is_callable((const void *)&sceKernelGetModuleList) &&
             obs_address_is_callable((const void *)&sceKernelDlsym)) {
@@ -507,19 +509,31 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                     if (mid <= 0)
                         continue;
                     void *tsym = NULL;
-                    if (sceKernelDlsym(mid, "g8cM39EUZ6o", &tsym) == 0 ||
-                        sceKernelDlsym(mid, "sceSysmoduleLoadModule", &tsym) == 0) {
-                        fn_sysmodule_load = (int (*)(uint16_t))tsym;
-                        void *isym = NULL;
-                        if (sceKernelDlsym(mid, "39iV5E1HoCk", &isym) == 0 ||
-                            sceKernelDlsym(mid, "sceSysmoduleLoadModuleInternal", &isym) == 0) {
+                    void *isym = NULL;
+                    void *nsym = NULL;
+                    void *hsym = NULL;
+                    (void)sceKernelDlsym(mid, "39iV5E1HoCk", &isym);
+                    if (isym == NULL)
+                        (void)sceKernelDlsym(mid, "sceSysmoduleLoadModuleInternal", &isym);
+                    (void)sceKernelDlsym(mid, "CU8m+Qs+HN4", &nsym);
+                    if (nsym == NULL)
+                        (void)sceKernelDlsym(mid, "sceSysmoduleLoadModuleByNameInternal", &nsym);
+                    (void)sceKernelDlsym(mid, "D8cuU4d72xM", &hsym);
+                    if (hsym == NULL)
+                        (void)sceKernelDlsym(mid, "sceSysmoduleGetModuleHandleInternal", &hsym);
+                    (void)sceKernelDlsym(mid, "g8cM39EUZ6o", &tsym);
+                    if (tsym == NULL)
+                        (void)sceKernelDlsym(mid, "sceSysmoduleLoadModule", &tsym);
+
+                    if (isym != NULL || nsym != NULL || hsym != NULL || tsym != NULL) {
+                        if (isym != NULL)
                             fn_sysmodule_internal = (int (*)(uint32_t))isym;
-                        }
-                        void *nsym = NULL;
-                        if (sceKernelDlsym(mid, "CU8m+Qs+HN4", &nsym) == 0 ||
-                            sceKernelDlsym(mid, "sceSysmoduleLoadModuleByNameInternal", &nsym) == 0) {
+                        if (nsym != NULL)
                             fn_sysmodule_by_name = (int (*)(const char *, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t))nsym;
-                        }
+                        if (hsym != NULL)
+                            fn_sysmodule_get_handle = (int (*)(uint32_t, int *))hsym;
+                        if (tsym != NULL)
+                            fn_sysmodule_load = (int (*)(uint16_t))tsym;
                         break;
                     }
                 }
@@ -538,11 +552,23 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                 }
             }
         }
+        if (fn_sysmodule_by_name == NULL &&
+            obs_address_is_callable((const void *)&sceSysmoduleLoadModuleByNameInternal)) {
+            fn_sysmodule_by_name = sceSysmoduleLoadModuleByNameInternal;
+        }
+        if (fn_sysmodule_internal == NULL &&
+            obs_address_is_callable((const void *)&sceSysmoduleLoadModuleInternal)) {
+            fn_sysmodule_internal = (int (*)(uint32_t))&sceSysmoduleLoadModuleInternal;
+        }
+        if (fn_sysmodule_get_handle == NULL &&
+            obs_address_is_callable((const void *)&sceSysmoduleGetModuleHandleInternal)) {
+            fn_sysmodule_get_handle = (int (*)(uint32_t, int *))&sceSysmoduleGetModuleHandleInternal;
+        }
     }
     /* clang-format on */
 
     if (fn_sysmodule_load != NULL || fn_sysmodule_internal != NULL ||
-        fn_sysmodule_by_name != NULL) {
+        fn_sysmodule_by_name != NULL || fn_sysmodule_get_handle != NULL) {
         for (unsigned int i = 0; i < OBS_COUNT(obs_sysmodules); i++) {
             if (obs_strcmp(library, obs_sysmodules[i].name) == 0) {
                 /* If already cached, return immediately */
@@ -552,11 +578,12 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                     }
                     return obs_sysmodules[i].cached_handle;
                 }
-                /* Try internal sysmodule functions which return module handle directly
-                 */
-                if (fn_sysmodule_internal != NULL) {
-                    int h = fn_sysmodule_internal((uint32_t)obs_sysmodules[i].id);
-                    if (h > 0) {
+                /* Check if already loaded according to get_handle */
+                if (fn_sysmodule_get_handle != NULL) {
+                    int h = -1;
+                    if (fn_sysmodule_get_handle((uint32_t)obs_sysmodules[i].id, &h) ==
+                            0 &&
+                        h > 0) {
                         if (tier_out != NULL) {
                             *tier_out = OBS_TIER_SYSMODULE;
                         }
@@ -564,113 +591,109 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                         return h;
                     }
                 }
-                if (fn_sysmodule_by_name != NULL) {
+
+                int mod_list_before[128];
+                size_t count_before = 0;
+                if (obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
+                    (void)sceKernelGetModuleList(mod_list_before, 128, &count_before);
+                }
+                int rc = -1;
+                if (fn_sysmodule_internal != NULL) {
+                    rc = fn_sysmodule_internal((uint32_t)obs_sysmodules[i].id);
+                }
+                if (rc != 0 && fn_sysmodule_by_name != NULL) {
                     char sprx_name[64];
                     obs_module_path(sprx_name, sizeof sprx_name, "", library);
-                    int h = fn_sysmodule_by_name(sprx_name, 0, 0, 0, 0, 0);
-                    if (h > 0) {
-                        if (tier_out != NULL) {
-                            *tier_out = OBS_TIER_SYSMODULE;
-                        }
-                        obs_sysmodule_cache_handle(library, h);
-                        return h;
-                    }
+                    rc = fn_sysmodule_by_name(sprx_name, 0, 0, 0, 0, 0);
                 }
-                if (fn_sysmodule_load != NULL) {
-                    int mod_list_before[128];
-                    size_t count_before = 0;
+                if (rc != 0 && fn_sysmodule_load != NULL) {
+                    rc = fn_sysmodule_load(obs_sysmodules[i].id);
+                }
+                if (rc == 0 || rc == (int)0x80540001) {
+                    if (tier_out != NULL) {
+                        *tier_out = OBS_TIER_SYSMODULE;
+                    }
+                    if (fn_sysmodule_get_handle != NULL) {
+                        int h = -1;
+                        if (fn_sysmodule_get_handle((uint32_t)obs_sysmodules[i].id,
+                                                    &h) == 0 &&
+                            h > 0) {
+                            obs_sysmodule_cache_handle(library, h);
+                            return h;
+                        }
+                    }
                     if (obs_address_is_callable(
                             (const void *)&sceKernelGetModuleList)) {
-                        (void)sceKernelGetModuleList(mod_list_before, 128,
-                                                     &count_before);
-                    }
-                    int rc = fn_sysmodule_load(obs_sysmodules[i].id);
-                    if (rc == 0 || rc == (int)0x80540001) {
-                        if (tier_out != NULL) {
-                            *tier_out = OBS_TIER_SYSMODULE;
-                        }
-                        if (obs_address_is_callable(
-                                (const void *)&sceKernelGetModuleList)) {
-                            int mod_list_after[128];
-                            size_t count_after = 0;
-                            if (sceKernelGetModuleList(mod_list_after, 128,
-                                                       &count_after) == 0 &&
-                                count_after > 0) {
-                                /* 1. Check for newly appeared module handle */
-                                for (size_t a = 0; a < count_after && a < 128; a++) {
-                                    int mid = mod_list_after[a];
-                                    int was_present = 0;
-                                    for (size_t b = 0; b < count_before && b < 128;
-                                         b++) {
-                                        if (mod_list_before[b] == mid) {
-                                            was_present = 1;
-                                            break;
-                                        }
-                                    }
-                                    if (!was_present && mid > 0) {
-                                        obs_sysmodule_cache_handle(library, mid);
-                                        return mid;
+                        int mod_list_after[128];
+                        size_t count_after = 0;
+                        if (sceKernelGetModuleList(mod_list_after, 128, &count_after) ==
+                                0 &&
+                            count_after > 0) {
+                            /* 1. Check for newly appeared module handle */
+                            for (size_t a = 0; a < count_after && a < 128; a++) {
+                                int mid = mod_list_after[a];
+                                int was_present = 0;
+                                for (size_t b = 0; b < count_before && b < 128; b++) {
+                                    if (mod_list_before[b] == mid) {
+                                        was_present = 1;
+                                        break;
                                     }
                                 }
-                                /* 2. Try sceKernelGetModuleInfo */
-                                if (obs_address_is_callable(
-                                        (const void *)&sceKernelGetModuleInfo)) {
-                                    for (size_t k = 0; k < count_after && k < 128;
-                                         k++) {
-                                        int mod_id = mod_list_after[k];
-                                        if (mod_id <= 0)
-                                            continue;
-                                        unsigned char info[512];
-                                        for (size_t z = 0; z < sizeof(info); z++)
-                                            info[z] = 0;
-                                        *(size_t *)info = sizeof(info);
-                                        if (sceKernelGetModuleInfo(mod_id, info) == 0) {
-                                            const char *mod_name =
-                                                (const char *)(info + 8);
-                                            if (obs_mod_name_match(mod_name, library)) {
-                                                obs_sysmodule_cache_handle(library,
-                                                                           mod_id);
-                                                return mod_id;
-                                            }
+                                if (!was_present && mid > 0) {
+                                    obs_sysmodule_cache_handle(library, mid);
+                                    return mid;
+                                }
+                            }
+                            /* 2. Try sceKernelGetModuleInfo */
+                            if (obs_address_is_callable(
+                                    (const void *)&sceKernelGetModuleInfo)) {
+                                for (size_t k = 0; k < count_after && k < 128; k++) {
+                                    int mod_id = mod_list_after[k];
+                                    if (mod_id <= 0)
+                                        continue;
+                                    unsigned char info[512];
+                                    for (size_t z = 0; z < sizeof(info); z++)
+                                        info[z] = 0;
+                                    *(size_t *)info = sizeof(info);
+                                    if (sceKernelGetModuleInfo(mod_id, info) == 0) {
+                                        const char *mod_name = (const char *)(info + 8);
+                                        if (obs_mod_name_match(mod_name, library)) {
+                                            obs_sysmodule_cache_handle(library, mod_id);
+                                            return mod_id;
                                         }
                                     }
                                 }
-                                /* 3. Fallback: match via known section symbols */
-                                if (obs_address_is_callable(
-                                        (const void *)&sceKernelDlsym)) {
-                                    for (unsigned int s = 0; s < obs_section_count;
-                                         s++) {
-                                        const obs_section *sec = obs_sections[s];
-                                        if (sec == NULL)
-                                            continue;
-                                        for (unsigned int c = 0; c < sec->check_count;
-                                             c++) {
-                                            const obs_check *chk = &sec->checks[c];
-                                            if (chk->library != NULL &&
-                                                obs_strcmp(chk->library, library) ==
-                                                    0 &&
-                                                chk->symbol != NULL &&
-                                                obs_is_real_symbol_name(chk->symbol)) {
-                                                char nid[12];
-                                                obs_compute_nid(chk->symbol, nid);
-                                                for (size_t k = 0;
-                                                     k < count_after && k < 128; k++) {
-                                                    int mid = mod_list_after[k];
-                                                    if (mid <= 0)
-                                                        continue;
-                                                    void *sym_addr = NULL;
-                                                    if ((sceKernelDlsym(mid, nid,
-                                                                        &sym_addr) ==
-                                                             0 ||
-                                                         sceKernelDlsym(
-                                                             mid, chk->symbol,
-                                                             &sym_addr) == 0) &&
-                                                        obs_address_is_callable(
-                                                            sym_addr)) {
-                                                        obs_sysmodule_cache_handle(
-                                                            library, mid);
-                                                        return mid;
-                                                    }
+                            }
+                            /* 3. Fallback: match via known section symbols */
+                            if (obs_address_is_callable(
+                                    (const void *)&sceKernelDlsym)) {
+                                for (unsigned int s = 0; s < obs_section_count; s++) {
+                                    const obs_section *sec = obs_sections[s];
+                                    if (sec == NULL)
+                                        continue;
+                                    for (unsigned int c = 0; c < sec->check_count;
+                                         c++) {
+                                        const obs_check *chk = &sec->checks[c];
+                                        if (chk->library != NULL &&
+                                            obs_strcmp(chk->library, library) == 0 &&
+                                            chk->symbol != NULL &&
+                                            obs_is_real_symbol_name(chk->symbol)) {
+                                            char nid[12];
+                                            obs_compute_nid(chk->symbol, nid);
+                                            for (size_t k = 0;
+                                                 k < count_after && k < 128; k++) {
+                                                int mid = mod_list_after[k];
+                                                if (mid <= 0)
+                                                    continue;
+                                                void *sym_addr = NULL;
+                                                if ((sceKernelDlsym(mid, nid,
+                                                                    &sym_addr) == 0 ||
+                                                     sceKernelDlsym(mid, chk->symbol,
+                                                                    &sym_addr) == 0) &&
+                                                    obs_address_is_callable(sym_addr)) {
+                                                    obs_sysmodule_cache_handle(library,
+                                                                               mid);
+                                                    return mid;
                                                 }
                                             }
                                         }
@@ -678,11 +701,11 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                                 }
                             }
                         }
-                        if (obs_sysmodules[i].cached_handle > 0) {
-                            return obs_sysmodules[i].cached_handle;
-                        }
-                        return 1;
                     }
+                    if (obs_sysmodules[i].cached_handle > 0) {
+                        return obs_sysmodules[i].cached_handle;
+                    }
+                    return 1;
                 }
             }
         }
