@@ -484,17 +484,43 @@ static obs_result check_video_visual_flip(void) {
 
     /* Event queue wait probe if symbols resolve */
     typedef int sce_equeue_t;
-    int (*fn_create_eq)(sce_equeue_t *, const char *) = (int (*)(
-        sce_equeue_t *, const char *))obs_module_symbol(1, "sceKernelCreateEqueue");
-    int (*fn_delete_eq)(sce_equeue_t) =
-        (int (*)(sce_equeue_t))obs_module_symbol(1, "sceKernelDeleteEqueue");
+    int vo_mod = obs_module_open("libSceVideoOut");
+    int k_mod = obs_module_open("libkernel");
+    int (*fn_create_eq)(sce_equeue_t *, const char *) =
+        (int (*)(sce_equeue_t *, const char *))obs_module_symbol(
+            k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelCreateEqueue");
+    if (fn_create_eq == NULL) {
+        fn_create_eq = (int (*)(sce_equeue_t *, const char *))obs_module_symbol(
+            OBS_HANDLE_SELF, "sceKernelCreateEqueue");
+    }
+    int (*fn_delete_eq)(sce_equeue_t) = (int (*)(sce_equeue_t))obs_module_symbol(
+        k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelDeleteEqueue");
+    if (fn_delete_eq == NULL) {
+        fn_delete_eq = (int (*)(sce_equeue_t))obs_module_symbol(
+            OBS_HANDLE_SELF, "sceKernelDeleteEqueue");
+    }
     int (*fn_wait_eq)(sce_equeue_t, void *, int, int *, void *) =
         (int (*)(sce_equeue_t, void *, int, int *, void *))obs_module_symbol(
-            1, "sceKernelWaitEqueue");
-    int (*fn_add_flip_ev)(sce_equeue_t, int, void *) = (int (*)(
-        sce_equeue_t, int, void *))obs_module_symbol(1, "sceVideoOutAddFlipEvent");
+            k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelWaitEqueue");
+    if (fn_wait_eq == NULL) {
+        fn_wait_eq =
+            (int (*)(sce_equeue_t, void *, int, int *, void *))obs_module_symbol(
+                OBS_HANDLE_SELF, "sceKernelWaitEqueue");
+    }
+    int (*fn_add_flip_ev)(sce_equeue_t, int, void *) =
+        (int (*)(sce_equeue_t, int, void *))obs_module_symbol(
+            vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutAddFlipEvent");
+    if (fn_add_flip_ev == NULL) {
+        fn_add_flip_ev = (int (*)(sce_equeue_t, int, void *))obs_module_symbol(
+            OBS_HANDLE_SELF, "sceVideoOutAddFlipEvent");
+    }
     int (*fn_del_flip_ev)(sce_equeue_t, int) =
-        (int (*)(sce_equeue_t, int))obs_module_symbol(1, "sceVideoOutDeleteFlipEvent");
+        (int (*)(sce_equeue_t, int))obs_module_symbol(
+            vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutDeleteFlipEvent");
+    if (fn_del_flip_ev == NULL) {
+        fn_del_flip_ev = (int (*)(sce_equeue_t, int))obs_module_symbol(
+            OBS_HANDLE_SELF, "sceVideoOutDeleteFlipEvent");
+    }
 
     if (fn_create_eq != NULL && fn_add_flip_ev != NULL && fn_wait_eq != NULL) {
         sce_equeue_t eq = 0;
@@ -542,13 +568,12 @@ static obs_result check_video_visual_flip(void) {
             static const char *arm_names[3] = {"flip-arg-normal", "flip-arg-minus1",
                                                "flip-arg-48bit"};
 
-            int vo_mod = obs_module_open("libSceVideoOut");
             int (*fn_get_ev_id)(const void *) =
-                (int (*)(const void *))obs_module_symbol(vo_mod > 0 ? vo_mod : 1,
-                                                         "sceVideoOutGetEventId");
+                (int (*)(const void *))obs_module_symbol(
+                    vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutGetEventId");
             int64_t (*fn_get_ev_data)(const void *) =
-                (int64_t (*)(const void *))obs_module_symbol(vo_mod > 0 ? vo_mod : 1,
-                                                             "sceVideoOutGetEventData");
+                (int64_t (*)(const void *))obs_module_symbol(
+                    vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutGetEventData");
 
             obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventId",
                                "resolved", fn_get_ev_id != NULL ? 1 : 0, "bool");
