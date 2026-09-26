@@ -74,13 +74,15 @@ int obs_sink_backend_open(const char *path) {
      * the text channel that was about to work. */
     if (obs_address_is_callable((const void *)&sceKernelOpen) &&
         obs_address_is_callable((const void *)&sceKernelWrite)) {
-        int fd = sceKernelOpen(path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC, OBS_SINK_MODE);
+        int fd = sceKernelOpen(path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC,
+                               OBS_SINK_MODE);
         if (fd >= 0) {
             return fd;
         }
     }
 #if !defined(OBSCENE_HOST_BUILD)
-    long fd = sys_call(SYS_open, (long)path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC, OBS_SINK_MODE, 0, 0, 0);
+    long fd = sys_call(SYS_open, (long)path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC,
+                       OBS_SINK_MODE, 0, 0, 0);
     if (fd >= 0) {
         return (int)fd;
     }

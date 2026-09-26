@@ -270,8 +270,9 @@ static int obs_locate_containers(obs_found_container_t *out, int max_count) {
                 unsigned char type = 0;
                 unsigned int namlen = 0;
                 const char *name = NULL;
-                if (!obs_parse_dirent((const unsigned char *)dents + pos, (size_t)(n - pos),
-                                      &reclen, &type, &namlen, &name)) {
+                if (!obs_parse_dirent((const unsigned char *)dents + pos,
+                                      (size_t)(n - pos), &reclen, &type, &namlen,
+                                      &name)) {
                     stop_dir = 1;
                     break;
                 }
@@ -596,8 +597,9 @@ static obs_result check_metadata_differential(void) {
                 unsigned char type = 0;
                 unsigned int namlen = 0;
                 const char *name = NULL;
-                if (!obs_parse_dirent((const unsigned char *)dents + pos, (size_t)(n - pos),
-                                      &reclen, &type, &namlen, &name)) {
+                if (!obs_parse_dirent((const unsigned char *)dents + pos,
+                                      (size_t)(n - pos), &reclen, &type, &namlen,
+                                      &name)) {
                     stop_dir = 1;
                     break;
                 }

@@ -54,7 +54,8 @@ static char s_savedata_mount[64] = {0};
 static void obs_sink_ensure_savedata(void) {
     if (s_savedata_mount[0] == '\0') {
         (void)oops_savedata_mount("obscene",
-                                  (oops_savedata_mode_t)(OOPS_SAVEDATA_MODE_CREATE | OOPS_SAVEDATA_MODE_READ_WRITE),
+                                  (oops_savedata_mode_t)(OOPS_SAVEDATA_MODE_CREATE |
+                                                         OOPS_SAVEDATA_MODE_READ_WRITE),
                                   s_savedata_mount, sizeof(s_savedata_mount));
     }
 }
@@ -134,12 +135,16 @@ const char *obs_sink_open(void) {
     uint64_t ts = obs_sink_backend_time();
     if (ts > 0) {
         static const char *const ts_prefixes[] = {
-            "/mnt/usb0/obscene/report-", "/mnt/usb0/obscene-report-",
-            "/mnt/usb1/obscene/report-", "/mnt/usb1/obscene-report-",
+            "/mnt/usb0/obscene/report-",
+            "/mnt/usb0/obscene-report-",
+            "/mnt/usb1/obscene/report-",
+            "/mnt/usb1/obscene-report-",
             "/data/homebrew/PPSA90000/report-",
-            "/data/obscene/report-",     "/data/obscene-report-",
+            "/data/obscene/report-",
+            "/data/obscene-report-",
             "/savedata0/report-",
-            "reports/report-",           "obscene-report-",
+            "reports/report-",
+            "obscene-report-",
         };
         char ts_candidate[128];
         for (unsigned int i = 0; i < OBS_COUNT(ts_prefixes); i++) {

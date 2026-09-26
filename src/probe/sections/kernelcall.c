@@ -218,17 +218,17 @@ static obs_result check_mapper_param(void) {
 
 /* Answers REQ-20260915T1615Z-b3c2 (Orbistoun):
  * Probe int 0x41 software interrupt behavior on hardware.
- * PPSA04263 (Grand Theft Auto V) executes `cd 41` (int 0x41) at image+0x196b91a expecting it
- * to return. We test int $0x41 with selector values (RAX=0, 1) under fault guard protection.
- * If a signal (SIGSEGV, SIGILL, etc.) is raised, the fault guard captures and reports it.
- * If control returns, we record returned RAX, RDX, and RFLAGS.
+ * PPSA04263 (Grand Theft Auto V) executes `cd 41` (int 0x41) at image+0x196b91a
+ * expecting it to return. We test int $0x41 with selector values (RAX=0, 1) under fault
+ * guard protection. If a signal (SIGSEGV, SIGILL, etc.) is raised, the fault guard
+ * captures and reports it. If control returns, we record returned RAX, RDX, and RFLAGS.
  */
 static obs_result check_int_0x41(void) {
 #if defined(OBSCENE_HOST_BUILD)
     return obs_skip("int 0x41 probe requires real console target");
 #elif defined(__x86_64__)
-    static const uint64_t selectors[] = { 0, 1 };
-    static const char *labels[] = { "sel-0x0", "sel-0x1" };
+    static const uint64_t selectors[] = {0, 1};
+    static const char *labels[] = {"sel-0x0", "sel-0x1"};
     uint64_t last_ret = 0;
     int any_returned = 0;
 
@@ -241,37 +241,43 @@ static obs_result check_int_0x41(void) {
             uint64_t out_rdx = 0;
             uint64_t out_rflags = 0;
 
-            __asm__ volatile(
-                "mov %3, %%rax\n\t"
-                "xor %%rdx, %%rdx\n\t"
-                "int $0x41\n\t"
-                "mov %%rax, %0\n\t"
-                "mov %%rdx, %1\n\t"
-                "pushfq\n\t"
-                "pop %2\n\t"
-                : "=r"(out_rax), "=r"(out_rdx), "=r"(out_rflags)
-                : "r"(sel)
-                : "rax", "rdx", "rcx", "rsi", "rdi", "r8", "r9", "r10", "r11", "memory"
-            );
+            __asm__ volatile("mov %3, %%rax\n\t"
+                             "xor %%rdx, %%rdx\n\t"
+                             "int $0x41\n\t"
+                             "mov %%rax, %0\n\t"
+                             "mov %%rdx, %1\n\t"
+                             "pushfq\n\t"
+                             "pop %2\n\t"
+                             : "=r"(out_rax), "=r"(out_rdx), "=r"(out_rflags)
+                             : "r"(sel)
+                             : "rax", "rdx", "rcx", "rsi", "rdi", "r8", "r9", "r10",
+                               "r11", "memory");
 
             obs_fault_unregister();
             any_returned = 1;
             last_ret = out_rax;
-            obs_report_measure("137-kernelcall/int41-probe", labels[i], "returned", 1u, "bool");
-            obs_report_measure("137-kernelcall/int41-probe", labels[i], "rax", out_rax, "hex");
-            obs_report_measure("137-kernelcall/int41-probe", labels[i], "rdx", out_rdx, "hex");
-            obs_report_measure("137-kernelcall/int41-probe", labels[i], "rflags", out_rflags, "hex");
+            obs_report_measure("137-kernelcall/int41-probe", labels[i], "returned", 1u,
+                               "bool");
+            obs_report_measure("137-kernelcall/int41-probe", labels[i], "rax", out_rax,
+                               "hex");
+            obs_report_measure("137-kernelcall/int41-probe", labels[i], "rdx", out_rdx,
+                               "hex");
+            obs_report_measure("137-kernelcall/int41-probe", labels[i], "rflags",
+                               out_rflags, "hex");
         } else {
             obs_fault_unregister();
-            obs_report_measure("137-kernelcall/int41-probe", labels[i], "returned", 0u, "bool");
-            obs_report_measure("137-kernelcall/int41-probe", labels[i], "fault", (uint64_t)(uint32_t)sig, "signal");
+            obs_report_measure("137-kernelcall/int41-probe", labels[i], "returned", 0u,
+                               "bool");
+            obs_report_measure("137-kernelcall/int41-probe", labels[i], "fault",
+                               (uint64_t)(uint32_t)sig, "signal");
         }
     }
 
     if (any_returned) {
         return obs_pass_value(last_ret);
     }
-    return obs_partial_value("int 0x41 raised signal; kernel did not return to user space", 0);
+    return obs_partial_value(
+        "int 0x41 raised signal; kernel did not return to user space", 0);
 #else
     return obs_skip("int 0x41 probe only applicable to x86_64");
 #endif

@@ -373,7 +373,8 @@ static obs_result check_exception_handler_ordering(void) {
                        "rc-inverted-args", (uint64_t)(uint32_t)rc_raise_inv, "rc");
 
     /* 5. raise(31) - signal nothing was installed for while 30 is installed;
-     * test with invalid thread handle to avoid process termination by unhandled signal */
+     * test with invalid thread handle to avoid process termination by unhandled signal
+     */
     int rc_raise31 = fn_raise((ScePthread)1, 31);
     obs_report_measure("030-thread/exception-handler", "sceKernelRaiseException",
                        "rc-unhandled-sig31", (uint64_t)(uint32_t)rc_raise31, "rc");

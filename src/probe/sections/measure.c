@@ -505,9 +505,8 @@ static const obs_check measure_checks[] = {
     {"120-measure/timer-ratio", "libkernel", "sceKernelReadTsc", OBS_CAP_TIME,
      OBS_CAP_NONE, (const void *)check_timer_ratio, check_timer_ratio,
      OBS_FROM_ASSUMED},
-    {"120-sys/wall-clock", "libkernel", "clock_gettime", OBS_CAP_NONE,
-     OBS_CAP_NONE, OBS_NO_SYMBOL, check_wall_clock,
-     OBS_FROM_ASSUMED},
+    {"120-sys/wall-clock", "libkernel", "clock_gettime", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_wall_clock, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_measure = {

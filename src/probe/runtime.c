@@ -101,8 +101,15 @@ uintptr_t obs_syscall_gadget_address(void) {
     return 0;
 }
 
-long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6) {
-    (void)num; (void)a1; (void)a2; (void)a3; (void)a4; (void)a5; (void)a6;
+long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
+                        long a6) {
+    (void)num;
+    (void)a1;
+    (void)a2;
+    (void)a3;
+    (void)a4;
+    (void)a5;
+    (void)a6;
     return -1;
 }
 
@@ -238,11 +245,12 @@ static void *obs_payload_resolve(const char *name) {
     char nid[12];
     obs_compute_nid(name, nid);
 
-    /* 0. Try staged kexport_table first if available (bypasses retail game DRM / uninitialized dlsym) */
+    /* 0. Try staged kexport_table first if available (bypasses retail game DRM /
+     * uninitialized dlsym) */
     const payload_args_t *pargs = obs_get_payload_args();
     if (pargs != NULL && pargs->kexport_table != NULL) {
-        const void *kaddr = obs_kexport_lookup(
-            (const obs_kexport_table_t *)pargs->kexport_table, nid);
+        const void *kaddr =
+            obs_kexport_lookup((const obs_kexport_table_t *)pargs->kexport_table, nid);
         if (kaddr != NULL && obs_address_is_callable(kaddr))
             return (void *)(uintptr_t)kaddr;
     }
@@ -298,7 +306,8 @@ void obs_bootstrap_payload_output(unsigned long payload_args_word0) {
     s_fn_close = (fn_close_t)obs_payload_resolve("sceKernelClose");
     s_fn_read = (fn_read_t)obs_payload_resolve("sceKernelRead");
     s_fn_usleep = (fn_usleep_t)obs_payload_resolve("sceKernelUsleep");
-    s_fn_get_process_time = (fn_get_process_time_t)obs_payload_resolve("sceKernelGetProcessTime");
+    s_fn_get_process_time =
+        (fn_get_process_time_t)obs_payload_resolve("sceKernelGetProcessTime");
     void *getpid_ptr = obs_payload_resolve("getpid");
     if (getpid_ptr != NULL) {
         s_libkernel_syscall_gadget = (long)(uintptr_t)getpid_ptr + 0xa;
@@ -1062,8 +1071,7 @@ static uintptr_t obs_find_own_base(void) {
         if (addr < 0x10000UL) {
             break;
         }
-        if (obs_linkmap_readable(addr) &&
-            *(const uint32_t *)addr == 0x464c457f) {
+        if (obs_linkmap_readable(addr) && *(const uint32_t *)addr == 0x464c457f) {
             return addr;
         }
         addr -= 0x4000UL;
@@ -1160,7 +1168,8 @@ static void obs_relocate_payload_got(void) {
         } else if (slot0_val > 0 && slot0_val < 0x1000000UL) {
             first_stub = base + (uintptr_t)slot0_val - 6;
         }
-        if (first_stub >= base && first_stub < base + 0x1000000UL && first_stub >= 0x10) {
+        if (first_stub >= base && first_stub < base + 0x1000000UL &&
+            first_stub >= 0x10) {
             plt_start = first_stub - 0x10;
             plt_end = plt_start + 0x10 + count * 0x10;
             obs_set_plt_bounds(plt_start, plt_end);

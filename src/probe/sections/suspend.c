@@ -33,15 +33,16 @@
  * mid-run. The `load-on-demand` check (5) does call `sceKernelLoadStartModule` - a
  * confirmed-signature loader used across the suite - to answer whether the absent
  * libraries can be brought in, but it loads only; it still calls none of their symbols.
- * The one question this surface cannot answer is the behavioural half of arm 1 - whether
- * a specific unretired fence or bound context is what times the suspend out - because an
- * inert probe cannot observe its own suspension. That needs a live close on a title that
- * drains vs. one that does not, and it is called out as such in the verdict.
+ * The one question this surface cannot answer is the behavioural half of arm 1 -
+ * whether a specific unretired fence or bound context is what times the suspend out -
+ * because an inert probe cannot observe its own suspension. That needs a live close on
+ * a title that drains vs. one that does not, and it is called out as such in the
+ * verdict.
  *
  * First hardware run (2026-09-23, FW 12.40) settled the surface: the event pump (2) and
  * the AGC suspend point (4) are present and reachable in a homebrew title; the
- * declare-ready library (1) and the sceApplication lifecycle (3) are not - which is what
- * check 5 then interrogates.
+ * declare-ready library (1) and the sceApplication lifecycle (3) are not - which is
+ * what check 5 then interrogates.
  */
 
 #include "oops/freestd.h"
@@ -124,7 +125,7 @@ static obs_result check_suspend_declare_ready(void) {
  * event it may be required to acknowledge. */
 static obs_result check_suspend_receive_event(void) {
     static const char *const syms[] = {
-        "sceSystemServiceReceiveEvent",   "sceSystemServiceGetStatus",
+        "sceSystemServiceReceiveEvent",      "sceSystemServiceGetStatus",
         "sceSystemServiceGetEventForDaemon", "sceSystemServiceGetPSButtonEvent",
         "sceSystemServiceIsAppSuspended",
     };
@@ -155,14 +156,17 @@ static obs_result check_suspend_receive_event(void) {
  * same freeze, driven through the application object rather than the raw service. */
 static obs_result check_suspend_application_lifecycle(void) {
     static const char *const syms[] = {
-        "sceApplicationIsSuspendable",     "sceApplicationSuspend",
-        "sceApplicationResume",            "sceApplicationSystemSuspend",
-        "sceApplicationLocalProcessSuspend", "sceApplicationLocalProcessResume",
+        "sceApplicationIsSuspendable",
+        "sceApplicationSuspend",
+        "sceApplicationResume",
+        "sceApplicationSystemSuspend",
+        "sceApplicationLocalProcessSuspend",
+        "sceApplicationLocalProcessResume",
     };
     unsigned int resolved = 0;
     for (size_t i = 0; i < OBS_COUNT(syms); i++) {
-        resolved += (unsigned int)suspend_resolve(
-            "141-suspend/application-lifecycle", "libSceSysCore", syms[i]);
+        resolved += (unsigned int)suspend_resolve("141-suspend/application-lifecycle",
+                                                  "libSceSysCore", syms[i]);
     }
     obs_report_measure("141-suspend/application-lifecycle", "libSceSysCore",
                        "resolved-of-6", (uint64_t)resolved, "count");
@@ -214,14 +218,15 @@ static int suspend_try_load(const char *id, const char *path) {
 
 /* 5. Loadable on demand? The first hardware run (2026-09-23, FW 12.40) found
  * libSceSystemServiceSuspend and the libSceSysCore lifecycle absent from a homebrew
- * title's address space - `declare-ready` and `application-lifecycle` both skipped, zero
- * resolved - while the event pump and the AGC suspend point were present. Neither library
- * is in the sysmodule id table, so `obs_module_open` only ever tried `LoadStartModule`
- * over its path prefixes and swallowed the codes. This asks the same question out loud: it
- * calls `sceKernelLoadStartModule` on each candidate `.sprx` with a poisoned result word,
- * reporting the handle and code per path so "not found" is told apart from "refused", then
- * re-resolves the two entry points to report whether a load made them appear. No id is
- * guessed - the paths are built from the census library names, which are authoritative. */
+ * title's address space - `declare-ready` and `application-lifecycle` both skipped,
+ * zero resolved - while the event pump and the AGC suspend point were present. Neither
+ * library is in the sysmodule id table, so `obs_module_open` only ever tried
+ * `LoadStartModule` over its path prefixes and swallowed the codes. This asks the same
+ * question out loud: it calls `sceKernelLoadStartModule` on each candidate `.sprx` with
+ * a poisoned result word, reporting the handle and code per path so "not found" is told
+ * apart from "refused", then re-resolves the two entry points to report whether a load
+ * made them appear. No id is guessed - the paths are built from the census library
+ * names, which are authoritative. */
 static obs_result check_suspend_load_on_demand(void) {
     if (!obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
         return obs_skip("sceKernelLoadStartModule is not callable");
@@ -259,9 +264,9 @@ static obs_result check_suspend_load_on_demand(void) {
 
     /* Re-resolve now that a load has been attempted - if the load took, obs_module_open
      * finds the module in the list this time and the symbol appears. */
-    int declare_after = suspend_resolve("141-suspend/load-on-demand",
-                                        "libSceSystemServiceSuspend",
-                                        "sceSystemServiceDeclareReadyForSuspend");
+    int declare_after =
+        suspend_resolve("141-suspend/load-on-demand", "libSceSystemServiceSuspend",
+                        "sceSystemServiceDeclareReadyForSuspend");
     int suspendable_after = suspend_resolve(
         "141-suspend/load-on-demand", "libSceSysCore", "sceApplicationIsSuspendable");
 
@@ -277,29 +282,31 @@ static obs_result check_suspend_load_on_demand(void) {
     return obs_skip("neither library loaded on demand from any candidate path");
 }
 
-/* 6. Call it honestly (REQ-20260923T0055Z-9b41). Checks 1-5 resolve the surface and never call
- * it (D008); this one call is the exception the request asks for, and a probe can afford it
- * where the SDK cannot: it runs under a fault guard that recovers the whole run, in the same
- * one-argument shape oops-sdk's pump already uses on hardware without crashing (so the arity is
- * empirically safe - a size-typed second argument would be the danger, and passing a pointer for
- * it is worse, not better). It measures the two constants the pump assumes: the return value when
- * the queue is empty, and how many bytes the call writes. The buffer is poisoned so the write
- * extent needs no layout, and the queue is drained first so the reported "no-event" return is the
- * value after the events obscene's own launch delivered are gone. */
+/* 6. Call it honestly (REQ-20260923T0055Z-9b41). Checks 1-5 resolve the surface and
+ * never call it (D008); this one call is the exception the request asks for, and a
+ * probe can afford it where the SDK cannot: it runs under a fault guard that recovers
+ * the whole run, in the same one-argument shape oops-sdk's pump already uses on
+ * hardware without crashing (so the arity is empirically safe - a size-typed second
+ * argument would be the danger, and passing a pointer for it is worse, not better). It
+ * measures the two constants the pump assumes: the return value when the queue is
+ * empty, and how many bytes the call writes. The buffer is poisoned so the write extent
+ * needs no layout, and the queue is drained first so the reported "no-event" return is
+ * the value after the events obscene's own launch delivered are gone. */
 static obs_result check_suspend_receive_event_call(void) {
     const char *id = "141-suspend/receive-event-call";
     int handle = obs_module_open("libSceSystemService");
     if (handle < 0) {
         handle = obs_module_open("libSceSystemService.sprx");
     }
-    const void *fn =
-        (handle >= 0) ? obs_module_symbol(handle, "sceSystemServiceReceiveEvent") : NULL;
+    const void *fn = (handle >= 0)
+                         ? obs_module_symbol(handle, "sceSystemServiceReceiveEvent")
+                         : NULL;
     if (fn == NULL || !obs_address_is_callable(fn)) {
         return obs_skip("sceSystemServiceReceiveEvent did not resolve");
     }
 
-    /* One argument, exactly as oops-sdk's pump calls it. 512 is the size the pump hands it;
-     * 1024 here so an over-write is caught rather than hidden. */
+    /* One argument, exactly as oops-sdk's pump calls it. 512 is the size the pump hands
+     * it; 1024 here so an over-write is caught rather than hidden. */
     static unsigned char event[1024];
     static unsigned char first_before[1024];
     static unsigned char first_after[1024];
@@ -312,7 +319,8 @@ static obs_result check_suspend_receive_event_call(void) {
     int got_empty = 0;
     int no_event_rc = 0;
 
-    /* Drain: call until one call leaves the poison untouched (an empty queue), bounded. */
+    /* Drain: call until one call leaves the poison untouched (an empty queue), bounded.
+     */
     for (int iter = 0; iter < 16 && !got_empty; iter++) {
         for (size_t i = 0; i < sizeof event; i++) {
             event[i] = 0xC7u;
@@ -325,12 +333,13 @@ static obs_result check_suspend_receive_event_call(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "sceSystemServiceReceiveEvent", "faulted", 1u, "bool");
+            obs_report_measure(id, "sceSystemServiceReceiveEvent", "faulted", 1u,
+                               "bool");
             obs_report_measure(id, "sceSystemServiceReceiveEvent", "fault-signal",
                                (uint64_t)(uint32_t)sig, "signal");
-            return obs_partial_value(
-                "call faulted under guard; arity is above one or the call needs setup first",
-                (uint64_t)(uint32_t)sig);
+            return obs_partial_value("call faulted under guard; arity is above one or "
+                                     "the call needs setup first",
+                                     (uint64_t)(uint32_t)sig);
         }
         unsigned int written = 0;
         for (size_t i = 0; i < sizeof event; i++) {
@@ -380,10 +389,9 @@ static const obs_check suspend_checks[] = {
      "sceSystemServiceDeclareReadyForSuspend", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_suspend_declare_ready, check_suspend_declare_ready,
      OBS_FROM_DERIVED},
-    {"141-suspend/receive-event", "libSceSystemService",
-     "sceSystemServiceReceiveEvent", OBS_CAP_NONE, OBS_CAP_NONE,
-     (const void *)check_suspend_receive_event, check_suspend_receive_event,
-     OBS_FROM_DERIVED},
+    {"141-suspend/receive-event", "libSceSystemService", "sceSystemServiceReceiveEvent",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_suspend_receive_event,
+     check_suspend_receive_event, OBS_FROM_DERIVED},
     {"141-suspend/application-lifecycle", "libSceSysCore",
      "sceApplicationIsSuspendable", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_suspend_application_lifecycle,
@@ -405,8 +413,10 @@ const obs_section obs_section_suspend = {
     "141-suspend",
     "The suspend/resume lifecycle surface",
     "Which cooperation, event-pump, application-lifecycle and GPU suspend-point entry "
-    "points a big-app must call to be suspended cleanly - resolved but not called, except "
-    "the event pump, which is called once under a fault guard to measure what it returns "
+    "points a big-app must call to be suspended cleanly - resolved but not called, "
+    "except "
+    "the event pump, which is called once under a fault guard to measure what it "
+    "returns "
     "and writes.",
     suspend_checks,
     OBS_COUNT(suspend_checks),

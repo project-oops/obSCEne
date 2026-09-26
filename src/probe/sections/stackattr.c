@@ -311,7 +311,8 @@ static obs_result check_pthread_attr_layout(void) {
     } else {
         obs_fault_unregister();
         (void)scePthreadAttrDestroy(&attr);
-        return obs_fail_code("fault reading initial ScePthreadAttr bytes", (uint64_t)sig);
+        return obs_fail_code("fault reading initial ScePthreadAttr bytes",
+                             (uint64_t)sig);
     }
 
     obs_report_buffer("031-stackattr/attr-layout", "scePthreadAttrInit", "initial",
@@ -332,8 +333,8 @@ static obs_result check_pthread_attr_layout(void) {
     memcpy(after, (const void *)attr, 128);
     obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetstacksize", "rc",
                        (uint64_t)(uint32_t)rc_stacksize, "code");
-    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetstacksize", "diff",
-                       before, after, 128);
+    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetstacksize",
+                       "diff", before, after, 128);
 
     /* 3. Mutate detach state to 1 (detached) */
     memcpy(before, (const void *)attr, 128);
@@ -348,10 +349,10 @@ static obs_result check_pthread_attr_layout(void) {
         }
     }
     memcpy(after, (const void *)attr, 128);
-    obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetdetachstate", "rc",
-                       (uint64_t)(uint32_t)rc_detach, "code");
-    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetdetachstate", "diff",
-                       before, after, 128);
+    obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetdetachstate",
+                       "rc", (uint64_t)(uint32_t)rc_detach, "code");
+    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetdetachstate",
+                       "diff", before, after, 128);
 
     /* 4. Mutate affinity to distinctive 0x5 (cores 0 and 2) */
     memcpy(before, (const void *)attr, 128);
@@ -374,7 +375,9 @@ static obs_result check_pthread_attr_layout(void) {
     /* 5. Mutate sched priority to distinctive 0x42 */
     memcpy(before, (const void *)attr, 128);
     int rc_sched = -1;
-    struct { int sched_priority; } param;
+    struct {
+        int sched_priority;
+    } param;
     param.sched_priority = 0x42;
     if (obs_address_is_callable((const void *)&scePthreadAttrSetschedparam)) {
         sig = OBS_FAULT_ARM(&guard);
@@ -388,8 +391,8 @@ static obs_result check_pthread_attr_layout(void) {
     memcpy(after, (const void *)attr, 128);
     obs_report_measure("031-stackattr/attr-layout", "scePthreadAttrSetschedparam", "rc",
                        (uint64_t)(uint32_t)rc_sched, "code");
-    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetschedparam", "diff",
-                       before, after, 128);
+    obs_report_written("031-stackattr/attr-layout", "scePthreadAttrSetschedparam",
+                       "diff", before, after, 128);
 
     /* 6. Create thread using this attr to read back honoured values */
     struct attr_worker_result res;
@@ -403,10 +406,12 @@ static obs_result check_pthread_attr_layout(void) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             /* Try with &attr first */
-            rc_create = scePthreadCreate(&child, &attr, attr_probe_thread_entry, &res, "obscene-attr");
+            rc_create = scePthreadCreate(&child, &attr, attr_probe_thread_entry, &res,
+                                         "obscene-attr");
             if (rc_create != 0) {
                 /* Try with attr directly if &attr was rejected */
-                rc_create = scePthreadCreate(&child, attr, attr_probe_thread_entry, &res, "obscene-attr");
+                rc_create = scePthreadCreate(&child, attr, attr_probe_thread_entry,
+                                             &res, "obscene-attr");
             }
             obs_fault_unregister();
         } else {
@@ -423,7 +428,8 @@ static obs_result check_pthread_attr_layout(void) {
                 sceKernelUsleep(100);
             }
         }
-        if (rc_detach != 0 && obs_address_is_callable((const void *)&scePthreadJoin) && child != NULL) {
+        if (rc_detach != 0 && obs_address_is_callable((const void *)&scePthreadJoin) &&
+            child != NULL) {
             void *join_ret = NULL;
             (void)scePthreadJoin(child, &join_ret);
         }

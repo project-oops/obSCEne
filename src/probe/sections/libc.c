@@ -949,24 +949,30 @@ static obs_result check_unwind_abi(void) {
     };
 
     int h_kernel = obs_module_open("libkernel");
-    if (h_kernel < 0) h_kernel = 0x2001;
+    if (h_kernel < 0)
+        h_kernel = 0x2001;
     int h_libc = obs_module_open("libSceLibcInternal");
-    if (h_libc < 0) h_libc = 1;
+    if (h_libc < 0)
+        h_libc = 1;
 
     unsigned int resolved_count = 0;
     for (size_t m = 0; m < OBS_COUNT(targets); m++) {
         int h = targets[m].handle_hint;
-        if (m == 0 && h_kernel > 0) h = h_kernel;
-        if (m == 1 && h_libc > 0) h = h_libc;
+        if (m == 0 && h_kernel > 0)
+            h = h_kernel;
+        if (m == 1 && h_libc > 0)
+            h = h_libc;
 
         for (size_t i = 0; i < OBS_COUNT(symbols); i++) {
             const char *sym = symbols[i];
             const void *addr = obs_module_symbol(h, sym);
             int present = (addr != NULL && obs_address_is_callable(addr)) ? 1 : 0;
-            obs_report_measure("035-libc/unwind-abi", sym, targets[m].name, (uint64_t)present, "bool");
+            obs_report_measure("035-libc/unwind-abi", sym, targets[m].name,
+                               (uint64_t)present, "bool");
             if (present) {
                 resolved_count++;
-                obs_report_measure("035-libc/unwind-abi", sym, "vaddr", (uint64_t)(uintptr_t)addr, "address");
+                obs_report_measure("035-libc/unwind-abi", sym, "vaddr",
+                                   (uint64_t)(uintptr_t)addr, "address");
             }
         }
     }
@@ -1001,24 +1007,30 @@ static obs_result check_unwind_frame_abi(void) {
     };
 
     int h_kernel = obs_module_open("libkernel");
-    if (h_kernel < 0) h_kernel = 0x2001;
+    if (h_kernel < 0)
+        h_kernel = 0x2001;
     int h_libc = obs_module_open("libSceLibcInternal");
-    if (h_libc < 0) h_libc = 1;
+    if (h_libc < 0)
+        h_libc = 1;
 
     unsigned int resolved_count = 0;
     for (size_t m = 0; m < OBS_COUNT(targets); m++) {
         int h = targets[m].handle_hint;
-        if (m == 0 && h_kernel > 0) h = h_kernel;
-        if (m == 1 && h_libc > 0) h = h_libc;
+        if (m == 0 && h_kernel > 0)
+            h = h_kernel;
+        if (m == 1 && h_libc > 0)
+            h = h_libc;
 
         for (size_t i = 0; i < OBS_COUNT(symbols); i++) {
             const char *sym = symbols[i];
             const void *addr = obs_module_symbol(h, sym);
             int present = (addr != NULL && obs_address_is_callable(addr)) ? 1 : 0;
-            obs_report_measure("035-libc/unwind-frame-abi", sym, targets[m].name, (uint64_t)present, "bool");
+            obs_report_measure("035-libc/unwind-frame-abi", sym, targets[m].name,
+                               (uint64_t)present, "bool");
             if (present) {
                 resolved_count++;
-                obs_report_measure("035-libc/unwind-frame-abi", sym, "vaddr", (uint64_t)(uintptr_t)addr, "address");
+                obs_report_measure("035-libc/unwind-frame-abi", sym, "vaddr",
+                                   (uint64_t)(uintptr_t)addr, "address");
             }
         }
     }
@@ -1096,8 +1108,8 @@ static const obs_check libc_checks[] = {
     {"035-libc/vtable-bytes", "libSceLibcInternal", "_ZTVSt9bad_alloc", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_vtable_bytes, check_vtable_bytes,
      OBS_FROM_ASSUMED},
-    {"035-libc/unwind-abi", "libSceLibcInternal", "_Unwind_RaiseException", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_unwind_abi, check_unwind_abi,
+    {"035-libc/unwind-abi", "libSceLibcInternal", "_Unwind_RaiseException",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_unwind_abi, check_unwind_abi,
      OBS_FROM_ASSUMED},
     {"035-libc/unwind-frame-abi", "libSceLibcInternal", "dl_iterate_phdr", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_unwind_frame_abi, check_unwind_frame_abi,

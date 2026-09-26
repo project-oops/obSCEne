@@ -905,15 +905,17 @@ static obs_result check_net_accept_inherits(void) {
         int64_t tv_sec;
         int64_t tv_usec;
     } rcvtimeo16 = {0, 200000}; /* 200ms */
-    int rrc16 = net_setsockopt_wrapper(&f, listener, OBS_NET_SOL_SOCKET, 0x1006 /* SO_RCVTIMEO */,
-                                       &rcvtimeo16, (uint32_t)sizeof(rcvtimeo16));
+    int rrc16 = net_setsockopt_wrapper(&f, listener, OBS_NET_SOL_SOCKET,
+                                       0x1006 /* SO_RCVTIMEO */, &rcvtimeo16,
+                                       (uint32_t)sizeof(rcvtimeo16));
     if (rrc16 != 0) {
         struct {
             int32_t tv_sec;
             int32_t tv_usec;
         } rcvtimeo8 = {0, 200000};
-        (void)net_setsockopt_wrapper(&f, listener, OBS_NET_SOL_SOCKET, 0x1006 /* SO_RCVTIMEO */,
-                                     &rcvtimeo8, (uint32_t)sizeof(rcvtimeo8));
+        (void)net_setsockopt_wrapper(&f, listener, OBS_NET_SOL_SOCKET,
+                                     0x1006 /* SO_RCVTIMEO */, &rcvtimeo8,
+                                     (uint32_t)sizeof(rcvtimeo8));
     }
 
     obs_net_watchdog_t w;
@@ -926,8 +928,8 @@ static obs_result check_net_accept_inherits(void) {
     ScePthread watchdog_th;
     int have_watchdog = 0;
     if (obs_address_is_callable((const void *)&scePthreadCreate)) {
-        have_watchdog = (scePthreadCreate(&watchdog_th, NULL, obs_net_accept_watchdog, &w,
-                                          "obs-net-wd") == 0);
+        have_watchdog = (scePthreadCreate(&watchdog_th, NULL, obs_net_accept_watchdog,
+                                          &w, "obs-net-wd") == 0);
     }
 
     /* Loopback self-connect */
@@ -998,21 +1000,23 @@ static obs_result check_net_accept_inherits(void) {
     }
 
     /* Guard against indefinite blocking if accepted socket did not inherit non-blocking
-     * mode. Standard 64-bit FreeBSD/PS5 struct timeval is 16 bytes (int64_t tv_sec, tv_usec).
-     * Try 16-byte first, fallback to 8-byte if rejected. */
+     * mode. Standard 64-bit FreeBSD/PS5 struct timeval is 16 bytes (int64_t tv_sec,
+     * tv_usec). Try 16-byte first, fallback to 8-byte if rejected. */
     struct {
         int64_t tv_sec;
         int64_t tv_usec;
     } sndtimeo16 = {0, 100000}; /* 100ms timeout */
-    int so_rc16 = net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET, 0x1005 /* SO_SNDTIMEO */,
-                                         &sndtimeo16, (uint32_t)sizeof(sndtimeo16));
+    int so_rc16 = net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET,
+                                         0x1005 /* SO_SNDTIMEO */, &sndtimeo16,
+                                         (uint32_t)sizeof(sndtimeo16));
     if (so_rc16 != 0) {
         struct {
             int32_t tv_sec;
             int32_t tv_usec;
         } sndtimeo8 = {0, 100000}; /* 100ms timeout */
-        (void)net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET, 0x1005 /* SO_SNDTIMEO */,
-                                     &sndtimeo8, (uint32_t)sizeof(sndtimeo8));
+        (void)net_setsockopt_wrapper(&f, accepted, OBS_NET_SOL_SOCKET,
+                                     0x1005 /* SO_SNDTIMEO */, &sndtimeo8,
+                                     (uint32_t)sizeof(sndtimeo8));
     }
     obs_report_measure("102-net/accept-inherits", "setsockopt", "SO_SNDTIMEO-rc",
                        (uint64_t)(uint32_t)so_rc16, "rc");

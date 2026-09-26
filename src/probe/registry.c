@@ -149,7 +149,8 @@ const obs_section *const obs_sections[] = {
     /* The suspend/resume lifecycle surface (141), beside the oracle for the same
      * reason: it asks the platform about itself - which cooperation, event-pump,
      * application-lifecycle and GPU suspend-point entry points a big-app must call to
-     * be suspended cleanly - and resolves them without calling. Answers REQ-...-5e8c. */
+     * be suspended cleanly - and resolves them without calling. Answers REQ-...-5e8c.
+     */
     &obs_section_suspend,
     /* The map, last: it is the longest-running section and the one whose records a
      * reader is most likely to scroll to the end for. */
