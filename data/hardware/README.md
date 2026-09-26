@@ -36,7 +36,7 @@ got out.
 
 `crashers.txt` is here rather than in a build directory for the reason this whole directory
 exists: it cost an iterative sweep against a real console to obtain, one crash and one reboot
-per entry, and a build directory does not survive `rm -rf` or reach a second machine. (D236)
+per entry, and a build directory does not survive `rm -rf` or reach a second machine.
 
 **Emptying it and re-running the sweep is a valid experiment**, and the right one when the
 firmware changes - `SEED=0`, or `EXCLUDE=` in the environment. Exclusions are how you see what

@@ -53,9 +53,6 @@ silently stops covering the directory is worse than no index, because it reads a
 - [BOOT.md](BOOT.md) - the load sequence from "the loader has your file" to your first
   instruction: `e_type`, `EI_ABIVERSION`, the vendor dynamic table, `DT_INIT` and who calls
   it, unresolved-import strategies, and what is still unknown.
-- [HANDOVER-ORBISTOUN.md](HANDOVER-ORBISTOUN.md) - what obSCEne measured on the sibling
-  project, and a process it suggests for turning a stub into a shaped implementation without
-  reading anyone else's source. Written to be read cold from that side.
 - [LOADING.md](LOADING.md) - what a loader has to handle, written from the module side.
   A list of things a module will do to you.
 - [MODULE-FORMAT.md](MODULE-FORMAT.md) - what a loader requires of the module, and how each
@@ -89,19 +86,12 @@ silently stops covering the directory is worse than no index, because it reads a
 - [DECISIONS.md](DECISIONS.md) - a generated index over `decisions/`, one file per entry,
   with a status column. Numbers are unique and gated; a citation resolves to exactly one
   file.
-- [MILESTONES.md](MILESTONES.md) - a generated index over `milestones/`. **The firsts**, each with the artefact that proves it and
-  the build that produced it. Deliberately short - a first is the point after which a class of
-  work became possible, and it has to stay findable in a way a four-thousand-line worklog
-  cannot make it. Ends with what is *not* done yet, so the list
-  stays honest about its own scope.
-- [WORKLOG.md](WORKLOG.md) - what was done, in order, plus surprises.
-- [BACKLOG.md](BACKLOG.md) - a generated index over `backlog/`, with a status column.
-  What is not done, ranked, with what was struck and why.
+- [WORKLOG.md](WORKLOG.md) - what was done, one entry per milestone.
 - [WORKFLOW.md](WORKFLOW.md) - how the whole thing fits together.
 
-**These last four are dated records.** Counts inside them were true when written and are
-not corrected afterwards - `obscene-tool doccheck` exempts `DECISIONS.md` and `WORKLOG.md` from the
-accuracy checks for that reason. Correcting a log is falsifying it.
+`DECISIONS.md` and `WORKLOG.md` are dated records. Counts inside them were true when written
+and are not corrected afterwards; `obscene-tool doccheck` exempts them from the accuracy checks
+for that reason. Open work is a GitHub issue, not a document.
 
 ---
 
@@ -111,12 +101,11 @@ module, and [../CLAUDE.md](../CLAUDE.md) if you are changing the code.
 
 ## Adding to a log
 
-DECISIONS, BACKLOG and MILESTONES are **directories with a generated index**. Add a file under
-`decisions/`, `backlog/` or `milestones/`, then regenerate its table:
+DECISIONS is a **directory with a generated index**. Add a file under `decisions/`, then
+regenerate its table:
 
 ```bash
 tools/split-decisions.sh --index obscene
-tools/split-doc.sh --index obscene BACKLOG 2 backlog
 ```
 
 Do not edit an index by hand - it is overwritten, and the splitter refuses to run over one.

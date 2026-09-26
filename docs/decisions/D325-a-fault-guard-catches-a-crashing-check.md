@@ -8,7 +8,8 @@ every check with the `OBS_FAULT_ARM` macro. A caught fault becomes a `crash` res
 run continues; a dangling `try` still means the process went down before the guard could land. The
 pad is keyed per thread, so a fault on a worker thread is caught. The guard carries its own
 freestanding `setjmp`/`longjmp` and takes its signal primitives as imports, preferring the bound
-address over `dlsym` (D326). Hangs are not caught - a call that never returns raises no signal.
+address over `dlsym`, because a native title's `dlsym` sees only symbols the process imports.
+Hangs are not caught - a call that never returns raises no signal.
 
 **Why:** `obs_address_is_callable` cannot stop a fault inside a resolved function, and one such
 fault took a whole run down. `sigsetjmp` must capture the check's own frame, so the arm is a macro.

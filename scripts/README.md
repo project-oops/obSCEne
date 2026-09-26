@@ -23,7 +23,7 @@ single entry point; none of these is run by its path directly** (D269):
 
 The report itself is no longer a script. `./bin/obscene report` (`obscene-tool report`) captures
 obscene's records from the console system log, because that is the one channel that leaves the
-title's sandbox (D233); `deploy` calls it across the launch. It replaced `oops-klog.sh` and the
+title's sandbox; `deploy` calls it across the launch. It replaced `oops-klog.sh` and the
 `hw pull /data/...` half of the old deploy scripts, which fetched a file the console will not hand
 over.
 

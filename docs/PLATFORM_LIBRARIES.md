@@ -1,19 +1,18 @@
-# Platform Libraries: The Prospero Retail SPRX Filesystem Layout & Privilege Model
+# Prospero system library layout and privilege model
 
-This document specifies the retail filesystem organization of system shared libraries (`.sprx`),
-the sandbox partition boundaries, and the four-tier privilege model governing access on the
-Prospero-generation platform (firmware 12.40).
+The retail filesystem organisation of system shared libraries (`.sprx`), the sandbox partition
+boundaries, and the four-tier privilege model governing access on the Prospero-generation
+platform (firmware 12.40).
 
-**Everything below is measured directly from retail hardware** via obSCEne runtime probes
-and live filesystem inspection. The complete module list is captured in the companion
-manifest [`data/hardware/ps5-sprx-manifest.tsv`](../data/hardware/ps5-sprx-manifest.tsv), which
-records every module as a measured snapshot (firmware 12.40). That manifest is the source of
-truth for the per-tier tallies quoted below; read them as measured rather than fixed, since
-they move with firmware.
+Everything below is measured from retail hardware via obSCEne runtime probes and live filesystem
+inspection. The complete module list is the companion manifest
+[`data/hardware/ps5-sprx-manifest.tsv`](../data/hardware/ps5-sprx-manifest.tsv), a measured
+snapshot at firmware 12.40 and the source of truth for the per-tier tallies below, which move
+with firmware.
 
 ---
 
-## 1. Architectural Divergence from the Orbis-generation Platform
+## 1. Divergence from the Orbis-generation platform
 
 On the Orbis-generation platform, system shared libraries resided almost exclusively in a single
 flat directory: `/system/common/lib/`. Any library not shipped in `/system/common/lib/`
@@ -33,14 +32,14 @@ mount points with independent access controls, security tokens, and sandbox rule
 
 Linking a module statically via `DT_NEEDED` forces the system loader (`rtld`) to resolve
 it at launch. If that library does not exist in `/system/common/lib/` or is in a higher
-privilege tier denied to the title, **the process is terminated before executing a single
-instruction** (D295).
+privilege tier denied to the title, the process is terminated before executing a single
+instruction.
 
 ---
 
-## 2. The Four Privilege Tiers
+## 2. The four privilege tiers
 
-Access to system libraries is partitioned into four distinct permission tiers (D296):
+Access to system libraries is partitioned into four permission tiers (D296):
 
 | Tier | Category / Target | Typical Directory | Credentials (`paid`) | Scope & Capabilities |
 | :--- | :--- | :--- | :--- | :--- |
@@ -51,13 +50,13 @@ Access to system libraries is partitioned into four distinct permission tiers (D
 
 ---
 
-## 3. Directory Layout & Module Breakdown
+## 3. Directory layout and module breakdown
 
-### 3.1 `/system/common/lib/` (Standard Application Tier)
+### 3.1 `/system/common/lib/` (standard application tier)
 
 Mapped into every standard game title sandbox (`appCategory: "gd"`); the manifest lists these
-SPRXs as a measured snapshot. These libraries provide
-the public and semi-public APIs exposed to games:
+SPRXs as a measured snapshot. These libraries provide the public and semi-public APIs exposed to
+games:
 
 * **Core Runtime**:
   * `libkernel.sprx`, `libkernel_sys.sprx`, `libkernel_web.sprx` - System call interfaces and thread primitives.
@@ -80,7 +79,7 @@ the public and semi-public APIs exposed to games:
   * `libSceNet.sprx`, `libSceNetCtl.sprx` - Sockets and network configuration.
   * `libSceUserService.sprx`, `libSceNpCommon.sprx`, `libSceSaveData.sprx`, `libwebrtc.sprx`.
 
-### 3.2 `/system_ex/common_ex/lib/` (Extended System Tier)
+### 3.2 `/system_ex/common_ex/lib/` (extended system tier)
 
 Mounted only for applications flagged as system applications (`system_app` / `0x3800000000000001`).
 Sandboxed game titles cannot access this directory. As measured, it holds native C/C++ libraries
@@ -105,7 +104,7 @@ alongside a larger set of Mono/.NET assemblies (`.dll.sprx`); the manifest carri
 * **Shell UI Components**:
   * `libSceShellUIUtil.sprx`, `libSceGLSlimVSH.sprx`, `libSceGLSlimClientVSH.sprx`, `libSceNotificationClient.sprx`.
 
-### 3.3 `/system/priv/lib/` (Root / Privileged Tier)
+### 3.3 `/system/priv/lib/` (root / privileged tier)
 
 Accessible only to processes with root/kernel daemon credentials (`0x8000000000000001` or specific
 daemon entitlements); the manifest lists these privileged SPRXs as measured. Unprivileged titles
@@ -129,11 +128,11 @@ attempting to load these fail with permission denials:
 
 ---
 
-## 4. Key Differences Summary (Orbis vs Prospero)
+## 4. Key differences, Orbis versus Prospero
 
 | Library / Functionality | Orbis | Prospero | Impact on Homebrew |
 | :--- | :--- | :--- | :--- |
-| **`libScePosix`** | `/system/common/lib/libScePosix.sprx` | `/system_ex/common_ex/lib/libScePosixForWebKit.sprx` | Titles cannot statically link `libScePosix`. Must resolve dynamically via `obs_module_open` (D295). |
+| **`libScePosix`** | `/system/common/lib/libScePosix.sprx` | `/system_ex/common_ex/lib/libScePosixForWebKit.sprx` | Titles cannot statically link `libScePosix`. Must resolve dynamically via `obs_module_open`. |
 | **`libSceVencCore`** | Present in `/system/common/lib/` | Absent (merged into `libSceVenc.sprx`) | Static `DT_NEEDED` on `libSceVencCore` aborts launch with `val 2` (`ENOENT`). |
 | **3D Rendering** | `libSceGnmDriver.sprx` | `libSceAgc.sprx` / `libSceAgcDriver.sprx` | Native titles use AGC; GnmDriver is retained for backwards compatibility. |
 | **Audio Encoders** | Broadly accessible | Strictly isolated in `/system/priv/lib/` | Dolby/DTS encoders require `root` privilege. |
@@ -141,56 +140,55 @@ attempting to load these fail with permission denials:
 
 ---
 
-## 5. obSCEne Integration & Probing Strategy
+## 5. obSCEne probing strategy
 
 obSCEne treats module presence as an empirical question, probed dynamically rather than assumed:
 
-1. **Static Dynamic Section (`DT_NEEDED`)**:
-   `obscene.eboot.elf` statically links only a small, deliberately-bounded set of core libraries
-   guaranteed to exist in `/system/common/lib/` on every Prospero firmware - gated by
-   `EBOOT_LIBS` (default 18, see `Makefile`) precisely because a system loader resolves every
-   named library before any of our code runs (D226). The exact count moves with the behavioural
-   imports in [`src/probe/imports.c`](../src/probe/imports.c) and per-target exclusions there;
-   read that file for the current figure rather than a number fixed on this page.
-2. **On-Demand Loader (`obs_module_open`)**:
-   All non-essential libraries (such as POSIX, video encoders, or system tools) are resolved at
-   runtime using `obs_module_open()`, which searches the tier paths in order of accessibility.
-3. **Privilege Flag (`--privilege`)**:
-   `selfish` container builds can declare target privilege (`app`, `sysmodule`, `system`, `root`),
-   generating the matching `paid` auth token and `appCategory` so probes can test higher tiers
-   when executing under kstuff (D296).
-4. **Census Logging (`OBS|modtier|...`)**:
-   The runtime module probe outputs the verified permission tier of every reachable module directly
-   into the test report for automated comparison.
+1. **Static dynamic section (`DT_NEEDED`)**:
+   `obscene.eboot.elf` statically links only a bounded set of core libraries guaranteed to exist
+   in `/system/common/lib/` on every Prospero firmware, gated by `EBOOT_LIBS` because a system
+   loader resolves every named library before any of the probe's code runs (D226). The set is the
+   behavioural imports in [`src/probe/imports.c`](../src/probe/imports.c) and the per-target
+   exclusions there; read that file for the current membership.
+2. **On-demand loader (`obs_module_open`)**:
+   Non-essential libraries (POSIX, video encoders, system tools) are resolved at runtime with
+   `obs_module_open()`, which searches the tier paths in order of accessibility.
+3. **Privilege flag (`--privilege`)**:
+   `selfish` container builds declare target privilege (`app`, `sysmodule`, `system`, `root`),
+   generating the matching `paid` auth token and `appCategory` so probes test higher tiers when
+   executing under kstuff (D296).
+4. **Census logging (`OBS|modtier|...`)**:
+   The runtime module probe emits the verified permission tier of every reachable module into the
+   report for automated comparison.
 
 ---
 
-## 6. Application Category, Display Arbitration, and Memory Budgets
+## 6. Application category, display arbitration, and memory budgets
 
 Process authority and runtime hardware resources are governed across two orthogonal axes:
 
-1. **Privilege Tier (`paid` in SELF header)**:
+1. **Privilege tier (`paid` in SELF header)**:
    Determines kernel authority, raw device access, sysctls, and directory partition traversal (`/system/priv/lib/`).
-2. **Application Category (`applicationCategoryType` in `param.json`)**:
+2. **Application category (`applicationCategoryType` in `param.json`)**:
    Determines display bus ownership (`SceSysAvControl`), Direct Memory budget (`ResourceArbitrator`), and UI focus:
    - `0` (`SCE_APP_CATEGORY_TYPE_BIG_APP` / `gd` / `native_game`): Primary foreground application.
    - `65536` (`0x00010000`, `SCE_APP_CATEGORY_TYPE_SYSTEM_APP`): Background or system application.
    - `131072` (`0x00020000`, `SCE_APP_CATEGORY_TYPE_MINI_APP`): Mini app (quick menu overlay).
 
-### 6.1 Hardware Display & Memory Arbitration Rules
+### 6.1 Hardware display and memory arbitration rules
 
-* **HDMI Video Scanout**: `SceSysAvControl` grants ownership of the primary HDMI video bus (`OBS_VIDEO_BUS_MAIN = 0`) **exclusively to Big Apps (`category 0`)**. Calling `sceVideoOutOpen(..., OBS_VIDEO_BUS_MAIN, ...)` from a `system_app` (`category 65536`) fails with `0x80290001 (SCE_VIDEO_OUT_ERROR_INVALID_VALUE)`.
-* **Direct Memory (`DMEM`) Budget**: `ResourceArbitrator` only grants direct physical memory pools (required for GPU framebuffers and DMA buffers) to Big Apps (`0x300000000` / 12 GB). For `system_app`, direct memory budget is 0 bytes (`sceKernelAllocateDirectMemory` returns `-1`).
-* **Orthogonality**: A `root` eboot (`paid: 0x8000000000000001`) CAN be launched as a Big App (`category 0`). When launched with both, the kernel grants full 12 GB DMEM, switches HDMI video ownership to the app, and retains root kernel capabilities.
+* **HDMI video scanout**: `SceSysAvControl` grants ownership of the primary HDMI video bus (`OBS_VIDEO_BUS_MAIN = 0`) exclusively to Big Apps (`category 0`). Calling `sceVideoOutOpen(..., OBS_VIDEO_BUS_MAIN, ...)` from a `system_app` (`category 65536`) fails with `0x80290001 (SCE_VIDEO_OUT_ERROR_INVALID_VALUE)`.
+* **Direct Memory (`DMEM`) budget**: `ResourceArbitrator` grants direct physical memory pools (required for GPU framebuffers and DMA buffers) only to Big Apps (`0x300000000` / 12 GB). For `system_app`, direct memory budget is 0 bytes (`sceKernelAllocateDirectMemory` returns `-1`).
+* **Orthogonality**: a `root` eboot (`paid: 0x8000000000000001`) can be launched as a Big App (`category 0`). Launched with both, the kernel grants full 12 GB DMEM, switches HDMI video ownership to the app, and retains root kernel capabilities.
 
-### 6.2 The Big App PRX Loader Contract
+### 6.2 The Big App PRX loader contract
 
 When launched as `category 0` (`native_game`), the Prospero runtime dynamic linker (`rtld`) activates the retail game startup contract:
 * `rtld` unconditionally attempts to load `/app0/sce_module/libc.prx` before jumping to the eboot entry point.
 * Under `kstuff` on current firmware (FW 12.40), `sceSblAuthMgrAuthHeader` intercepts and authenticates fSELF files using **Gen-4 container magic (`4F 15 3D 1D`)**.
 * Bundled PRX modules in `/app0/sce_module/` must be wrapped in Gen-4 containers with matching privilege authority. Raw unencrypted ELFs (`\x7fELF`) or Gen-5 containers (`54 14 F5 EE`) cause `rtld` to abort launch with `PRX_SCE_MODULE_LOAD_ERROR` (`0xa0020102`).
 
-### 6.3 Homebrew Configuration Matrix
+### 6.3 Homebrew configuration matrix
 
 | Target Goal | Application Category | Privilege (`paid`) | Bundled `sce_module/` | Suitable Use Cases |
 |---|---|---|---|---|

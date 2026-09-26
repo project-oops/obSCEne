@@ -1,32 +1,25 @@
 # Design
 
-Why obSCEne is shaped the way it is: what it announces before it acts, why it is written from
-the failure side, how the sections are ordered, and what it refuses to invent.
+What obSCEne announces before it acts, how it checks from the failure side, how the sections
+are ordered, and what it refuses to invent.
 
-These were the middle of the README, which made a reader wanting the build instructions scroll
-past a design essay to reach them. The reasoning is worth keeping and worth keeping *here*.
-
-See also [OUTPUT.md](OUTPUT.md) for the report format itself, and [WORKFLOW.md](WORKFLOW.md)
-for the loop this feeds.
+[OUTPUT.md](OUTPUT.md) is the report format; [WORKFLOW.md](WORKFLOW.md) is the loop this
+feeds.
 
 ## Announce before attempting
 
-The single most important property. Every check prints its identity **before** making
-the call:
+Every check prints its identity **before** making the call:
 
 ```
 OBS|try|020-memory/map|libkernel|sceKernelMapDirectMemory
 OBS|res|020-memory/map|pass|0x8804000000|
 ```
 
-Under an emulator the normal outcome of an unimplemented function is a hard crash
-that takes the process with it. When that happens the stream simply stops - and the
-last line names the exact call that did it. A report that ends on a `try` is not a
-truncated report, it is a stack trace with one frame and no debugger required.
+Under an emulator, an unimplemented function usually crashes the process. The stream then
+stops, and the last line names the exact call that did it. A report that ends on a `try` is a
+stack trace with one frame. Everything else in the program is arranged to keep this property.
 
-Everything else in the program is arranged around keeping that property true.
-
-## Checked from the failure side
+## Checks from the failure side
 
 Much of the suite passes deliberately invalid arguments and expects an error:
 
@@ -34,49 +27,37 @@ Much of the suite passes deliberately invalid arguments and expects an error:
 int rc = sceKernelClose(-1);   /* must fail */
 ```
 
-This needs no struct layouts - guessing at one corrupts the stack, and the crash
-lands nowhere near the mistake - and it still proves the function exists, is
-reachable, validates its arguments, and returns something plausible. That is exactly
-the set of things an implementation returning a constant gets wrong.
+This needs no struct layouts, and a guessed layout corrupts the stack far from the mistake. It
+still shows the function exists, is reachable, validates its arguments and returns something
+plausible - the things an implementation returning a constant gets wrong.
 
-**The honest limitation:** an implementation that fails *everything* passes every
-negative check. Negative checks prove argument validation; only the positive ones
-prove the function does its job.
+An implementation that fails everything passes every negative check. Negative checks prove
+argument validation; positive checks prove the function does its job.
 
-That is why `035-libc` and `037-math` matter out of proportion to their size. The C runtime is the one
-library whose whole interface is ISO C, so every signature is certain and every check
-can ask whether it *works*: `calloc` must return zeroed memory, `realloc` must preserve
-contents, `qsort` must actually sort, `snprintf` must report the length it would have
-written. A stub returning success fails all four. The maths section is the same idea
-with no tolerances anywhere - every value checked against is exactly representable, so
-`floor(-1.5)` must be `-2.0` and nothing else. An epsilon is where a wrong answer
-hides.
+`035-libc` and `037-math` are positive checks over an interface ISO C defines completely, so
+every signature is certain and every check asks whether the function works: `calloc` returns
+zeroed memory, `realloc` preserves contents, `qsort` sorts, `snprintf` reports the length it
+would have written. The maths section uses no tolerances: every expected value is exactly
+representable, so `floor(-1.5)` must be `-2.0`.
 
-Shifting the balance from checks this project reasoned out to checks a public document
-settles is the main direction of travel - the current split is in the status block above,
-and the reasoning is in [docs/BACKLOG.md](BACKLOG.md).
-
-`018-relational` takes the same idea somewhere no document reaches. It compares results
-**to each other** rather than to an expected value: two live event flags must not share a
-handle, a counting semaphore must refuse a third claim against two signals, memory
-released must be allocatable again. Those hold whatever the platform's actual numbers
-are, so they need no authority to check - which is what makes them usable on the vendor
-surface, where no authority exists.
+`018-relational` compares results **to each other** rather than to an expected value: two live
+event flags do not share a handle, a counting semaphore refuses a third claim against two
+signals, released memory is allocatable again. These hold whatever the platform's actual
+numbers are, so they need no authority, which makes them usable on the vendor surface.
 
 ## Reading a report
 
-The binary emits one machine-readable format. Colour and grouping are presentation
-and live in a script, so the guest stays small:
+The binary emits one machine-readable format. Colour and grouping are presentation and live in
+the tool, so the guest stays small:
 
 ```bash
 make pretty                          # colour, grouped by section
 ./build/obscene-host | obscene-tool pretty
 ```
 
-The format contract is [docs/OUTPUT.md](OUTPUT.md). Treat it as an interface -
-parsers exist.
+[OUTPUT.md](OUTPUT.md) is the format contract, and parsers depend on it.
 
-## The loop this exists for
+## Comparing runs
 
 ```bash
 make host && ./build/obscene-host > baseline.txt
@@ -91,24 +72,16 @@ make diff BASELINE=baseline.txt
 tally: pass +7, skip -7
 ```
 
-Exit 0 means no regressions, 1 means something got worse. **A regression is a check
-that got *worse*, not a check that is failing** - under an early emulator almost
-everything fails, and the only useful question is whether today beats yesterday.
+Exit 0 means no regressions; 1 means something got worse. A **regression** is a check that got
+worse, not a check that is failing. `skip` ranks below `fail`, because a check that stopped
+running says less than one that ran and failed. A check that vanishes from the report counts
+the same way.
 
-`skip` ranks *below* `fail`: a check that stopped running tells you less than one that
-ran and failed, so losing coverage counts against you. A check vanishing from the
-report entirely counts the same way - otherwise deleting an awkward check would read
-as progress.
+## Section order
 
-## Sections, base to high level
-
-Order is the whole value of the report: a failure at the top is read before a failure
-at the bottom, because the bottom depends on the top.
-
-The table below is illustrative, not exhaustive - it shows the shape of the ordering, low-level
-to high-level, using the earliest sections as landmarks. `src/probe/registry.c` currently
-registers 53 sections, and it is the authoritative, ordered list; this table is not resynced
-against it automatically and should not be read as a full index.
+Sections run from the base of the platform to high level, so a failure at the top is read
+before the failures below that depend on it. `src/probe/registry.c` is the authoritative,
+ordered list. The landmarks:
 
 | | Section | Establishes |
 |---|---|---|
@@ -126,51 +99,49 @@ against it automatically and should not be read as a full index.
 | 080 | video | Acquiring the display output |
 | 090 | audio | Bringing up audio |
 | 100 | input | Acquiring a controller |
-| … | (39 more sections between here and 900, covering sync, POSIX, modules, GPU, and more - see `src/probe/registry.c`) | |
 | 900 | surface | A census of the whole known surface - presence only |
 
-A check whose prerequisites were not met is **skipped, not failed**. One broken
-allocator would otherwise turn everything below it red and bury the one real fault.
-The same applies to a check whose symbol the loader could not resolve - every platform
-declaration is weak, so an absent function is skipped rather than jumped to.
+A check whose prerequisites were not met is **skipped, not failed**, so one broken allocator
+does not turn everything below it red. A check whose symbol the loader could not resolve is
+also skipped: every platform declaration is weak, so an absent function is skipped rather than
+jumped to.
 
-## Presence and behaviour are different questions
+## Display and user
 
-The behavioural sections ask whether a function *works*, and each one costs a confident
-signature. The census asks only whether it *exists*, which costs a name - so it scales
-to the whole platform, and it is where the honest coverage number comes from.
+obSCEne opens its display against a user obtained from the user service. When no initial user
+can be determined it does not open a display and does not guess a user id; the text report is
+still complete.
 
-**The census never calls anything, and one section deliberately does.** Every censused
-name is declared as data rather than as a function, so the type system forbids the call
-outright - calling a function whose signature you do not know is the mistake this project
-refuses to make, and forty thousand names would otherwise be forty thousand chances to make
-it. `910-bulk` steps around that on purpose, by casting an address rather than redeclaring
-the name, so the exception stays inside one expression and every other translation unit
-still cannot call these by accident. It is compiled in only under `OBS_BULK` and it is the
-one part of the program expected to end the process.
+## Presence and behaviour
 
-**Presence is a statement about the loader as much as the platform.** shadPS4 resolves
-every import through a generic stub and reports **35,337 of 35,337 present** for libraries
-it does not implement; PS5PCEM resolves what it implements and names the other 31,601
-absent. The higher number is the less honest one. Read the census beside `007-responsive`,
-never alone - and see `910-bulk`, which exists because a resolved address and an
-implementation are not the same claim.
+The behavioural sections ask whether a function works, and each costs a confident signature.
+The census asks only whether it exists, which costs a name, so it scales to the whole platform.
 
-A wrong name in the census is a false negative - visible, harmless, correctable. A
-wrong *arity* in a behavioural check corrupts the stack and crashes somewhere
-unrelated. That asymmetry is why the census can cast a much wider net.
+**The census never calls anything.** Every censused name is declared as data rather than as a
+function, so the type system forbids the call. `910-bulk` is the one exception: it casts an
+address rather than redeclaring the name, so the exception stays inside one expression and no
+other translation unit can call these names. It is compiled in only under `OBS_BULK` and is
+the one part of the program expected to end the process.
 
-**`900-surface/control` runs first and validates the test itself**, probing one symbol
-that must resolve and one that must not. On a platform implementing none of the
-surface, "everything absent" and "the presence test is broken" look identical - the
-control is what tells them apart.
+**Presence measures the loader as much as the platform.** A loader that resolves every import
+through a generic stub reports the whole census present, including libraries it does not
+implement; one that resolves only what it implements reports the rest absent. Read the census
+beside `007-responsive`, never alone. `910-bulk` exists because a resolved address and an
+implementation are different claims.
 
-## Nothing here is invented
+A wrong name in the census is a visible, harmless false negative. A wrong arity in a
+behavioural check corrupts the stack and crashes somewhere unrelated. That asymmetry is why the
+census casts a wider net.
 
-Every declaration in [include/obscene/platform.h](../include/obscene/platform.h) is a
-signature this project is confident about. Where an arity or a struct layout is
-uncertain, the function is **left out** rather than guessed at.
+**`900-surface/control` runs first and validates the census**, probing one symbol that must
+resolve and one that must not. On a platform implementing none of the surface, "everything
+absent" and "the presence test is broken" look identical without it.
 
-The symbol and library strings are ABI identifiers - the import hash is computed from
-the symbol name, so renaming them for tidiness would stop this testing anything. They
-stay exactly as the platform spells them. Prose elsewhere avoids vendor branding.
+## Nothing is invented
+
+Every declaration in [include/obscene/platform.h](../include/obscene/platform.h) is a signature
+this project is confident about. Where an arity or a struct layout is uncertain, the function is
+left out.
+
+The symbol and library strings are ABI identifiers. The import hash is computed from the symbol
+name, so they stay exactly as the platform spells them. Prose elsewhere avoids vendor branding.

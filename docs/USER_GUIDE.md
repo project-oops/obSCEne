@@ -1,110 +1,82 @@
-# obSCEne Operator Guide
+# Operator guide
 
-Welcome to the **obSCEne** operator guide.
+How to build obSCEne, run it on a console, and read what it reports. The report format is
+[OUTPUT.md](OUTPUT.md), the command protocol is [PROTOCOL.md](PROTOCOL.md), and which file
+goes to which loader is [ARTIFACTS.md](ARTIFACTS.md).
 
-This guide explains how **hardware testers, homebrew operators, and researchers** can build, deploy, run, and interpret obSCEne conformance probes on physical console hardware.
+## Build targets
 
-For the wire protocol, the register tables and the decision records, see the **[Technical Reference](README.md)**, **[PROTOCOL.md](PROTOCOL.md)** and **[DECISIONS.md](DECISIONS.md)**.
+| Target | Artifact | Execution context | Probing scope |
+|---|---|---|---|
+| `payload` | `build/obscene-probe-prospero.elf`, a plain ELF | Sent to the homebrew ELF loader on port 9021. Runs in the previous generation's compatibility sandbox (`ps4_mode`) | Kernel calls, memory mapping, errno encoding, POSIX sockets |
+| `native` | `build/prospero/<TITLE_ID>/`, a title directory holding the fake-signed `eboot.bin`, `sce_sys/param.json` and `sce_sys/icon0.png` | Launched as a `BIG_APP` from `/data/homebrew/`, owning the display | GPU command buffers, video output and flips, controller input |
+| `pkg` | `build/obscene-probe-orbis.pkg` | Installed as a previous-generation `ps4_game` title; its report file is sealed `0600` inside the title's sandbox | Save data mounting, filesystem sandbox boundaries, dynamic linking inside an installed title |
 
----
+`TITLE_ID` defaults to `PPSA90000`; `TITLE_ID` or `CONTENT_ID` overrides it
+(`scripts/build-native.sh`). Plain `make eboot` produces the standalone `eboot.bin` that goes
+into the package, not the title directory.
 
-## Table of Contents
+## Building
 
-1. [Understanding the 3 Build Targets](#1-understanding-the-3-build-targets)
-2. [Building the Probes](#2-building-the-probes)
-3. [Executing Probes on Real Hardware](#3-executing-probes-on-real-hardware)
-   - [Method A: Fast Direct Socket (`payload` via port 9021)](#method-a-fast-direct-socket-payload-via-port-9021)
-   - [Method B: Full Screen Application (`eboot` via BIG_APP)](#method-b-full-screen-application-eboot-via-big_app)
-   - [Method C: Installed Retail Sandbox (`pkg`)](#method-c-installed-retail-sandbox-pkg)
-4. [Reading & Interpreting the Telemetry](#4-reading--interpreting-the-telemetry)
-5. [Capturing Reports with `obscene-tool`](#5-capturing-reports-with-obscene-tool)
-6. [Operator Troubleshooting](#6-operator-troubleshooting)
-
----
-
-## 1. Understanding the 3 Build Targets
-
-Different platform capabilities require different execution privileges. obSCEne compiles into three distinct targets:
-
-| Target | File Type | Privileges & Execution Context | Ideal Probing Scope |
-| :--- | :--- | :--- | :--- |
-| **`payload`** | Bare ELF | Runs directly via `elfldr` on `:9021`. Unsandboxed, kernel address space visible, direct POSIX sockets. | Kernel syscalls, memory mapping (`mmap`), errno encoding, raw CPU registers. |
-| **`eboot`** | Fake-signed fSELF (`eboot.bin`) | Runs in `/data/homebrew/` as a retail `BIG_APP`. HDMI screen ownership, universal graphics queues (`libSceAgc`). | GPU command buffers (PM4), DualSense input, video output, display flips. |
-| **`pkg`** | Encrypted PFS | Installed on retail SSD (`/user/app/`). Strict retail sandbox (`0600`), isolated filesystem. | Title save mounting, filesystem sandbox boundaries, background download queues. |
-
----
-
-## 2. Building the Probes
-
-Cross-compilation requires a freestanding Clang 18+ toolchain (via WSL or Docker):
+Cross-compilation runs in WSL or a container; [BUILDING.md](BUILDING.md) has the toolchain.
 
 ```bash
-# In WSL or Linux container
-cd obscene
-
-# Build all 3 targets:
-make payload   # Produces build/obscene-probe-prospero.elf
-make native    # Produces build/prospero/<TITLE_ID>/ (default TITLE_ID is PPSA90000)
-make pkg       # Produces build/obscene-probe-orbis.pkg
+make payload
+make native
+make pkg
 ```
 
----
+## Running on a console
 
-## 3. Executing Probes on Real Hardware
+Register the console with `pros` first:
 
-Ensure your target console is registered in `pros`:
 ```powershell
-pros.exe register 192.168.1.211 --name ps5-testbed
+pros.exe register <console-ip> --name <console-name>
 pros.exe check
 ```
 
-### Method A: Fast Direct Socket (`payload` via port 9021)
-
-This is the fastest method for routine OS and kernel probing:
+### Payload
 
 ```powershell
-# 1. Start the kernel log streamer in terminal 1
+# Terminal 1: stream the system log.
 pros.exe logs
-
-# 2. In terminal 2, stream the bare ELF directly to elfldr (or use ./bin/obscene payload)
+# Terminal 2: send the ELF to the loader on port 9021.
 pros.exe send build/obscene-probe-prospero.elf 9021
 ```
 
-The console will immediately execute the probe in memory and stream output back over `klog`.
+`./bin/obscene payload` builds, sends and captures in one step.
 
----
-
-### Method B: Full Screen Application (`eboot` via BIG_APP)
-
-For graphics and AGC shader probes that need screen ownership:
+### Native title
 
 ```powershell
-# Stage the directory into /data/homebrew (or use ./bin/obscene native --deploy)
 pros.exe restore build/prospero/PPSA90000 /data/homebrew/PPSA90000
-
-# Launch the title
 pros.exe launch PPSA90000
 ```
 
-The TV display will show the obSCEne HUD rendering real-time test progress.
+`./bin/obscene native --deploy` builds the title and pushes it. While it runs, the display
+shows the obSCEne HUD: the detected hardware generation (`GEN`), the graphics driver
+(`GPU`, `gnm` or `agc`), and a running check counter with a pass/fail tally.
 
----
-
-### Method C: Installed Retail Sandbox (`pkg`)
-
-For retail sandbox and filesystem permission checks:
+### Package
 
 ```powershell
-# Install the package via Prosperous
 pros.exe restore build/obscene-probe-orbis.pkg /data/pkg/obscene-probe-orbis.pkg
-# Launch via Prosperous GUI or console UI
 ```
 
----
+`./bin/obscene deploy` builds the package, installs it, launches it and captures the report.
 
-## 4. Reading & Interpreting the Telemetry
+### Console ports
 
-obSCEne follows a strict **"Announce Before Attempting"** principle. Every check emits an unbuffered announcement *before* calling the operating system. Every line is pipe-separated and begins `OBS|` (see `docs/OUTPUT.md` for the full contract):
+| Port | Service | Use |
+|---|---|---|
+| 9021 | `elfldr` | receives a payload ELF |
+| 2121 | `ftpsrv` | uploads title directories and packages, pulls report files |
+| 3232 | `klogsrv` | streams the system log |
+
+## Reading the telemetry
+
+Every check writes an unbuffered announcement before it makes its call. Every line is
+pipe-separated and begins `OBS|`:
 
 ```text
 OBS|try|130-layout/kquery|libkernel|sceKernelVirtualQueryInfo
@@ -113,51 +85,34 @@ OBS|measure|130-layout/kquery|sceKernelVirtualQueryInfo|size|0x38|bytes
 OBS|bytes|130-layout/kquery|sceKernelVirtualQueryInfo|extent|0x0|0010000000000000...
 ```
 
-### Key Output Fields:
-1. **`OBS|try|<check-id>|<library>|<symbol>`**: The probe is about to invoke `<symbol>`. If this is the last line printed before a crash, that exact function caused the kernel hang.
-2. **`OBS|res|<check-id>|<status>|<value>|<detail>|<provenance>`**: The check's verdict - `pass`, `partial`, `fail`, `skip`, `crash` or `pending` - with the returned value and how much the expectation behind it should be trusted.
-3. **`OBS|measure|<check-id>|<symbol>|<quantity>|<value>|<unit>`**: A measured silicon property (e.g. structure size, alignment, or timer frequency), recorded with no verdict attached.
-4. **`OBS|bytes|<check-id>|<symbol>|<label>|<offset>|<hex>`**: One line of a byte-exact hex dump of a kernel structure populated by hardware.
+| Record | Meaning |
+|---|---|
+| `OBS\|try\|<check-id>\|<library>\|<symbol>` | the check is about to call `<symbol>`. A `try` with no matching `res` names the call that did not return |
+| `OBS\|res\|<check-id>\|<status>\|<value>\|<detail>\|<provenance>` | the verdict (`pass`, `partial`, `fail`, `skip`, `crash` or `pending`), the returned value, and how far the expectation behind it is trusted |
+| `OBS\|measure\|<check-id>\|<symbol>\|<quantity>\|<value>\|<unit>` | a measured property such as a structure size, an alignment or a timer frequency, with no verdict |
+| `OBS\|bytes\|<check-id>\|<symbol>\|<label>\|<offset>\|<hex>` | one line of a byte-exact dump of a structure the platform filled in |
 
----
+## Capturing reports
 
-## 5. Capturing Reports with `obscene-tool` and `pull-log`
-
-There are two primary ways to retrieve obSCEne reports from physical hardware:
-
-### Method 1: Pulling Completed Log Files via Prosperous FTP (`pull-log`)
-When obSCEne runs, the sink writes report logs to persistent console mounts (e.g. `/mnt/usb0/obscene/`, `/data/homebrew/PPSA90000`, `/data/`).
-You can pull the latest run directly using the front-door CLI:
-
-```bash
-# Auto-discovers the newest report on console and saves to reports/obscene-report.txt:
-./bin/obscene pull-log
-
-# Or explicitly specify destination:
-./bin/obscene pull-log reports/run30-report.txt
-```
-
-### Method 2: Capturing Live over Kernel Log Stream (`report`)
-`obscene-tool report` captures obscene's own `OBS|`-prefixed records off the console system log
-into a plain text file - not JSON, and not a conversion of an existing log:
+`./bin/obscene report` (or `obscene-tool report`) captures obSCEne's `OBS|` records from the
+console system log into a plain text file:
 
 ```powershell
-# In Windows PowerShell:
 obscene-tool.exe report --seconds 120 --into reports/hardware/console-klog.txt
 ```
 
-The file it writes is exactly what `obscene-tool verify`, `diff` and `pretty` read. See
-`docs/TOOLING.md` for the full set of `report` flags and `docs/OUTPUT.md` for the record format.
+`reports/hardware/console-klog.txt` is the default destination. The file is what
+`obscene-tool verify`, `obscene-tool diff` and `obscene-tool pretty` read. [TOOLING.md](TOOLING.md)
+lists the flags.
 
----
+`./bin/obscene pull-log [destination]` pulls the newest report file from the console over
+FTP, into `reports/obscene-report.txt` by default. The sink tries these paths in order and
+records which one answered: `/data/obscene-report.txt`, `/download0/obscene-report.txt`,
+`/mnt/usb0/obscene-report.txt`, then `obscene-report.txt` beside the process.
 
-## 6. Operator Troubleshooting
+## Troubleshooting
 
-### Problem: Probe outputs `OBS|try|...` and then completely freezes
-- **Explanation**: You encountered an unhandled kernel exception or fatal page fault on hardware.
-- **Recovery**: Reboot the console, note the offending check name, and flag it as an architectural wall in `worklog.md`.
-
-### Problem: `pros send` reports connection refused on `:9021`
-- **Explanation**: The `elfldr` daemon is not running on the console.
-- **Recovery**: Re-run the jailbreak environment from the console browser.
-
+| Symptom | Meaning | Recovery |
+|---|---|---|
+| a `try` line and then nothing | the call did not return: the process faulted or hung | run `./bin/obscene recover` before relaunching, then reboot the console. The `try` line names the call |
+| `pros send` reports connection refused on 9021 | the ELF loader is not running on the console | start the homebrew loader on the console |

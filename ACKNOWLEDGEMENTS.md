@@ -16,7 +16,7 @@ The practical distinction this project draws:
 |---|---|
 | **Symbol and library names** | Facts about an interface. A name is what the loader hashes; there is no other name that works. Used freely. |
 | **Function signatures** | Interface facts. Needed to call anything at all. Used where confident, omitted where not (D008). |
-| **Format constants** | Interface facts. A dynamic-table tag has one correct value, and reading it in a loader that has it right is how one was found to be wrong here (D038). |
+| **Format constants** | Interface facts. A dynamic-table tag has one correct value, and reading it in a loader that has it right is how one was found to be wrong here. |
 | **Struct layouts** | Interface facts, but far easier to get subtly wrong. Omitted entirely so far - every check is written to avoid needing one. |
 | **Implementation** | Never. Not adapted, not paraphrased, not carried across in any form. |
 
@@ -29,7 +29,7 @@ it stopped being true, which is the ordinary way a provenance document goes wron
 No amount of testing could have found it: the derivation tool checks that
 `JMPREL + PLTRELSZ == RELA`, and addition is commutative, so a swapped pair satisfies the
 identity exactly. It was found by reading a loader that had the constants the right way
-round, and confirmed against a second one (D038).
+round, and confirmed against a second one.
 
 Fourteen emulators and reference projects are now kept locally and read for exactly that
 - see `docs/EMULATORS.md`. Several are GPL, and this program calls the platform's own
@@ -74,7 +74,7 @@ elsewhere. Named after its source, and a superset of it.
 
 So the count of independent confirmations for this project's hash is **two, not three**:
 the published test vector, and this database read through two files. That distinction was
-got wrong once and corrected in D064; it is written here so it is not got wrong again.
+got wrong once and corrected; it is written here so it is not got wrong again.
 
 **What the comparison establishes.** Hashing all 78,372 names reproduces all 78,372
 identifiers. Since those identifiers were observed in firmware rather than computed, that
@@ -184,10 +184,10 @@ what.
 
 - **KytyPS5** (<https://github.com/KytyPS5/KytyPS5>), at the commit its own build banner
   reported. an emulator's own `loader/elf.h` gave the vendor dynamic tag numbers, which showed that
-  two of ours were swapped (D036); `src/loader/runtimeLinker.cpp` gave the relocation
+  two of ours were swapped; `src/loader/runtimeLinker.cpp` gave the relocation
   types it accepts and how it treats an unresolved weak import; `src/libs/libC.cpp` and
   `src/libs/libKernel.cpp` gave which output functions it implements and where each one
-  sends its bytes (D037). Its `libs/` registration tables were read again for D331, where
+  sends its bytes. Its `libs/` registration tables were read again for D331, where
   the point was which `*GetSize` functions exist and that two implementations disagree about
   their values - not what any value is.
 

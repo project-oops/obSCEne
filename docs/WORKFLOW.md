@@ -1,71 +1,45 @@
-# How the whole thing works
+# Workflow
 
-Written for the emulator side, and written plainly. It covers the loop from "the
-emulator does not run this" to "the emulator runs this", where the tools fit, which of
-them a person runs by hand, and which run themselves.
+The loop from "the emulator does not run this" to "the emulator runs this", where each tool
+fits, and which tools a person runs by hand.
 
-## The one correction worth making first
+## NIDs are not reversible
 
-A reasonable mental model of the loop goes:
+A module does not import `sceKernelWrite`. It imports `4wSze92BhLI`, which is the first eight
+bytes of `SHA-1("sceKernelWrite" ‖ suffix)`, written in a compact alphabet. Hashing discards
+information, so no computation turns a NID back into a name. There are two ways to name a NID:
 
-> build the emulator from public information → run real software at it → watch what
-> breaks → **decode the stuck symbol back into a method** → implement that method →
-> repeat
+1. **Lookup.** If the pair is already established, a table gives the name instantly. This
+   covers most imports.
+2. **Cracking.** Otherwise, hash candidate names until one matches. That is `crack`, and it is
+   a campaign rather than a lookup.
 
-Every step is right except the fourth, and it is the one everything else hangs off.
-
-**You cannot decode a symbol back into a method.** A module does not import
-`sceKernelWrite`. It imports `4wSze92BhLI`, which is the first eight bytes of
-`SHA-1("sceKernelWrite" ‖ suffix)`, written in a compact alphabet. Hashing throws
-information away on purpose. There is no computation that runs it backwards.
-
-So the fourth step is really two steps with very different costs:
-
-1. **Look it up.** If somebody has already established that `4wSze92BhLI` is
-   `sceKernelWrite`, this is a table lookup and it is instant. This is what happens
-   almost every time.
-2. **Guess it.** If nobody has, the only route is to hash candidate names until one
-   matches. That is `crack`, and it is a campaign rather than a lookup.
-
-Everything below follows from that split.
-
-## The four words that sound the same
-
-| | what it does | reversible? | who runs it |
+| | what it does | reversible | who runs it |
 |---|---|---|---|
-| **hashing** | `sceKernelWrite` → 8 bytes | **no** | automatic, every build |
+| **hashing** | `sceKernelWrite` → 8 bytes | no | automatic, every build |
 | **encoding** | those 8 bytes → the text `4wSze92BhLI` | yes | automatic, every build |
 | **decoding** | `4wSze92BhLI` → back to the 8 bytes | yes | by hand, rarely |
 | **cracking** | guess names, hash them, look for a match | the only way back | by hand, occasionally |
 
-If you remember one thing: **`decode` does not undo `hash`.** It undoes the text
-formatting and hands you the same eight bytes you were stuck with. Opening the envelope
-does not unshred the document.
+`decode` does not undo the hash. It undoes the text encoding and returns the same eight bytes.
 
-## The loop, end to end
+## The loop
 
 ### 1. Build the emulator against public information
 
-Unchanged from your model. Public documentation, open-source toolchains, published
-interface descriptions.
+Public documentation, open-source toolchains, published interface descriptions.
 
-### 2. Run something real at it and watch
+### 2. Run real software and record what fails
 
-Also unchanged. What comes out is a list of NIDs the loader could not resolve, plus
-whatever went wrong afterwards.
-
-**The emulator's job here is to record that list as data**, not prose. A NID, its
-library, its module, and ideally which module wanted it - one record per line. That list
-is a *demand ranking*: the NIDs that block real software, ordered by how many things
-want them. It is useful before anyone knows what any of the names are.
+The output is a list of NIDs the loader could not resolve, plus whatever fails afterwards. The
+emulator records that list as data, one record per line: the NID, its library, its module, and
+the module that wanted it. That list is a **demand ranking** - the NIDs that block real
+software, ordered by how many things want them - and it is useful before any name is known.
 
 ### 3. Turn the NIDs into names
 
-Two paths, in order of cost.
-
-**The table.** `data/nid-corpus.txt` holds established pairs - 389 at the time of
-writing, harvested from an emulator's own resolution logs, which print the name they
-matched for every NID. Free, and it covers most of what any module imports.
+**The table.** `data/nid-corpus.txt` holds established pairs, harvested from emulator
+resolution logs, which print the name they matched for every NID.
 
 **The cracker,** for what the table does not cover:
 
@@ -73,82 +47,63 @@ matched for every NID. Free, and it covers most of what any module imports.
 obscene-tool crack --nids unresolved.txt --words candidates.txt --known data/nid-corpus.txt
 ```
 
-It hashes every candidate and reports matches. Read the header before the results:
+It hashes every candidate and reports matches. The header comes first:
 
 ```
-# candidates 12480
-# generator  reproduced 389 of 389 known pairs
-# recovered  17 of 240
+# candidates <n>
+# generator  reproduced <k> of <k> known pairs
+# recovered  <m> of <t>
 ```
 
-`reproduced 389 of 389` is the number that matters. It says the candidate list can
-regenerate names *already known* - a list that cannot do that is not evidence about
-names that are not known. If that number is short, a miss below means "we did not guess
-it", not "it does not exist".
+The `reproduced` line says whether the candidate list regenerates names already known. A list
+that cannot is not evidence about names that are not known. A match is proof; a miss means the
+name was not guessed, not that it does not exist.
 
-**A match is proof. A miss is nothing.** Those must never be read the same way.
+### 4. Implement the function and check its behaviour
 
-### 4. Implement the function, and check it behaves
+Implementing is the emulator's work. Checking is obSCEne's: it calls the function and reports
+what happened.
 
-Implementing is the emulator's work. Checking is obSCEne's: it calls the function and
-reports what actually happened, which is the part that catches an implementation that
-exists and is wrong.
+- A **missing** function shows up as an unresolved NID.
+- A **stubbed** function resolves and returns zero to everything. `007-responsive` catches it
+  by calling each function twice with inputs whose answers must differ.
+- A **wrong** function resolves, varies with its input, and gives the wrong answer. The
+  behavioural checks catch it.
 
-This is where the two halves meet, and it is worth being precise about the difference:
-
-- **A missing function** shows up as an unresolved NID. Nothing to test yet.
-- **A stubbed function** resolves and returns zero to everything. `007-responsive`
-  catches these by calling each one twice with inputs whose answers must differ.
-- **A wrong function** resolves, varies with its input, and gives the wrong answer.
-  That is what the behavioural checks are for.
-
-An existence test cannot tell the second from the third, and those need opposite work.
+An existence test cannot tell a stub from a wrong function, and the two need opposite work.
 
 ### 5. Repeat
 
-`obscene-tool diff` compares two runs and reports what got **worse**, not what is
-failing. Under an early emulator almost everything fails; a tool that called that a
-regression would be ignored inside a day.
+`obscene-tool diff` compares two runs and reports what got worse, not what is failing.
 
-## Which commands does a person actually run?
+## Automatic and manual commands
 
-The short answer: **almost none of them, almost never.**
-
-### Automatic - runs itself, no human involved
+### Automatic
 
 | | when | what it does |
 |---|---|---|
 | `mkmodule` | every `make module` | hashes every import name into a NID, builds the vendor tables, checks its own work |
-| `derive` | inside `mkmodule` | re-derives the format constants from what it just wrote, and fails the build if they disagree |
-| hashing / encoding | inside `mkmodule` | you never invoke these; they are what `mkmodule` *is* |
+| `derive` | inside `mkmodule` | re-derives the format constants from what it wrote, and fails the build if they disagree |
+| hashing / encoding | inside `mkmodule` | never invoked directly |
 
-If you only ever run `make module`, hashing and encoding happen hundreds of times and
-you never type either word.
+### Manual
 
-### By hand - occasionally, deliberately
-
-| | when you would run it |
+| | when to run it |
 |---|---|
-| `nid <name>` | "an emulator logged an unknown NID - which of my functions is that?" Answers in one line. |
-| `crack` | you have a batch of unresolved NIDs nobody has named. A campaign, not a lookup. Run it when the list is worth the effort. |
-| `decode` | almost never. Reading raw bytes out of a module's symbol table by hand. |
-| `pretty` / `verify` / `diff` | reading results. `verify` in CI, the other two by eye. |
-| `surface` | when adding names to the census - edit `data/surface.txt`, then regenerate. |
-| `mine` | when an emulator checkout has moved on and the corpus should see it. |
-| `gap` | "what do the emulators implement that we never touch?" |
+| `nid <name>` | an emulator logged an unknown NID and the question is which function it is |
+| `crack` | a batch of unresolved NIDs has no names and is worth a campaign |
+| `decode` | reading raw bytes out of a module's symbol table by hand |
+| `pretty` / `verify` / `diff` | reading results; `verify` in CI, the other two by eye |
+| `surface` | adding names to the census: edit `data/surface.txt`, then regenerate |
+| `mine` | an emulator checkout has moved on and the corpus should see it |
+| `gap` | listing what the emulators implement that obSCEne never reaches |
 
-## Are the stubs generated, or written?
+## Generated stubs and written checks
 
-Both, and the split matters.
-
-**On the emulator side: generated, and they should be.** Once you have a NID→name
-table, a stub per entry is mechanical - log the name, return an unimplemented error,
-carry on. That is exactly what shadPS4's `CommonStub` does, and it is why its logs can
-say `Stub: sceKernelWrite (nid: 4wSze92BhLI) called` rather than just reporting a hash.
-Nobody should be hand-writing those.
-
-**This is the real payoff of the NID table.** It is not a curiosity - it is the pivot
-everything else turns on:
+**Emulator stubs are generated.** With a NID-to-name table, a stub per entry is mechanical: log
+the name, return an unimplemented error, carry on. shadPS4's `CommonStub` does this, which is
+why its logs name the function rather than the hash. The table is what everything else turns
+on:
 
 ```
 NID → name table
@@ -158,118 +113,62 @@ NID → name table
    └── a checklist of what to implement next
 ```
 
-Without the table you have hashes in your logs and no way to rank anything. With it,
-every one of those falls out mechanically.
-
-**On the probe side: written, deliberately.** Each obSCEne check is hand-written,
-because a check encodes an *expectation* and a generated expectation is worth nothing.
-"`strlen` returns the number of characters" comes from a standard; "closing an invalid
-handle returns non-zero" is a belief somebody held. Every check records which
-(`docs/DECISIONS.md`, D044), and generating them would erase exactly that distinction.
-
-The census is the exception that proves the rule - 289 names generated from a list,
-claiming only that a symbol exists, and nothing about what it does.
+**obSCEne checks are written by hand.** A check encodes an expectation, and a generated
+expectation is worth nothing. "`strlen` returns the number of characters" comes from a
+standard; "closing an invalid handle returns non-zero" is a belief. Every check records which
+(D044). The census is generated from a list because it claims only that a symbol exists.
 
 ## Running the loop
 
-Everything is `sh`, and the emulators are driven from it exactly as the builds are.
-
 ```bash
 # One run: build (in WSL), fetch, run, extract the report.
-sh scripts/run-emulator.sh --emulator C:\emu\shadPS4.exe
+sh scripts/run-emulator.sh --emulator <emulators>/shadps4/shadPS4.exe
 
-# A complete sweep: rounds until nothing kills the process.
-sh scripts/sweep.sh --emulator C:\emu\shadPS4.exe
+# Every loader on the same module, with a screenshot and log each.
+sh scripts/sweep-emulators.sh
 
-# Grow the NID table from whatever logs are lying around. Merges, never replaces.
+# Grow the NID table from emulator logs. Merges, never replaces.
 sh scripts/harvest-nids.sh reports/*.log
-```
 
-```bash
-# Everything that must pass before a change is done. Run this in WSL.
+# Everything that must pass before a change is done. Run in WSL.
 sh scripts/verify.sh
 ```
 
-The emulators themselves live in `<emulators>`, outside this repository, and the
-scripts default to the shadPS4 there. `docs/EMULATORS.md` says what is in the toolkit and
-why the source is kept alongside the binaries.
+The emulators live in `<emulators>`, outside this repository, and the scripts default to the
+shadPS4 there. [EMULATORS.md](EMULATORS.md) describes the kit.
 
-`sweep.sh` is the interesting one. It runs, reads the report for a `try` with no matching
-`res` - the announce-before-attempting invariant naming the exact call that did not
-return - adds that check to the exclusion list, and goes again. A typical result:
+A call that ends the process takes the rest of the suite with it. An exclusion sweep reads the
+report for a `try` with no matching `res`, adds that check to the exclusion list
+(`sweep-build.sh` builds with it), and runs again. Excluded checks stay in the report as skips
+with their reason. A timeout leaves the same trace as a crash, so a timeout doubles the budget
+and retries the same build; only an identical stopping point under twice the time is a hang
+(D144). The first pass starts with an empty exclusion list, so a stale exclusion never hides a
+check that no longer crashes.
 
-```
-round 1: 180 records, died in 040-file/open-rejects-null
-round 2: 209 records, died in 080-video/flip-rate-rejects-bad-handle
-round 3: 554 records, COMPLETE
-```
+Builds land on a Linux-local `BUILD` path, never the mounted `/mnt/c/...` tree: a Windows mount
+cannot carry the execute bit, and the host binary that generates `symbols.txt` will not run
+from it. Reports go to `reports/`. Calls from Git Bash into WSL set `MSYS_NO_PATHCONV=1`
+([TOOLING.md](TOOLING.md#path-conversion-under-git-bash)).
 
-Two calls that end the process, found and stepped over in three rounds without anyone
-watching. Both stay in the report as skips with their reason.
+## What obSCEne gives an emulator
 
-**A timeout is not a crash, and one round cannot tell them apart.** Both leave the same
-trace - a `try` with no `res` - so excluding on a timeout blames whichever check happened to
-be running when the clock ran out. Two rounds *can* tell them apart: a check that was merely
-unfinished gets further when given more time, and a hang stops in exactly the same place
-however long it is left. So a timeout doubles the budget and retries the same build, and only
-an identical stopping point under twice the time is called a hang (D144):
-
-```
-round 5: 65 records, the budget ran out at "015-sync/machine-kind"
-  retrying at 480s to tell a hang from a check that was still going
-round 6: 65 records, stopped at "015-sync/machine-kind" again
-  unchanged at 480s after 240s, so it is hung rather than unfinished. Excluding it.
-```
-
-Against fpPS4 that walk took 33 records to a complete 742, over 44 exclusions and 35 rounds.
-Two flags matter at that scale: `--resume` keeps an exclusion list a previous sweep proved,
-because each exclusion costs two runs; and `--corpus 0` leaves the thirty thousand mined
-targets out of the hunt, since the crashes a sweep is chasing live in the hand-written
-checks. Resuming is off by default - the first pass must start empty, or a stale exclusion
-hides a check that no longer crashes.
-
-### The one environment hazard worth knowing
-
-Git Bash rewrites anything that looks like a Unix path before a Windows program sees it, and
-`wsl.exe` is as Windows a program as any, however Linux the command it carries. So
-`wsl.exe -d Ubuntu -- bash -lc '... /home/ubuntu/obscene ...'` reaches the distro with its
-`/...` arguments rewritten to `C:/Program Files/Git/...`, and the command fails on a directory
-that does not exist. Paths meant for inside WSL must survive untouched, so every `wsl.exe` call
-goes through a one-line wrapper that sets `MSYS_NO_PATHCONV=1`.
-
-**This is why these scripts used to be PowerShell.** CLAUDE.md said to use it for the
-cross-boundary invocations for exactly this reason - and the reason was one environment
-variable, not a language. Writing them in sh also deleted the hazard PowerShell brought
-with it: it turns a native command's stderr into a terminating error, so a warning printed on
-a step that had actually succeeded would kill a script, intermittently.
-
-`build/` is a related trap: the build must land on a Linux-local `BUILD` path, never the
-mounted `/mnt/c/...` tree, because a Windows mount cannot carry the execute bit and the host
-binary that generates `symbols.txt` will not run from it. Reports go to `reports/`.
-
-## What obSCEne gives the emulator, concretely
-
-- **An inventory.** `110-modules` asks the platform what it has loaded rather than
-  testing a list somebody wrote.
-- **A stub map.** `007-responsive` says which functions read their arguments and which
-  return zero to everything. A failure against a stub is absence, not incorrectness.
-- **Behavioural checks** with `try`-before-call, so a call that takes the process down
-  is named rather than merely losing the run.
+- **An inventory.** `110-modules` asks the platform what it has loaded.
+- **A stub map.** `007-responsive` says which functions read their arguments and which return
+  zero to everything. A failure against a stub is absence, not incorrectness.
+- **Behavioural checks** with `try`-before-call, so a call that takes the process down is named.
 - **A diff** that reports what got worse.
-- **A drawn report**, for when there is no working way to get text out - which happens.
+- **A drawn report**, for when there is no working way to get text out.
 
-## What the emulator gives obSCEne
+## What an emulator gives obSCEne
 
-One thing, and it is the input the whole loop needs: **a machine-readable list of every
-NID it failed to resolve**, with its library and module. Names not required - an
-unresolved NID with a count is already actionable, and cracking it is downstream work.
+A machine-readable list of every NID it failed to resolve, with its library and module. Names
+are not required: an unresolved NID with a count is already actionable.
 
-## The same loop, on a real console
+## The loop on a console
 
-Everything above is the emulator loop. The console runs the identical probe and answers the
-same report, but the mechanics differ - the package builds in WSL, installs from Windows (the
-console fetches it), and the report comes off the system log rather than a pipe (D233). That
-whole round-trip is one command:
+The console runs the same probe and produces the same report. The package builds in WSL,
+installs from Windows (the console fetches it), and the report comes off the system log rather
+than a pipe.
 
 ```bash
 ./bin/obscene deploy    # build, install, launch, and capture the report
@@ -277,6 +176,6 @@ whole round-trip is one command:
 ./bin/obscene recover   # read-only, after a crash: what the console recorded
 ```
 
-`./bin/obscene help` lists every hardware verb, and `CLAUDE.md` ("Which side runs what") is the
-runbook for why each half runs where it does. `docs/HARDWARE.md` is what a real PS5 actually
-answered.
+`./bin/obscene help` lists every hardware verb. The repository `CLAUDE.md` ("Hardware
+round-trip") says which side runs each half. [HARDWARE.md](HARDWARE.md) records what the
+hardware answered.

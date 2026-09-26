@@ -48,7 +48,8 @@ exactly the stub-everything result `900-surface/control` exists to mark `(void)`
 It is good for **finding bugs in the loader**. In one sitting it took obSCEne from 1 record to
 102 and surfaced the `VideoOutOpen` contradiction above, plus `PthreadMutexattrSettype`
 calling `EXIT` on an unrecognised type where POSIX specifies `EINVAL`. The second of those
-produced D177, which is a finding about the platform rather than about Kyty.
+is a finding about the platform rather than about Kyty: the mutex type constants are one-based
+and are not the POSIX values.
 
 ## Applying and reverting
 
@@ -69,6 +70,6 @@ debugger. The patch makes it a function returning zero instead, which is what th
 Behaviour-changing, so `reports/fpps4-patched.txt` and not the stock row. (D176)
 
 36 records and a permanent hang become 36,631 records and a complete suite in two seconds,
-surviving 181 unimplemented-import calls that would each have ended the run. (D196)
+surviving 181 unimplemented-import calls that would each have ended the run.
 
 Rebuild with `lazbuild fpPS4.lpi`.

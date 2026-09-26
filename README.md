@@ -52,7 +52,7 @@ Within the [OOPS ecosystem](../docs/THE_LOOP.md), obSCEne serves as **The Silico
 
 When an emulator encounters an undocumented system call, the traditional approach is to guess or copy from leaked sources. In OOPS, we **ask the hardware directly**:
 1. An automated test case or probe section is added to obSCEne.
-2. [Prosperous](../prosperous/) delivers the probe to our physical PS5 (`192.168.1.211`).
+2. [Prosperous](../prosperous/) delivers the probe to a physical PS5 on the local network.
 3. The probe executes on the metal, logging exact return values and hex dumps of memory buffers to `klog`.
 4. The verified telemetry is fed back into [Orbistoun](../orbistoun/) with `known_by: measured`, permanently closing the gap with 100% clean-room provenance.
 
@@ -74,7 +74,7 @@ On real console firmware, **system privileges, sandbox boundaries, and dynamic l
 
 | Build Shape | Delivery & Context | Privileges & Sandboxing | What It Measures |
 |---|---|---|---|
-| **`payload`** | Bare ELF sent to `:9021` via `elfldr` (`pros send`). | Runs inside the previous generation's compatibility sandbox (`ps4_mode`) - not outside any sandbox. Dynamic introspection and the current-generation graphics driver are unavailable there (D276). | Low-level kernel syscalls, direct page table allocations, raw device drivers, and POSIX sockets. |
+| **`payload`** | Bare ELF sent to `:9021` via `elfldr` (`pros send`). | Runs inside the previous generation's compatibility sandbox (`ps4_mode`) - not outside any sandbox. Dynamic introspection and the current-generation graphics driver are unavailable there. | Low-level kernel syscalls, direct page table allocations, raw device drivers, and POSIX sockets. |
 | **`eboot`** | Fake-signed fSELF (`eboot.bin`) launched via `pros launch`. | Runs as a retail `BIG_APP` (`category 0`). Direct HDMI display ownership; controller focus. | Universal graphics queues (`libSceAgc`), video flip queues, DualSense controller polling, and retail app lifecycle. |
 | **`pkg`** | Installed package under encrypted PFS filesystem. | Strict retail sandbox. The report file itself is sealed `0600` inside it. Restricted filesystem; full OS security checks. | Save data mounting (`libSceSaveData`), background downloads (`BGFT`), entitlement checks, and retail sandboxing. |
 
