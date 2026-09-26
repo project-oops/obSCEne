@@ -297,12 +297,9 @@ static obs_result check_encoder_module_load(void) {
     int loaded_handle = -1;
     for (size_t i = 0; i < OBS_COUNT(search_paths); i++) {
         if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-            /* **Poisoned, not zeroed.** A zero here cannot be told apart from a
-             * platform that never writes the out-parameter at all - both report 0, so
-             * the measurement separates nothing, and orbistoun had to mark all
-             * twenty-four of them opaque (orbistoun D497). Poisoning makes "untouched"
-             * a visible answer, which is the same argument `obs_report_written` already
-             * makes for buffers.
+            /* Poisoned, not zeroed: a zero cannot be told apart from a platform that
+             * never writes the out-parameter. Poisoning makes "untouched" a visible
+             * answer, as `obs_report_written` does for buffers.
              *
              * `0xC7` is this project's own pattern byte, from `obs_layout_patterns`; a
              * word of it is a value no error code or handle would be. A platform that

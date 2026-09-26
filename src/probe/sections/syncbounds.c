@@ -22,10 +22,9 @@
  *
  * The obvious way to probe the semaphore is `sceKernelWaitSema`. It blocks: called on a
  * semaphore with no tokens it does not return until one arrives, and the third argument
- * that would bound the wait is a timeout whose *unit* is precisely one of the things
- * orbistoun records as unestablished (D540). A probe that blocks on a platform whose
- * semaphores are broken never comes back and loses every check behind it - an outcome
- * this suite has already paid for twice.
+ * that would bound the wait is a timeout whose unit is unestablished. A probe
+ * that blocks on a platform whose semaphores are broken never returns and loses
+ * every check behind it.
  *
  * `sceKernelPollSema` asks the same question about the `need` count and the bad handle
  * and always returns. It is the safe counterpart, exactly as `sceKernelPollEventFlag`
