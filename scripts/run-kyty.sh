@@ -24,7 +24,7 @@
 # drive it, which it explains when given nothing.
 # Paths are derived from this script's own location rather than hardcoded, so the
 # collection works wherever it is cloned. `$OOPS` is the parent holding all four projects.
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 OOPS="$(cd "$REPO/.." && pwd)"
 EMULATORS="${EMULATORS:-$(cd "$OOPS/.." && pwd)/emulators}"
@@ -37,6 +37,7 @@ TIMEOUT="${TIMEOUT:-240}"
 # The build environment lives in scripts/wsl.sh, which replaced multipass on 2026-08-26.
 # `VM` is kept because call sites still pass it positionally; there is no instance any more.
 # (D199)
+# shellcheck source=/dev/null
 . "$(dirname "$0")/wsl.sh"
 
 VM="${VM:-wsl}"

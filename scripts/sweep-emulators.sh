@@ -14,13 +14,12 @@
 #   sh scripts/sweep-emulators.sh                     # all of them
 #   sh scripts/sweep-emulators.sh shad cem            # named ones only
 #   sh scripts/sweep-emulators.sh --out /tmp/x --timeout 90
-# Paths are derived from this script's own location rather than hardcoded, so the
-# collection works wherever it is cloned. `$OOPS` is the parent holding all four projects.
-EMULATORS="${EMULATORS:-$(cd "$OOPS/.." && pwd)/emulators}"
-
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#
+# Paths derive from this script's location; `$OOPS` is the collection root.
+HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 OOPS="$(cd "$REPO/.." && pwd)"
+EMULATORS="${EMULATORS:-$(cd "$OOPS/.." && pwd)/emulators}"
 set -e
 
 OUT="${OUT:-reports/sweep}"
@@ -98,7 +97,7 @@ win() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf
 wslpath_of() {
     if command -v cygpath >/dev/null 2>&1; then
         p=$(cygpath -m "$1")
-        drive=$(printf '%s' "$p" | cut -c1 | tr 'A-Z' 'a-z')
+        drive=$(printf '%s' "$p" | cut -c1 | tr '[:upper:]' '[:lower:]')
         printf '/mnt/%s%s' "$drive" "$(printf '%s' "$p" | cut -c3-)"
     else
         printf '%s' "$1" | sed 's|^/\([a-zA-Z]\)/|/mnt/\1/|'
@@ -168,8 +167,8 @@ patched() {
 process_running() {
     command -v tasklist >/dev/null 2>&1 || return 1
     # MSYS_NO_PATHCONV, or Git Bash rewrites `/FI` into a Windows path and the filter is lost.
-    out=$(MSYS_NO_PATHCONV=1 tasklist /FI "IMAGENAME eq $1.exe" /NH 2>/dev/null | tr 'A-Z' 'a-z')
-    want=$(printf '%s' "$1.exe" | tr 'A-Z' 'a-z')
+    out=$(MSYS_NO_PATHCONV=1 tasklist /FI "IMAGENAME eq $1.exe" /NH 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    want=$(printf '%s' "$1.exe" | tr '[:upper:]' '[:lower:]')
     case "$out" in *"$want"*) return 0 ;; esac
     return 1
 }

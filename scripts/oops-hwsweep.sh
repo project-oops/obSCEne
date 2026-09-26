@@ -27,7 +27,8 @@ tool="$repo/tool/target-win/debug/obscene-tool.exe"
 # `wsl.exe` is handed the Linux form, so all three spellings come from the one root rather than
 # from three constants that can disagree - and no absolute path off this machine goes in the
 # file. `cygpath` is present wherever this runs, because it runs under Git Bash by definition.
-export CARGO_TARGET_DIR="$(cygpath -w "$repo/tool/target-win" 2>/dev/null || printf '%s' "$repo/tool/target-win")"
+CARGO_TARGET_DIR="$(cygpath -w "$repo/tool/target-win" 2>/dev/null || printf '%s' "$repo/tool/target-win")"
+export CARGO_TARGET_DIR
 # a Git Bash drive path to its WSL spelling, the same rewrite `oops-rebuild-pkg.sh` does.
 linux_repo="$(printf '%s' "$repo" | sed 's|^/\([a-zA-Z]\)/|/mnt/\1/|')"
 staged_pkg="$repo/build-sweep.pkg"

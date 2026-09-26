@@ -59,6 +59,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+# shellcheck source=/dev/null
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 export PATH="$HOME/.cargo/bin:$PATH"
 export CORPUS="$CORPUS_VAL"
@@ -70,8 +71,9 @@ outdir="$REPO/reports/hardware"
 mkdir -p "$outdir" "$REPO/build"
 TS="$(date +%Y%m%d-%H%M%S)"
 
-# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+# The title identity comes from app.env.
 app_env="$REPO/app.env"
+# shellcheck source=/dev/null
 [ -f "$app_env" ] && . "$app_env"
 TITLE_CODE="${TITLE_CODE:-O00001}"
 PKG_TITLE_ID="${PKG_TITLE_ID:-ORB${TITLE_CODE}}"
@@ -295,4 +297,4 @@ done
 
 echo
 echo "=== sweep $TS complete - files under reports/hardware/ ==="
-ls -la "$outdir"/${TS}-*.log "$outdir"/${TS}-*.obs.log 2>/dev/null
+ls -la "$outdir/${TS}"-*.log "$outdir/${TS}"-*.obs.log 2>/dev/null

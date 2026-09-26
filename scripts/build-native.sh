@@ -27,13 +27,15 @@
 # The eboot itself is built by `make eboot` (this script is invoked by `make native`, which
 # depends on it) and its bytes come from selfish - this script only orchestrates.
 set -e
+# shellcheck source=/dev/null
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
 BUILD="${1:?usage: build-native.sh <BUILD> [TARGET]}"
 TARGET_NAME="${2:-prospero}"
 SELFISH="${SELFISH:-../selfish}"
-# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+# The title identity comes from app.env.
 app_env="$(dirname "$0")/../app.env"
+# shellcheck source=/dev/null
 [ -f "$app_env" ] && . "$app_env"
 TITLE_CODE="${TITLE_CODE:-O00001}"
 TITLE="${TITLE:-${TITLE_NAME:-obSCEne}}"
@@ -44,35 +46,19 @@ fi
 TITLE_ID="${TITLE_ID:-PPSA90000}"
 CONTENT_ID="${CONTENT_ID:-UP0000-${TITLE_ID}_00-OBSCENE000000000}"
 deeplink_arg=()
-category_arg=(--category 0)
 if [ "${NO_EBOOT:-0}" = "1" ]; then
     DEEPLINK="${DEEPLINK:-http://127.0.0.1:8080/}"
     deeplink_arg=(--deeplink "$DEEPLINK")
-    category_arg=(--category 65536)
 fi
 
 out="$BUILD/$TARGET_NAME"
 rm -rf "$out"
 mkdir -p "$out"
 
-# Stage what `selfish build title --root` copies verbatim into the title directory: the eboot, unless
-# a deeplink-only layout was asked for.
-root_arg=()
-if [ "${NO_EBOOT:-0}" != "1" ]; then
-    if [ ! -f "$BUILD/eboot.bin" ]; then
-        echo "build-native: no eboot at $BUILD/eboot.bin - run 'make native' (which builds it) or" >&2
-        echo "              'make eboot' first, or set NO_EBOOT=1 for a deeplink-only layout." >&2
-        exit 1
-    fi
-    ebootroot="$BUILD/native-root"
-    rm -rf "$ebootroot"
-    mkdir -p "$ebootroot"
-    cp "$BUILD/eboot.bin" "$ebootroot/eboot.bin"
-    if [ -d "$BUILD/sce_module" ]; then
-        mkdir -p "$ebootroot"
-        cp -r "$BUILD/sce_module" "$ebootroot/sce_module"
-    fi
-    root_arg=(--root "$(cd "$ebootroot" && pwd)")
+if [ "${NO_EBOOT:-0}" != "1" ] && [ ! -f "$BUILD/eboot.bin" ]; then
+    echo "build-native: no eboot at $BUILD/eboot.bin - run 'make native' (which builds it) or" >&2
+    echo "              'make eboot' first, or set NO_EBOOT=1 for a deeplink-only layout." >&2
+    exit 1
 fi
 
 selfish() { ( cd "$SELFISH" && PATH="$HOME/.cargo/bin:$PATH" cargo run -q -p selfish-cli -- "$@" ); }

@@ -8,7 +8,10 @@
 set -e
 BUILD="${BUILD:-/tmp/obs}"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/tmp/obscene-tool-target}"
-. "$HOME/.cargo/env" 2>/dev/null || true
+if [ -f "$HOME/.cargo/env" ]; then
+    # shellcheck source=/dev/null
+    . "$HOME/.cargo/env"
+fi
 
 (cd tool && cargo build --release --quiet)
 make module BUILD="$BUILD" 2>&1 | grep -v '^clang' | grep -v '^    -'

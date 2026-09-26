@@ -1,18 +1,10 @@
 #!/bin/bash
-# Run verify.sh inside WSL with per-gate progress, so a long run can be watched rather than
-# waited on blind.
-#
-# verify.sh only prints its verdict at the end, so a run that is merely slow is
-# indistinguishable from one that has hung - which cost a 50-minute wait and three background
-# tasks that could not be told apart from finished ones. This streams each gate with the time
-# it started, to $HOME/verify-progress.txt.
-# Paths are derived from this script's own location rather than hardcoded, so the
-# collection works wherever it is cloned. `$OOPS` is the parent holding all four projects.
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$HERE/.." && pwd)"
-OOPS="$(cd "$REPO/.." && pwd)"
+# Runs verify.sh inside WSL and streams each gate, with the second it started, to
+# $HOME/verify-progress.txt, so a slow run can be told apart from a hung one. The full output
+# goes to $HOME/verify.txt.
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="$HOME/.cargo/bin:$PATH" CARGO_TARGET_DIR="$HOME/obs-tool-target"
-cd "$REPO"
+cd "$REPO" || exit
 p="$HOME/verify-progress.txt"
 : > "$p"
 start=$(date +%s)
@@ -22,5 +14,6 @@ bash scripts/verify.sh BUILD="$HOME/obs" 2>&1 | while IFS= read -r l; do
     esac
     printf '%s\n' "$l"
 done > "$HOME/verify.txt"
-rc=$?
+rc=${PIPESTATUS[0]}
 printf '[%4ss] EXIT=%s\n' "$(( $(date +%s) - start ))" "$rc" >> "$p"
+exit "$rc"

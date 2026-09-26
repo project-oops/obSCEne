@@ -73,6 +73,7 @@ if [ -z "$into" ]; then
     fi
 fi
 
+# shellcheck source=/dev/null
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 export PATH="$HOME/.cargo/bin:$PATH"
 export CARGO_TARGET_DIR="$HOME/obs-tool-target"

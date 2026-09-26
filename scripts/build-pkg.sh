@@ -14,8 +14,9 @@ BUILD="${1:?usage: build-pkg.sh <BUILD> [TARGET]}"
 TARGET_NAME="${2:-orbis}"
 SELFISH="${SELFISH:-../selfish}"
 GEN="${GEN:-4}"
-# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+# The title identity comes from app.env.
 app_env="$(dirname "$0")/../app.env"
+# shellcheck source=/dev/null
 [ -f "$app_env" ] && . "$app_env"
 TITLE_CODE="${TITLE_CODE:-O00001}"
 TITLE="${TITLE:-${TITLE_NAME:-obSCEne}}"

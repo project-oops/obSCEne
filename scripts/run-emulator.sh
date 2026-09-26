@@ -24,7 +24,7 @@
 # the sort of thing worth a comment rather than a scar.
 # Paths are derived from this script's own location rather than hardcoded, so the
 # collection works wherever it is cloned. `$OOPS` is the parent holding all four projects.
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 OOPS="$(cd "$REPO/.." && pwd)"
 EMULATORS="${EMULATORS:-$(cd "$OOPS/.." && pwd)/emulators}"
@@ -37,6 +37,7 @@ TIMEOUT="${TIMEOUT:-70}"
 # The build environment lives in scripts/wsl.sh, which replaced multipass on 2026-08-26.
 # `VM` is kept because call sites still pass it positionally; there is no instance any more.
 # (D199)
+# shellcheck source=/dev/null
 . "$(dirname "$0")/wsl.sh"
 
 VM="${VM:-wsl}"
@@ -169,8 +170,8 @@ emulator_name=$(basename "$EMULATOR" .exe)
 process_running() {
     command -v tasklist >/dev/null 2>&1 || return 1
     # MSYS_NO_PATHCONV, or Git Bash rewrites `/FI` into a Windows path and the filter is lost.
-    out=$(MSYS_NO_PATHCONV=1 tasklist /FI "IMAGENAME eq $1.exe" /NH 2>/dev/null | tr 'A-Z' 'a-z')
-    want=$(printf '%s' "$1.exe" | tr 'A-Z' 'a-z')
+    out=$(MSYS_NO_PATHCONV=1 tasklist /FI "IMAGENAME eq $1.exe" /NH 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    want=$(printf '%s' "$1.exe" | tr '[:upper:]' '[:lower:]')
     case "$out" in *"$want"*) return 0 ;; esac
     return 1
 }

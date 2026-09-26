@@ -23,7 +23,7 @@
 # rebuilding between runs would measure the build rather than the platform.
 # Paths are derived from this script's own location rather than hardcoded, so the
 # collection works wherever it is cloned. `$OOPS` is the parent holding all four projects.
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 OOPS="$(cd "$REPO/.." && pwd)"
 EMULATORS="${EMULATORS:-$(cd "$OOPS/.." && pwd)/emulators}"
@@ -47,6 +47,7 @@ done
 
 here=$(dirname "$0")
 # The build environment lives in scripts/wsl.sh, which replaced multipass. (D199)
+# shellcheck source=/dev/null
 . "$(dirname "$0")/wsl.sh"
 
 if [ -n "$CHURN" ]; then

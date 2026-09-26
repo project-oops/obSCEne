@@ -37,6 +37,7 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/tmp/obscene-tool-target}"
 # direction: the first version could never fail, and this could fail without saying anything.
 # A gate has to be honest in both directions.
 if [ -f "$HOME/.cargo/env" ]; then
+    # shellcheck source=/dev/null
     . "$HOME/.cargo/env"
 fi
 

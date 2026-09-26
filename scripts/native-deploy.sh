@@ -16,6 +16,7 @@
 # different scan root (e.g. --into /mnt/usb0); --name desk picks a non-default device. All pass
 # through to the tool.
 set -euo pipefail
+# shellcheck source=/dev/null
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 cd "$(dirname "$0")/.."
 
@@ -24,8 +25,9 @@ BUILD="${BUILD:-$HOME/obs}"
 build=1
 if [ "${1:-}" = "--deploy-only" ]; then build=0; shift; fi
 
-# Title identity sourced from app.env, per standard OOPS convention (REQ-20260911T0940Z-e39a).
+# The title identity comes from app.env.
 app_env="app.env"
+# shellcheck source=/dev/null
 [ -f "$app_env" ] && . "$app_env"
 TITLE_CODE="${TITLE_CODE:-O00001}"
 appid="${TITLE_ID:-PRO${TITLE_CODE}}"

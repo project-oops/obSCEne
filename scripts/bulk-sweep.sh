@@ -105,6 +105,7 @@ done
 here=$(dirname "$0")
 
 # The build environment lives in scripts/wsl.sh, which replaced multipass. (D199)
+# shellcheck source=/dev/null
 . "$(dirname "$0")/wsl.sh"
 
 work="${TMPDIR:-/tmp}/obscene-bulk.$$"
