@@ -1,16 +1,15 @@
 # D005 - Freestanding C, clang only, no vendor SDK
 
-**assumed** · 2026-08-19
+**Status:** decided
+**Date:** 2026-09-26
 
-`-ffreestanding -nostdlib`, target triple `x86_64-unknown-freebsd`, no libc, no SDK
-headers. Imports are ordinary undefined symbols the loader resolves.
+The probe is freestanding C (`-ffreestanding -nostdlib`) built with clang, with no libc and no
+vendor headers. Imports are ordinary undefined symbols the loader resolves. The compiler's own
+`memcpy`, `memset` and `memmove` calls are satisfied by local definitions.
 
-Three things fall out of it. Provenance stays clean - nothing here derives from
-vendor headers. The import list in the finished object is an accurate statement of
-what the program needs, because nothing was linked in that a console would not
-already provide. And the build needs one tool that anybody already has.
+**Why:** provenance stays clean, the import list is an exact statement of what the program asks
+the platform for, and the toolchain is one anybody has.
 
-`memcpy` and `memset` are defined by hand: the compiler emits calls to them
-regardless of `-ffreestanding`, and without definitions the link fails naming a
-function nothing in the source calls.
-
+**Rejected:** a vendor or community SDK - its headers and stub lists carry provenance this
+project cannot adopt. Linking a libc - the probe would measure its own library instead of the
+platform's.

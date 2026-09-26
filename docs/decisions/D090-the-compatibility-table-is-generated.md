@@ -1,33 +1,15 @@
-# D090 - The compatibility table is generated from reports, because a hand-written one would be stale by tomorrow
+# D090 - The compatibility table is generated and ranks nothing
 
+**Status:** decided
+**Date:** 2026-09-26
 
-Status: decided.
+`docs/COMPATIBILITY.md` is rendered from loader reports by `obscene-tool compat` and gated for
+drift. It keeps per-section tallies, marks a census whose control failed as void, and does not
+rank loaders. Hardware results are not a column; the document points to `docs/HARDWARE.md`.
 
-`docs/EMULATORS.md` said what each loader *is* and nothing about what each loader *did* -
-which is the question anybody arrives with, and the one whose answer changes every time the
-suite grows or an emulator is updated.
+**Why:** what each loader did changes with every suite or emulator update, so a hand-written table
+is stale at once. A pass count is not a quality score. The console is the reference the loaders
+are measured toward, not one of them.
 
-`scripts/compat.py` renders it from the reports themselves into a marked region, and
-`--check` runs in `verify.sh`. Same contract as `counts.py`, for the same reason (D069).
-
-**It does not rank loaders and says so.** A pass count is not a quality score: a loader
-resolving everything to a stub scores well on presence and badly on behaviour, and one that
-refuses to load scores nothing while being the most honest of the three. Per-section
-tallies are kept rather than merged, because "fails everything in one section" and "fails
-one check in each of eight" are different platforms.
-
-**Kyty is included despite producing no records**, because "produced nothing and did not
-reach the end" is a fact about a loader and belongs in a compatibility table rather than
-only in prose.
-
-### And it repeated a mistake I had already fixed once
-
-The first version listed `000-boot` among the sections the loaders disagree on - with both
-reporting loaders showing exactly `4/0/0/0`. Kyty had no entry for it, and its *absence*
-was being counted as a differing opinion.
-
-That is precisely the skip-handling bug found in `obscene-tool consensus` four hours
-earlier (D072), in a different file, written by the same hand, after writing the decision
-record explaining it. **Absence is not an opinion** appears to need enforcing rather than
-remembering, and both places now say so in a comment pointing at the other.
-
+**Rejected:** a hand-maintained table - drifts. A hardware column - couples a gated generated table
+to a hand-captured run.
