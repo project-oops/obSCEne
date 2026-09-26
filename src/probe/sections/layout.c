@@ -549,16 +549,23 @@ static obs_result check_resolution_status(void) {
 static obs_result check_video_out_output_status(void) {
     OBS_REQUIRE(&sceVideoOutOpen, &sceVideoOutClose, &sceUserServiceGetInitialUser);
 
-    int32_t user = 0;
-    if (sceUserServiceGetInitialUser(&user) != 0) {
-        return obs_skip("no initial user to open an output for");
-    }
-    int handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
-    if (handle <= 0) {
-        if (obs_display_holds_output()) {
-            return obs_skip("display path holds output, second open refused");
+    int borrowed = 0;
+    int handle = -1;
+    if (obs_display_holds_output()) {
+        handle = obs_display_get_video_handle();
+        if (handle > 0) {
+            borrowed = 1;
         }
-        return obs_skip("no video output to query");
+    }
+    if (handle <= 0) {
+        int32_t user = 0;
+        if (sceUserServiceGetInitialUser(&user) != 0) {
+            return obs_skip("no initial user to open an output for");
+        }
+        handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
+        if (handle <= 0) {
+            return obs_skip("no video output to query");
+        }
     }
 
     const char *id = "130-layout/video-out-output-status";
@@ -588,8 +595,10 @@ static obs_result check_video_out_output_status(void) {
         }
     }
 
-    /* Arm with buffer registered if direct memory is available */
-    if (obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory) &&
+    /* Arm with buffer registered if direct memory is available and handle not borrowed
+     */
+    if (!borrowed &&
+        obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory) &&
         obs_address_is_callable((const void *)&sceKernelMapDirectMemory) &&
         obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers) &&
         obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute)) {
@@ -677,7 +686,8 @@ static obs_result check_video_out_output_status(void) {
         }
     }
 
-    if (handle > 0) {
+    if (!borrowed && handle > 0 &&
+        obs_address_is_callable((const void *)&sceVideoOutClose)) {
         (void)sceVideoOutClose(handle);
     }
     return obs_pass();
@@ -686,16 +696,23 @@ static obs_result check_video_out_output_status(void) {
 static obs_result check_video_out_vblank_status(void) {
     OBS_REQUIRE(&sceVideoOutOpen, &sceVideoOutClose, &sceUserServiceGetInitialUser);
 
-    int32_t user = 0;
-    if (sceUserServiceGetInitialUser(&user) != 0) {
-        return obs_skip("no initial user to open an output for");
-    }
-    int handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
-    if (handle <= 0) {
-        if (obs_display_holds_output()) {
-            return obs_skip("display path holds output, second open refused");
+    int borrowed = 0;
+    int handle = -1;
+    if (obs_display_holds_output()) {
+        handle = obs_display_get_video_handle();
+        if (handle > 0) {
+            borrowed = 1;
         }
-        return obs_skip("no video output to query");
+    }
+    if (handle <= 0) {
+        int32_t user = 0;
+        if (sceUserServiceGetInitialUser(&user) != 0) {
+            return obs_skip("no initial user to open an output for");
+        }
+        handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
+        if (handle <= 0) {
+            return obs_skip("no video output to query");
+        }
     }
 
     const char *id = "130-layout/video-out-vblank-status";
@@ -775,7 +792,10 @@ static obs_result check_video_out_vblank_status(void) {
         }
     }
 
-    (void)sceVideoOutClose(handle);
+    if (!borrowed && handle > 0 &&
+        obs_address_is_callable((const void *)&sceVideoOutClose)) {
+        (void)sceVideoOutClose(handle);
+    }
     return obs_pass();
 }
 

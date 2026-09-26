@@ -500,7 +500,7 @@ static obs_result check_video_visual_flip(void) {
         sce_equeue_t eq = 0;
         int eq_rc = fn_create_eq(&eq, "visual_flip_eq");
         if (eq_rc == 0 && eq != 0) {
-            (void)fn_add_flip_ev(eq, handle, (void *)0x1234);
+            (void)fn_add_flip_ev(eq, handle, (void *)0xabcd);
             int out_events = 0;
             uint8_t ev_buf[256];
             for (size_t j = 0; j < sizeof(ev_buf); j++)
@@ -535,6 +535,98 @@ static obs_result check_video_visual_flip(void) {
                                "timeout-64", (uint64_t)(uint32_t)w_rc64, "rc");
             obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
                                "elapsed-64", t1 >= t0 ? (t1 - t0) : 0, "us");
+
+            /* REQ-20260926T1927Z-4e20: Dump flip completion kevent */
+            static const int64_t flip_args[3] = {(int64_t)0x123456789aULL, -1LL,
+                                                 (int64_t)0x00007fffffffffffULL};
+            static const char *arm_names[3] = {"flip-arg-normal", "flip-arg-minus1",
+                                               "flip-arg-48bit"};
+
+            int vo_mod = obs_module_open("libSceVideoOut");
+            int (*fn_get_ev_id)(const void *) =
+                (int (*)(const void *))obs_module_symbol(vo_mod > 0 ? vo_mod : 1,
+                                                         "sceVideoOutGetEventId");
+            int64_t (*fn_get_ev_data)(const void *) =
+                (int64_t (*)(const void *))obs_module_symbol(vo_mod > 0 ? vo_mod : 1,
+                                                             "sceVideoOutGetEventData");
+
+            obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventId",
+                               "resolved", fn_get_ev_id != NULL ? 1 : 0, "bool");
+            obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventData",
+                               "resolved", fn_get_ev_data != NULL ? 1 : 0, "bool");
+
+            uint8_t before_c7[256];
+            memset(before_c7, 0xC7, sizeof(before_c7));
+
+            for (int a = 0; a < 3; a++) {
+                int64_t f_arg = flip_args[a];
+                const char *arm = arm_names[a];
+                memset(ev_buf, 0xC7, sizeof(ev_buf));
+                out_events = 0;
+                int flip_rc = sceVideoOutSubmitFlip(handle, a % 2, 1, f_arg);
+                obs_report_measure("080-video/visual-flip", arm, "flip-rc",
+                                   (uint64_t)(uint32_t)flip_rc, "rc");
+
+                uint64_t to_wait = 200000; /* 200ms wait for flip to complete */
+                int w_rc = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to_wait);
+                obs_report_measure("080-video/visual-flip", arm, "wait-rc",
+                                   (uint64_t)(uint32_t)w_rc, "rc");
+                obs_report_measure("080-video/visual-flip", arm, "out-events",
+                                   (uint64_t)(uint32_t)out_events, "events");
+
+                if (w_rc == 0 && out_events > 0) {
+                    obs_report_written("080-video/visual-flip", arm, "kevent",
+                                       before_c7, ev_buf, 40);
+                    uint64_t ev_ident = *(const uint64_t *)(ev_buf + 0);
+                    int16_t ev_filter = *(const int16_t *)(ev_buf + 8);
+                    uint16_t ev_flags = *(const uint16_t *)(ev_buf + 10);
+                    uint32_t ev_fflags = *(const uint32_t *)(ev_buf + 12);
+                    int64_t ev_data = *(const int64_t *)(ev_buf + 16);
+                    uint64_t ev_udata = *(const uint64_t *)(ev_buf + 24);
+
+                    obs_report_measure("080-video/visual-flip", arm, "ident", ev_ident,
+                                       "ident");
+                    obs_report_measure("080-video/visual-flip", arm, "filter",
+                                       (uint64_t)(int64_t)ev_filter, "filter");
+                    obs_report_measure("080-video/visual-flip", arm, "flags",
+                                       (uint64_t)ev_flags, "flags");
+                    obs_report_measure("080-video/visual-flip", arm, "fflags",
+                                       (uint64_t)ev_fflags, "fflags");
+                    obs_report_measure("080-video/visual-flip", arm, "data",
+                                       (uint64_t)ev_data, "data");
+                    obs_report_measure("080-video/visual-flip", arm, "udata", ev_udata,
+                                       "udata");
+                    obs_report_measure("080-video/visual-flip", arm, "data-bits-0-15",
+                                       (uint64_t)(ev_data & 0xffff), "bits");
+                    obs_report_measure("080-video/visual-flip", arm, "data-bits-58-63",
+                                       (uint64_t)((ev_data >> 58) & 0x3f), "bits");
+
+                    if (fn_get_ev_id != NULL) {
+                        obs_jmp_buf g;
+                        if (OBS_FAULT_ARM(&g) == 0) {
+                            int ev_id = fn_get_ev_id(ev_buf);
+                            obs_fault_unregister();
+                            obs_report_measure("080-video/visual-flip", arm,
+                                               "get-event-id",
+                                               (uint64_t)(uint32_t)ev_id, "id");
+                        } else {
+                            obs_fault_unregister();
+                        }
+                    }
+                    if (fn_get_ev_data != NULL) {
+                        obs_jmp_buf g;
+                        if (OBS_FAULT_ARM(&g) == 0) {
+                            int64_t ev_data_ret = fn_get_ev_data(ev_buf);
+                            obs_fault_unregister();
+                            obs_report_measure("080-video/visual-flip", arm,
+                                               "get-event-data", (uint64_t)ev_data_ret,
+                                               "data");
+                        } else {
+                            obs_fault_unregister();
+                        }
+                    }
+                }
+            }
 
             if (fn_del_flip_ev != NULL) {
                 fn_del_flip_ev(eq, handle);

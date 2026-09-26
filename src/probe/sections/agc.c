@@ -3356,6 +3356,11 @@ static obs_result check_agc_driver_symbols(void) {
                                        (uint64_t)(uint32_t)sig, "sig");
                 }
             } else if (strcmp(name, "sceAgcDriverWaitUntilSafeForRendering") == 0) {
+                int vo_handle = -1;
+                if (obs_display_holds_output()) {
+                    vo_handle = obs_display_get_video_handle();
+                }
+                int target_h = (vo_handle > 0) ? vo_handle : 1;
                 uint32_t words[64];
                 uint32_t before_w[64];
                 for (int k = 0; k < 64; k++) {
@@ -3368,7 +3373,7 @@ static obs_result check_agc_driver_symbols(void) {
                 obs_jmp_buf guard;
                 int sig = OBS_FAULT_ARM(&guard);
                 if (sig == 0) {
-                    int rc0 = wait_fn(&up, words + 64, 0, 1, 0);
+                    int rc0 = wait_fn(&up, words + 64, 0, target_h, 0);
                     obs_fault_unregister();
                     uint64_t dw_written0 = (uint64_t)(up - words);
                     obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0", "rc",
@@ -3390,7 +3395,7 @@ static obs_result check_agc_driver_symbols(void) {
                 up = words;
                 sig = OBS_FAULT_ARM(&guard);
                 if (sig == 0) {
-                    int rc1 = wait_fn(&up, words + 64, 0, 1, 1);
+                    int rc1 = wait_fn(&up, words + 64, 0, target_h, 1);
                     obs_fault_unregister();
                     uint64_t dw_written1 = (uint64_t)(up - words);
                     obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1", "rc",
@@ -20186,7 +20191,14 @@ static obs_result check_agc_dcb_set_flip(void) {
     /* Pass 3: With VideoOut port open (REQ-20260926T1927Z-1d54) */
     int vo_user = 0;
     int vo_handle = -1;
-    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser) &&
+    int vo_borrowed = 0;
+    if (obs_display_holds_output()) {
+        vo_handle = obs_display_get_video_handle();
+        if (vo_handle > 0) {
+            vo_borrowed = 1;
+        }
+    }
+    if (vo_handle <= 0 && obs_address_is_callable((const void *)&sceUserServiceGetInitialUser) &&
         obs_address_is_callable((const void *)&sceVideoOutOpen)) {
         if (sceUserServiceGetInitialUser(&vo_user) == 0) {
             vo_handle = sceVideoOutOpen(vo_user, OBS_VIDEO_BUS_MAIN, 0, NULL);
@@ -20233,7 +20245,7 @@ static obs_result check_agc_dcb_set_flip(void) {
                 }
             }
         }
-        if (obs_address_is_callable((const void *)&sceVideoOutClose)) {
+        if (!vo_borrowed && vo_handle > 0 && obs_address_is_callable((const void *)&sceVideoOutClose)) {
             sceVideoOutClose(vo_handle);
         }
     }
