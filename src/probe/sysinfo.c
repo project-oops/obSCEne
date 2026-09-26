@@ -397,10 +397,11 @@ obs_sys_state obs_sysinfo_value(obs_sys_field field, char *buf, size_t n) {
     }
 }
 
+#if !defined(OBS_NO_UI)
 /* The record's tier word. The report carries the tier as a name because a consumer
  * diffing two platforms needs "unwired here, missing there" to read as different, not
  * both as `unknown`. */
-__attribute__((unused)) static const char *obs_state_word(obs_sys_state state) {
+static const char *obs_state_word(obs_sys_state state) {
     switch (state) {
     case OBS_SYS_KNOWN:
         return "known";
@@ -416,7 +417,7 @@ __attribute__((unused)) static const char *obs_state_word(obs_sys_state state) {
  * read well on a status line; `firmware`/`storage` are what a report reader keys on,
  * and an abbreviation is a presentation choice that should not be a field name in an
  * interface. */
-__attribute__((unused)) static const char *obs_field_key(obs_sys_field field) {
+static const char *obs_field_key(obs_sys_field field) {
     switch (field) {
     case OBS_SYS_LISTENING:
         return "listening";
@@ -449,6 +450,7 @@ __attribute__((unused)) static const char *obs_field_key(obs_sys_field field) {
         return "unknown";
     }
 }
+#endif
 
 void obs_sysinfo_report(void) {
 #if defined(OBS_NO_UI)

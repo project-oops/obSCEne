@@ -27,10 +27,6 @@ title's sandbox (D233); `deploy` calls it across the launch. It replaced `oops-k
 `hw pull /data/...` half of the old deploy scripts, which fetched a file the console will not hand
 over.
 
-Two scripts here are cross-repo rather than obSCEne's own, so they belong to `oops`, not a verb:
-`oops-ci.sh` and `oops-selfcheck.sh` run the gates across both `selfish` and obSCEne. `oops check
-selfish obscene` and `oops all` are the thorough form of the same thing.
-
 Everything here takes arguments or reads the environment. A script that hardcodes one path is a
 script somebody will copy and edit rather than reuse.
 
