@@ -31,6 +31,7 @@
  * worse than reporting nothing (D008).
  */
 
+#include "oops/freestd.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -492,6 +493,120 @@ static obs_result check_module_tiers(void) {
     return obs_pass_value((uint64_t)resolved);
 }
 
+static obs_result check_runtime_load_lifecycle(void) {
+    const char *id = "110-modules/runtime-load-lifecycle";
+    if (!obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
+        return obs_skip("sceKernelGetModuleList not callable");
+    }
+
+    /* 3. Resident before main? */
+    int libc_listed_before = 0;
+    int libc_handle_before = -1;
+    int list_handles[OBS_MODULE_MAX];
+    size_t written = 0;
+    if (sceKernelGetModuleList(list_handles, OBS_MODULE_MAX, &written) == 0) {
+        for (size_t i = 0; i < written; i++) {
+            char name_buf[OBS_MODULE_NAME_MAX];
+            if (obs_address_is_callable((const void *)&sceKernelGetModuleInfo)) {
+                unsigned char info[OBS_MODULE_INFO_BYTES];
+                memset(info, 0, sizeof(info));
+                *(uint32_t *)(void *)info = sizeof(info);
+                if (sceKernelGetModuleInfo(list_handles[i], info) == 0) {
+                    if (obs_copy_name(info, name_buf, sizeof(name_buf))) {
+                        if (obs_strstr(name_buf, "libc.prx") != NULL ||
+                            obs_strcmp(name_buf, "libc") == 0) {
+                            libc_listed_before = 1;
+                            libc_handle_before = list_handles[i];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    obs_report_measure(id, "resident-check", "libc-listed-before",
+                       (uint64_t)libc_listed_before, "bool");
+    if (libc_handle_before >= 0) {
+        obs_report_measure(id, "resident-check", "libc-handle-before",
+                           (uint64_t)(uint32_t)libc_handle_before, "handle");
+    }
+
+    if (!obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        return obs_pass();
+    }
+
+    int h_kernel = obs_module_open("libkernel");
+    typedef int (*fn_sceKernelStopUnloadModule_t)(int handle, size_t argc,
+                                                  const void *argv, uint32_t flags,
+                                                  const void *opt, int *res);
+    fn_sceKernelStopUnloadModule_t fn_stop_unload = NULL;
+    if (h_kernel >= 0) {
+        fn_stop_unload = (fn_sceKernelStopUnloadModule_t)obs_module_symbol(
+            h_kernel, "sceKernelStopUnloadModule");
+    }
+    obs_report_measure(id, "sceKernelStopUnloadModule", "resolved",
+                       (uint64_t)(fn_stop_unload != NULL), "bool");
+
+    /* 1. First Load */
+    const char *prx_path = "/app0/sce_module/libc.prx";
+    struct {
+        uint64_t size;
+        uint32_t version;
+        uint32_t unused;
+    } start_args = {0x10, 0x200, 0};
+
+    int res1 = 0x5a5a5a5a; /* poison res */
+    int h1 = sceKernelLoadStartModule(prx_path, sizeof(start_args), &start_args, 0,
+                                      NULL, &res1);
+    obs_report_measure(id, "first-load", "handle", (uint64_t)(uint32_t)h1, "code");
+    obs_report_measure(id, "first-load", "res", (uint64_t)(uint32_t)res1, "code");
+
+    /* Check Dlsym on export if loaded */
+    void *sym_ptr1 = NULL;
+    if (h1 >= 0 && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        (void)sceKernelDlsym(h1, "module_start", &sym_ptr1);
+        obs_report_measure(id, "first-load", "dlsym-module-start",
+                           (uint64_t)(sym_ptr1 != NULL), "bool");
+    }
+
+    /* 2. Second Load (Refcount test) */
+    int res2 = 0x5a5a5a5a;
+    int h2 = sceKernelLoadStartModule(prx_path, sizeof(start_args), &start_args, 0,
+                                      NULL, &res2);
+    obs_report_measure(id, "second-load", "handle", (uint64_t)(uint32_t)h2, "code");
+    obs_report_measure(id, "second-load", "res", (uint64_t)(uint32_t)res2, "code");
+    obs_report_measure(id, "second-load", "same-handle",
+                       (uint64_t)(h1 >= 0 && h1 == h2), "bool");
+
+    /* StopUnload calls */
+    if (fn_stop_unload != NULL && h1 >= 0) {
+        for (int step = 1; step <= 3; step++) {
+            char tag[32];
+            tag[0] = 's';
+            tag[1] = 't';
+            tag[2] = 'o';
+            tag[3] = 'p';
+            tag[4] = '-';
+            tag[5] = (char)('0' + step);
+            tag[6] = '\0';
+            int res_stop = 0x5a5a5a5a;
+            int rc_stop =
+                fn_stop_unload(h1, sizeof(start_args), &start_args, 0, NULL, &res_stop);
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc_stop, "code");
+            obs_report_measure(id, tag, "res", (uint64_t)(uint32_t)res_stop, "code");
+
+            void *sym_post = NULL;
+            if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+                (void)sceKernelDlsym(h1, "module_start", &sym_post);
+            }
+            obs_report_measure(id, tag, "dlsym-post", (uint64_t)(sym_post != NULL),
+                               "bool");
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check module_checks[] = {
     {"110-modules/load", "libkernel", "sceKernelLoadStartModule", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelLoadStartModule, check_module_load,
@@ -514,6 +629,9 @@ static const obs_check module_checks[] = {
     {"110-modules/tier-probe", "libkernel", "sceKernelLoadStartModule", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelLoadStartModule, check_module_tiers,
      OBS_FROM_ASSUMED},
+    {"110-modules/runtime-load-lifecycle", "libkernel", "sceKernelLoadStartModule",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelLoadStartModule,
+     check_runtime_load_lifecycle, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_modules = {

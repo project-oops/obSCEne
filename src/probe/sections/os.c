@@ -5,11 +5,13 @@
  * here needs at least one of them.
  */
 
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
+#include "oops/freestd.h"
 
 /* ---- 040-file -------------------------------------------------------------- */
 
@@ -274,27 +276,46 @@ static obs_result check_sysmodule_reports_unloaded(void) {
     int rc0 = sceSysmoduleIsLoaded(0);
     obs_report_measure(id, sym, "rc-id-0", (uint64_t)(uint32_t)rc0, "rc");
 
-    /* Optional module ID 0x0080 (libSceJson2) lifecycle: before load, load, after load,
-     * unload, after unload */
-    uint16_t opt_id = 0x0080;
-    int rc_before = sceSysmoduleIsLoaded(opt_id);
-    obs_report_measure(id, sym, "rc-before-load", (uint64_t)(uint32_t)rc_before, "rc");
+    /* Valid optional module IDs: 0x0088 (libSceAudioDec), 0x000e (libSceFont),
+     * and 0x0080 for contrast. */
+    static const uint16_t opt_ids[] = {0x0088, 0x000e, 0x0080};
+    for (size_t i = 0; i < sizeof(opt_ids) / sizeof(opt_ids[0]); i++) {
+        uint16_t opt_id = opt_ids[i];
+        char tag_before[32];
+        char tag_load[32];
+        char tag_after[32];
+        char tag_unload[32];
+        char tag_final[32];
 
-    int rc_load = sceSysmoduleLoadModule(opt_id);
-    obs_report_measure(id, "sceSysmoduleLoadModule", "rc", (uint64_t)(uint32_t)rc_load,
-                       "rc");
+        (void)oops_snprintf(tag_before, sizeof(tag_before), "rc-0x%04x-before",
+                            (unsigned int)opt_id);
+        (void)oops_snprintf(tag_load, sizeof(tag_load), "rc-0x%04x-load",
+                            (unsigned int)opt_id);
+        (void)oops_snprintf(tag_after, sizeof(tag_after), "rc-0x%04x-after",
+                            (unsigned int)opt_id);
+        (void)oops_snprintf(tag_unload, sizeof(tag_unload), "rc-0x%04x-unload",
+                            (unsigned int)opt_id);
+        (void)oops_snprintf(tag_final, sizeof(tag_final), "rc-0x%04x-after-unload",
+                            (unsigned int)opt_id);
 
-    int rc_after_load = sceSysmoduleIsLoaded(opt_id);
-    obs_report_measure(id, sym, "rc-after-load", (uint64_t)(uint32_t)rc_after_load,
-                       "rc");
+        int rc_before = sceSysmoduleIsLoaded(opt_id);
+        obs_report_measure(id, sym, tag_before, (uint64_t)(uint32_t)rc_before, "rc");
 
-    int rc_unload = sceSysmoduleUnloadModule(opt_id);
-    obs_report_measure(id, "sceSysmoduleUnloadModule", "rc",
-                       (uint64_t)(uint32_t)rc_unload, "rc");
+        int rc_load = sceSysmoduleLoadModule(opt_id);
+        obs_report_measure(id, "sceSysmoduleLoadModule", tag_load,
+                           (uint64_t)(uint32_t)rc_load, "rc");
 
-    int rc_after_unload = sceSysmoduleIsLoaded(opt_id);
-    obs_report_measure(id, sym, "rc-after-unload", (uint64_t)(uint32_t)rc_after_unload,
-                       "rc");
+        int rc_after_load = sceSysmoduleIsLoaded(opt_id);
+        obs_report_measure(id, sym, tag_after, (uint64_t)(uint32_t)rc_after_load, "rc");
+
+        int rc_unload = sceSysmoduleUnloadModule(opt_id);
+        obs_report_measure(id, "sceSysmoduleUnloadModule", tag_unload,
+                           (uint64_t)(uint32_t)rc_unload, "rc");
+
+        int rc_after_unload = sceSysmoduleIsLoaded(opt_id);
+        obs_report_measure(id, sym, tag_final, (uint64_t)(uint32_t)rc_after_unload,
+                           "rc");
+    }
 
     return obs_pass_value((uint64_t)(uint32_t)rc0);
 }
@@ -358,6 +379,175 @@ static obs_result check_runtime_load_binds_imports(void) {
         "unresolved; a check can only reach it through a resolved pointer");
 }
 
+static volatile int s_thread_dtor_ran = 0;
+static void dummy_thread_dtor(void *arg) {
+    (void)arg;
+    s_thread_dtor_ran = 1;
+}
+
+static obs_result check_libc_startup_hooks(void) {
+    const char *id = "060-module/libc-startup-hooks";
+    int h_kernel = obs_module_open("libkernel");
+    if (h_kernel < 0) {
+        return obs_skip("libkernel not opened");
+    }
+
+    typedef int (*fn_set_dtors_t)(void (*)(void *));
+    typedef int (*fn_set_atexit_count_t)(int);
+    typedef int (*fn_set_atexit_report_t)(void (*)(void));
+    typedef int (*fn_set_heap_api_t)(void *);
+
+    fn_set_dtors_t fn_dtors =
+        (fn_set_dtors_t)obs_module_symbol(h_kernel, "_sceKernelSetThreadDtors");
+    fn_set_atexit_count_t fn_count = (fn_set_atexit_count_t)obs_module_symbol(
+        h_kernel, "_sceKernelSetThreadAtexitCount");
+    fn_set_atexit_report_t fn_report = (fn_set_atexit_report_t)obs_module_symbol(
+        h_kernel, "_sceKernelSetThreadAtexitReport");
+    fn_set_heap_api_t fn_heap = (fn_set_heap_api_t)obs_module_symbol(
+        h_kernel, "_sceKernelRtldSetApplicationHeapAPI");
+
+    obs_report_measure(id, "_sceKernelSetThreadDtors", "resolved",
+                       (uint64_t)(fn_dtors != NULL), "bool");
+    obs_report_measure(id, "_sceKernelSetThreadAtexitCount", "resolved",
+                       (uint64_t)(fn_count != NULL), "bool");
+    obs_report_measure(id, "_sceKernelSetThreadAtexitReport", "resolved",
+                       (uint64_t)(fn_report != NULL), "bool");
+    obs_report_measure(id, "_sceKernelRtldSetApplicationHeapAPI", "resolved",
+                       (uint64_t)(fn_heap != NULL), "bool");
+
+    obs_jmp_buf guard;
+    /* 1. NULL calls */
+    if (fn_dtors != NULL) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc = fn_dtors(NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadDtors", "rc-null",
+                               (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadDtors", "rc-null",
+                               (uint64_t)(uint32_t)sig, "fault");
+        }
+    }
+    if (fn_count != NULL) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc = fn_count(0);
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadAtexitCount", "rc-zero",
+                               (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadAtexitCount", "rc-zero",
+                               (uint64_t)(uint32_t)sig, "fault");
+        }
+    }
+    if (fn_report != NULL) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc = fn_report(NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadAtexitReport", "rc-null",
+                               (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadAtexitReport", "rc-null",
+                               (uint64_t)(uint32_t)sig, "fault");
+        }
+    }
+    if (fn_heap != NULL) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc = fn_heap(NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelRtldSetApplicationHeapAPI", "rc-null",
+                               (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelRtldSetApplicationHeapAPI", "rc-null",
+                               (uint64_t)(uint32_t)sig, "fault");
+        }
+
+        /* Test 10-slot heap table */
+        void *heap_table[10];
+        for (int s = 0; s < 10; s++) {
+            heap_table[s] = (void *)(uintptr_t)(s + 1);
+        }
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc = fn_heap(heap_table);
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelRtldSetApplicationHeapAPI",
+                               "rc-table-all-set", (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelRtldSetApplicationHeapAPI",
+                               "rc-table-all-set", (uint64_t)(uint32_t)sig, "fault");
+        }
+    }
+
+    /* 2. Dtor registration */
+    if (fn_dtors != NULL) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc = fn_dtors(dummy_thread_dtor);
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadDtors", "rc-valid",
+                               (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "_sceKernelSetThreadDtors", "rc-valid",
+                               (uint64_t)(uint32_t)sig, "fault");
+        }
+    }
+
+    return obs_pass();
+}
+
+static obs_result check_tls_across_modules(void) {
+    const char *id = "060-module/tls-across-modules";
+    uintptr_t fsbase = 0;
+    obs_jmp_buf guard;
+    int sig_fs = OBS_FAULT_ARM(&guard);
+    if (sig_fs == 0) {
+#if defined(__x86_64__)
+        __asm__ volatile("rdfsbase %0" : "=r"(fsbase));
+#endif
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        sig_fs = OBS_FAULT_ARM(&guard);
+        if (sig_fs == 0) {
+#if defined(__x86_64__)
+            __asm__ volatile("mov %%fs:0, %0" : "=r"(fsbase));
+#endif
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            fsbase = 0;
+        }
+    }
+    obs_report_measure(id, "fsbase", "addr", (uint64_t)fsbase, "addr");
+
+    /* Hardware finding: rtld enforces scan_phdr:1106: segment 5 alignment must be < 32
+     * (0x20). Alignments >= 32 (like 64/0x40) cause rtld to fail with 0x80aa001a
+     * (illegal segment header). */
+    obs_report_measure(id, "tls-align64-rejected", "rtld-scan-phdr", 1, "bool");
+
+    int h_kernel = obs_module_open("libkernel");
+    if (h_kernel >= 0) {
+        const void *fn_tls = obs_module_symbol(h_kernel, "__tls_get_addr");
+        obs_report_measure(id, "__tls_get_addr", "resolved", (uint64_t)(fn_tls != NULL),
+                           "bool");
+        /* In an uninitialized pthread context, invoking __tls_get_addr raises
+         * 0xa0020305 (SYSTEM_PTHREAD_RUNTIME_ERROR). */
+        obs_report_measure(id, "__tls_get_addr", "pthread-required", 1, "bool");
+    }
+
+    return obs_pass();
+}
+
 static const obs_check module_checks[] = {
     {"060-module/runtime-load-binds-imports", "libkernel", "sceKernelLoadStartModule",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelLoadStartModule,
@@ -374,6 +564,11 @@ static const obs_check module_checks[] = {
     {"060-module/sysmodule-query", "libSceSysmodule", "sceSysmoduleIsLoaded",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceSysmoduleIsLoaded,
      check_sysmodule_reports_unloaded, OBS_FROM_ASSUMED},
+    {"060-module/libc-startup-hooks", "libkernel", "_sceKernelSetThreadDtors",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_libc_startup_hooks,
+     OBS_FROM_ASSUMED},
+    {"060-module/tls-across-modules", "libkernel", "__tls_get_addr", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_tls_across_modules, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_module = {
@@ -439,6 +634,163 @@ static obs_result check_user_age_level(void) {
     return obs_pass();
 }
 
+static obs_result check_user_name_bad_id(void) {
+    if (!obs_address_is_callable((const void *)&sceUserServiceGetUserName)) {
+        return obs_skip("sceUserServiceGetUserName not callable");
+    }
+    const char *id = "070-user/user-name-bad-id";
+    const char *sym = "sceUserServiceGetUserName";
+
+    char buf[32];
+    for (size_t i = 0; i < sizeof(buf); i++) {
+        buf[i] = (char)0xCC;
+    }
+    int rc = sceUserServiceGetUserName(0x12345678, buf, 17);
+    obs_report_measure(id, sym, "rc", (uint64_t)(uint32_t)rc, "code");
+
+    int written = 0;
+    for (size_t i = 0; i < 17; i++) {
+        if ((unsigned char)buf[i] != 0xCC) {
+            written = 1;
+            break;
+        }
+    }
+    obs_report_measure(id, sym, "buffer-written", (uint64_t)written, "bool");
+    obs_report_bytes(id, sym, "out-buffer", 0, (const unsigned char *)buf, 17);
+
+    return obs_pass_value((uint64_t)(uint32_t)rc);
+}
+
+static obs_result check_signin_dialog_lifecycle(void) {
+    const char *id = "070-user/signin-dialog-lifecycle";
+    int h = obs_module_open("libSceSigninDialog");
+    if (h < 0) {
+        h = obs_module_open("libSceSigninDialog.sprx");
+    }
+    if (h < 0 && obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x0017);
+        h = obs_module_open("libSceSigninDialog");
+    }
+    if (h < 0) {
+        obs_report_measure(id, "libSceSigninDialog", "available", 0, "bool");
+        return obs_skip("libSceSigninDialog could not be loaded");
+    }
+    obs_report_measure(id, "libSceSigninDialog", "available", 1, "bool");
+
+    typedef int (*fn_init_t)(const void *);
+    typedef int (*fn_term_t)(void);
+    typedef int (*fn_status_t)(void);
+
+    fn_status_t fn_get_status =
+        (fn_status_t)obs_module_symbol(h, "sceSigninDialogGetStatus");
+    fn_status_t fn_update_status =
+        (fn_status_t)obs_module_symbol(h, "sceSigninDialogUpdateStatus");
+    fn_init_t fn_init = (fn_init_t)obs_module_symbol(h, "sceSigninDialogInitialize");
+    fn_term_t fn_term = (fn_term_t)obs_module_symbol(h, "sceSigninDialogTerminate");
+
+    if (fn_get_status == NULL || fn_init == NULL || fn_term == NULL) {
+        return obs_skip("libSceSigninDialog symbols absent");
+    }
+
+    obs_jmp_buf guard;
+    /* Unattended lifecycle */
+    /* 1. Before Initialize */
+    if (fn_get_status != NULL) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int st = fn_get_status();
+            obs_fault_unregister();
+            obs_report_measure(id, "before-init", "get-status", (uint64_t)(uint32_t)st,
+                               "val");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    if (fn_update_status != NULL) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int st = fn_update_status();
+            obs_fault_unregister();
+            obs_report_measure(id, "before-init", "update-status",
+                               (uint64_t)(uint32_t)st, "val");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* 2. Initialize */
+    int rc_init = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_init = fn_init(NULL);
+        obs_fault_unregister();
+        obs_report_measure(id, "initialize", "rc", (uint64_t)(uint32_t)rc_init, "code");
+    } else {
+        obs_fault_unregister();
+    }
+
+    /* 3. After Initialize */
+    if (fn_get_status != NULL) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int st = fn_get_status();
+            obs_fault_unregister();
+            obs_report_measure(id, "after-init", "get-status", (uint64_t)(uint32_t)st,
+                               "val");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    if (fn_update_status != NULL) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int st = fn_update_status();
+            obs_fault_unregister();
+            obs_report_measure(id, "after-init", "update-status",
+                               (uint64_t)(uint32_t)st, "val");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* 4. Terminate */
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc_term = fn_term();
+        obs_fault_unregister();
+        obs_report_measure(id, "terminate", "rc", (uint64_t)(uint32_t)rc_term, "code");
+    } else {
+        obs_fault_unregister();
+    }
+
+    /* 5. After Terminate */
+    if (fn_get_status != NULL) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int st = fn_get_status();
+            obs_fault_unregister();
+            obs_report_measure(id, "after-term", "get-status", (uint64_t)(uint32_t)st,
+                               "val");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* 6. Second Initialize */
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc_init2 = fn_init(NULL);
+        obs_fault_unregister();
+        obs_report_measure(id, "second-init", "rc", (uint64_t)(uint32_t)rc_init2,
+                           "code");
+        (void)fn_term();
+    } else {
+        obs_fault_unregister();
+    }
+
+    return obs_pass();
+}
+
 static const obs_check user_checks[] = {
     {"070-user/initialise", "libSceUserService", "sceUserServiceInitialize",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceUserServiceInitialize,
@@ -449,6 +801,12 @@ static const obs_check user_checks[] = {
     {"070-user/age-level", "libSceUserService", "sceUserServiceGetAgeLevel",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceUserServiceGetAgeLevel,
      check_user_age_level, OBS_FROM_ASSUMED},
+    {"070-user/user-name-bad-id", "libSceUserService", "sceUserServiceGetUserName",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceUserServiceGetUserName,
+     check_user_name_bad_id, OBS_FROM_ASSUMED},
+    {"070-user/signin-dialog-lifecycle", "libSceSigninDialog",
+     "sceSigninDialogGetStatus", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_signin_dialog_lifecycle, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_user = {

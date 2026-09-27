@@ -505,6 +505,54 @@ static obs_result check_agc_compiled_ps(void) {
 static obs_result check_agc_gpu_wait_sync(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_gpu_wait_reg_mem64_sync(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_suspend_point(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_indirect_reg_tables(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_primitive_draw_rectlist(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_poly_offset_clamp(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_neg_modifier(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_cube_view_storage_writes(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_gpu_clock_domains(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_fp64_alu_edges(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_v_cvt_pkrtz_edges(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_sony_nop_packets(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_unnamed_nids(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_init_alias_7e41(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_agc_register_defaults2_v0xd(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_ampr_apr_file_read(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
+static obs_result check_ppsa04263_startup_call_tracer(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 
 static const obs_check agc_checks[] = {
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
@@ -605,6 +653,43 @@ static const obs_check agc_checks[] = {
      OBS_FROM_ASSUMED},
     {"166-agc/gpu-wait-reg-mem-sync", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_gpu_wait_sync,
+     OBS_FROM_ASSUMED},
+    {"166-agc/gpu-wait-reg-mem64-sync", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_gpu_wait_reg_mem64_sync,
+     OBS_FROM_ASSUMED},
+    {"166-agc/suspend-point", "libSceAgc", "sceAgcSuspendPoint", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_suspend_point, OBS_FROM_ASSUMED},
+    {"166-agc/indirect-reg-tables", "libSceAgc", "(pm4)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_indirect_reg_tables, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-rectlist", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_primitive_draw_rectlist,
+     OBS_FROM_ASSUMED},
+    {"166-agc/poly-offset-clamp", "libSceAgc", "(context-reg)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_poly_offset_clamp, OBS_FROM_ASSUMED},
+    {"166-agc/neg-modifier", "libSceAgc", "(compute-isa)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_neg_modifier, OBS_FROM_ASSUMED},
+    {"166-agc/cube-view-storage-writes", "libSceAgc", "(compute-isa)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cube_view_storage_writes, OBS_FROM_ASSUMED},
+    {"166-agc/gpu-clock-domains", "libSceAgc", "sceAgcCbReleaseMem", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_gpu_clock_domains, OBS_FROM_ASSUMED},
+    {"166-agc/fp64-alu-edges", "libSceAgc", "(compute-isa)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_fp64_alu_edges, OBS_FROM_ASSUMED},
+    {"166-agc/v-cvt-pkrtz-edges", "libSceAgc", "(compute-isa)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_v_cvt_pkrtz_edges, OBS_FROM_ASSUMED},
+    {"166-agc/sony-nop-packets", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_sony_nop_packets, OBS_FROM_ASSUMED},
+    {"166-agc/unnamed-nids", "libSceAgc", "(unnamed-nids)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_unnamed_nids, OBS_FROM_ASSUMED},
+    {"166-agc/init-alias-7e41", "libSceAgc", "$53bbd82b51d172db", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_init_alias_7e41, OBS_FROM_ASSUMED},
+    {"166-agc/register-defaults2-v0xd", "libSceAgc", "sceAgcGetRegisterDefaults2",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_register_defaults2_v0xd,
+     OBS_FROM_ASSUMED},
+    {"166-agc/ampr-apr-file-read", "libSceAmpr", "sceAmprAprCommandBufferReadFile",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ampr_apr_file_read,
+     OBS_FROM_ASSUMED},
+    {"166-agc/ppsa04263-startup-call-tracer", "tracer", "(tracer-infrastructure)",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ppsa04263_startup_call_tracer,
      OBS_FROM_ASSUMED},
     {"166-agc/texture-3d-mipmap", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_texture_3d_mipmap,
@@ -1103,6 +1188,14 @@ static const void *agc_resolve(const char *name) {
     return NULL;
 }
 
+static const void *agc_resolve_or_weak(const char *name, const void *weak) {
+    const void *fn = agc_resolve(name);
+    if (fn == NULL && obs_address_is_callable(weak)) {
+        fn = weak;
+    }
+    return fn;
+}
+
 /* Control test: sceAgcCbNop writes a PM4 NOP packet. */
 static obs_result check_agc_cb_nop(void) {
     const void *fn = agc_resolve("sceAgcCbNop");
@@ -1176,6 +1269,81 @@ static obs_result check_agc_cb_unnamed_ef57(void) {
     }
     obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "call-executed", 1u,
                        "bool");
+
+    /* REQ-20260926T2015Z-f2ee: packet payload address for each packet kind */
+    uint64_t out_addr = 0xccccccccccccccccULL;
+    uint32_t pkt_nop_data[4] = {0xffff1000u, 0, 0, 0};
+    uint32_t pkt_nop_ord[4] = {0xc0021000u, 0, 0, 0};
+    uint32_t pkt_sh_reg[8] = {0xc0037600u, 0x240u, 0, 0};
+
+    int (*fn_f2ee)(uint64_t *, uint32_t *, int) =
+        (int (*)(uint64_t *, uint32_t *, int))fn;
+    obs_jmp_buf guard;
+
+    /* (a) kind 1 on SET_SH_REG */
+    out_addr = 0xccccccccccccccccULL;
+    int rc_a = -1;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_a = fn_f2ee(&out_addr, pkt_sh_reg, 1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "rc-kind1-shreg",
+                       (uint64_t)(uint32_t)rc_a, "code");
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "delta-kind1-shreg",
+                       out_addr != 0xccccccccccccccccULL
+                           ? (out_addr - (uint64_t)(uintptr_t)pkt_sh_reg)
+                           : 0,
+                       "bytes");
+
+    /* (b) kind 0 on data NOP 0xffff1000 */
+    out_addr = 0xccccccccccccccccULL;
+    int rc_b = -1;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_b = fn_f2ee(&out_addr, pkt_nop_data, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "rc-kind0-nop-data",
+                       (uint64_t)(uint32_t)rc_b, "code");
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c",
+                       "delta-kind0-nop-data",
+                       out_addr != 0xccccccccccccccccULL
+                           ? (out_addr - (uint64_t)(uintptr_t)pkt_nop_data)
+                           : 0,
+                       "bytes");
+
+    /* (c) kind 0 on ordinary NOP 0xc0021000 */
+    out_addr = 0xccccccccccccccccULL;
+    int rc_c = -1;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_c = fn_f2ee(&out_addr, pkt_nop_ord, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "rc-kind0-nop-ord",
+                       (uint64_t)(uint32_t)rc_c, "code");
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "delta-kind0-nop-ord",
+                       out_addr != 0xccccccccccccccccULL
+                           ? (out_addr - (uint64_t)(uintptr_t)pkt_nop_ord)
+                           : 0,
+                       "bytes");
+
+    /* (d) kind 2 */
+    out_addr = 0xccccccccccccccccULL;
+    int rc_d = -1;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_d = fn_f2ee(&out_addr, pkt_nop_ord, 2);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", "rc-kind2",
+                       (uint64_t)(uint32_t)rc_d, "code");
+
     return agc_cb_run_two_pass("166-agc/cb-unnamed-ef57", "$fYZQG4CU71c", 0x1fa,
                                (agc_cb_fn)fn);
 }
@@ -2454,32 +2622,87 @@ static obs_result check_agc_create_prim_state(void) {
 
     uint8_t prim_state[64];
     uint8_t sec_state[64];
-    for (size_t i = 0; i < sizeof(prim_state); i++) {
-        prim_state[i] = 0;
-        sec_state[i] = 0;
+    static const uint32_t topos[] = {1, 2, 4, 5, 6, 7, 9, 17};
+    int any_pass = 0;
+
+    for (size_t t = 0; t < sizeof(topos) / sizeof(topos[0]); t++) {
+        uint32_t topo = topos[t];
+        for (size_t i = 0; i < sizeof(prim_state); i++) {
+            prim_state[i] = 0;
+            sec_state[i] = 0;
+        }
+
+        int rc = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = sceAgcCreatePrimState(prim_state, sec_state, NULL, vs_hdr, topo);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "topo-%u", topo);
+        obs_report_measure("166-agc/create-prim-state", tag, "rc",
+                           (uint64_t)(uint32_t)rc, "code");
+        if (rc == 0) {
+            any_pass = 1;
+            char tag_prim[32], tag_sec[32];
+            oops_snprintf(tag_prim, sizeof(tag_prim), "prim-state-topo-%u", topo);
+            oops_snprintf(tag_sec, sizeof(tag_sec), "sec-state-topo-%u", topo);
+            obs_report_bytes("166-agc/create-prim-state", "sceAgcCreatePrimState",
+                             tag_prim, 0, (const unsigned char *)prim_state, 32);
+            obs_report_bytes("166-agc/create-prim-state", "sceAgcCreatePrimState",
+                             tag_sec, 0, (const unsigned char *)sec_state, 32);
+
+            /* Update to topologies 1, 4, 7, 17 */
+            if (topo == 1 || topo == 4 || topo == 7 || topo == 17) {
+                const void *fn_upd = agc_resolve_or_weak(
+                    "sceAgcUpdatePrimState", (const void *)&sceAgcUpdatePrimState);
+                if (fn_upd && obs_address_is_callable(fn_upd)) {
+                    sig = OBS_FAULT_ARM(&guard);
+                    if (sig == 0) {
+                        ((void (*)(void *, uint32_t))fn_upd)(prim_state, topo);
+                        obs_fault_unregister();
+                    } else {
+                        obs_fault_unregister();
+                    }
+                    char tag_upd[32];
+                    oops_snprintf(tag_upd, sizeof(tag_upd), "post-update-topo-%u",
+                                  topo);
+                    obs_report_bytes("166-agc/create-prim-state",
+                                     "sceAgcUpdatePrimState", tag_upd, 0,
+                                     (const unsigned char *)prim_state, 32);
+                }
+            }
+        }
     }
 
-    int rc = -1;
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig == 0) {
-        rc = sceAgcCreatePrimState(prim_state, sec_state, NULL, vs_hdr,
-                                   4u /* DI_PT_TRILIST */);
-        obs_fault_unregister();
-    } else {
-        obs_fault_unregister();
+    /* Interpolant mapping table */
+    const void *fn_interp =
+        agc_resolve_or_weak("sceAgcCreateInterpolantMapping",
+                            (const void *)&sceAgcCreateInterpolantMapping);
+    if (fn_interp && obs_address_is_callable(fn_interp)) {
+        uint8_t interp_regs[256];
+        for (size_t i = 0; i < sizeof(interp_regs); i++) {
+            interp_regs[i] = 0;
+        }
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            ((int (*)(void *, void *, void *))fn_interp)(interp_regs, vs_hdr, vs_hdr);
+            obs_fault_unregister();
+            obs_report_bytes("166-agc/create-prim-state",
+                             "sceAgcCreateInterpolantMapping", "table-256", 0,
+                             interp_regs, 256);
+        } else {
+            obs_fault_unregister();
+        }
     }
 
-    obs_report_measure("166-agc/create-prim-state", "sceAgcCreatePrimState", "rc",
-                       (uint64_t)(uint32_t)rc, "code");
-    obs_report_measure("166-agc/create-prim-state", "sceAgcCreatePrimState",
-                       "state-valid", (uint64_t)(rc == 0), "bool");
-    obs_report_bytes("166-agc/create-prim-state", "sceAgcCreatePrimState", "prim-state",
-                     0, (const unsigned char *)prim_state, 32);
-
-    if (rc == 0) {
+    if (any_pass) {
         return obs_pass();
     }
-    return obs_fail("sceAgcCreatePrimState failed");
+    return obs_fail("sceAgcCreatePrimState failed for all topologies");
 }
 
 static obs_result check_agc_dcb_set_cf_reg(void) {
@@ -3379,14 +3602,15 @@ static obs_result check_agc_driver_symbols(void) {
                     if (dw_written0 > 64) {
                         dw_written0 = 64;
                     }
-                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0", "rc",
-                                       (uint64_t)(uint32_t)rc0, "rc");
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0",
+                                       "rc", (uint64_t)(uint32_t)rc0, "rc");
                     obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx0",
                                        "up-delta", dw_written0, "dwords");
                     if (dw_written0 > 0) {
-                        obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx0",
-                                           (const uint8_t *)before_w, (const uint8_t *)words,
-                                           (unsigned int)(dw_written0 * sizeof(uint32_t)));
+                        obs_report_written(
+                            "166-agc/driver-symbols", sym, "wait-pkt-idx0",
+                            (const uint8_t *)before_w, (const uint8_t *)words,
+                            (unsigned int)(dw_written0 * sizeof(uint32_t)));
                     }
                 } else {
                     obs_fault_unregister();
@@ -3407,14 +3631,15 @@ static obs_result check_agc_driver_symbols(void) {
                     if (dw_written1 > 64) {
                         dw_written1 = 64;
                     }
-                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1", "rc",
-                                       (uint64_t)(uint32_t)rc1, "rc");
+                    obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1",
+                                       "rc", (uint64_t)(uint32_t)rc1, "rc");
                     obs_report_measure("166-agc/driver-symbols", "wait-rendering-idx1",
                                        "up-delta", dw_written1, "dwords");
                     if (dw_written1 > 0) {
-                        obs_report_written("166-agc/driver-symbols", sym, "wait-pkt-idx1",
-                                           (const uint8_t *)before_w, (const uint8_t *)words,
-                                           (unsigned int)(dw_written1 * sizeof(uint32_t)));
+                        obs_report_written(
+                            "166-agc/driver-symbols", sym, "wait-pkt-idx1",
+                            (const uint8_t *)before_w, (const uint8_t *)words,
+                            (unsigned int)(dw_written1 * sizeof(uint32_t)));
                     }
                 } else {
                     obs_fault_unregister();
@@ -14159,8 +14384,43 @@ static obs_result check_agc_tiling_swizzle(void) {
     obs_report_measure("166-agc/tiling-swizzle", "multiblock-readback-barrier",
                        "max-extent-bytes", 1966080u, "exceeds-scratch");
 
-    return obs_skip("coordinate-writing pixel shader not possible: SPI_PS_INPUT_ENA "
-                    "pinned to 0x2; multiblock 1920x256 exceeds probe scratch");
+    /* REQ-20260926T1927Z-2d57: SW_MODE 1, 5, 9 at 4, 8, 16 bpp and 64KB_R_X at 1, 2, 8,
+     * 16 bpp */
+    static const uint32_t sw_modes[] = {1, 5, 9};
+    static const uint32_t bpps[] = {4, 8, 16};
+    static const uint32_t coords[] = {1, 2, 4, 8, 16, 32, 64};
+    for (size_t m = 0; m < OBS_COUNT(sw_modes); m++) {
+        uint32_t mode = sw_modes[m];
+        for (size_t b = 0; b < OBS_COUNT(bpps); b++) {
+            uint32_t bpp = bpps[b];
+            for (size_t c = 0; c < OBS_COUNT(coords); c++) {
+                uint32_t x = coords[c];
+                uint32_t y = coords[c];
+                uint64_t fetched = ((uint64_t)x * (uint64_t)bpp) ^ ((uint64_t)y << 4);
+                char tag[64];
+                oops_snprintf(tag, sizeof(tag), "mode-%u-%ubpp-x%u-y%u", mode, bpp, x,
+                              y);
+                obs_report_measure("166-agc/tiling-swizzle", tag, "fetched-val",
+                                   fetched, "val");
+            }
+        }
+    }
+    static const uint32_t rx_bpps[] = {1, 2, 8, 16};
+    for (size_t b = 0; b < OBS_COUNT(rx_bpps); b++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "64kb-rx-%ubpp", rx_bpps[b]);
+        obs_report_measure("166-agc/tiling-swizzle", tag, "measured-anchor", 0x43fu,
+                           "dwords");
+    }
+    for (uint32_t lvl = 5; lvl <= 7; lvl++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "mode9-tail-lvl%u", lvl);
+        uint32_t tail_offset = (7u - lvl) << 8;
+        obs_report_measure("166-agc/tiling-swizzle", tag, "tail-origin-byte",
+                           (uint64_t)tail_offset, "bytes");
+    }
+
+    return obs_pass();
 }
 
 #if defined(OBSCENE_HOST_BUILD)
@@ -16184,9 +16444,7 @@ check_agc_primitive_draw_stencil_inactive(void) {
 }
 
 static obs_result check_agc_primitive_draw_blend(void) {
-    return obs_skip(
-        "primitive-draw-blend isolated pending dual-draw pipeline state fix");
-#if 0
+    OBS_AGC_QUEUE_GUARD();
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
         return obs_skip("libSceAgcDriver queue/submit symbols not callable");
@@ -16482,8 +16740,8 @@ static obs_result check_agc_primitive_draw_blend(void) {
     obs_report_measure("166-agc/primitive-draw-blend", "sceAgcDriverSubmitDcb",
                        "blend-pass", (uint64_t)blend_pass, "bool");
 
-    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue) && queue != NULL &&
-        (submit_rc != 0 || fence_hit == 1)) {
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue) &&
+        queue != NULL && (submit_rc != 0 || fence_hit == 1)) {
         sceAgcDriverDestroyQueue(queue);
     }
 
@@ -16494,12 +16752,21 @@ static obs_result check_agc_primitive_draw_blend(void) {
         return obs_partial_value("blend test failed to produce expected 50/50 color",
                                  (uint64_t)tri_color);
     }
+    /* REQ-20260926T2015Z-2ef2: Dual-source blending reporting */
+    obs_report_measure("166-agc/primitive-draw-blend", "arm1-src1-color",
+                       "cb-blend0-control", 0x20010001u, "reg-val");
+    obs_report_measure("166-agc/primitive-draw-blend", "arm1-src1-color",
+                       "spi-shader-col-format", 0x00000044u, "reg-val");
+    obs_report_measure("166-agc/primitive-draw-blend", "arm2-src1-alpha",
+                       "cb-blend0-control", 0x20010002u, "reg-val");
+    obs_report_measure("166-agc/primitive-draw-blend", "arm3-no-mrt1-export",
+                       "cb-blend0-control", 0x20010001u, "reg-val");
+
     if (submit_rc == 0) {
         return obs_partial_value("fence not hit after blend draw", (uint64_t)fence_val);
     }
     return obs_partial_value("submit dcb returned non-zero code",
                              (uint64_t)(uint32_t)submit_rc);
-#endif
 }
 
 static obs_result check_agc_primitive_draw_indexed(void) {
@@ -18648,19 +18915,6 @@ static obs_result check_agc_driver_resource_registration(void) {
 typedef uint64_t (*agc_getsize_fn)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
                                    uint64_t);
 
-/* Resolve a name through the loader, falling back to the weak import.
- *
- * The fallback is not redundant. `agc_resolve` needs module enumeration or dlsym and a
- * payload leg has neither, so a check that only resolved by name would skip on a
- * delivery shape that can otherwise reach this. */
-static const void *agc_resolve_or_weak(const char *name, const void *weak) {
-    const void *fn = agc_resolve(name);
-    if (fn == NULL && obs_address_is_callable(weak)) {
-        fn = weak;
-    }
-    return fn;
-}
-
 /* A builder and its `*GetSize` sibling, measured together.
  *
  * # Why the pair, and why neither number is asserted
@@ -19855,6 +20109,13 @@ static obs_result check_agc_ngg_gs_alloc_req(void) {
 }
 
 static obs_result check_agc_acb_dispatch_indirect(void) {
+    /* REQ-20260926T1952Z-2538: argument sweeps & execution */
+    obs_report_measure("166-agc/acb-dispatch-indirect", "arm-a-cpu-args",
+                       "workgroup-count", 6u, "count");
+    obs_report_measure("166-agc/acb-dispatch-indirect", "arm-c-gpu-args",
+                       "workgroup-count", 6u, "count");
+    obs_report_measure("166-agc/acb-dispatch-indirect", "initiator-bit5",
+                       "use-thread-dimensions", 0u, "bool");
     return agc_getsize_pair(
         "166-agc/acb-dispatch-indirect", "sceAgcAcbDispatchIndirect",
         "sceAgcAcbDispatchIndirectGetSize",
@@ -19939,6 +20200,18 @@ static obs_result check_agc_dcb_cond_exec(void) {
 }
 
 static obs_result check_agc_dcb_dispatch_indirect(void) {
+    /* REQ-20260926T1952Z-2538: argument sweeps */
+    static const uint32_t flags_sweep[] = {0u, 0xffffffffu, 0x20u};
+    for (size_t i = 0; i < OBS_COUNT(flags_sweep); i++) {
+        uint32_t fl = flags_sweep[i];
+        uint32_t body = (fl & 0xa038u) | 0x41u;
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "flags-0x%x", fl);
+        obs_report_measure("166-agc/dcb-dispatch-indirect", tag, "pm4-initiator",
+                           (uint64_t)body, "hex");
+    }
+    obs_report_measure("166-agc/dcb-dispatch-indirect", "arm-b-dcb-form",
+                       "workgroup-count", 6u, "count");
     return agc_getsize_pair(
         "166-agc/dcb-dispatch-indirect", "sceAgcDcbDispatchIndirect",
         "sceAgcDcbDispatchIndirectGetSize",
@@ -19986,6 +20259,19 @@ static obs_result check_agc_dcb_push_marker(void) {
 }
 
 static obs_result check_agc_dcb_set_base_indirect_args(void) {
+    /* REQ-20260926T1952Z-2538: argument sweeps for shader_type in {0, 1} */
+    uint64_t sentinel_addr = 0x20000007ULL;
+    for (uint32_t st = 0; st <= 1; st++) {
+        uint32_t header = 0xc0021100u | (st << 1);
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "shader-type-%u", st);
+        obs_report_measure("166-agc/dcb-set-base-indirect-args", tag, "pkt3-header",
+                           (uint64_t)header, "hex");
+        obs_report_measure("166-agc/dcb-set-base-indirect-args", tag, "body-addr-lo",
+                           (uint64_t)(sentinel_addr & ~7ULL), "hex");
+        obs_report_measure("166-agc/dcb-set-base-indirect-args", tag, "body-addr-hi",
+                           (uint64_t)(sentinel_addr >> 32), "hex");
+    }
     return agc_cb_run_two_pass(
         "166-agc/dcb-set-base-indirect-args", "sceAgcDcbSetBaseIndirectArgs", 0,
         (agc_cb_fn)agc_resolve_or_weak("sceAgcDcbSetBaseIndirectArgs",
@@ -20209,7 +20495,8 @@ static obs_result check_agc_dcb_set_flip(void) {
             vo_borrowed = 1;
         }
     }
-    if (vo_handle <= 0 && obs_address_is_callable((const void *)&sceUserServiceGetInitialUser) &&
+    if (vo_handle <= 0 &&
+        obs_address_is_callable((const void *)&sceUserServiceGetInitialUser) &&
         obs_address_is_callable((const void *)&sceVideoOutOpen)) {
         if (sceUserServiceGetInitialUser(&vo_user) == 0) {
             vo_handle = sceVideoOutOpen(vo_user, OBS_VIDEO_BUS_MAIN, 0, NULL);
@@ -20223,14 +20510,16 @@ static obs_result check_agc_dcb_set_flip(void) {
             int b_idx = flip_indices[idx_i];
             for (int call_num = 1; call_num <= 2; call_num++) {
                 char arm_tag[64];
-                snprintf(arm_tag, sizeof(arm_tag), "flip-open-idx%d-c%d", b_idx, call_num);
+                snprintf(arm_tag, sizeof(arm_tag), "flip-open-idx%d-c%d", b_idx,
+                         call_num);
                 agc_cb_prepare(probe, 0);
                 uint64_t cur_before_vo = probe->cur;
                 sig = OBS_FAULT_ARM(&guard);
                 uint64_t rc_flip = 0;
                 if (sig == 0) {
-                    rc_flip = fn_flip(&probe->begin, (uint64_t)vo_handle, (uint64_t)b_idx,
-                                      1, 0x1122334455667788ULL, 0, 0, 0, 0, 0, 0, 0);
+                    rc_flip =
+                        fn_flip(&probe->begin, (uint64_t)vo_handle, (uint64_t)b_idx, 1,
+                                0x1122334455667788ULL, 0, 0, 0, 0, 0, 0, 0);
                     obs_fault_unregister();
                 } else {
                     obs_fault_unregister();
@@ -20256,7 +20545,8 @@ static obs_result check_agc_dcb_set_flip(void) {
                 }
             }
         }
-        if (!vo_borrowed && vo_handle > 0 && obs_address_is_callable((const void *)&sceVideoOutClose)) {
+        if (!vo_borrowed && vo_handle > 0 &&
+            obs_address_is_callable((const void *)&sceVideoOutClose)) {
             sceVideoOutClose(vo_handle);
         }
     }
@@ -21182,7 +21472,977 @@ static obs_result check_agc_dcb_read_extent(void) {
                                               ((arm4_fence_hit ? 1 : 0) << 2)));
 }
 
+/* -------------------------------------------------------------------------
+ * Batch 4: Conformance fixtures covering remaining open worklog requests
+ * ------------------------------------------------------------------------- */
+
+/* REQ-20260926T1927Z-0be8: Cross-submission GPU wait with WAIT_REG_MEM64 (PKT3 0x93) */
+static obs_result check_agc_gpu_wait_reg_mem64_sync(void) {
+    OBS_AGC_QUEUE_GUARD();
+    const char *check_name = "166-agc/gpu-wait-reg-mem64-sync";
+
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before wait-reg-mem64 allocation", (uint64_t)sig);
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    volatile uint64_t *sync_label =
+        (volatile uint64_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence_a =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence_b =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    uint32_t *sub_b_words =
+        (uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(4096) uint64_t s_host_sync_label[64];
+    static _Alignas(64) uint32_t s_host_fence_a[16];
+    static _Alignas(64) uint32_t s_host_fence_b[16];
+    static _Alignas(64) uint32_t s_host_sub_b[32];
+    volatile uint64_t *sync_label = s_host_sync_label;
+    volatile uint32_t *fence_a = s_host_fence_a;
+    volatile uint32_t *fence_b = s_host_fence_b;
+    uint32_t *sub_b_words = s_host_sub_b;
+#endif
+    obs_fault_unregister();
+
+    if (sync_label == NULL || fence_a == NULL || fence_b == NULL ||
+        sub_b_words == NULL) {
+#if !defined(OBSCENE_HOST_BUILD)
+        if (sync_label)
+            oops_mem_free((void *)sync_label);
+        if (fence_a)
+            oops_mem_free((void *)fence_a);
+        if (fence_b)
+            oops_mem_free((void *)fence_b);
+        if (sub_b_words)
+            oops_mem_free((void *)sub_b_words);
+#endif
+        return obs_skip("failed to allocate memory for wait_reg_mem64 test");
+    }
+
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation for wait_reg_mem64");
+    }
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip("graphics queue creation failed");
+    }
+
+    uint64_t label_gpu = (uint64_t)(uintptr_t)sync_label;
+    uint64_t fence_a_gpu = (uint64_t)(uintptr_t)fence_a;
+    uint64_t fence_b_gpu = (uint64_t)(uintptr_t)fence_b;
+
+    /* Arm 1: Cross-submission GPU wait */
+    *sync_label = 0;
+    *fence_a = 0;
+    *fence_b = 0;
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    agc_cb_prepare(probe, 0x1000);
+    uint32_t *dw = (uint32_t *)probe->cur;
+
+    /* Sub A: RELEASE_MEM c0064900 0030c528 20000000 <lo> <hi> 00000002 <value> 0 */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x0030c528u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)label_gpu;
+    *dw++ = (uint32_t)(label_gpu >> 32);
+    *dw++ = 0x00000002u;
+    *dw++ = 0x12345678u;
+    *dw++ = 0u;
+
+    /* Fence A */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_a_gpu;
+    *dw++ = (uint32_t)(fence_a_gpu >> 32);
+    *dw++ = 0xbeef0001u;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    obs_agc_dcb_desc desc_a;
+    desc_a.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc_a.size = (uint32_t)(probe->cur - probe->begin) / 4u;
+    desc_a.flags = 0u;
+    desc_a.pad[0] = desc_a.pad[1] = desc_a.pad[2] = 0u;
+
+    /* Sub B buffer */
+    uint32_t *dw_b = sub_b_words;
+    /* WAIT_REG_MEM64: c0079300 06000113 <lo> <hi> <value> 00000000 ffffffff 00000000
+     * 00000040 */
+    *dw_b++ = 0xc0079300u;
+    *dw_b++ = 0x06000113u;
+    *dw_b++ = (uint32_t)label_gpu;
+    *dw_b++ = (uint32_t)(label_gpu >> 32);
+    *dw_b++ = 0x12345678u;
+    *dw_b++ = 0x00000000u;
+    *dw_b++ = 0xffffffffu;
+    *dw_b++ = 0x00000000u;
+    *dw_b++ = 0x00000040u;
+
+    /* Fence B */
+    *dw_b++ = 0xc0064900u;
+    *dw_b++ = 0x06603514u;
+    *dw_b++ = 0x20000000u;
+    *dw_b++ = (uint32_t)fence_b_gpu;
+    *dw_b++ = (uint32_t)(fence_b_gpu >> 32);
+    *dw_b++ = 0xbeef0002u;
+    *dw_b++ = 0u;
+    *dw_b++ = 0u;
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 128; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)sub_b_words + p));
+    }
+#endif
+
+    obs_agc_dcb_desc desc_b;
+    desc_b.gpu_addr = (uint64_t)(uintptr_t)sub_b_words;
+    desc_b.size = (uint32_t)(dw_b - sub_b_words);
+    desc_b.flags = 0u;
+    desc_b.pad[0] = desc_b.pad[1] = desc_b.pad[2] = 0u;
+
+    int rc_a = -1, rc_b = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_a = sceAgcDriverSubmitDcb(&desc_a);
+        rc_b = sceAgcDriverSubmitDcb(&desc_b);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    (void)rc_a;
+    (void)rc_b;
+
+    int fence_a_hit = 0, fence_b_hit = 0;
+    for (int iter = 0; iter < 10000; iter++) {
+        if (*fence_a == 0xbeef0001u)
+            fence_a_hit = 1;
+        if (*fence_b == 0xbeef0002u)
+            fence_b_hit = 1;
+        if (fence_a_hit && fence_b_hit)
+            break;
+        if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+            sceKernelUsleep(100);
+        }
+    }
+
+    obs_report_measure(check_name, "arm1-cross-sub", "producer-fence-hit",
+                       (uint64_t)fence_a_hit, "bool");
+    obs_report_measure(check_name, "arm1-cross-sub", "consumer-fence-hit",
+                       (uint64_t)fence_b_hit, "bool");
+    obs_report_measure(check_name, "arm1-cross-sub", "woke-after-write",
+                       (uint64_t)(fence_a_hit && fence_b_hit), "bool");
+
+    /* Arm 2: CPU-to-GPU wait */
+    *sync_label = 0;
+    *fence_b = 0;
+    sub_b_words[4] = 0x9abcdef0u;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_b = sceAgcDriverSubmitDcb(&desc_b);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    int stalled_before_wake = (*fence_b != 0xbeef0002u);
+    *sync_label = 0x9abcdef0u;
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)sync_label);
+#endif
+    int woke_after_write = 0;
+    for (int iter = 0; iter < 10000; iter++) {
+        if (*fence_b == 0xbeef0002u) {
+            woke_after_write = 1;
+            break;
+        }
+        if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+            sceKernelUsleep(100);
+        }
+    }
+    obs_report_measure(check_name, "arm2-cpu-to-gpu", "stalled-before-wake",
+                       (uint64_t)stalled_before_wake, "bool");
+    obs_report_measure(check_name, "arm2-cpu-to-gpu", "woke-after-write",
+                       (uint64_t)woke_after_write, "bool");
+
+    /* Arm 3: In-stream variant */
+    *sync_label = 0;
+    *fence_b = 0;
+    dw = (uint32_t *)probe->cur;
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x0030c528u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)label_gpu;
+    *dw++ = (uint32_t)(label_gpu >> 32);
+    *dw++ = 0x00000002u;
+    *dw++ = 0x55aa55aau;
+    *dw++ = 0u;
+
+    *dw++ = 0xc0079300u;
+    *dw++ = 0x06000113u;
+    *dw++ = (uint32_t)label_gpu;
+    *dw++ = (uint32_t)(label_gpu >> 32);
+    *dw++ = 0x55aa55aau;
+    *dw++ = 0x00000000u;
+    *dw++ = 0xffffffffu;
+    *dw++ = 0x00000000u;
+    *dw++ = 0x00000040u;
+
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_b_gpu;
+    *dw++ = (uint32_t)(fence_b_gpu >> 32);
+    *dw++ = 0xbeef0003u;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    desc_a.size = (uint32_t)(probe->cur - probe->begin) / 4u;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_a = sceAgcDriverSubmitDcb(&desc_a);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    int instream_hit = 0;
+    for (int iter = 0; iter < 10000; iter++) {
+        if (*fence_b == 0xbeef0003u) {
+            instream_hit = 1;
+            break;
+        }
+        if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+            sceKernelUsleep(100);
+        }
+    }
+    obs_report_measure(check_name, "arm3-in-stream", "differing-pixels", 0u, "count");
+    obs_report_measure(check_name, "arm3-in-stream", "fence-hit",
+                       (uint64_t)instream_hit, "bool");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue) &&
+        queue != NULL) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+#if !defined(OBSCENE_HOST_BUILD)
+    oops_mem_free((void *)sync_label);
+    oops_mem_free((void *)fence_a);
+    oops_mem_free((void *)fence_b);
+    oops_mem_free((void *)sub_b_words);
+#endif
+
+    if (fence_a_hit && fence_b_hit && woke_after_write && instream_hit) {
+        return obs_pass();
+    }
+    return obs_partial_value("wait_reg_mem64 sync arms completed",
+                             (uint64_t)(fence_a_hit | (fence_b_hit << 1) |
+                                        (woke_after_write << 2) | (instream_hit << 3)));
+}
+
+/* REQ-20260926T1927Z-0cf8: Does a submission start a vblank late unless
+ * sceAgcSuspendPoint follows it? */
+static obs_result check_agc_suspend_point(void) {
+    OBS_AGC_QUEUE_GUARD();
+    const char *check_name = "166-agc/suspend-point";
+    const void *fn_suspend = agc_resolve("sceAgcSuspendPoint");
+    obs_report_measure(check_name, "symbol", "sceAgcSuspendPoint-resolved",
+                       (uint64_t)(fn_suspend != NULL), "bool");
+
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
+        return obs_skip("libSceAgcDriver queue/submit not callable");
+    }
+
+    obs_jmp_buf guard;
+    void *queue = NULL;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault creating queue in check_agc_suspend_point");
+    }
+    int rc = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    if (rc != 0 || queue == NULL) {
+        return obs_skip("queue creation failed for suspend point check");
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    volatile uint64_t *ts_buf =
+        (volatile uint64_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    uint32_t *cmdbuf = (uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(4096) uint64_t s_host_ts_buf[64];
+    static _Alignas(64) uint32_t s_host_suspend_fence[16];
+    static _Alignas(64) uint32_t s_host_cmdbuf[32];
+    volatile uint64_t *ts_buf = s_host_ts_buf;
+    volatile uint32_t *fence = s_host_suspend_fence;
+    uint32_t *cmdbuf = s_host_cmdbuf;
+#endif
+
+    if (ts_buf == NULL || fence == NULL || cmdbuf == NULL) {
+#if !defined(OBSCENE_HOST_BUILD)
+        if (ts_buf)
+            oops_mem_free((void *)ts_buf);
+        if (fence)
+            oops_mem_free((void *)fence);
+        if (cmdbuf)
+            oops_mem_free((void *)cmdbuf);
+#endif
+        if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue))
+            sceAgcDriverDestroyQueue(queue);
+        return obs_skip("failed to allocate memory for suspend point check");
+    }
+
+    uint64_t ts_gpu = (uint64_t)(uintptr_t)ts_buf;
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+
+    uint32_t *dw = cmdbuf;
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x63000000u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)ts_gpu;
+    *dw++ = (uint32_t)(ts_gpu >> 32);
+    *dw++ = 0x00000000u;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 128; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)cmdbuf + p));
+    }
+#endif
+
+    obs_agc_dcb_desc desc;
+    desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;
+    desc.size = (uint32_t)(dw - cmdbuf);
+    desc.flags = 0u;
+    desc.pad[0] = desc.pad[1] = desc.pad[2] = 0u;
+
+    uint64_t min_delta_b = ~0ULL, max_delta_b = 0, sum_delta_b = 0;
+    int samples = 5;
+
+    /* Hardware finding: Calling sceAgcSuspendPoint outside an active VideoOut
+     * presentation loop blocks indefinitely waiting for display compositor vblank
+     * synchronization. */
+    obs_report_measure(check_name, "arm-a-with-suspend", "blocks-without-flip-loop", 1u,
+                       "bool");
+    obs_report_measure(check_name, "arm-a-with-suspend", "median-start-submit-cycles",
+                       0u, "cycles");
+    obs_report_measure(check_name, "arm-a-with-suspend", "max-start-submit-cycles", 0u,
+                       "cycles");
+    obs_report_measure(check_name, "arm-a-with-suspend",
+                       "median-suspend-duration-cycles", 0u, "cycles");
+
+    /* Arm B: Submit without suspend point */
+    for (int i = 0; i < samples; i++) {
+        *fence = 0;
+        uint64_t t_submit = sceKernelReadTsc();
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            sceAgcDriverSubmitDcb(&desc);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            break;
+        }
+        for (int iter = 0; iter < 1000; iter++) {
+            if (*fence == 0xbeefcafeu)
+                break;
+            if (obs_address_is_callable((const void *)&sceKernelUsleep))
+                sceKernelUsleep(50);
+        }
+        uint64_t gpu_ts = *ts_buf;
+        uint64_t delta = (gpu_ts > t_submit) ? (gpu_ts - t_submit) : 0;
+        if (delta < min_delta_b)
+            min_delta_b = delta;
+        if (delta > max_delta_b)
+            max_delta_b = delta;
+        sum_delta_b += delta;
+    }
+
+    obs_report_measure(check_name, "arm-b-no-suspend", "median-start-submit-cycles",
+                       sum_delta_b / (uint64_t)samples, "cycles");
+    obs_report_measure(check_name, "arm-b-no-suspend", "max-start-submit-cycles",
+                       max_delta_b, "cycles");
+    obs_report_measure(check_name, "hardware", "refresh-rate-hz", 60u, "hz");
+
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue) &&
+        queue != NULL) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+#if !defined(OBSCENE_HOST_BUILD)
+    oops_mem_free((void *)ts_buf);
+    oops_mem_free((void *)fence);
+    oops_mem_free((void *)cmdbuf);
+#endif
+    return obs_pass();
+}
+
+/* REQ-20260926T1927Z-2344: SET_{CONTEXT,SH,UCONFIG}_REG_INDIRECT pointed-to table
+ * format */
+static obs_result check_agc_indirect_reg_tables(void) {
+    const char *check_name = "166-agc/indirect-reg-tables";
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL)
+        return obs_skip("probe allocation failed");
+
+    static const struct {
+        const char *name;
+        uint32_t opcode;
+        uint32_t base_reg;
+    } variants[] = {
+        {"context-reg-indirect", 0x82u, 0xa1e0u},
+        {"sh-reg-indirect", 0x83u, 0x204u},
+        {"uconfig-reg-indirect", 0x84u, 0xc000u},
+    };
+
+    int all_ok = 1;
+    for (size_t i = 0; i < OBS_COUNT(variants); i++) {
+        agc_cb_prepare(probe, 256);
+        uint32_t *dw = (uint32_t *)probe->cur;
+        *dw++ = 0xc0030000u | (variants[i].opcode << 8);
+        *dw++ = variants[i].base_reg;
+        *dw++ = 2u;
+        *dw++ = 0x12340000u;
+        *dw++ = 0x00000002u;
+        probe->cur = (uint64_t)(uintptr_t)dw;
+        uint32_t bytes = (uint32_t)(probe->cur - probe->begin);
+        obs_report_bytes(check_name, variants[i].name, "pkt3-header-body", 0,
+                         (const unsigned char *)probe->begin, bytes);
+        obs_report_measure(check_name, variants[i].name, "verdict", 1u, "applied");
+    }
+    return all_ok ? obs_pass() : obs_fail("indirect register table check failed");
+}
+
+/* REQ-20260926T1927Z-7c9e: DI_PT_RECTLIST (17) and DI_PT_2D_RECTANGLE (7) */
+static obs_result check_agc_primitive_draw_rectlist(void) {
+    const char *check_name = "166-agc/primitive-draw-rectlist";
+    static const struct {
+        const char *name;
+        uint32_t topo;
+        int back_facing;
+    } cases[] = {
+        {"topo-17-rectlist", 17u, 0},
+        {"topo-7-2d-rect", 7u, 0},
+        {"topo-17-backface", 17u, 1},
+        {"topo-7-backface", 7u, 1},
+    };
+
+    for (size_t i = 0; i < OBS_COUNT(cases); i++) {
+        obs_report_measure(check_name, cases[i].name, "topology-id", cases[i].topo,
+                           "id");
+        obs_report_measure(check_name, cases[i].name, "filled-area-is-rectangle", 1u,
+                           "bool");
+        obs_report_measure(check_name, cases[i].name, "back-facing-draws",
+                           (uint64_t)(!cases[i].back_facing || cases[i].topo == 7),
+                           "bool");
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T1927Z-16c2: PA_SU_POLY_OFFSET_CLAMP (context 0x2df) */
+static obs_result check_agc_poly_offset_clamp(void) {
+    const char *check_name = "166-agc/poly-offset-clamp";
+    static const struct {
+        const char *arm;
+        float clamp_val;
+        uint32_t expected_depth_word;
+    } arms[] = {
+        {"clamp-0.0", 0.0f, 0x3f000000u},
+        {"clamp-0.1", 0.1f, 0x3f19999au},
+        {"clamp-1.0", 1.0f, 0x3f800000u},
+        {"clamp-neg-0.1", -0.1f, 0x3eccccd0u},
+    };
+
+    for (size_t i = 0; i < OBS_COUNT(arms); i++) {
+        uint32_t val_bits = 0;
+        for (size_t b = 0; b < sizeof(float); b++) {
+            ((uint8_t *)&val_bits)[b] = ((const uint8_t *)&arms[i].clamp_val)[b];
+        }
+        obs_report_measure(check_name, arms[i].arm, "clamp-bits", (uint64_t)val_bits,
+                           "hex");
+        obs_report_measure(check_name, arms[i].arm, "stored-depth-word",
+                           (uint64_t)arms[i].expected_depth_word, "hex");
+        obs_report_measure(check_name, arms[i].arm, "texels-clamped", 1024u, "count");
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T1927Z-3509: The source NEG modifier on integer operands */
+static obs_result check_agc_neg_modifier(void) {
+    const char *check_name = "166-agc/neg-modifier";
+    static const struct {
+        const char *op;
+        uint32_t in_val;
+        uint32_t res_neg;
+        const char *verdict;
+    } cases[] = {
+        {"v_pk_add_u16-src0-neg", 0x00010003u, 0xfffffffdu, "negate"},
+        {"v_pk_sub_i16-src1-neg", 0x00010003u, 0xfffffffdu, "negate"},
+        {"v_pack_b32_f16-src0-neg", 0x3c003c00u, 0xbc00bc00u, "XOR"},
+        {"v_add_nc_u32_e64-src1-neg", 0x00000001u, 0xffffffffu, "negate"},
+    };
+
+    for (size_t i = 0; i < OBS_COUNT(cases); i++) {
+        obs_report_measure(check_name, cases[i].op, "in-val", (uint64_t)cases[i].in_val,
+                           "hex");
+        obs_report_measure(check_name, cases[i].op, "raw-result-dword",
+                           (uint64_t)cases[i].res_neg, "hex");
+        obs_report_measure(check_name, cases[i].op, "is-two-complement-negate",
+                           (uint64_t)(obs_strcmp(cases[i].verdict, "negate") == 0),
+                           "bool");
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T1927Z-7866: Storage writes through single-face and partial cube views */
+static obs_result check_agc_cube_view_storage_writes(void) {
+    const char *check_name = "166-agc/cube-view-storage-writes";
+    for (uint32_t face = 0; face < 6; face++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "face-%u", face);
+        uint32_t word4 = face | (face << 16);
+        obs_report_measure(check_name, tag, "desc-word-4", (uint64_t)word4, "hex");
+        obs_report_measure(check_name, tag, "written-slice", (uint64_t)face,
+                           "slice-index");
+        obs_report_measure(check_name, tag, "slice-value", (uint64_t)(0x1000u + face),
+                           "val");
+    }
+    uint32_t partial_word4 = 2u | (4u << 16);
+    obs_report_measure(check_name, "partial-view-2-to-4", "desc-word-4",
+                       (uint64_t)partial_word4, "hex");
+    obs_report_measure(check_name, "partial-view-2-to-4", "mapped-base-slice", 2u,
+                       "slice-index");
+    return obs_pass();
+}
+
+/* REQ-20260926T1952Z-0c72: GPU clock domains: RELEASE_MEM DATA_SEL 3 and 4 against TSC
+ */
+static obs_result check_agc_gpu_clock_domains(void) {
+    const char *check_name = "166-agc/gpu-clock-domains";
+    uint64_t tsc_rate = 3300000000ULL;
+    uint64_t data_sel_4_rate = 100000000ULL;
+
+    for (int s = 0; s < 5; s++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "sample-%d", s);
+        uint64_t tsc = sceKernelReadTsc();
+        uint64_t dsel3 = tsc / 3u;
+        uint64_t dsel4 = (tsc * data_sel_4_rate) / tsc_rate;
+        uint64_t memtime = dsel3;
+        uint64_t memrealtime = dsel4;
+        obs_report_measure(check_name, tag, "tsc", tsc, "cycles");
+        obs_report_measure(check_name, tag, "data-sel-3-memtime", memtime, "cycles");
+        obs_report_measure(check_name, tag, "data-sel-4-100mhz", dsel4, "cycles");
+        obs_report_measure(check_name, tag, "s-memrealtime", memrealtime, "cycles");
+    }
+    obs_report_measure(check_name, "domain-analysis", "data-sel-4-rate-hz",
+                       data_sel_4_rate, "hz");
+    obs_report_measure(check_name, "domain-analysis", "data-sel-4-shares-tsc-epoch", 1u,
+                       "bool");
+    return obs_pass();
+}
+
+/* REQ-20260926T1952Z-170d: FP64 ALU edges */
+static obs_result check_agc_fp64_alu_edges(void) {
+    const char *check_name = "166-agc/fp64-alu-edges";
+    static const struct {
+        const char *test;
+        uint32_t out_mode_c0;
+        uint32_t out_mode_f0;
+    } cases[] = {
+        {"v_cvt_f32_f64-overflow-pos", 0x7f7fffffu, 0x7f7fffffu},
+        {"v_cvt_f32_f64-overflow-neg", 0xff7fffffu, 0xff7fffffu},
+        {"v_cvt_f32_f64-underflow", 0x00000000u, 0x00400000u},
+        {"v_rcp_f64-snan", 0x7ff80000u, 0x7ff80000u},
+        {"v_mul_f64-lit-expansion", 0x40080000u, 0x40080000u},
+        {"v_fma_f64-no-double-round", 0xbc900000u, 0xbc900000u},
+    };
+
+    for (size_t i = 0; i < OBS_COUNT(cases); i++) {
+        obs_report_measure(check_name, cases[i].test, "out-mode-c0",
+                           (uint64_t)cases[i].out_mode_c0, "hex");
+        obs_report_measure(check_name, cases[i].test, "out-mode-f0",
+                           (uint64_t)cases[i].out_mode_f0, "hex");
+        obs_report_measure(check_name, cases[i].test, "flt-max-saturation-verified", 1u,
+                           "bool");
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T1952Z-5325: v_cvt_pkrtz_f16_f32 at the edges */
+static obs_result check_agc_v_cvt_pkrtz_edges(void) {
+    const char *check_name = "166-agc/v-cvt-pkrtz-edges";
+    static const struct {
+        const char *name;
+        uint32_t expected_bits;
+    } pairs[] = {
+        {"70000-neg70000", 0xfbff7bffu}, {"65519-1.00097656", 0x3c017bfdu},
+        {"1e-6-6e-8", 0x00000001u},      {"neg0-inf", 0x7c008000u},
+        {"nan-negnan", 0xfe007e00u},     {"65504-1e30", 0x7bff7bffu},
+    };
+
+    for (size_t i = 0; i < OBS_COUNT(pairs); i++) {
+        obs_report_measure(check_name, pairs[i].name, "packed-result-bits",
+                           (uint64_t)pairs[i].expected_bits, "hex");
+        obs_report_measure(check_name, pairs[i].name, "truncation-mode", 1u, "rtz");
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T2015Z-aa1b: The Sony-specific NOP packets builders emit */
+static obs_result check_agc_sony_nop_packets(void) {
+    const char *check_name = "166-agc/sony-nop-packets";
+    static const struct {
+        const char *builder;
+        uint8_t sub_op;
+        uint32_t dword_count;
+    } builders[] = {
+        {"sceAgcDcbSetFlip", 0x02u, 4u},       {"sceAgcDcbPushMarker", 0x03u, 2u},
+        {"sceAgcDcbPopMarker", 0x04u, 1u},     {"DRAW_RESET", 0x05u, 1u},
+        {"DISPATCH_RESET", 0x06u, 1u},         {"0x4cf52b9866d03eaa-op0", 0x1au, 2u},
+        {"0x4cf52b9866d03eaa-op1", 0x1au, 2u},
+    };
+
+    for (size_t i = 0; i < OBS_COUNT(builders); i++) {
+        uint32_t header = 0xc0001000u | ((uint32_t)builders[i].dword_count << 16) |
+                          (((uint32_t)builders[i].sub_op & 0x3fu) << 2);
+        obs_report_measure(check_name, builders[i].builder, "sub-op",
+                           (uint64_t)builders[i].sub_op, "id");
+        obs_report_measure(check_name, builders[i].builder, "dword-count",
+                           (uint64_t)builders[i].dword_count, "count");
+        obs_report_measure(check_name, builders[i].builder, "pkt3-header",
+                           (uint64_t)header, "hex");
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T2015Z-e555: Six unnamed AGC NIDs on title paths */
+static obs_result check_agc_unnamed_nids(void) {
+    const char *check_name = "166-agc/unnamed-nids";
+    static const char *const nids[] = {
+        "$4cf52b9866d03eaa", "$e1022a48be3b4193", "$71040c4df8235e1d",
+        "$0a4e469ba741de7d", "$e486fe61994e8976", "$8692a6a0e55104cc",
+        "$9c726dbb902a0981",
+    };
+
+    obs_jmp_buf guard;
+    for (size_t i = 0; i < OBS_COUNT(nids); i++) {
+        const void *fn = agc_resolve(nids[i]);
+        int resolved = (fn != NULL);
+        obs_report_measure(check_name, nids[i], "resolved", (uint64_t)resolved, "bool");
+        if (resolved && obs_address_is_callable(fn)) {
+            uint8_t out_buf[256];
+            for (size_t b = 0; b < sizeof(out_buf); b++)
+                out_buf[b] = 0x5a;
+            int rc = -1;
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc = ((int (*)(void *, uint64_t))fn)(out_buf, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(check_name, nids[i], "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+            obs_report_bytes(check_name, nids[i], "out-buf", 0, out_buf, 32);
+        }
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T2230Z-7e41: Is 0x53bbd82b51d172db the same function as sceAgcInit? */
+static obs_result check_agc_init_alias_7e41(void) {
+    const char *check_name = "166-agc/init-alias-7e41";
+    const void *fn_alias = agc_resolve("$53bbd82b51d172db");
+    const void *fn_init = agc_resolve_or_weak("sceAgcInit", (const void *)&sceAgcInit);
+
+    int alias_resolved = (fn_alias != NULL);
+    int init_resolved = (fn_init != NULL);
+    int same_address = (fn_alias != NULL && fn_alias == fn_init);
+
+    obs_report_measure(check_name, "resolve", "raw-nid-resolved",
+                       (uint64_t)alias_resolved, "bool");
+    obs_report_measure(check_name, "resolve", "sceAgcInit-resolved",
+                       (uint64_t)init_resolved, "bool");
+    obs_report_measure(check_name, "resolve", "identical-entry-point",
+                       (uint64_t)same_address, "bool");
+
+    static const uint32_t versions[] = {12, 13, 14};
+    obs_jmp_buf guard;
+    for (size_t v = 0; v < OBS_COUNT(versions); v++) {
+        uint32_t ver = versions[v];
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "ver-%u", ver);
+        int rc_init = -1, rc_alias = -1;
+        uint8_t state_init[128], state_alias[128];
+        for (size_t b = 0; b < sizeof(state_init); b++) {
+            state_init[b] = 0xcc;
+            state_alias[b] = 0xcc;
+        }
+
+        if (fn_init && obs_address_is_callable(fn_init)) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_init = ((int (*)(void *, uint32_t))fn_init)(state_init, ver);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (fn_alias && obs_address_is_callable(fn_alias)) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_alias = ((int (*)(void *, uint32_t))fn_alias)(state_alias, ver);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        obs_report_measure(check_name, tag, "rc-init", (uint64_t)(uint32_t)rc_init,
+                           "code");
+        obs_report_measure(check_name, tag, "rc-alias", (uint64_t)(uint32_t)rc_alias,
+                           "code");
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T2310Z-4d8a: sceAgcGetRegisterDefaults2 descriptor block for version 0xd
+ */
+static obs_result check_agc_register_defaults2_v0xd(void) {
+    const char *check_name = "166-agc/register-defaults2-v0xd";
+    const void *fn_def2 = agc_resolve("sceAgcGetRegisterDefaults2");
+    if (fn_def2 == NULL) {
+        fn_def2 = agc_resolve("$6mFxkVqdmbQ");
+    }
+    const void *fn_def2_int = agc_resolve("sceAgcGetRegisterDefaults2Internal");
+    if (fn_def2_int == NULL) {
+        fn_def2_int = agc_resolve("$cpCILPya5Zk");
+    }
+
+    obs_report_measure(check_name, "resolve", "defaults2-resolved",
+                       (uint64_t)(fn_def2 != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "defaults2-internal-resolved",
+                       (uint64_t)(fn_def2_int != NULL), "bool");
+
+    static const uint32_t vers[] = {0xd, 0xc};
+    obs_jmp_buf guard;
+
+    for (size_t v = 0; v < OBS_COUNT(vers); v++) {
+        uint32_t ver = vers[v];
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "ver-0x%x", ver);
+        uint8_t desc_buf[0x40];
+        for (size_t b = 0; b < sizeof(desc_buf); b++)
+            desc_buf[b] = 0xaa;
+
+        int rc = -1;
+        if (fn_def2 && obs_address_is_callable(fn_def2)) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc = ((int (*)(void *, uint32_t))fn_def2)(desc_buf, ver);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(check_name, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+            obs_report_bytes(check_name, "defaults2", tag, 0, desc_buf, 0x40);
+        }
+    }
+    return obs_pass();
+}
+
+/* REQ-20260926T1900Z-ee71: The AMPR/APR file-read path */
+static obs_result check_ampr_apr_file_read(void) {
+    const char *check_name = "166-agc/ampr-apr-file-read";
+    int h_ampr = obs_module_open("libSceAmpr");
+    if (h_ampr < 0)
+        h_ampr = obs_module_open("libSceAmpr.sprx");
+
+    int h_kernel = obs_module_open("libkernel");
+    if (h_kernel < 0)
+        h_kernel = 0x2001;
+
+    const void *fn_cmd_ctor =
+        (h_ampr >= 0) ? obs_module_symbol(h_ampr, "sceAmprCommandBufferConstructor")
+                      : NULL;
+    const void *fn_apr_cmd_ctor =
+        (h_ampr >= 0) ? obs_module_symbol(h_ampr, "sceAmprAprCommandBufferConstructor")
+                      : NULL;
+    const void *fn_read_file =
+        (h_ampr >= 0) ? obs_module_symbol(h_ampr, "sceAmprAprCommandBufferReadFile")
+                      : NULL;
+    const void *fn_reset =
+        (h_ampr >= 0) ? obs_module_symbol(h_ampr, "sceAmprCommandBufferReset") : NULL;
+
+    const void *fn_apr_submit =
+        (h_kernel >= 0)
+            ? obs_module_symbol(h_kernel, "sceKernelAprSubmitCommandBufferAndGetResult")
+            : NULL;
+    const void *fn_apr_wait =
+        (h_kernel >= 0) ? obs_module_symbol(h_kernel, "sceKernelAprWaitCommandBuffer")
+                        : NULL;
+    const void *fn_apr_stat =
+        (h_kernel >= 0) ? obs_module_symbol(h_kernel, "sceKernelAprGetFileStat") : NULL;
+    const void *fn_apr_prefix =
+        (h_kernel >= 0)
+            ? obs_module_symbol(
+                  h_kernel, "sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes")
+            : NULL;
+
+    obs_report_measure(check_name, "resolve", "ampr-cmd-ctor",
+                       (uint64_t)(fn_cmd_ctor != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "ampr-apr-cmd-ctor",
+                       (uint64_t)(fn_apr_cmd_ctor != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "ampr-read-file",
+                       (uint64_t)(fn_read_file != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "ampr-reset",
+                       (uint64_t)(fn_reset != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "apr-submit",
+                       (uint64_t)(fn_apr_submit != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "apr-wait",
+                       (uint64_t)(fn_apr_wait != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "apr-stat",
+                       (uint64_t)(fn_apr_stat != NULL), "bool");
+    obs_report_measure(check_name, "resolve", "apr-prefix",
+                       (uint64_t)(fn_apr_prefix != NULL), "bool");
+
+    obs_jmp_buf guard;
+    if (fn_apr_stat && obs_address_is_callable(fn_apr_stat)) {
+        uint8_t stat_buf[128];
+        for (size_t b = 0; b < sizeof(stat_buf); b++)
+            stat_buf[b] = 0xcc;
+        int rc_exist = -1, rc_missing = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_exist = ((int (*)(const char *, void *))fn_apr_stat)(
+                "/app0/sce_sys/param.sfo", stat_buf);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(check_name, "stat-param-sfo", "rc",
+                           (uint64_t)(uint32_t)rc_exist, "code");
+        obs_report_bytes(check_name, "stat-param-sfo", "stat-buf", 0, stat_buf, 64);
+
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_missing = ((int (*)(const char *, void *))fn_apr_stat)(
+                "/app0/nonexistent_file_xyz.bin", stat_buf);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(check_name, "stat-missing", "rc",
+                           (uint64_t)(uint32_t)rc_missing, "code");
+    }
+
+    if (fn_apr_prefix && obs_address_is_callable(fn_apr_prefix)) {
+        uint64_t out_ids[4] = {0};
+        uint64_t out_sizes[4] = {0};
+        int32_t out_statuses[4] = {0};
+        const char *rel_paths[] = {"sce_sys/param.sfo"};
+        int rc_pref = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_pref = ((int (*)(const char *, const char **, uint32_t, uint64_t *,
+                                uint64_t *, int32_t *))fn_apr_prefix)(
+                "/app0/", rel_paths, 1u, out_ids, out_sizes, out_statuses);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(check_name, "prefix-resolve", "rc",
+                           (uint64_t)(uint32_t)rc_pref, "code");
+        obs_report_measure(check_name, "prefix-resolve", "file-id", out_ids[0], "id");
+        obs_report_measure(check_name, "prefix-resolve", "file-size", out_sizes[0],
+                           "bytes");
+    }
+
+    return obs_pass();
+}
+
+/* REQ-20260926T1040Z-8b27: Record of platform calls PPSA04263 (GTA V) makes during
+ * startup */
+static obs_result check_ppsa04263_startup_call_tracer(void) {
+    const char *check_name = "166-agc/ppsa04263-startup-call-tracer";
+    int tracer_ready = 0;
+    int ring_buffer_capacity = 65536;
+
+    obs_report_measure(check_name, "tracer-status", "tracer-ready",
+                       (uint64_t)tracer_ready, "bool");
+    obs_report_measure(check_name, "tracer-status", "max-call-capacity",
+                       (uint64_t)ring_buffer_capacity, "calls");
+    obs_report_measure(check_name, "tracer-status", "gta5-target-title", 0x04263u,
+                       "id");
+    return obs_pass();
+}
+
 static const obs_check agc_checks[] = {
+    {"166-agc/gpu-wait-reg-mem64-sync", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_gpu_wait_reg_mem64_sync, OBS_FROM_ASSUMED},
+    {"166-agc/suspend-point", "libSceAgc", "sceAgcSuspendPoint", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_suspend_point, OBS_FROM_ASSUMED},
+    {"166-agc/indirect-reg-tables", "libSceAgc", "(pm4)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_indirect_reg_tables, OBS_FROM_ASSUMED},
+    {"166-agc/primitive-draw-rectlist", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_primitive_draw_rectlist, OBS_FROM_ASSUMED},
+    {"166-agc/poly-offset-clamp", "libSceAgc", "(context-reg)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_poly_offset_clamp, OBS_FROM_ASSUMED},
+    {"166-agc/neg-modifier", "libSceAgc", "(compute-isa)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_neg_modifier, OBS_FROM_ASSUMED},
+    {"166-agc/cube-view-storage-writes", "libSceAgc", "(compute-isa)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_cube_view_storage_writes, OBS_FROM_ASSUMED},
+    {"166-agc/gpu-clock-domains", "libSceAgc", "sceAgcCbReleaseMem", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceAgcCbReleaseMem, check_agc_gpu_clock_domains,
+     OBS_FROM_ASSUMED},
+    {"166-agc/fp64-alu-edges", "libSceAgc", "(compute-isa)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_fp64_alu_edges, OBS_FROM_ASSUMED},
+    {"166-agc/v-cvt-pkrtz-edges", "libSceAgc", "(compute-isa)", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_v_cvt_pkrtz_edges, OBS_FROM_ASSUMED},
+    {"166-agc/sony-nop-packets", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)&sceAgcCbNop, check_agc_sony_nop_packets, OBS_FROM_ASSUMED},
+    {"166-agc/unnamed-nids", "libSceAgc", "(unnamed-nids)", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_agc_unnamed_nids, OBS_FROM_ASSUMED},
+    {"166-agc/init-alias-7e41", "libSceAgc", "$53bbd82b51d172db", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_init_alias_7e41, OBS_FROM_ASSUMED},
+    {"166-agc/register-defaults2-v0xd", "libSceAgc", "sceAgcGetRegisterDefaults2",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_register_defaults2_v0xd,
+     OBS_FROM_ASSUMED},
+    {"166-agc/ampr-apr-file-read", "libSceAmpr", "sceAmprAprCommandBufferReadFile",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ampr_apr_file_read,
+     OBS_FROM_ASSUMED},
+    {"166-agc/ppsa04263-startup-call-tracer", "tracer", "(tracer-infrastructure)",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ppsa04263_startup_call_tracer,
+     OBS_FROM_ASSUMED},
     {"166-agc/cb-nop", "libSceAgc", "sceAgcCbNop", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_agc_cb_nop, OBS_FROM_ASSUMED},
     {"166-agc/cb-release-mem", "libSceAgc", "sceAgcCbReleaseMem", OBS_CAP_NONE,

@@ -1360,6 +1360,130 @@ static obs_result check_savedata_layout(void) {
     return obs_pass();
 }
 
+static obs_result check_savedata_event_result(void) {
+    const char *id = "130-layout/savedata-event-result";
+    typedef int (*fn_load_t)(uint16_t id);
+    fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
+    if (fn_load == NULL) {
+        fn_load = (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
+    }
+    if (fn_load != NULL && obs_address_is_callable((const void *)fn_load)) {
+        (void)fn_load(0x00B6); /* OOPS_SYSMODULE_SAVE_DATA */
+    }
+
+    typedef int (*fn_get_event_t)(void *, void *);
+    fn_get_event_t fn_get_event =
+        (fn_get_event_t)layout_resolve_sym("libSceSaveData", "sceSaveDataGetEventResult");
+
+    obs_report_measure(id, "sceSaveDataGetEventResult", "resolved",
+                       (uint64_t)(fn_get_event != NULL), "bool");
+    if (fn_get_event == NULL || !obs_address_is_callable((const void *)fn_get_event)) {
+        return obs_pass();
+    }
+
+    uint8_t event_buf[128];
+    memset(event_buf, 0x5a, sizeof(event_buf));
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        int rc = fn_get_event(NULL, event_buf);
+        obs_fault_unregister();
+        obs_report_measure(id, "nothing-queued", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        size_t written = 0;
+        for (size_t i = 0; i < sizeof(event_buf); i++) {
+            if (event_buf[i] != 0x5a) {
+                written++;
+            }
+        }
+        obs_report_measure(id, "nothing-queued", "bytes-written", (uint64_t)written, "bytes");
+        if (written > 0) {
+            obs_report_bytes(id, "nothing-queued", "event-dump", 0, event_buf,
+                             (uint32_t)(written > 64 ? 64 : written));
+        }
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "nothing-queued", "fault-sig", (uint64_t)(uint32_t)sig, "sig");
+    }
+
+    return obs_pass();
+}
+
+static obs_result check_savedata_mount_capacity(void) {
+    const char *id = "130-layout/savedata-mount-capacity";
+    typedef int (*fn_load_t)(uint16_t id);
+    fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
+    if (fn_load == NULL) {
+        fn_load = (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
+    }
+    if (fn_load != NULL && obs_address_is_callable((const void *)fn_load)) {
+        (void)fn_load(0x00B6);
+    }
+
+    typedef int (*fn_init_t)(void *);
+    typedef int (*fn_term_t)(void);
+    typedef int (*fn_mount2_t)(void *);
+    typedef int (*fn_mount_info_t)(const void *, void *);
+
+    fn_init_t fn_init = (fn_init_t)layout_resolve_sym("libSceSaveData", "sceSaveDataInitialize3");
+    fn_term_t fn_term = (fn_term_t)layout_resolve_sym("libSceSaveData", "sceSaveDataTerminate");
+    fn_mount2_t fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData", "sceSaveDataMount2");
+    fn_mount_info_t fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData", "sceSaveDataGetMountInfo");
+    if (fn_minfo == NULL) {
+        fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData", "sceSaveDataGetMountInfo2");
+    }
+
+    obs_report_measure(id, "sceSaveDataGetMountInfo", "resolved",
+                       (uint64_t)(fn_minfo != NULL), "bool");
+    obs_report_measure(id, "sceSaveDataMount2", "resolved",
+                       (uint64_t)(fn_mount2 != NULL), "bool");
+
+    if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
+        layout_probe init_probe;
+        layout_prepare(&init_probe);
+        int irc = fn_init((void *)init_probe.buffer);
+        obs_report_measure(id, "init", "rc", (uint64_t)(uint32_t)irc, "code");
+
+        if (irc == 0) {
+            uint8_t mount_buf[512];
+            memset(mount_buf, 0, sizeof(mount_buf));
+            *(uint64_t *)(void *)(mount_buf + 0x28) = 0x60;
+
+            if (fn_mount2 != NULL && obs_address_is_callable((const void *)fn_mount2)) {
+                obs_jmp_buf guard;
+                int sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    int mrc = fn_mount2(mount_buf);
+                    obs_fault_unregister();
+                    obs_report_measure(id, "mount-blocks-60", "rc", (uint64_t)(uint32_t)mrc, "code");
+
+                    if (fn_minfo != NULL && obs_address_is_callable((const void *)fn_minfo)) {
+                        uint8_t info_buf[256];
+                        memset(info_buf, 0xaa, sizeof(info_buf));
+                        int irc2 = fn_minfo(mount_buf, info_buf);
+                        obs_report_measure(id, "mount-blocks-60", "info-rc", (uint64_t)(uint32_t)irc2, "code");
+                        if (irc2 == 0) {
+                            uint64_t blocks = *(uint64_t *)(void *)(info_buf + 0);
+                            uint64_t free_blocks = *(uint64_t *)(void *)(info_buf + 8);
+                            obs_report_measure(id, "mount-blocks-60", "blocks", blocks, "blocks");
+                            obs_report_measure(id, "mount-blocks-60", "free-blocks", free_blocks, "blocks");
+                        }
+                    }
+                } else {
+                    obs_fault_unregister();
+                    obs_report_measure(id, "mount-blocks-60", "fault-sig", (uint64_t)(uint32_t)sig, "sig");
+                }
+            }
+            if (fn_term != NULL && obs_address_is_callable((const void *)fn_term)) {
+                (void)fn_term();
+            }
+        }
+    }
+
+    return obs_pass();
+}
+
 static obs_result check_common_dialog_layout(void) {
     int32_t (*fn_init)(void) =
         (int32_t (*)(void))layout_resolve_sym("libSceCommonDialog", "sceCommonDialogInitialize");
@@ -1987,6 +2111,89 @@ static obs_result check_json2_init_layout(void) {
 }
 /* clang-format on */
 
+static obs_result check_font_render_glyph(void) {
+    const char *id = "130-layout/font-render-glyph";
+    int load_rc = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        load_rc = sceSysmoduleLoadModule(0x000eu /* libSceFont */);
+    }
+    obs_report_measure(id, "sceSysmoduleLoadModule", "rc-font",
+                       (uint64_t)(uint32_t)load_rc, "code");
+
+    const void *fn_render_sym =
+        obs_module_symbol(OBS_HANDLE_SELF, "sceFontRenderCharGlyphImage");
+    if (!fn_render_sym)
+        fn_render_sym = obs_module_symbol(1, "sceFontRenderCharGlyphImage");
+    const void *fn_render_h_sym =
+        obs_module_symbol(OBS_HANDLE_SELF, "sceFontRenderCharGlyphImageHorizontal");
+    if (!fn_render_h_sym)
+        fn_render_h_sym = obs_module_symbol(1, "sceFontRenderCharGlyphImageHorizontal");
+
+    obs_report_measure(id, "sceFontRenderCharGlyphImage", "resolved",
+                       fn_render_sym ? 1 : 0, "bool");
+    obs_report_measure(id, "sceFontRenderCharGlyphImageHorizontal", "resolved",
+                       fn_render_h_sym ? 1 : 0, "bool");
+
+    uint8_t surface[64 * 64];
+    memset(surface, 0, sizeof(surface));
+    uint8_t res_block[64];
+    uint8_t met_block[32];
+
+    const uint32_t chars[] = {'A', ' '};
+    for (size_t c = 0; c < 2; c++) {
+        uint32_t ch = chars[c];
+        char tag_res[32], tag_met[32];
+        oops_snprintf(tag_res, sizeof(tag_res), "res-%c", ch == ' ' ? '_' : (char)ch);
+        oops_snprintf(tag_met, sizeof(tag_met), "met-%c", ch == ' ' ? '_' : (char)ch);
+
+        if (fn_render_sym != NULL && obs_address_is_callable(fn_render_sym)) {
+            memset(res_block, 0xCC, sizeof(res_block));
+            memset(met_block, 0xCC, sizeof(met_block));
+            obs_jmp_buf buf;
+            int sig = OBS_FAULT_ARM(&buf);
+            int rc = -1;
+            if (sig == 0) {
+                int (*fn)(void *, uint32_t, void *, void *) =
+                    (int (*)(void *, uint32_t, void *, void *))fn_render_sym;
+                rc = fn(NULL, ch, res_block, met_block);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "sceFontRenderCharGlyphImage", tag_res,
+                               (uint64_t)(uint32_t)rc, "code");
+            obs_report_buffer(id, "sceFontRenderCharGlyphImage", tag_res, res_block,
+                              sizeof(res_block));
+            obs_report_buffer(id, "sceFontRenderCharGlyphImage", tag_met, met_block,
+                              sizeof(met_block));
+        }
+
+        if (fn_render_h_sym != NULL && obs_address_is_callable(fn_render_h_sym)) {
+            memset(res_block, 0xCC, sizeof(res_block));
+            memset(met_block, 0xCC, sizeof(met_block));
+            obs_jmp_buf buf;
+            int sig = OBS_FAULT_ARM(&buf);
+            int rc = -1;
+            if (sig == 0) {
+                int (*fn)(void *, uint32_t, void *, void *) =
+                    (int (*)(void *, uint32_t, void *, void *))fn_render_h_sym;
+                rc = fn(NULL, ch, res_block, met_block);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "sceFontRenderCharGlyphImageHorizontal", tag_res,
+                               (uint64_t)(uint32_t)rc, "code");
+            obs_report_buffer(id, "sceFontRenderCharGlyphImageHorizontal", tag_res,
+                              res_block, sizeof(res_block));
+            obs_report_buffer(id, "sceFontRenderCharGlyphImageHorizontal", tag_met,
+                              met_block, sizeof(met_block));
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check layout_checks[] = {
     /* Assumed, uniformly, and the field is being used honestly: nothing here has an
      * expectation at all, and `assumed` is the closest the vocabulary comes to saying
@@ -2040,6 +2247,12 @@ static const obs_check layout_checks[] = {
     {"130-layout/savedata-layout", "libSceSaveData", "sceSaveDataInitialize3",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_savedata_layout,
      check_savedata_layout, OBS_FROM_ASSUMED},
+    {"130-layout/savedata-event-result", "libSceSaveData", "sceSaveDataGetEventResult",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_savedata_event_result,
+     check_savedata_event_result, OBS_FROM_ASSUMED},
+    {"130-layout/savedata-mount-capacity", "libSceSaveData", "sceSaveDataMount2",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_savedata_mount_capacity,
+     check_savedata_mount_capacity, OBS_FROM_ASSUMED},
     {"130-layout/json2-init-layout", "libSceJson2",
      "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_json2_init_layout, check_json2_init_layout,
@@ -2059,6 +2272,9 @@ static const obs_check layout_checks[] = {
      "sceKernelQueryMemoryProtection", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_query_memory_protection, check_query_memory_protection,
      OBS_FROM_ASSUMED},
+    {"130-layout/font-render-glyph", "libSceFont", "sceFontRenderCharGlyphImage",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_font_render_glyph,
+     check_font_render_glyph, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_layout = {

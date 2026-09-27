@@ -819,6 +819,168 @@ static obs_result check_video_buffer_set_extension(void) {
 #endif
 }
 
+static obs_result check_video_output_mode_selectors(void) {
+    const void *fn_is_supp_sym =
+        obs_module_symbol(OBS_HANDLE_SELF, "sceVideoOutIsOutputSupported");
+    if (fn_is_supp_sym == NULL) {
+        fn_is_supp_sym = obs_module_symbol(1, "sceVideoOutIsOutputSupported");
+    }
+    const void *fn_cfg_sym =
+        obs_module_symbol(OBS_HANDLE_SELF, "sceVideoOutConfigureOutput");
+    if (fn_cfg_sym == NULL) {
+        fn_cfg_sym = obs_module_symbol(1, "sceVideoOutConfigureOutput");
+    }
+    const void *fn_wait_sym =
+        obs_module_symbol(OBS_HANDLE_SELF, "sceVideoOutWaitVblank");
+    if (fn_wait_sym == NULL) {
+        fn_wait_sym = obs_module_symbol(1, "sceVideoOutWaitVblank");
+    }
+
+    int handle = obs_display_get_video_handle();
+    int owned = 0;
+    if (handle <= 0 && obs_address_is_callable((const void *)&sceVideoOutOpen)) {
+        int32_t u = initial_user();
+        handle = sceVideoOutOpen(u >= 0 ? u : 0xFF, OBS_VIDEO_BUS_MAIN, 0, NULL);
+        if (handle > 0) {
+            owned = 1;
+        }
+    }
+    if (handle <= 0) {
+        return obs_skip("no video handle available");
+    }
+
+    int (*fn_is_supp)(int, int, void *, void *, void *) =
+        (int (*)(int, int, void *, void *, void *))fn_is_supp_sym;
+    int (*fn_cfg)(int, int, void *, void *, void *) =
+        (int (*)(int, int, void *, void *, void *))fn_cfg_sym;
+    int (*fn_wait)(int) = (int (*)(int))fn_wait_sym;
+
+    uint32_t supported_mask = 0;
+    for (int sel = 0; sel < 64; sel++) {
+        if (fn_is_supp != NULL) {
+            obs_jmp_buf buf;
+            int sig = OBS_FAULT_ARM(&buf);
+            int rc = -1;
+            if (sig == 0) {
+                rc = fn_is_supp(handle, sel, NULL, NULL, NULL);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            if (rc == 0) {
+                if (sel < 32)
+                    supported_mask |= (1u << sel);
+                obs_report_measure("080-video/output-mode-selectors", "is-supported",
+                                   "sel", (uint64_t)sel, "selector");
+            }
+            if (sel <= 20 || rc == 0) {
+                char tag[32];
+                oops_snprintf(tag, sizeof(tag), "rc-sel-%d", sel);
+                obs_report_measure("080-video/output-mode-selectors",
+                                   "sceVideoOutIsOutputSupported", tag,
+                                   (uint64_t)(uint32_t)rc, "code");
+            }
+        }
+    }
+
+    if (fn_cfg != NULL) {
+        int test_sels[] = {1, 15};
+        for (size_t s = 0; s < sizeof(test_sels) / sizeof(test_sels[0]); s++) {
+            int sel = test_sels[s];
+            obs_jmp_buf buf;
+            int sig = OBS_FAULT_ARM(&buf);
+            int rc = -1;
+            if (sig == 0) {
+                rc = fn_cfg(handle, sel, NULL, NULL, NULL);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            char tag[32];
+            oops_snprintf(tag, sizeof(tag), "configure-sel-%d-rc", sel);
+            obs_report_measure("080-video/output-mode-selectors",
+                               "sceVideoOutConfigureOutput", tag,
+                               (uint64_t)(uint32_t)rc, "code");
+
+            if (rc == 0 && fn_wait != NULL &&
+                obs_address_is_callable((const void *)&sceKernelReadTsc) &&
+                obs_address_is_callable((const void *)&sceKernelGetTscFrequency)) {
+                uint64_t tsc_freq = sceKernelGetTscFrequency();
+                uint64_t t0 = sceKernelReadTsc();
+                for (int v = 0; v < 120; v++) {
+                    fn_wait(handle);
+                }
+                uint64_t t1 = sceKernelReadTsc();
+                if (tsc_freq > 0) {
+                    uint64_t elapsed_us =
+                        ((t1 - t0) * 1000000ULL) / (tsc_freq * 120ULL);
+                    char ptag[32];
+                    oops_snprintf(ptag, sizeof(ptag), "vblank-period-us-sel-%d", sel);
+                    obs_report_measure("080-video/output-mode-selectors",
+                                       "vblank-timing", ptag, elapsed_us, "us");
+                }
+            }
+        }
+        obs_jmp_buf buf;
+        if (OBS_FAULT_ARM(&buf) == 0) {
+            fn_cfg(handle, 1, NULL, NULL, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (owned && obs_address_is_callable((const void *)&sceVideoOutClose)) {
+        sceVideoOutClose(handle);
+    }
+    return obs_pass_value((uint64_t)supported_mask);
+}
+
+static obs_result check_video_pixel_format_codes(void) {
+    if (!obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute2)) {
+        return obs_skip("sceVideoOutSetBufferAttribute2 is not callable");
+    }
+    const uint64_t codes[] = {
+        0x8000000022000000ULL, 0x8100000000000000ULL, 0x8100000022000000ULL,
+        0x8100070422000000ULL, 0xc001000600000000ULL, 0xc001000622000000ULL,
+    };
+    const char *names[] = {
+        "0x8000000022000000", "0x8100000000000000", "0x8100000022000000",
+        "0x8100070422000000", "0xc001000600000000", "0xc001000622000000",
+    };
+    uint8_t attr[256];
+    for (size_t i = 0; i < sizeof(codes) / sizeof(codes[0]); i++) {
+        memset(attr, 0x55, sizeof(attr));
+        sceVideoOutSetBufferAttribute2(attr, codes[i], 0, 1920, 1080, 0, 0, 0);
+        char tag[64];
+        oops_snprintf(tag, sizeof(tag), "attr-block-%s", names[i]);
+        obs_report_buffer("080-video/pixel-format-codes",
+                          "sceVideoOutSetBufferAttribute2", tag, attr, 64);
+
+        int handle = obs_display_get_video_handle();
+        if (handle > 0 &&
+            obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers2)) {
+            obs_video_out_buffer_desc bufs[1];
+            memset(bufs, 0, sizeof(bufs));
+            bufs[0].data = (void *)0x1000;
+            obs_jmp_buf jbuf;
+            int sig = OBS_FAULT_ARM(&jbuf);
+            int rc = -1;
+            if (sig == 0) {
+                rc = sceVideoOutRegisterBuffers2(handle, 1, 0, bufs, 1, attr, 0, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            oops_snprintf(tag, sizeof(tag), "register-rc-%s", names[i]);
+            obs_report_measure("080-video/pixel-format-codes",
+                               "sceVideoOutRegisterBuffers2", tag,
+                               (uint64_t)(uint32_t)rc, "code");
+        }
+    }
+    return obs_pass();
+}
+
 static const obs_check video_checks[] = {
     {"080-video/close-rejects-bad-handle", "libSceVideoOut", "sceVideoOutClose",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutClose,
@@ -844,6 +1006,13 @@ static const obs_check video_checks[] = {
     {"080-video/buffer-set-extension", "libSceVideoOut", "sceVideoOutRegisterBuffers2",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutRegisterBuffers2,
      check_video_buffer_set_extension, OBS_FROM_ASSUMED},
+    {"080-video/output-mode-selectors", "libSceVideoOut",
+     "sceVideoOutIsOutputSupported", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_video_output_mode_selectors, check_video_output_mode_selectors,
+     OBS_FROM_ASSUMED},
+    {"080-video/pixel-format-codes", "libSceVideoOut", "sceVideoOutSetBufferAttribute2",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_video_pixel_format_codes,
+     check_video_pixel_format_codes, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_video = {
@@ -1644,18 +1813,32 @@ static obs_result check_pad_button_bits(void) {
     if (handle < 0) {
         return obs_pending("no controller attached: connect one and re-run");
     }
+    /* Dump bytes 0x58-0x77 at rest */
+    obs_probe_fill();
+    if (scePadReadState(handle, s_probe_buf) == 0) {
+        obs_report_buffer("100-input/button-bits", "scePadReadState",
+                          "bytes-58-77-at-rest", s_probe_buf + 0x58, 0x20);
+    }
     /* ~8s at 50ms: bounded, non-blocking, and long enough to press every button in
      * turn with a beat between each so the edges land in distinct samples. */
     obs_report_measure("100-input/button-bits", "scePadReadState",
                        "press-each-button-in-turn-now", 8, "prompt-seconds");
     uint32_t seen = 0;
     unsigned int edges = 0;
+    uint32_t last_bit31 = 0;
     for (int i = 0; i < 160; i++) {
         obs_probe_fill();
         if (scePadReadState(handle, s_probe_buf) == 0 || obs_probe_extent() >= 4u) {
             uint32_t word = obs_probe_word(0);
             uint32_t risen = word & ~seen; /* bits newly set this sample */
             seen |= word;
+            uint32_t bit31 = (word >> 31) & 1u;
+            if (bit31 != last_bit31) {
+                obs_report_measure("100-input/button-bits", "scePadReadState",
+                                   bit31 ? "bit31-rising-edge" : "bit31-falling-edge",
+                                   (uint64_t)bit31, "edge");
+                last_bit31 = bit31;
+            }
             /* Emit one edge row per newly-set bit, in press order. The report
              * preserves emission order, so the Nth edge is the Nth distinct button. */
             for (int b = 0; b < 32 && risen != 0u; b++) {
@@ -1671,6 +1854,17 @@ static obs_result check_pad_button_bits(void) {
             sceKernelUsleep(50000);
         }
     }
+    uint32_t connected_word = obs_probe_word(0x4c);
+    uint8_t connected_byte = s_probe_buf[0x4c];
+    obs_report_measure("100-input/button-bits", "scePadReadState",
+                       "connected-byte-0x4c", (uint64_t)connected_byte, "val");
+    obs_report_measure("100-input/button-bits", "scePadReadState", "connected-u32-0x4c",
+                       (uint64_t)connected_word, "word");
+    obs_report_measure("100-input/button-bits", "scePadReadState", "byte-0x68",
+                       (uint64_t)s_probe_buf[0x68], "val");
+    obs_report_buffer("100-input/button-bits", "scePadReadState",
+                      "bytes-58-77-connected", s_probe_buf + 0x58, 0x20);
+
     obs_pad_close(handle);
     if (seen == 0u) {
         return obs_pending("controller attached, but no button was seen in the window");
@@ -2029,6 +2223,249 @@ static obs_result check_input_mocking_harness(void) {
     return obs_pass();
 }
 
+static obs_result check_pad_is_remote_controller(void) {
+    const void *fn_sym = obs_module_symbol(OBS_HANDLE_SELF, "scePadIsRemoteController");
+    if (fn_sym == NULL) {
+        fn_sym = obs_module_symbol(OBS_HANDLE_SELF, "$fCWdlnmB1Ks");
+    }
+    if (fn_sym == NULL) {
+        fn_sym = obs_module_symbol(1, "scePadIsRemoteController");
+    }
+    if (fn_sym == NULL) {
+        fn_sym = obs_module_symbol(1, "$fCWdlnmB1Ks");
+    }
+    if (fn_sym == NULL || !obs_address_is_callable(fn_sym)) {
+        return obs_skip("scePadIsRemoteController / $fCWdlnmB1Ks not found");
+    }
+    int (*fn_remote)(int, void *) = (int (*)(int, void *))fn_sym;
+
+    int handle = obs_pad_open();
+    obs_jmp_buf jbuf;
+
+    /* Arm 1: Bad handle (-1) */
+    uint32_t is_remote = 0x55555555;
+    int sig = OBS_FAULT_ARM(&jbuf);
+    int rc_bad = -1;
+    if (sig == 0) {
+        rc_bad = fn_remote(-1, &is_remote);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure("100-input/is-remote-controller", "scePadIsRemoteController",
+                       "rc-bad-handle", (uint64_t)(uint32_t)rc_bad, "code");
+
+    /* Arm 2: Valid handle + NULL out-pointer */
+    int rc_null = -1;
+    if (handle >= 0) {
+        sig = OBS_FAULT_ARM(&jbuf);
+        if (sig == 0) {
+            rc_null = fn_remote(handle, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure("100-input/is-remote-controller", "scePadIsRemoteController",
+                           "rc-null-outptr", (uint64_t)(uint32_t)rc_null, "code");
+
+        /* Arm 3: Valid handle + valid out-pointer */
+        is_remote = 0xAA;
+        int rc_valid = -1;
+        sig = OBS_FAULT_ARM(&jbuf);
+        if (sig == 0) {
+            rc_valid = fn_remote(handle, &is_remote);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure("100-input/is-remote-controller", "scePadIsRemoteController",
+                           "rc-valid", (uint64_t)(uint32_t)rc_valid, "code");
+        obs_report_measure("100-input/is-remote-controller", "scePadIsRemoteController",
+                           "is-remote-value", (uint64_t)is_remote, "bool");
+        obs_pad_close(handle);
+    } else {
+        obs_report_measure("100-input/is-remote-controller", "scePadIsRemoteController",
+                           "handle-open-failed", 1, "bool");
+    }
+
+    return obs_pass();
+}
+
+static obs_result check_keyboard_and_media_gates(void) {
+    const char *id = "100-input/keyboard-and-media-gates";
+
+    /* 1. libSceKeyboard */
+    int load_rc = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        load_rc = sceSysmoduleLoadModule(0x001eu /* libSceKeyboard */);
+    }
+    obs_report_measure(id, "sceSysmoduleLoadModule", "rc-keyboard",
+                       (uint64_t)(uint32_t)load_rc, "code");
+
+    const void *fn_init_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardInit");
+    if (!fn_init_sym)
+        fn_init_sym = obs_module_symbol(1, "sceKeyboardInit");
+    const void *fn_open_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardOpen");
+    if (!fn_open_sym)
+        fn_open_sym = obs_module_symbol(1, "sceKeyboardOpen");
+    const void *fn_read_sym =
+        obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardReadState");
+    if (!fn_read_sym)
+        fn_read_sym = obs_module_symbol(1, "sceKeyboardReadState");
+    const void *fn_close_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardClose");
+    if (!fn_close_sym)
+        fn_close_sym = obs_module_symbol(1, "sceKeyboardClose");
+
+    obs_report_measure(id, "sceKeyboardInit", "resolved", fn_init_sym ? 1 : 0, "bool");
+    obs_report_measure(id, "sceKeyboardOpen", "resolved", fn_open_sym ? 1 : 0, "bool");
+    obs_report_measure(id, "sceKeyboardReadState", "resolved", fn_read_sym ? 1 : 0,
+                       "bool");
+    obs_report_measure(id, "sceKeyboardClose", "resolved", fn_close_sym ? 1 : 0,
+                       "bool");
+
+    int32_t user = initial_user();
+    if (user < 0)
+        user = 0xFF;
+
+    obs_jmp_buf buf;
+    int sig = 0;
+
+    if (fn_init_sym && obs_address_is_callable(fn_init_sym)) {
+        int (*fn_init)(void) = (int (*)(void))fn_init_sym;
+        sig = OBS_FAULT_ARM(&buf);
+        int rc_init = -1;
+        if (sig == 0) {
+            rc_init = fn_init();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "sceKeyboardInit", "rc", (uint64_t)(uint32_t)rc_init,
+                           "code");
+    }
+
+    int (*fn_open)(int32_t, int, int, const void *) =
+        (int (*)(int32_t, int, int, const void *))fn_open_sym;
+    int (*fn_read)(int, void *) = (int (*)(int, void *))fn_read_sym;
+    int (*fn_close)(int) = (int (*)(int))fn_close_sym;
+
+    if (fn_open && obs_address_is_callable((const void *)fn_open)) {
+        sig = OBS_FAULT_ARM(&buf);
+        int h_bad = -1;
+        if (sig == 0) {
+            h_bad = fn_open(-1, 0, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "sceKeyboardOpen", "rc-bad-user",
+                           (uint64_t)(uint32_t)h_bad, "handle");
+
+        int h1 = -1;
+        sig = OBS_FAULT_ARM(&buf);
+        if (sig == 0) {
+            h1 = fn_open(user, 0, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "sceKeyboardOpen", "handle1", (uint64_t)(uint32_t)h1,
+                           "handle");
+
+        int h2 = -1;
+        sig = OBS_FAULT_ARM(&buf);
+        if (sig == 0) {
+            h2 = fn_open(user, 0, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "sceKeyboardOpen", "handle2-second-open",
+                           (uint64_t)(uint32_t)h2, "handle");
+
+        uint8_t kb_state[96];
+        uint8_t kb_before[96];
+        memset(kb_state, 0xCC, sizeof(kb_state));
+        memset(kb_before, 0xCC, sizeof(kb_before));
+
+        if (fn_read && obs_address_is_callable((const void *)fn_read)) {
+            sig = OBS_FAULT_ARM(&buf);
+            int rc_rbad = -1;
+            if (sig == 0) {
+                rc_rbad = fn_read(-1, kb_state);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "sceKeyboardReadState", "rc-bad-handle",
+                               (uint64_t)(uint32_t)rc_rbad, "code");
+
+            if (h1 >= 0) {
+                sig = OBS_FAULT_ARM(&buf);
+                int rc_r = -1;
+                if (sig == 0) {
+                    rc_r = fn_read(h1, kb_state);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                obs_report_measure(id, "sceKeyboardReadState", "rc",
+                                   (uint64_t)(uint32_t)rc_r, "code");
+                obs_report_written(id, "sceKeyboardReadState", "state-96-bytes",
+                                   kb_before, kb_state, sizeof(kb_state));
+            }
+        }
+
+        if (fn_close && obs_address_is_callable((const void *)fn_close)) {
+            if (h1 >= 0) {
+                int rc_c1 = fn_close(h1);
+                obs_report_measure(id, "sceKeyboardClose", "rc-h1",
+                                   (uint64_t)(uint32_t)rc_c1, "code");
+            }
+            if (h2 >= 0) {
+                int rc_c2 = fn_close(h2);
+                obs_report_measure(id, "sceKeyboardClose", "rc-h2",
+                                   (uint64_t)(uint32_t)rc_c2, "code");
+            }
+        }
+    }
+
+    /* 2. libSceVideoRecording */
+    const char *vr_syms[] = {
+        "sceVideoRecordingSetInfo",
+        "sceVideoRecordingQueryMemSize",
+        "sceVideoRecordingOpen",
+        "sceVideoRecordingClose",
+    };
+    for (size_t i = 0; i < sizeof(vr_syms) / sizeof(vr_syms[0]); i++) {
+        const void *sym = obs_module_symbol(OBS_HANDLE_SELF, vr_syms[i]);
+        if (!sym)
+            sym = obs_module_symbol(1, vr_syms[i]);
+        obs_report_measure(id, vr_syms[i], "resolved", sym ? 1 : 0, "bool");
+    }
+
+    /* 3. PPSA02664 gates: sceAvPlayerInitEx, sceNpUniversalDataSystemCreateEvent,
+     * sceImeUpdate */
+    const void *av_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceAvPlayerInitEx");
+    if (!av_sym)
+        av_sym = obs_module_symbol(1, "sceAvPlayerInitEx");
+    obs_report_measure(id, "sceAvPlayerInitEx", "resolved", av_sym ? 1 : 0, "bool");
+
+    const void *np_sym =
+        obs_module_symbol(OBS_HANDLE_SELF, "sceNpUniversalDataSystemCreateEvent");
+    if (!np_sym)
+        np_sym = obs_module_symbol(1, "sceNpUniversalDataSystemCreateEvent");
+    obs_report_measure(id, "sceNpUniversalDataSystemCreateEvent", "resolved",
+                       np_sym ? 1 : 0, "bool");
+
+    const void *ime_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceImeUpdate");
+    if (!ime_sym)
+        ime_sym = obs_module_symbol(1, "sceImeUpdate");
+    obs_report_measure(id, "sceImeUpdate", "resolved", ime_sym ? 1 : 0, "bool");
+
+    return obs_pass();
+}
+
 static const obs_check input_checks[] = {
     {"100-input/initialise", "libScePad", "scePadInit", OBS_CAP_NONE, OBS_CAP_INPUT,
      (const void *)&scePadInit, check_pad_init, OBS_FROM_ASSUMED},
@@ -2067,6 +2504,12 @@ static const obs_check input_checks[] = {
     {"100-input/mocking-harness", "libScePad", "scePadVirtualDeviceInsertData",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_input_mocking_harness,
      check_input_mocking_harness, OBS_FROM_DERIVED},
+    {"100-input/is-remote-controller", "libScePad", "scePadIsRemoteController",
+     OBS_CAP_INPUT, OBS_CAP_NONE, (const void *)check_pad_is_remote_controller,
+     check_pad_is_remote_controller, OBS_FROM_ASSUMED},
+    {"100-input/keyboard-and-media-gates", "libSceKeyboard", "sceKeyboardInit",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_keyboard_and_media_gates,
+     check_keyboard_and_media_gates, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_input = {

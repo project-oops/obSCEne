@@ -487,6 +487,187 @@ static obs_result check_wall_clock(void) {
     return obs_pass();
 }
 
+static int compare_u32_ticks(const void *a, const void *b) {
+    uint32_t ua = *(const uint32_t *)a;
+    uint32_t ub = *(const uint32_t *)b;
+    return (ua > ub) - (ua < ub);
+}
+
+#define KERNEL_ENTRY_ITERS 1000
+static uint32_t s_entry_samples[KERNEL_ENTRY_ITERS];
+
+static void report_timed_entry(const char *id, const char *name, uint64_t tsc_hz) {
+    if (tsc_hz == 0) {
+        return;
+    }
+    uint64_t sum_ticks = 0;
+    for (size_t i = 0; i < KERNEL_ENTRY_ITERS; i++) {
+        sum_ticks += s_entry_samples[i];
+    }
+    if (obs_address_is_callable((const void *)&qsort)) {
+        qsort(s_entry_samples, KERNEL_ENTRY_ITERS, sizeof(uint32_t), compare_u32_ticks);
+    }
+    uint64_t mean_ns = (sum_ticks * 1000000000ULL) / (KERNEL_ENTRY_ITERS * tsc_hz);
+    uint64_t p99_ticks = s_entry_samples[(KERNEL_ENTRY_ITERS * 99) / 100];
+    uint64_t p99_ns = (p99_ticks * 1000000000ULL) / tsc_hz;
+
+    obs_report_measure(id, name, "mean-ns", mean_ns, "ns");
+    obs_report_measure(id, name, "p99-ns", p99_ns, "ns");
+}
+
+static obs_result check_kernel_entry_cost(void) {
+    const char *id = "120-measure/kernel-entry-cost";
+    if (!obs_address_is_callable((const void *)&sceKernelReadTsc)) {
+        return obs_skip("sceKernelReadTsc not callable");
+    }
+
+    uint64_t tsc_hz = 0;
+    if (obs_address_is_callable((const void *)&sceKernelGetTscFrequency)) {
+        tsc_hz = sceKernelGetTscFrequency();
+    }
+    if (tsc_hz == 0) {
+        tsc_hz = 1000000000ULL;
+    }
+    obs_report_measure(id, "tsc", "rate", tsc_hz, "hz");
+
+    int h_kernel = obs_module_open("libkernel");
+
+    /* 1. sceKernelReadTsc */
+    for (size_t i = 0; i < KERNEL_ENTRY_ITERS; i++) {
+        uint64_t t0 = sceKernelReadTsc();
+        uint64_t val = sceKernelReadTsc();
+        uint64_t t1 = sceKernelReadTsc();
+        (void)val;
+        s_entry_samples[i] = (uint32_t)(t1 > t0 ? (t1 - t0) : 0);
+    }
+    report_timed_entry(id, "sceKernelReadTsc", tsc_hz);
+
+    /* 2. getpid */
+    typedef int (*fn_getpid_t)(void);
+    fn_getpid_t fn_pid =
+        h_kernel >= 0 ? (fn_getpid_t)obs_module_symbol(h_kernel, "getpid") : NULL;
+    if (fn_pid != NULL) {
+        for (size_t i = 0; i < KERNEL_ENTRY_ITERS; i++) {
+            uint64_t t0 = sceKernelReadTsc();
+            int pid = fn_pid();
+            uint64_t t1 = sceKernelReadTsc();
+            (void)pid;
+            s_entry_samples[i] = (uint32_t)(t1 > t0 ? (t1 - t0) : 0);
+        }
+        report_timed_entry(id, "getpid", tsc_hz);
+    }
+
+    /* 3. clock_gettime(CLOCK_MONOTONIC) */
+    struct {
+        int64_t sec;
+        long nsec;
+    } ts_mono;
+    typedef int (*fn_clock_gettime_t)(int, void *);
+    fn_clock_gettime_t fn_cgt =
+        h_kernel >= 0 ? (fn_clock_gettime_t)obs_module_symbol(h_kernel, "clock_gettime")
+                      : NULL;
+    if (fn_cgt != NULL) {
+        for (size_t i = 0; i < KERNEL_ENTRY_ITERS; i++) {
+            uint64_t t0 = sceKernelReadTsc();
+            (void)fn_cgt(4 /* CLOCK_MONOTONIC */, &ts_mono);
+            uint64_t t1 = sceKernelReadTsc();
+            s_entry_samples[i] = (uint32_t)(t1 > t0 ? (t1 - t0) : 0);
+        }
+        report_timed_entry(id, "clock_gettime", tsc_hz);
+    }
+
+    /* 4. sceKernelGetProcessTime */
+    if (obs_address_is_callable((const void *)&sceKernelGetProcessTime)) {
+        for (size_t i = 0; i < KERNEL_ENTRY_ITERS; i++) {
+            uint64_t t0 = sceKernelReadTsc();
+            uint64_t pt = sceKernelGetProcessTime();
+            uint64_t t1 = sceKernelReadTsc();
+            (void)pt;
+            s_entry_samples[i] = (uint32_t)(t1 > t0 ? (t1 - t0) : 0);
+        }
+        report_timed_entry(id, "sceKernelGetProcessTime", tsc_hz);
+    }
+
+    /* 5. sceKernelGetProcessTimeCounter */
+    if (obs_address_is_callable((const void *)&sceKernelGetProcessTimeCounter)) {
+        for (size_t i = 0; i < KERNEL_ENTRY_ITERS; i++) {
+            uint64_t t0 = sceKernelReadTsc();
+            uint64_t ptc = sceKernelGetProcessTimeCounter();
+            uint64_t t1 = sceKernelReadTsc();
+            (void)ptc;
+            s_entry_samples[i] = (uint32_t)(t1 > t0 ? (t1 - t0) : 0);
+        }
+        report_timed_entry(id, "sceKernelGetProcessTimeCounter", tsc_hz);
+    }
+
+    /* 6. sceKernelUsleep(0) */
+    if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+        for (size_t i = 0; i < 200; i++) {
+            uint64_t t0 = sceKernelReadTsc();
+            (void)sceKernelUsleep(0);
+            uint64_t t1 = sceKernelReadTsc();
+            s_entry_samples[i] = (uint32_t)(t1 > t0 ? (t1 - t0) : 0);
+        }
+        uint64_t sum_ticks = 0;
+        for (size_t i = 0; i < 200; i++) {
+            sum_ticks += s_entry_samples[i];
+        }
+        if (obs_address_is_callable((const void *)&qsort)) {
+            qsort(s_entry_samples, 200, sizeof(uint32_t), compare_u32_ticks);
+        }
+        uint64_t mean_ns = (sum_ticks * 1000000000ULL) / (200 * tsc_hz);
+        uint64_t p99_ticks = s_entry_samples[198];
+        uint64_t p99_ns = (p99_ticks * 1000000000ULL) / tsc_hz;
+        obs_report_measure(id, "sceKernelUsleep_0", "mean-ns", mean_ns, "ns");
+        obs_report_measure(id, "sceKernelUsleep_0", "p99-ns", p99_ns, "ns");
+    }
+
+    /* 7. Uncontended mutex lock/unlock */
+    typedef int (*fn_mutex_init_t)(void *, const void *);
+    typedef int (*fn_mutex_lock_t)(void *);
+    typedef int (*fn_mutex_unlock_t)(void *);
+    typedef int (*fn_mutex_destroy_t)(void *);
+
+    fn_mutex_init_t fn_minit =
+        h_kernel >= 0
+            ? (fn_mutex_init_t)obs_module_symbol(h_kernel, "scePthreadMutexInit")
+            : NULL;
+    fn_mutex_lock_t fn_mlock =
+        h_kernel >= 0
+            ? (fn_mutex_lock_t)obs_module_symbol(h_kernel, "scePthreadMutexLock")
+            : NULL;
+    fn_mutex_unlock_t fn_munlock =
+        h_kernel >= 0
+            ? (fn_mutex_unlock_t)obs_module_symbol(h_kernel, "scePthreadMutexUnlock")
+            : NULL;
+    fn_mutex_destroy_t fn_mdestroy =
+        h_kernel >= 0
+            ? (fn_mutex_destroy_t)obs_module_symbol(h_kernel, "scePthreadMutexDestroy")
+            : NULL;
+
+    if (fn_minit != NULL && fn_mlock != NULL && fn_munlock != NULL) {
+        uint8_t mbuf[256];
+        for (size_t b = 0; b < sizeof(mbuf); b++) {
+            mbuf[b] = 0;
+        }
+        if (fn_minit(mbuf, NULL) == 0) {
+            for (size_t i = 0; i < KERNEL_ENTRY_ITERS; i++) {
+                uint64_t t0 = sceKernelReadTsc();
+                (void)fn_mlock(mbuf);
+                (void)fn_munlock(mbuf);
+                uint64_t t1 = sceKernelReadTsc();
+                s_entry_samples[i] = (uint32_t)(t1 > t0 ? (t1 - t0) : 0);
+            }
+            report_timed_entry(id, "mutex-lock-unlock", tsc_hz);
+            if (fn_mdestroy != NULL) {
+                (void)fn_mdestroy(mbuf);
+            }
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check measure_checks[] = {
     {"120-measure/frequencies", "libkernel", "sceKernelGetTscFrequency", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelGetTscFrequency, check_frequencies,
@@ -507,6 +688,9 @@ static const obs_check measure_checks[] = {
      OBS_FROM_ASSUMED},
     {"120-sys/wall-clock", "libkernel", "clock_gettime", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_wall_clock, OBS_FROM_ASSUMED},
+    {"120-measure/kernel-entry-cost", "libkernel", "sceKernelReadTsc", OBS_CAP_TIME,
+     OBS_CAP_NONE, (const void *)&sceKernelReadTsc, check_kernel_entry_cost,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_measure = {

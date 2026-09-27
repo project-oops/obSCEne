@@ -11,6 +11,7 @@
 #include "obscene/platform.h"
 #include "obscene/report.h"
 #include "obscene/sections.h"
+#include "oops/freestd.h"
 
 /* Set by the child thread, read by the parent after joining. Volatile because the
  * compiler cannot see the write - it happens on another thread, and without this
@@ -602,6 +603,109 @@ static obs_result check_thread_priority(void) {
     return obs_pass_value((uint64_t)(uint32_t)prio);
 }
 
+static obs_result check_ult_semantics(void) {
+    const char *id = "030-thread/ult-semantics";
+    int h = obs_module_open("libSceUlt");
+    if (h < 0) {
+        h = obs_module_open("libSceUlt.sprx");
+    }
+    if (h < 0 && obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x0020);
+        h = obs_module_open("libSceUlt");
+    }
+    if (h < 0) {
+        obs_report_measure(id, "libSceUlt", "available", 0, "bool");
+        return obs_skip("libSceUlt not available");
+    }
+    obs_report_measure(id, "libSceUlt", "available", 1, "bool");
+
+    typedef size_t (*fn_runtime_work_size_t)(uint32_t maxUlthreads,
+                                             uint32_t numWorkerThreads);
+    typedef size_t (*fn_pool_work_size_t)(uint32_t maxResources,
+                                          uint32_t numResourcePools);
+
+    fn_runtime_work_size_t fn_rt_sz = (fn_runtime_work_size_t)obs_module_symbol(
+        h, "sceUltUlthreadRuntimeGetWorkAreaSize");
+    fn_pool_work_size_t fn_pool_sz = (fn_pool_work_size_t)obs_module_symbol(
+        h, "sceUltWaitingQueueResourcePoolGetWorkAreaSize");
+
+    obs_report_measure(id, "sceUltUlthreadRuntimeGetWorkAreaSize", "resolved",
+                       (uint64_t)(fn_rt_sz != NULL), "bool");
+    obs_report_measure(id, "sceUltWaitingQueueResourcePoolGetWorkAreaSize", "resolved",
+                       (uint64_t)(fn_pool_sz != NULL), "bool");
+
+    if (fn_rt_sz != NULL) {
+        size_t rt_sz = fn_rt_sz(16, 3);
+        obs_report_measure(id, "work-area-size", "runtime_16_3", (uint64_t)rt_sz,
+                           "bytes");
+    }
+    if (fn_pool_sz != NULL) {
+        size_t pool_sz = fn_pool_sz(16, 16);
+        obs_report_measure(id, "work-area-size", "pool_16_16", (uint64_t)pool_sz,
+                           "bytes");
+    }
+
+    typedef int (*fn_mutex_create_t)(void *mutex_out, const char *name, uint32_t attr,
+                                     const void *opt);
+    typedef int (*fn_mutex_lock_t)(void *mutex);
+    typedef int (*fn_mutex_unlock_t)(void *mutex);
+    typedef int (*fn_mutex_destroy_t)(void *mutex);
+
+    fn_mutex_create_t fn_m_create =
+        (fn_mutex_create_t)obs_module_symbol(h, "_sceUltMutexCreate");
+    if (fn_m_create == NULL) {
+        fn_m_create = (fn_mutex_create_t)obs_module_symbol(h, "sceUltMutexCreate");
+    }
+    fn_mutex_lock_t fn_m_lock =
+        (fn_mutex_lock_t)obs_module_symbol(h, "sceUltMutexLock");
+    fn_mutex_unlock_t fn_m_unlock =
+        (fn_mutex_unlock_t)obs_module_symbol(h, "sceUltMutexUnlock");
+    fn_mutex_destroy_t fn_m_destroy =
+        (fn_mutex_destroy_t)obs_module_symbol(h, "sceUltMutexDestroy");
+
+    obs_jmp_buf guard;
+    if (fn_m_create != NULL && fn_m_lock != NULL && fn_m_unlock != NULL) {
+        uint8_t mutex_buf[256];
+        memset(mutex_buf, 0, sizeof(mutex_buf));
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            int rc_create =
+                fn_m_create(mutex_buf, "test-mutex", 0 /* non-recursive */, NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "mutex-create", "rc", (uint64_t)(uint32_t)rc_create,
+                               "code");
+
+            if (rc_create == 0) {
+                int rc_lock1 = fn_m_lock(mutex_buf);
+                obs_report_measure(id, "mutex-lock1", "rc",
+                                   (uint64_t)(uint32_t)rc_lock1, "code");
+
+                int rc_relock = fn_m_lock(mutex_buf);
+                obs_report_measure(id, "mutex-self-relock", "rc",
+                                   (uint64_t)(uint32_t)rc_relock, "code");
+
+                int rc_unlock1 = fn_m_unlock(mutex_buf);
+                obs_report_measure(id, "mutex-unlock1", "rc",
+                                   (uint64_t)(uint32_t)rc_unlock1, "code");
+
+                int rc_unlock2 = fn_m_unlock(mutex_buf);
+                obs_report_measure(id, "mutex-unlock-unowned", "rc",
+                                   (uint64_t)(uint32_t)rc_unlock2, "code");
+
+                if (fn_m_destroy != NULL) {
+                    (void)fn_m_destroy(mutex_buf);
+                }
+            }
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "mutex-ops", "fault", (uint64_t)(uint32_t)sig,
+                               "sig");
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check thread_checks[] = {
     {"030-thread/self", "libkernel", "scePthreadSelf", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&scePthreadSelf, check_self, OBS_FROM_SPEC},
@@ -620,6 +724,8 @@ static const obs_check thread_checks[] = {
     {"030-thread/priority", "libkernel", "scePthreadGetprio", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_thread_priority, check_thread_priority,
      OBS_FROM_ASSUMED},
+    {"030-thread/ult-semantics", "libSceUlt", "sceUltUlthreadRuntimeGetWorkAreaSize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ult_semantics, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_thread = {

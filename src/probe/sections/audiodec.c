@@ -291,6 +291,58 @@ static obs_result check_audiodec_related_libs(void) {
     return obs_pass_value((uint64_t)found);
 }
 
+static obs_result check_ajm_batch_initialize_nulls(void) {
+    const char *id = "108-audiodec/ajm-batch-init-nulls";
+    int h_ajm = obs_module_open("libSceAjm");
+    if (h_ajm < 0) {
+        return obs_skip("libSceAjm not openable");
+    }
+
+    typedef int (*fn_sceAjmBatchInitialize_t)(void *, size_t, void *);
+    fn_sceAjmBatchInitialize_t fn_init =
+        (fn_sceAjmBatchInitialize_t)obs_module_symbol(h_ajm, "sceAjmBatchInitialize");
+
+    obs_report_measure(id, "sceAjmBatchInitialize", "resolved",
+                       (uint64_t)(fn_init != NULL), "bool");
+    if (fn_init == NULL) {
+        return obs_pass();
+    }
+
+    obs_jmp_buf guard;
+    /* 1. NULL buffer with valid info pointer: sceAjmBatchInitialize(NULL, 0x100, &info)
+     */
+    uint8_t info[256];
+    memset(info, 0, sizeof(info));
+    int sig1 = OBS_FAULT_ARM(&guard);
+    if (sig1 == 0) {
+        int rc1 = fn_init(NULL, 0x100, info);
+        obs_fault_unregister();
+        obs_report_measure(id, "arm-null-buffer", "rc", (uint64_t)(uint32_t)rc1,
+                           "code");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm-null-buffer", "fault-sig", (uint64_t)(uint32_t)sig1,
+                           "sig");
+    }
+
+    /* 2. Valid buffer with NULL info pointer: sceAjmBatchInitialize(buf, 0x100, NULL)
+     */
+    uint8_t buf[256];
+    memset(buf, 0, sizeof(buf));
+    int sig2 = OBS_FAULT_ARM(&guard);
+    if (sig2 == 0) {
+        int rc2 = fn_init(buf, 0x100, NULL);
+        obs_fault_unregister();
+        obs_report_measure(id, "arm-null-info", "rc", (uint64_t)(uint32_t)rc2, "code");
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm-null-info", "fault-sig", (uint64_t)(uint32_t)sig2,
+                           "sig");
+    }
+
+    return obs_pass();
+}
+
 static const obs_check audiodec_checks[] = {
     {"108-audiodec/library", "libSceAudiodec", "sceAudiodecInitLibrary", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_audiodec_library, check_audiodec_library,
@@ -310,6 +362,9 @@ static const obs_check audiodec_checks[] = {
     {"108-audiodec/related-libs", "libSceAudioIn", "sceAudioInOpen", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_audiodec_related_libs,
      check_audiodec_related_libs, OBS_FROM_ASSUMED},
+    {"108-audiodec/ajm-batch-init-nulls", "libSceAjm", "sceAjmBatchInitialize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ajm_batch_initialize_nulls,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_audiodec = {

@@ -35,6 +35,7 @@ typedef struct obs_import {
 } obs_import;
 
 static const obs_import obs_platform_imports[] = {
+    {"libkernel", "__tls_get_addr"},
     {"libkernel", "sceKernelGetProcessTime"},
     {"libkernel", "sceKernelGetProcessTimeCounter"},
     {"libkernel", "sceKernelGetTscFrequency"},

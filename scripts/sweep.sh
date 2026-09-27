@@ -82,6 +82,8 @@ NATIVE_TITLE_ID="${NATIVE_TITLE_ID:-${TITLE_ID:-PRO${TITLE_CODE}}}"
 # Linux tool for everything that connects out; Windows tool for the package install (inbound).
 LTOOL="$TT/release/obscene-tool"
 WEXE="$REPO/tool/target-win/release/obscene-tool.exe"
+TARGET_IP="$("$LTOOL" hw list 2>/dev/null | awk '{print $2}' | head -1)"
+TARGET_IP="${TARGET_IP:-192.168.1.205}"
 
 ensure_tools() {
     [ -x "$LTOOL" ] || { echo "building linux tool..."; ( cd "$REPO/tool" && cargo build --release --quiet ) || true; }
@@ -149,18 +151,18 @@ leg_payload() {
     (
         for i in $(seq 1 40); do
             sleep 1
-            python3 -c '
+            python3 -c "
 import socket
 try:
-    s = socket.create_connection(("192.168.1.211", 9899), timeout=2)
-    s.sendall(b"HELLO_SWEEP_PORT_9899\n")
+    s = socket.create_connection(('$TARGET_IP', 9899), timeout=2)
+    s.sendall(b'HELLO_SWEEP_PORT_9899\n')
     data = s.recv(1024)
     s.close()
-    print("Port 9899 echo ok:", data)
+    print('Port 9899 echo ok:', data)
     exit(0)
 except Exception:
     exit(1)
-' 2>/dev/null && break
+" 2>/dev/null && break
         done
     ) &
     local probe_pid=$!

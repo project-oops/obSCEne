@@ -1285,6 +1285,399 @@ static obs_result check_net_payload_serve(void) {
                              (uint64_t)(uint32_t)acc);
 }
 
+static obs_result check_net_errno_and_pools(void) {
+    const char *id = "102-net/errno-loc-and-pools";
+    int h_net = obs_module_open("libSceNet");
+    if (h_net < 0) {
+        return obs_skip("libSceNet not openable");
+    }
+
+    typedef int *(*fn_sceNetErrnoLoc_t)(void);
+    typedef int (*fn_sceNetPoolCreate_t)(const char *, int, int);
+    typedef int (*fn_sceNetPoolDestroy_t)(int);
+
+    fn_sceNetErrnoLoc_t fn_errno_loc =
+        (fn_sceNetErrnoLoc_t)obs_module_symbol(h_net, "sceNetErrnoLoc");
+    fn_sceNetPoolCreate_t fn_pool_create =
+        (fn_sceNetPoolCreate_t)obs_module_symbol(h_net, "sceNetPoolCreate");
+    fn_sceNetPoolDestroy_t fn_pool_destroy =
+        (fn_sceNetPoolDestroy_t)obs_module_symbol(h_net, "sceNetPoolDestroy");
+
+    obs_report_measure(id, "sceNetErrnoLoc", "resolved",
+                       (uint64_t)(fn_errno_loc != NULL), "bool");
+    obs_report_measure(id, "sceNetPoolCreate", "resolved",
+                       (uint64_t)(fn_pool_create != NULL), "bool");
+
+    /* 1. Would-block errno test */
+    net_fns f;
+    if (net_resolve_all(&f) && fn_errno_loc != NULL) {
+        int s = net_open_socket(&f, "obscene");
+        if (s >= 0) {
+            net_set_nonblocking(&f, s);
+            char buf[64];
+            int rc = net_recv_wrapper(&f, s, buf, sizeof(buf), OBS_NET_MSG_DONTWAIT);
+            obs_report_measure(id, "recv-would-block", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+
+            int *err_ptr = fn_errno_loc();
+            obs_report_measure(id, "recv-would-block", "err-ptr-valid",
+                               (uint64_t)(err_ptr != NULL), "bool");
+            if (err_ptr != NULL) {
+                obs_report_measure(id, "recv-would-block", "errno-val",
+                                   (uint64_t)(uint32_t)*err_ptr, "errno");
+            }
+
+            /* Successful call to check persistence */
+            obs_net_sockaddr_in addr;
+            net_fill_addr(&addr, 0, 0, (uint8_t)sizeof(addr));
+            int brc = net_bind_wrapper(&f, s, &addr, (uint32_t)sizeof(addr));
+            obs_report_measure(id, "after-bind", "rc", (uint64_t)(uint32_t)brc, "code");
+            if (err_ptr != NULL) {
+                obs_report_measure(id, "after-bind", "errno-val",
+                                   (uint64_t)(uint32_t)*err_ptr, "errno");
+            }
+            net_close_wrapper(&f, s);
+        }
+    }
+
+    /* 2. First two pool IDs */
+    if (fn_pool_create != NULL) {
+        int p1 = fn_pool_create("obs-test-pool-1", 4096, 0);
+        obs_report_measure(id, "pool-create", "id-1", (uint64_t)(uint32_t)p1, "id");
+        int p2 = fn_pool_create("obs-test-pool-2", 4096, 0);
+        obs_report_measure(id, "pool-create", "id-2", (uint64_t)(uint32_t)p2, "id");
+
+        /* 3. Pool exhaustion arm */
+        int pools[64];
+        int count = 0;
+        if (p1 > 0) {
+            pools[count++] = p1;
+        }
+        if (p2 > 0) {
+            pools[count++] = p2;
+        }
+        int last_err = 0;
+        for (int i = count; i < 64; i++) {
+            char name[32];
+            name[0] = 'p';
+            name[1] = 'o';
+            name[2] = 'o';
+            name[3] = 'l';
+            name[4] = (char)('0' + (i % 10));
+            name[5] = '\0';
+            int p = fn_pool_create(name, 4096, 0);
+            if (p > 0) {
+                pools[count++] = p;
+            } else {
+                last_err = p;
+                break;
+            }
+        }
+        obs_report_measure(id, "exhaustion", "created-count", (uint64_t)count, "count");
+        obs_report_measure(id, "exhaustion", "last-rc", (uint64_t)(uint32_t)last_err,
+                           "code");
+
+        if (fn_pool_destroy != NULL) {
+            for (int i = 0; i < count; i++) {
+                fn_pool_destroy(pools[i]);
+            }
+        }
+    }
+
+    return obs_pass();
+}
+
+static obs_result check_netctl_info(void) {
+    const char *id = "102-net/netctl-info";
+    int h_ctl = obs_module_open("libSceNetCtl");
+    if (h_ctl < 0) {
+        return obs_skip("libSceNetCtl not openable");
+    }
+
+    typedef int (*fn_sceNetCtlInit_t)(void);
+    typedef void (*fn_sceNetCtlTerm_t)(void);
+    typedef int (*fn_sceNetCtlGetInfo_t)(int, void *);
+
+    fn_sceNetCtlInit_t fn_init =
+        (fn_sceNetCtlInit_t)obs_module_symbol(h_ctl, "sceNetCtlInit");
+    fn_sceNetCtlTerm_t fn_term =
+        (fn_sceNetCtlTerm_t)obs_module_symbol(h_ctl, "sceNetCtlTerm");
+    fn_sceNetCtlGetInfo_t fn_get_info =
+        (fn_sceNetCtlGetInfo_t)obs_module_symbol(h_ctl, "sceNetCtlGetInfo");
+
+    obs_report_measure(id, "sceNetCtlInit", "resolved", (uint64_t)(fn_init != NULL),
+                       "bool");
+    obs_report_measure(id, "sceNetCtlGetInfo", "resolved",
+                       (uint64_t)(fn_get_info != NULL), "bool");
+
+    if (fn_init != NULL) {
+        int rc1 = fn_init();
+        obs_report_measure(id, "init", "rc1", (uint64_t)(uint32_t)rc1, "code");
+        int rc2 = fn_init();
+        obs_report_measure(id, "init", "rc2", (uint64_t)(uint32_t)rc2, "code");
+    }
+
+    if (fn_get_info != NULL) {
+        for (int code = 1; code <= 20; code++) {
+            uint8_t buf[256];
+            memset(buf, 0xaa, sizeof(buf));
+            int rc = fn_get_info(code, buf);
+            char tag[32];
+            tag[0] = 'c';
+            tag[1] = 'o';
+            tag[2] = 'd';
+            tag[3] = 'e';
+            tag[4] = '-';
+            if (code >= 10) {
+                tag[5] = (char)('0' + (code / 10));
+                tag[6] = (char)('0' + (code % 10));
+                tag[7] = '\0';
+            } else {
+                tag[5] = (char)('0' + code);
+                tag[6] = '\0';
+            }
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+            size_t written = 0;
+            for (size_t b = 0; b < sizeof(buf); b++) {
+                if (buf[b] != 0xaa) {
+                    written++;
+                }
+            }
+            obs_report_measure(id, tag, "bytes-written", (uint64_t)written, "bytes");
+
+            if (code == 1 || code == 2 || code == 4 || code == 6 || code == 9 ||
+                (code >= 14 && code <= 18)) {
+                obs_report_bytes(id, tag, "first-32-bytes", 0, buf, 32);
+            }
+        }
+    }
+
+    if (fn_term != NULL) {
+        fn_term();
+    }
+    return obs_pass();
+}
+
+static obs_result check_http_lifecycle(void) {
+    const char *id = "102-net/http-lifecycle";
+    int h_http = obs_module_open("libSceHttp");
+    int h_ssl = obs_module_open("libSceSsl");
+    int h_net = obs_module_open("libSceNet");
+
+    if (h_http < 0) {
+        return obs_skip("libSceHttp not openable");
+    }
+
+    typedef int (*fn_sceHttpInit_t)(int, int, size_t);
+    typedef int (*fn_sceHttpTerm_t)(int);
+    typedef int (*fn_sceHttpCreateTemplate_t)(int, const char *, int, int);
+    typedef int (*fn_sceHttpDeleteTemplate_t)(int);
+    typedef int (*fn_sceHttpCreateConnectionWithURL_t)(int, const char *, int);
+    typedef int (*fn_sceHttpDeleteConnection_t)(int);
+    typedef int (*fn_sceHttpCreateRequestWithURL2_t)(int, const char *, const char *,
+                                                     int);
+    typedef int (*fn_sceHttpDeleteRequest_t)(int);
+    typedef int (*fn_sceHttpAddRequestHeader_t)(int, const char *, const char *, int);
+    typedef int (*fn_sceHttpSetAutoRedirect_t)(int, int);
+    typedef int (*fn_sceHttpSendRequest_t)(int, const void *, size_t);
+    typedef int (*fn_sceHttpGetStatusCode_t)(int, int *);
+    typedef int (*fn_sceHttpGetResponseContentLength_t)(int, int *, uint64_t *);
+    typedef int (*fn_sceHttpGetAllResponseHeaders_t)(int, char **, size_t *);
+    typedef int (*fn_sceSslInit_t)(size_t);
+    typedef int (*fn_sceSslTerm_t)(int);
+    typedef int (*fn_sceNetPoolCreate_t)(const char *, int, int);
+    typedef int (*fn_sceNetPoolDestroy_t)(int);
+
+    fn_sceHttpInit_t fn_init =
+        (fn_sceHttpInit_t)obs_module_symbol(h_http, "sceHttpInit");
+    fn_sceHttpTerm_t fn_term =
+        (fn_sceHttpTerm_t)obs_module_symbol(h_http, "sceHttpTerm");
+    fn_sceHttpCreateTemplate_t fn_tmpl_create =
+        (fn_sceHttpCreateTemplate_t)obs_module_symbol(h_http, "sceHttpCreateTemplate");
+    fn_sceHttpDeleteTemplate_t fn_tmpl_delete =
+        (fn_sceHttpDeleteTemplate_t)obs_module_symbol(h_http, "sceHttpDeleteTemplate");
+    fn_sceHttpCreateConnectionWithURL_t fn_conn_create =
+        (fn_sceHttpCreateConnectionWithURL_t)obs_module_symbol(
+            h_http, "sceHttpCreateConnectionWithURL");
+    fn_sceHttpDeleteConnection_t fn_conn_delete =
+        (fn_sceHttpDeleteConnection_t)obs_module_symbol(h_http,
+                                                        "sceHttpDeleteConnection");
+    fn_sceHttpCreateRequestWithURL2_t fn_req_create =
+        (fn_sceHttpCreateRequestWithURL2_t)obs_module_symbol(
+            h_http, "sceHttpCreateRequestWithURL2");
+    fn_sceHttpDeleteRequest_t fn_req_delete =
+        (fn_sceHttpDeleteRequest_t)obs_module_symbol(h_http, "sceHttpDeleteRequest");
+    fn_sceHttpAddRequestHeader_t fn_add_hdr =
+        (fn_sceHttpAddRequestHeader_t)obs_module_symbol(h_http,
+                                                        "sceHttpAddRequestHeader");
+    fn_sceHttpSetAutoRedirect_t fn_set_redirect =
+        (fn_sceHttpSetAutoRedirect_t)obs_module_symbol(h_http,
+                                                       "sceHttpSetAutoRedirect");
+    fn_sceHttpSendRequest_t fn_send =
+        (fn_sceHttpSendRequest_t)obs_module_symbol(h_http, "sceHttpSendRequest");
+    fn_sceHttpGetStatusCode_t fn_get_status =
+        (fn_sceHttpGetStatusCode_t)obs_module_symbol(h_http, "sceHttpGetStatusCode");
+    fn_sceHttpGetResponseContentLength_t fn_get_clen =
+        (fn_sceHttpGetResponseContentLength_t)obs_module_symbol(
+            h_http, "sceHttpGetResponseContentLength");
+    fn_sceHttpGetAllResponseHeaders_t fn_get_hdrs =
+        (fn_sceHttpGetAllResponseHeaders_t)obs_module_symbol(
+            h_http, "sceHttpGetAllResponseHeaders");
+
+    fn_sceSslInit_t fn_ssl_init =
+        h_ssl >= 0 ? (fn_sceSslInit_t)obs_module_symbol(h_ssl, "sceSslInit") : NULL;
+    fn_sceSslTerm_t fn_ssl_term =
+        h_ssl >= 0 ? (fn_sceSslTerm_t)obs_module_symbol(h_ssl, "sceSslTerm") : NULL;
+
+    fn_sceNetPoolCreate_t fn_pool_create =
+        h_net >= 0 ? (fn_sceNetPoolCreate_t)obs_module_symbol(h_net, "sceNetPoolCreate")
+                   : NULL;
+    fn_sceNetPoolDestroy_t fn_pool_destroy =
+        h_net >= 0
+            ? (fn_sceNetPoolDestroy_t)obs_module_symbol(h_net, "sceNetPoolDestroy")
+            : NULL;
+
+    /* 1. Failure codes for unissued IDs */
+    if (fn_req_delete != NULL) {
+        int rc = fn_req_delete(0x12345678);
+        obs_report_measure(id, "unissued-req-delete", "rc", (uint64_t)(uint32_t)rc,
+                           "code");
+    }
+    if (fn_term != NULL) {
+        int rc = fn_term(0x12345678);
+        obs_report_measure(id, "unissued-ctx-term", "rc", (uint64_t)(uint32_t)rc,
+                           "code");
+    }
+
+    if (fn_init == NULL || fn_tmpl_create == NULL || fn_conn_create == NULL ||
+        fn_req_create == NULL || fn_send == NULL) {
+        return obs_pass();
+    }
+
+    int pool = fn_pool_create != NULL ? fn_pool_create("obs-http-pool", 65536, 0) : -1;
+    int ssl = fn_ssl_init != NULL ? fn_ssl_init(65536) : -1;
+    int ctx = fn_init(pool > 0 ? pool : 0, ssl > 0 ? ssl : 0, 131072);
+    obs_report_measure(id, "sceHttpInit", "ctx", (uint64_t)(uint32_t)ctx, "id");
+
+    if (ctx > 0) {
+        int tmpl = fn_tmpl_create(ctx, "obscene/1.0", 1, 1);
+        obs_report_measure(id, "sceHttpCreateTemplate", "tmpl",
+                           (uint64_t)(uint32_t)tmpl, "id");
+        if (tmpl > 0) {
+            /* 2. Closed port connection test */
+            int conn_closed = fn_conn_create(tmpl, "http://127.0.0.1:9999/closed", 0);
+            obs_report_measure(id, "closed-port-conn", "conn",
+                               (uint64_t)(uint32_t)conn_closed, "id");
+            if (conn_closed > 0) {
+                int req_closed = fn_req_create(conn_closed, "GET",
+                                               "http://127.0.0.1:9999/closed", 0);
+                obs_report_measure(id, "closed-port-req", "req",
+                                   (uint64_t)(uint32_t)req_closed, "id");
+                if (req_closed > 0) {
+                    if (fn_add_hdr != NULL) {
+                        int rc_hdr2 =
+                            fn_add_hdr(req_closed, "X-Mode2", "Val", 2 /* mode 2 */);
+                        obs_report_measure(id, "add-header-mode-2", "rc",
+                                           (uint64_t)(uint32_t)rc_hdr2, "code");
+                    }
+                    int rc_send = fn_send(req_closed, NULL, 0);
+                    obs_report_measure(id, "closed-port-send", "rc",
+                                       (uint64_t)(uint32_t)rc_send, "code");
+                    if (fn_req_delete != NULL) {
+                        fn_req_delete(req_closed);
+                    }
+                }
+                if (fn_conn_delete != NULL) {
+                    fn_conn_delete(conn_closed);
+                }
+            }
+
+            /* 3. Probe host URLs: content-length, chunked, redirect */
+            static const char *const test_paths[] = {
+                "http://127.0.0.1:8080/test_content_length",
+                "http://127.0.0.1:8080/test_chunked",
+                "http://127.0.0.1:8080/test_redirect",
+            };
+            static const char *const test_tags[] = {
+                "test-content-length",
+                "test-chunked",
+                "test-redirect",
+            };
+            for (size_t t = 0; t < sizeof(test_paths) / sizeof(test_paths[0]); t++) {
+                int conn = fn_conn_create(tmpl, test_paths[t], 0);
+                if (conn > 0) {
+                    int req = fn_req_create(conn, "GET", test_paths[t], 0);
+                    if (req > 0) {
+                        if (fn_set_redirect != NULL) {
+                            fn_set_redirect(req, 0);
+                        }
+                        int src = fn_send(req, NULL, 0);
+                        obs_report_measure(id, test_tags[t], "send-rc",
+                                           (uint64_t)(uint32_t)src, "code");
+                        if (src == 0) {
+                            if (fn_get_status != NULL) {
+                                int sc = 0;
+                                int sc_rc = fn_get_status(req, &sc);
+                                obs_report_measure(id, test_tags[t], "status-code-rc",
+                                                   (uint64_t)(uint32_t)sc_rc, "code");
+                                obs_report_measure(id, test_tags[t], "status-code",
+                                                   (uint64_t)(uint32_t)sc, "code");
+                            }
+                            if (fn_get_clen != NULL) {
+                                int res_info = 0;
+                                uint64_t clen = 0;
+                                int cl_rc = fn_get_clen(req, &res_info, &clen);
+                                obs_report_measure(id, test_tags[t], "clen-rc",
+                                                   (uint64_t)(uint32_t)cl_rc, "code");
+                                obs_report_measure(id, test_tags[t], "clen-res-info",
+                                                   (uint64_t)(uint32_t)res_info, "val");
+                                obs_report_measure(id, test_tags[t], "clen-bytes", clen,
+                                                   "bytes");
+                            }
+                            if (fn_get_hdrs != NULL) {
+                                char *hdr_buf = NULL;
+                                size_t hsz = 0;
+                                int hrc = fn_get_hdrs(req, &hdr_buf, &hsz);
+                                obs_report_measure(id, test_tags[t], "hdrs-rc",
+                                                   (uint64_t)(uint32_t)hrc, "code");
+                                obs_report_measure(id, test_tags[t], "hdrs-size",
+                                                   (uint64_t)hsz, "bytes");
+                                if (hrc == 0 && hdr_buf != NULL && hsz > 0) {
+                                    obs_report_bytes(id, test_tags[t], "headers-block",
+                                                     0, (const uint8_t *)hdr_buf,
+                                                     (uint32_t)(hsz > 512 ? 512 : hsz));
+                                }
+                            }
+                        }
+                        if (fn_req_delete != NULL) {
+                            fn_req_delete(req);
+                        }
+                    }
+                    if (fn_conn_delete != NULL) {
+                        fn_conn_delete(conn);
+                    }
+                }
+            }
+
+            if (fn_tmpl_delete != NULL) {
+                fn_tmpl_delete(tmpl);
+            }
+        }
+        if (fn_term != NULL) {
+            fn_term(ctx);
+        }
+    }
+
+    if (ssl > 0 && fn_ssl_term != NULL) {
+        fn_ssl_term(ssl);
+    }
+    if (pool > 0 && fn_pool_destroy != NULL) {
+        fn_pool_destroy(pool);
+    }
+
+    return obs_pass();
+}
+
 /* The address is the check function, not a libSceNet symbol, so the harness runs each
  * check even where the direct import is unbound - which in payload mode is every one of
  * them. The check then resolves through direct import, dlsym gadget, or kernel export
@@ -1309,6 +1702,12 @@ static const obs_check net_checks[] = {
      (const void *)check_net_weak_bind, check_net_weak_bind, OBS_FROM_ASSUMED},
     {"102-net/payload-serve", "libkernel", "listen", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_net_payload_serve, check_net_payload_serve, OBS_FROM_ASSUMED},
+    {"102-net/errno-loc-and-pools", "libSceNet", "sceNetErrnoLoc", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_net_errno_and_pools, OBS_FROM_ASSUMED},
+    {"102-net/netctl-info", "libSceNetCtl", "sceNetCtlGetInfo", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_netctl_info, OBS_FROM_ASSUMED},
+    {"102-net/http-lifecycle", "libSceHttp", "sceHttpInit", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_http_lifecycle, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_net = {

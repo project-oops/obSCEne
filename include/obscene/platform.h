@@ -869,6 +869,7 @@ OBS_WEAK int sceSysmoduleIsLoaded(uint16_t id);
 OBS_WEAK int sceUserServiceInitialize(const void *params);
 OBS_WEAK int sceUserServiceGetInitialUser(int32_t *user_id_out);
 OBS_WEAK int sceUserServiceGetAgeLevel(int32_t user_id, int32_t *age_level_out);
+OBS_WEAK int sceUserServiceGetUserName(int32_t user_id, char *name_out, size_t size);
 OBS_WEAK int sceUserServiceTerminate(void);
 
 /* ---- libSceVideoOut -------------------------------------------------------- */
