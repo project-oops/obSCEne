@@ -483,7 +483,7 @@ static obs_result check_video_visual_flip(void) {
     }
 
     /* Event queue wait probe if symbols resolve */
-    typedef int sce_equeue_t;
+    typedef uint64_t sce_equeue_t;
     int vo_mod = obs_module_open("libSceVideoOut");
     int k_mod = obs_module_open("libkernel");
     int (*fn_create_eq)(sce_equeue_t *, const char *) =
@@ -654,10 +654,22 @@ static obs_result check_video_visual_flip(void) {
             }
 
             if (fn_del_flip_ev != NULL) {
-                fn_del_flip_ev(eq, handle);
+                obs_jmp_buf g;
+                if (OBS_FAULT_ARM(&g) == 0) {
+                    fn_del_flip_ev(eq, handle);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
             }
             if (fn_delete_eq != NULL) {
-                fn_delete_eq(eq);
+                obs_jmp_buf g;
+                if (OBS_FAULT_ARM(&g) == 0) {
+                    fn_delete_eq(eq);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
             }
         }
     }
