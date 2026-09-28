@@ -1609,7 +1609,7 @@ static obs_result check_http_lifecycle(void) {
                 }
             }
 
-            /* 2b. Check probe-host reachability with plain connect */
+            int host_reachable = 0;
             {
                 typedef int (*fn_sceNetSocket_t)(const char *, int, int, int);
                 typedef int (*fn_sceNetConnect_t)(int, const void *, unsigned int);
@@ -1643,6 +1643,9 @@ static obs_result check_http_lifecycle(void) {
                         int c_rc = p_conn(sock, &saddr, sizeof(saddr));
                         obs_report_measure(id, "probe-host", "connect-rc",
                                            (uint64_t)(uint32_t)c_rc, "code");
+                        if (c_rc == 0) {
+                            host_reachable = 1;
+                        }
                         if (p_close) {
                             p_close(sock);
                         }
@@ -1651,90 +1654,98 @@ static obs_result check_http_lifecycle(void) {
             }
 
             /* 3. Probe host URLs: content-length, chunked, redirect */
-            static const char *const test_paths[] = {
-                "http://192.168.1.214:8080/test_content_length",
-                "http://192.168.1.214:8080/test_chunked",
-                "http://192.168.1.214:8080/test_redirect",
-                "http://192.168.1.214:8080/test_no_length",
-            };
-            static const char *const test_tags[] = {
-                "test-content-length",
-                "test-chunked",
-                "test-redirect",
-                "test-no-length",
-            };
-            for (size_t t = 0; t < sizeof(test_paths) / sizeof(test_paths[0]); t++) {
-                int conn = fn_conn_create(tmpl, test_paths[t], 0);
-                if (conn > 0) {
-                    int req = fn_req_create(conn, "GET", test_paths[t], 0);
-                    if (req > 0) {
-                        if (fn_set_redirect != NULL) {
-                            fn_set_redirect(req, 0);
-                        }
-                        int src = fn_send(req, NULL, 0);
-                        obs_report_measure(id, test_tags[t], "send-rc",
-                                           (uint64_t)(uint32_t)src, "code");
-                        if (src == 0) {
-                            if (fn_get_status != NULL) {
-                                int sc = 0;
-                                int sc_rc = fn_get_status(req, &sc);
-                                obs_report_measure(id, test_tags[t], "status-code-rc",
-                                                   (uint64_t)(uint32_t)sc_rc, "code");
-                                obs_report_measure(id, test_tags[t], "status-code",
-                                                   (uint64_t)(uint32_t)sc, "code");
+            if (host_reachable) {
+                static const char *const test_paths[] = {
+                    "http://192.168.1.214:8080/test_content_length",
+                    "http://192.168.1.214:8080/test_chunked",
+                    "http://192.168.1.214:8080/test_redirect",
+                    "http://192.168.1.214:8080/test_no_length",
+                };
+                static const char *const test_tags[] = {
+                    "test-content-length",
+                    "test-chunked",
+                    "test-redirect",
+                    "test-no-length",
+                };
+                for (size_t t = 0; t < sizeof(test_paths) / sizeof(test_paths[0]);
+                     t++) {
+                    int conn = fn_conn_create(tmpl, test_paths[t], 0);
+                    if (conn > 0) {
+                        int req = fn_req_create(conn, "GET", test_paths[t], 0);
+                        if (req > 0) {
+                            if (fn_set_redirect != NULL) {
+                                fn_set_redirect(req, 0);
                             }
-                            if (fn_get_clen != NULL) {
-                                int res_info = 0;
-                                uint64_t clen = 0;
-                                int cl_rc = fn_get_clen(req, &res_info, &clen);
-                                obs_report_measure(id, test_tags[t], "clen-rc",
-                                                   (uint64_t)(uint32_t)cl_rc, "code");
-                                obs_report_measure(id, test_tags[t], "clen-res-info",
-                                                   (uint64_t)(uint32_t)res_info, "val");
-                                obs_report_measure(id, test_tags[t], "clen-bytes", clen,
-                                                   "bytes");
-                            }
-                            if (fn_get_hdrs != NULL) {
-                                char *hdr_buf = NULL;
-                                size_t hsz = 0;
-                                int hrc = fn_get_hdrs(req, &hdr_buf, &hsz);
-                                obs_report_measure(id, test_tags[t], "hdrs-rc",
-                                                   (uint64_t)(uint32_t)hrc, "code");
-                                obs_report_measure(id, test_tags[t], "hdrs-size",
-                                                   (uint64_t)hsz, "bytes");
-                                if (hrc == 0 && hdr_buf != NULL && hsz > 0) {
-                                    for (uint32_t off = 0; off < (uint32_t)hsz;
-                                         off += 64) {
-                                        uint32_t chunk = ((uint32_t)hsz - off > 64)
-                                                             ? 64
-                                                             : ((uint32_t)hsz - off);
-                                        obs_report_bytes(
-                                            id, test_tags[t], "headers-block", off,
-                                            (const uint8_t *)hdr_buf + off, chunk);
-                                    }
-                                    uint8_t byte_at_size = 0xff;
-                                    obs_jmp_buf hguard;
-                                    int hsig = OBS_FAULT_ARM(&hguard);
-                                    if (hsig == 0) {
-                                        byte_at_size = (uint8_t)hdr_buf[hsz];
-                                        obs_fault_unregister();
-                                    } else {
-                                        obs_fault_unregister();
-                                    }
-                                    obs_report_measure(id, test_tags[t], "byte-at-size",
-                                                       (uint64_t)byte_at_size, "val");
+                            int src = fn_send(req, NULL, 0);
+                            obs_report_measure(id, test_tags[t], "send-rc",
+                                               (uint64_t)(uint32_t)src, "code");
+                            if (src == 0) {
+                                if (fn_get_status != NULL) {
+                                    int sc = 0;
+                                    int sc_rc = fn_get_status(req, &sc);
                                     obs_report_measure(
-                                        id, test_tags[t], "is-nul-at-size",
-                                        (uint64_t)(byte_at_size == 0), "bool");
+                                        id, test_tags[t], "status-code-rc",
+                                        (uint64_t)(uint32_t)sc_rc, "code");
+                                    obs_report_measure(id, test_tags[t], "status-code",
+                                                       (uint64_t)(uint32_t)sc, "code");
+                                }
+                                if (fn_get_clen != NULL) {
+                                    int res_info = 0;
+                                    uint64_t clen = 0;
+                                    int cl_rc = fn_get_clen(req, &res_info, &clen);
+                                    obs_report_measure(id, test_tags[t], "clen-rc",
+                                                       (uint64_t)(uint32_t)cl_rc,
+                                                       "code");
+                                    obs_report_measure(
+                                        id, test_tags[t], "clen-res-info",
+                                        (uint64_t)(uint32_t)res_info, "val");
+                                    obs_report_measure(id, test_tags[t], "clen-bytes",
+                                                       clen, "bytes");
+                                }
+                                if (fn_get_hdrs != NULL) {
+                                    char *hdr_buf = NULL;
+                                    size_t hsz = 0;
+                                    int hrc = fn_get_hdrs(req, &hdr_buf, &hsz);
+                                    obs_report_measure(id, test_tags[t], "hdrs-rc",
+                                                       (uint64_t)(uint32_t)hrc, "code");
+                                    obs_report_measure(id, test_tags[t], "hdrs-size",
+                                                       (uint64_t)hsz, "bytes");
+                                    if (hrc == 0 && hdr_buf != NULL && hsz > 0) {
+                                        for (uint32_t off = 0; off < (uint32_t)hsz;
+                                             off += 64) {
+                                            uint32_t chunk =
+                                                ((uint32_t)hsz - off > 64)
+                                                    ? 64
+                                                    : ((uint32_t)hsz - off);
+                                            obs_report_bytes(
+                                                id, test_tags[t], "headers-block", off,
+                                                (const uint8_t *)hdr_buf + off, chunk);
+                                        }
+                                        uint8_t byte_at_size = 0xff;
+                                        obs_jmp_buf hguard;
+                                        int hsig = OBS_FAULT_ARM(&hguard);
+                                        if (hsig == 0) {
+                                            byte_at_size = (uint8_t)hdr_buf[hsz];
+                                            obs_fault_unregister();
+                                        } else {
+                                            obs_fault_unregister();
+                                        }
+                                        obs_report_measure(
+                                            id, test_tags[t], "byte-at-size",
+                                            (uint64_t)byte_at_size, "val");
+                                        obs_report_measure(
+                                            id, test_tags[t], "is-nul-at-size",
+                                            (uint64_t)(byte_at_size == 0), "bool");
+                                    }
                                 }
                             }
+                            if (fn_req_delete != NULL) {
+                                fn_req_delete(req);
+                            }
                         }
-                        if (fn_req_delete != NULL) {
-                            fn_req_delete(req);
+                        if (fn_conn_delete != NULL) {
+                            fn_conn_delete(conn);
                         }
-                    }
-                    if (fn_conn_delete != NULL) {
-                        fn_conn_delete(conn);
                     }
                 }
             }
