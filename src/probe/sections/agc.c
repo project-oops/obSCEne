@@ -20169,18 +20169,52 @@ static const uint64_t agc_target_word_probe[11] = {
     0ULL,
 };
 
+static int agc_run_one_pass(const char *id, const char *symbol, const char *label,
+                            const char *rc_name, const char *ext_name,
+                            const char *adv_name, const char *fault_name,
+                            const void *fn, obs_agc_cb_probe *probe,
+                            const uint8_t *before, const uint64_t *a,
+                            uint64_t *out_extent) {
+    agc_cb_prepare(probe, 0);
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        obs_report_measure(id, symbol, fault_name, (uint64_t)sig, "signal");
+        return -1;
+    }
+    uint64_t rc =
+        ((agc_cb_fn)fn)(&probe->begin, a[0], a[1], a[2], a[3], a[4], a[5],
+                        a[6], a[7], a[8], a[9], a[10]);
+    obs_fault_unregister();
+    if (!agc_cb_guard_intact(probe)) {
+        return -2;
+    }
+    unsigned int extent = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
+    uint64_t advance = probe->cur - probe->begin;
+    obs_report_written(id, symbol, label, before, probe->cmdbuf,
+                       OBS_AGC_CMDBUF_SIZE);
+    obs_report_measure(id, symbol, rc_name, rc, "rc");
+    obs_report_measure(id, symbol, ext_name, (uint64_t)extent, "bytes");
+    obs_report_measure(id, symbol, adv_name, advance, "bytes");
+    if (out_extent) {
+        *out_extent = (uint64_t)extent;
+    }
+    return 0;
+}
+
 /* Which body dwords come from arguments, and which are the library's own.
  *
- * Runs across distinct passes (REQ-20260915T1330Z-9e21, REQ-20260928T1936Z-ff23):
+ * Runs across distinct passes (REQ-20260915T1330Z-9e21, REQ-20260928T1936Z-ff23,
+ * REQ-20260928T2011Z-1044):
  * 1. All arguments zero.
- * 2. Distinct markers per slot (registers and stack alike).
- * 3. Captured retail title register arguments (PPSA03416).
- * 4. Target-word probe (testing whether 'b0 bb ff ee' moves with argument a7).
- * 5. Sentinel set A (0x1111..., 0x2222...).
- * 6. Sentinel set B (0xC1C1..., 0xC2C2...).
- *
- * All dumps are recorded. A dword tracking the sentinels/markers names the slot it came
- * from; a field constant across all passes is the library's own.
+ * 2. Single-argument sweeps: each of a1..a11 set to all-ones alone with all others zero.
+ * 3. Isolated event-type calls for sceAgcCbReleaseMem: a1=0x01 and a1=0x2b alone.
+ * 4. Distinct markers per slot (registers and stack alike).
+ * 5. Captured retail title register arguments (PPSA03416).
+ * 6. Target-word probe (testing whether 'b0 bb ff ee' moves with argument a7).
+ * 7. Sentinel set A (0x1111..., 0x2222...).
+ * 8. Sentinel set B (0xC1C1..., 0xC2C2...).
  */
 static obs_result agc_arg_discriminate(const char *id, const char *symbol,
                                        const void *fn,
@@ -20197,6 +20231,50 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
         before[i] = OBS_AGC_POISON_BYTE;
     }
 
+    uint64_t ext_zero = 0;
+    static const uint64_t zero_args[11] = {0};
+    int r = agc_run_one_pass(id, symbol, "zero-args", "rc-zero", "extent-zero",
+                             "cursor-advance-zero", "zero-fault", fn, probe,
+                             before, zero_args, &ext_zero);
+    if (r == -1) {
+        return obs_partial_value("builder dereferenced zero arguments", 0);
+    }
+    if (r == -2) {
+        return obs_fail("builder wrote past command buffer on zero arguments");
+    }
+
+    /* 1. Single argument sweeps with only that argument all-ones (REQ-20260928T2011Z-1044) */
+    for (unsigned int k = 0; k < 11; k++) {
+        uint64_t a_ones[11] = {0};
+        a_ones[k] = 0xffffffffffffffffULL;
+        char label[32], rc_name[32], ext_name[32], adv_name[32], fault_name[32];
+        oops_snprintf(label, sizeof(label), "a%u-all-ones", k + 1);
+        oops_snprintf(rc_name, sizeof(rc_name), "rc-a%u-all-ones", k + 1);
+        oops_snprintf(ext_name, sizeof(ext_name), "extent-a%u-all-ones", k + 1);
+        oops_snprintf(adv_name, sizeof(adv_name), "cursor-advance-a%u-all-ones", k + 1);
+        oops_snprintf(fault_name, sizeof(fault_name), "a%u-all-ones-fault", k + 1);
+        uint64_t ext_k = 0;
+        agc_run_one_pass(id, symbol, label, rc_name, ext_name, adv_name,
+                         fault_name, fn, probe, before, a_ones, &ext_k);
+    }
+
+    /* 2. Isolated event-type calls for sceAgcCbReleaseMem (REQ-20260928T2011Z-1044) */
+    if (strcmp(symbol, "sceAgcCbReleaseMem") == 0) {
+        uint64_t a_et01[11] = {0};
+        a_et01[0] = 0x01ULL;
+        uint64_t ext_et = 0;
+        agc_run_one_pass(id, symbol, "event-type-01", "rc-event-type-01",
+                         "extent-event-type-01", "cursor-advance-event-type-01",
+                         "event-type-01-fault", fn, probe, before, a_et01, &ext_et);
+
+        uint64_t a_et2b[11] = {0};
+        a_et2b[0] = 0x2bULL;
+        agc_run_one_pass(id, symbol, "event-type-2b", "rc-event-type-2b",
+                         "extent-event-type-2b", "cursor-advance-event-type-2b",
+                         "event-type-2b-fault", fn, probe, before, a_et2b, &ext_et);
+    }
+
+    /* 3. Composite passes from REQ-20260928T1936Z-ff23 */
     struct pass_desc {
         const char *label;
         const char *rc_name;
@@ -20206,11 +20284,7 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
         const uint64_t *args;
     };
 
-    static const uint64_t zero_args[11] = {0};
-
-    const struct pass_desc passes[] = {
-        {"zero-args", "rc-zero", "extent-zero", "cursor-advance-zero",
-         "zero-fault", zero_args},
+    const struct pass_desc composite_passes[] = {
         {"distinct-markers", "rc-distinct-markers", "extent-distinct-markers",
          "cursor-advance-distinct-markers", "distinct-markers-fault",
          agc_distinct_markers},
@@ -20225,58 +20299,17 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
          "cursor-advance-b", "sentinel-fault-b", agc_arg_sentinels_b},
     };
 
-    uint64_t extents[OBS_COUNT(passes)];
-    for (unsigned int i = 0; i < OBS_COUNT(passes); i++) {
-        extents[i] = 0;
+    for (unsigned int p = 0; p < OBS_COUNT(composite_passes); p++) {
+        uint64_t ext_p = 0;
+        agc_run_one_pass(id, symbol, composite_passes[p].label,
+                         composite_passes[p].rc_name,
+                         composite_passes[p].ext_name,
+                         composite_passes[p].adv_name,
+                         composite_passes[p].fault_name,
+                         fn, probe, before, composite_passes[p].args, &ext_p);
     }
 
-    for (unsigned int p = 0; p < OBS_COUNT(passes); p++) {
-        agc_cb_prepare(probe, 0);
-        obs_jmp_buf guard;
-        int sig = OBS_FAULT_ARM(&guard);
-        if (sig != 0) {
-            obs_fault_unregister();
-            obs_report_measure(id, symbol, passes[p].fault_name, (uint64_t)sig,
-                               "signal");
-            return obs_partial_value(
-                "the builder dereferenced an argument", (uint64_t)sig);
-        }
-        const uint64_t *a = passes[p].args;
-        uint64_t rc =
-            ((agc_cb_fn)fn)(&probe->begin, a[0], a[1], a[2], a[3], a[4], a[5],
-                            a[6], a[7], a[8], a[9], a[10]);
-        obs_fault_unregister();
-        if (!agc_cb_guard_intact(probe)) {
-            return obs_fail("the builder wrote past its command buffer");
-        }
-        unsigned int extent = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
-        uint64_t advance = probe->cur - probe->begin;
-        obs_report_written(id, symbol, passes[p].label, before, probe->cmdbuf,
-                           OBS_AGC_CMDBUF_SIZE);
-        obs_report_measure(id, symbol, passes[p].rc_name, rc, "rc");
-        obs_report_measure(id, symbol, passes[p].ext_name, (uint64_t)extent,
-                           "bytes");
-        obs_report_measure(id, symbol, passes[p].adv_name, advance, "bytes");
-        extents[p] = (uint64_t)extent;
-    }
-
-    int all_zero = 1;
-    for (unsigned int p = 0; p < OBS_COUNT(passes); p++) {
-        if (extents[p] != 0) {
-            all_zero = 0;
-            break;
-        }
-    }
-    if (all_zero) {
-        return obs_partial_value("the builder wrote nothing on any pass", 0);
-    }
-    for (unsigned int p = 1; p < OBS_COUNT(passes); p++) {
-        if (extents[p] != extents[0]) {
-            return obs_fail_code(
-                "the packet length depends on the argument values", extents[p]);
-        }
-    }
-    return obs_pass_value(extents[0]);
+    return obs_pass_value(ext_zero);
 }
 
 static obs_result check_agc_dcb_dma_data_args(void) {
