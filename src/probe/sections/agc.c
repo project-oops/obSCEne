@@ -1003,15 +1003,15 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-submit-batch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_batch,
      OBS_FROM_ASSUMED},
-    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_fence,
-     OBS_FROM_ASSUMED},
     {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
      OBS_FROM_ASSUMED},
     {"166-agc/driver-set-hs-offchip-param", "libSceAgcDriver",
      "sceAgcDriverSetHsOffchipParam", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_set_hs_offchip_param, OBS_FROM_ASSUMED},
+    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_fence,
+     OBS_FROM_ASSUMED},
     {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
      OBS_FROM_ASSUMED},
@@ -4386,6 +4386,7 @@ static obs_result check_agc_driver_add_eq_event(void) {
         for (size_t cl_off = 0; cl_off < (size_t)((uintptr_t)dw - (uintptr_t)dcb); cl_off += 64) {
             __builtin_ia32_clflush((const void *)((const char *)dcb + cl_off));
         }
+        __builtin_ia32_mfence();
 #endif
         obs_agc_dcb_desc desc;
         __builtin_memset(&desc, 0, sizeof(desc));
@@ -4601,6 +4602,7 @@ static void run_one_nop_hs_dcb(const char *arm_name, uint32_t fence_expected) {
     for (size_t p = 0; p < (size_t)((uintptr_t)dw - (uintptr_t)dcb); p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)dcb + p));
     }
+    __builtin_ia32_mfence();
 #endif
     obs_agc_dcb_desc desc;
     __builtin_memset(&desc, 0, sizeof(desc));
@@ -5303,7 +5305,7 @@ static obs_result check_agc_driver_submit_fence(void) {
 
     /* Pad trailing area with PM4 NOPs to ensure prefetch safety */
     for (int p = 0; p < 16; p++) {
-        dw[p] = 0xffff1000u;
+        *dw++ = 0xffff1000u;
     }
 
     probe->cur = (uint64_t)(uintptr_t)dw;
@@ -5311,9 +5313,17 @@ static obs_result check_agc_driver_submit_fence(void) {
     obs_report_measure("166-agc/driver-submit-fence", "sceAgcDriverSubmitDcb",
                        "bytes-written", (uint64_t)bytes_written, "size");
 
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+    __builtin_ia32_mfence();
+#endif
+
     obs_agc_dcb_desc desc;
     desc.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
-    desc.size = bytes_written / 4u; /* PM4 size in DWORDs (8 DWORDs = 32 bytes) */
+    desc.size = bytes_written / 4u; /* PM4 size in DWORDs */
     desc.flags = 0u;
     desc.pad[0] = 0u;
     desc.pad[1] = 0u;
@@ -23747,15 +23757,15 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-submit-batch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_driver_submit_batch, OBS_FROM_ASSUMED},
-    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
-     check_agc_driver_submit_fence, OBS_FROM_ASSUMED},
     {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
      OBS_FROM_ASSUMED},
     {"166-agc/driver-set-hs-offchip-param", "libSceAgcDriver",
      "sceAgcDriverSetHsOffchipParam", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_set_hs_offchip_param, OBS_FROM_ASSUMED},
+    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_driver_submit_fence, OBS_FROM_ASSUMED},
     {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
      OBS_FROM_ASSUMED},
