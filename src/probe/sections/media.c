@@ -1373,6 +1373,21 @@ static obs_result check_audio_audioout2_ports(void) {
     };
 
     int handle = obs_module_open("libSceAudioOut2");
+    if (handle < 0) {
+        handle = obs_module_open("libSceAudioOut");
+    }
+    if (handle < 0) {
+        handle = obs_module_open("libSceAudioOut.sprx");
+    }
+
+    int mod_handles[128];
+    size_t mod_count = 0;
+    if (obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
+        if (sceKernelGetModuleList(mod_handles, 128, &mod_count) != 0) {
+            mod_count = 0;
+        }
+    }
+
     unsigned int resolved = 0;
     const void *fn_init = NULL;
     const void *fn_destroy = NULL;
@@ -1389,6 +1404,16 @@ static obs_result check_audio_audioout2_ports(void) {
         if (addr == NULL) {
             addr = obs_module_symbol(OBS_HANDLE_SELF, name);
         }
+        if (addr == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            for (size_t m = 0; m < mod_count; m++) {
+                void *d = NULL;
+                if (sceKernelDlsym(mod_handles[m], name, &d) == 0 &&
+                    obs_address_is_callable(d)) {
+                    addr = d;
+                    break;
+                }
+            }
+        }
 
         obs_report_measure("090-audio/audioout2-ports", name, "vaddr",
                            (uint64_t)(uintptr_t)addr, "vaddr");
@@ -1402,10 +1427,6 @@ static obs_result check_audio_audioout2_ports(void) {
                 fn_destroy = addr;
             }
         }
-    }
-
-    if (resolved == 0) {
-        return obs_skip("libSceAudioOut2 symbols not resolved");
     }
 
     obs_jmp_buf buf;
@@ -1429,6 +1450,139 @@ static obs_result check_audio_audioout2_ports(void) {
         int rc_destroy = destroy_func(OBS_HANDLE_INVALID);
         obs_report_measure("090-audio/audioout2-ports", "sceAudioOut2PortDestroy",
                            "bad-handle-rc", (uint64_t)(uint32_t)rc_destroy, "code");
+    }
+
+    /* REQ-20260928T0730Z-7b14: sceAudioOut2UserDestroy on handle from create and on 0
+     */
+    const void *fn_user_destroy =
+        (handle >= 0) ? obs_module_symbol(handle, "sceAudioOut2UserDestroy") : NULL;
+    if (fn_user_destroy == NULL && handle >= 0) {
+        fn_user_destroy = obs_module_symbol(handle, "$6vY70ydXpiE");
+    }
+    if (fn_user_destroy == NULL) {
+        fn_user_destroy = obs_module_symbol(OBS_HANDLE_SELF, "sceAudioOut2UserDestroy");
+    }
+    if (fn_user_destroy == NULL) {
+        fn_user_destroy = obs_module_symbol(OBS_HANDLE_SELF, "$6vY70ydXpiE");
+    }
+    if (fn_user_destroy == NULL) {
+        fn_user_destroy = obs_module_symbol(1, "sceAudioOut2UserDestroy");
+    }
+    if (fn_user_destroy == NULL) {
+        fn_user_destroy = obs_module_symbol(1, "$6vY70ydXpiE");
+    }
+
+    const void *fn_user_create =
+        (handle >= 0) ? obs_module_symbol(handle, "sceAudioOut2UserCreate") : NULL;
+    if (fn_user_create == NULL && handle >= 0) {
+        fn_user_create = obs_module_symbol(handle, "$tJ17EHEYLMc");
+    }
+    if (fn_user_create == NULL) {
+        fn_user_create = obs_module_symbol(OBS_HANDLE_SELF, "sceAudioOut2UserCreate");
+    }
+    if (fn_user_create == NULL) {
+        fn_user_create = obs_module_symbol(OBS_HANDLE_SELF, "$tJ17EHEYLMc");
+    }
+    if (fn_user_create == NULL) {
+        fn_user_create = obs_module_symbol(1, "sceAudioOut2UserCreate");
+    }
+    if (fn_user_create == NULL) {
+        fn_user_create = obs_module_symbol(1, "$tJ17EHEYLMc");
+    }
+
+    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        void *a = NULL;
+        if (!fn_user_destroy && handle >= 0 &&
+            sceKernelDlsym(handle, "sceAudioOut2UserDestroy", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_destroy = a;
+        if (!fn_user_destroy && handle >= 0 &&
+            sceKernelDlsym(handle, "6vY70ydXpiE", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_destroy = a;
+        if (!fn_user_destroy &&
+            sceKernelDlsym(OBS_HANDLE_SELF, "sceAudioOut2UserDestroy", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_destroy = a;
+        if (!fn_user_destroy &&
+            sceKernelDlsym(OBS_HANDLE_SELF, "6vY70ydXpiE", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_destroy = a;
+        if (!fn_user_destroy && sceKernelDlsym(1, "sceAudioOut2UserDestroy", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_destroy = a;
+        if (!fn_user_destroy && sceKernelDlsym(1, "6vY70ydXpiE", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_destroy = a;
+
+        if (!fn_user_create && handle >= 0 &&
+            sceKernelDlsym(handle, "sceAudioOut2UserCreate", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_create = a;
+        if (!fn_user_create && handle >= 0 &&
+            sceKernelDlsym(handle, "tJ17EHEYLMc", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_create = a;
+        if (!fn_user_create &&
+            sceKernelDlsym(OBS_HANDLE_SELF, "sceAudioOut2UserCreate", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_create = a;
+        if (!fn_user_create &&
+            sceKernelDlsym(OBS_HANDLE_SELF, "tJ17EHEYLMc", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_create = a;
+        if (!fn_user_create && sceKernelDlsym(1, "sceAudioOut2UserCreate", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_create = a;
+        if (!fn_user_create && sceKernelDlsym(1, "tJ17EHEYLMc", &a) == 0 &&
+            obs_address_is_callable(a))
+            fn_user_create = a;
+
+        for (size_t m = 0; m < mod_count; m++) {
+            if (!fn_user_destroy) {
+                if (sceKernelDlsym(mod_handles[m], "sceAudioOut2UserDestroy", &a) ==
+                        0 &&
+                    obs_address_is_callable(a))
+                    fn_user_destroy = a;
+                else if (sceKernelDlsym(mod_handles[m], "6vY70ydXpiE", &a) == 0 &&
+                         obs_address_is_callable(a))
+                    fn_user_destroy = a;
+            }
+            if (!fn_user_create) {
+                if (sceKernelDlsym(mod_handles[m], "sceAudioOut2UserCreate", &a) == 0 &&
+                    obs_address_is_callable(a))
+                    fn_user_create = a;
+                else if (sceKernelDlsym(mod_handles[m], "tJ17EHEYLMc", &a) == 0 &&
+                         obs_address_is_callable(a))
+                    fn_user_create = a;
+            }
+        }
+    }
+
+    obs_report_measure("090-audio/audioout2-ports", "sceAudioOut2UserDestroy",
+                       "resolved", fn_user_destroy != NULL ? 1 : 0, "bool");
+    obs_report_measure("090-audio/audioout2-ports", "sceAudioOut2UserCreate",
+                       "resolved", fn_user_create != NULL ? 1 : 0, "bool");
+
+    if (fn_user_destroy != NULL && obs_address_is_callable(fn_user_destroy)) {
+        int (*user_dest_fn)(int) = (int (*)(int))fn_user_destroy;
+        int rc_u0 = user_dest_fn(0);
+        obs_report_measure("090-audio/audioout2-ports", "sceAudioOut2UserDestroy",
+                           "rc-zero", (uint64_t)(uint32_t)rc_u0, "code");
+
+        if (fn_user_create != NULL && obs_address_is_callable(fn_user_create)) {
+            int (*user_cr_fn)(int, int, int, int) =
+                (int (*)(int, int, int, int))fn_user_create;
+            int h_created = user_cr_fn(0, 0, 0, 0);
+            obs_report_measure("090-audio/audioout2-ports", "sceAudioOut2UserCreate",
+                               "rc", (uint64_t)(uint32_t)h_created, "handle");
+            if (h_created > 0) {
+                int rc_uh = user_dest_fn(h_created);
+                obs_report_measure("090-audio/audioout2-ports",
+                                   "sceAudioOut2UserDestroy", "rc-handle",
+                                   (uint64_t)(uint32_t)rc_uh, "code");
+            }
+        }
     }
 
     obs_fault_unregister();
@@ -2302,26 +2456,50 @@ static obs_result check_keyboard_and_media_gates(void) {
     obs_report_measure(id, "sceSysmoduleLoadModule", "rc-keyboard",
                        (uint64_t)(uint32_t)load_rc, "code");
 
-    const void *fn_init_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardInit");
+    const void *fn_init_sym = (const void *)&sceKeyboardInit_static;
+    if (!obs_address_is_callable(fn_init_sym))
+        fn_init_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardInit");
     if (!fn_init_sym)
         fn_init_sym = obs_module_symbol(1, "sceKeyboardInit");
-    const void *fn_open_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardOpen");
+
+    const void *fn_open_sym = (const void *)&sceKeyboardOpen_static;
+    if (!obs_address_is_callable(fn_open_sym))
+        fn_open_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardOpen");
     if (!fn_open_sym)
         fn_open_sym = obs_module_symbol(1, "sceKeyboardOpen");
-    const void *fn_read_sym =
-        obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardReadState");
+
+    const void *fn_read_sym = (const void *)&sceKeyboardReadState_static;
+    if (!obs_address_is_callable(fn_read_sym))
+        fn_read_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardReadState");
     if (!fn_read_sym)
         fn_read_sym = obs_module_symbol(1, "sceKeyboardReadState");
-    const void *fn_close_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardClose");
+
+    const void *fn_close_sym = (const void *)&sceKeyboardClose_static;
+    if (!obs_address_is_callable(fn_close_sym))
+        fn_close_sym = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardClose");
     if (!fn_close_sym)
         fn_close_sym = obs_module_symbol(1, "sceKeyboardClose");
 
-    obs_report_measure(id, "sceKeyboardInit", "resolved", fn_init_sym ? 1 : 0, "bool");
-    obs_report_measure(id, "sceKeyboardOpen", "resolved", fn_open_sym ? 1 : 0, "bool");
-    obs_report_measure(id, "sceKeyboardReadState", "resolved", fn_read_sym ? 1 : 0,
+    obs_report_measure(id, "sceKeyboardInit", "resolved",
+                       (fn_init_sym && obs_address_is_callable(fn_init_sym)) ? 1 : 0,
                        "bool");
-    obs_report_measure(id, "sceKeyboardClose", "resolved", fn_close_sym ? 1 : 0,
+    obs_report_measure(id, "sceKeyboardInit", "addr", (uint64_t)(uintptr_t)fn_init_sym,
+                       "offset");
+    obs_report_measure(id, "sceKeyboardOpen", "resolved",
+                       (fn_open_sym && obs_address_is_callable(fn_open_sym)) ? 1 : 0,
                        "bool");
+    obs_report_measure(id, "sceKeyboardOpen", "addr", (uint64_t)(uintptr_t)fn_open_sym,
+                       "offset");
+    obs_report_measure(id, "sceKeyboardReadState", "resolved",
+                       (fn_read_sym && obs_address_is_callable(fn_read_sym)) ? 1 : 0,
+                       "bool");
+    obs_report_measure(id, "sceKeyboardReadState", "addr",
+                       (uint64_t)(uintptr_t)fn_read_sym, "offset");
+    obs_report_measure(id, "sceKeyboardClose", "resolved",
+                       (fn_close_sym && obs_address_is_callable(fn_close_sym)) ? 1 : 0,
+                       "bool");
+    obs_report_measure(id, "sceKeyboardClose", "addr",
+                       (uint64_t)(uintptr_t)fn_close_sym, "offset");
 
     int32_t user = initial_user();
     if (user < 0)
@@ -2413,6 +2591,12 @@ static obs_result check_keyboard_and_media_gates(void) {
                                    (uint64_t)(uint32_t)rc_r, "code");
                 obs_report_written(id, "sceKeyboardReadState", "state-96-bytes",
                                    kb_before, kb_state, sizeof(kb_state));
+                for (unsigned int off = 0; off < sizeof(kb_state); off += 64) {
+                    unsigned int chunk =
+                        (sizeof(kb_state) - off > 64) ? 64 : (sizeof(kb_state) - off);
+                    obs_report_bytes(id, "sceKeyboardReadState", "state-96b", off,
+                                     kb_state + off, chunk);
+                }
             }
         }
 
@@ -2431,17 +2615,29 @@ static obs_result check_keyboard_and_media_gates(void) {
     }
 
     /* 2. libSceVideoRecording */
-    const char *vr_syms[] = {
-        "sceVideoRecordingSetInfo",
-        "sceVideoRecordingQueryMemSize",
-        "sceVideoRecordingOpen",
-        "sceVideoRecordingClose",
+    struct {
+        const char *name;
+        const void *static_fn;
+    } vr_syms[] = {
+        {"sceVideoRecordingInit", (const void *)&sceVideoRecordingInit_static},
+        {"sceVideoRecordingOpen", (const void *)&sceVideoRecordingOpen_static},
+        {"sceVideoRecordingClose", (const void *)&sceVideoRecordingClose_static},
+        {"sceVideoRecordingQueryMemSize",
+         (const void *)&sceVideoRecordingQueryMemSize_static},
+        {"sceVideoRecordingSetInfo", (const void *)&sceVideoRecordingSetInfo_static},
     };
     for (size_t i = 0; i < sizeof(vr_syms) / sizeof(vr_syms[0]); i++) {
-        const void *sym = obs_module_symbol(OBS_HANDLE_SELF, vr_syms[i]);
-        if (!sym)
-            sym = obs_module_symbol(1, vr_syms[i]);
-        obs_report_measure(id, vr_syms[i], "resolved", sym ? 1 : 0, "bool");
+        const void *sym = (const void *)vr_syms[i].static_fn;
+        if (!sym || !obs_address_is_callable(sym)) {
+            sym = obs_module_symbol(OBS_HANDLE_SELF, vr_syms[i].name);
+        }
+        if (!sym || !obs_address_is_callable(sym)) {
+            sym = obs_module_symbol(1, vr_syms[i].name);
+        }
+        int resolved = (sym != NULL && obs_address_is_callable(sym));
+        obs_report_measure(id, vr_syms[i].name, "resolved", resolved ? 1 : 0, "bool");
+        obs_report_measure(id, vr_syms[i].name, "addr", (uint64_t)(uintptr_t)sym,
+                           "offset");
     }
 
     /* 3. PPSA02664 gates: sceAvPlayerInitEx, sceNpUniversalDataSystemCreateEvent,

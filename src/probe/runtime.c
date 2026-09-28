@@ -377,6 +377,49 @@ void obs_bootstrap_title_output(void) {
             obs_libkernel_base_value = (unsigned long)(uintptr_t)getpid_ptr - 0x5b0UL;
         }
     }
+    if (s_libkernel_syscall_gadget == 0) {
+        const void *candidates[] = {
+            (const void *)s_fn_write,
+            obs_module_symbol(handle, "write"),
+            obs_module_symbol(handle, "close"),
+            obs_module_symbol(handle, "sceKernelClose"),
+            obs_module_symbol(handle, "sceKernelOpen"),
+            obs_module_symbol(handle, "sceKernelGetProcessTime"),
+        };
+        for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]); i++) {
+            const void *ptr = candidates[i];
+            if (ptr != NULL && obs_address_is_callable(ptr)) {
+                const uint8_t *code = (const uint8_t *)ptr;
+                for (int off = 0; off < 32; off++) {
+                    if (code[off] == 0x0f && code[off + 1] == 0x05) { /* syscall */
+                        s_libkernel_syscall_gadget = (long)(uintptr_t)(code + off);
+                        break;
+                    }
+                }
+                if (s_libkernel_syscall_gadget != 0) {
+                    break;
+                }
+            }
+        }
+    }
+    if (s_fn_open == NULL) {
+        const void *p = obs_module_symbol(handle, "sceKernelOpen");
+        if (obs_address_is_callable(p)) {
+            s_fn_open = (fn_open_t)(uintptr_t)p;
+        }
+    }
+    if (s_fn_close == NULL) {
+        const void *p = obs_module_symbol(handle, "sceKernelClose");
+        if (obs_address_is_callable(p)) {
+            s_fn_close = (fn_close_t)(uintptr_t)p;
+        }
+    }
+    if (s_fn_read == NULL) {
+        const void *p = obs_module_symbol(handle, "sceKernelRead");
+        if (obs_address_is_callable(p)) {
+            s_fn_read = (fn_read_t)(uintptr_t)p;
+        }
+    }
 }
 
 #if !defined(OBSCENE_HOST_BUILD)

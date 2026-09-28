@@ -146,7 +146,8 @@ STAMP += -DOBSCENE_EXCLUDE='"$(EXCLUDE)"'
 #   make pkg PROC_SDK=0            run-time resolution works; the census runs
 #   make pkg PROC_SDK=0x08008011   what a launching title declares; dlsym stops answering
 PROC_SDK ?= 0
-STAMP += -DOBS_PROC_PARAM_SDK=$(PROC_SDK)u
+PROC_SDK_PPR ?= 0
+STAMP += -DOBS_PROC_PARAM_SDK=$(PROC_SDK)u -DOBS_PROC_PARAM_SDK_PPR=$(PROC_SDK_PPR)u
 
 # Whether `061-imports` calls an import whose address reads as null.
 #
@@ -820,7 +821,7 @@ payload-min: | $(BUILD)
 # `module` and `payload` are not gated. They run under a homebrew loader with different
 # privileges and under emulators that stub everything, where requiring the whole census is
 # exactly what is wanted.
-EBOOT_LIBS ?= 19
+EBOOT_LIBS ?= 24
 
 eboot-libs-guard: $(BUILD)/symbols-no-census.txt
 	@if [ "$(EBOOT_LIBS)" != "any" ]; then \
@@ -892,8 +893,8 @@ NATIVE_TARGET ?= $(if $(filter trinity,$(TARGET)),trinity,prospero)
 
 .PHONY: native
 native: | $(BUILD)
-	@$(MAKE) eboot sce-module TARGET=$(NATIVE_TARGET) BUILD=$(BUILD)
-	@SELFISH=$(SELFISH) PRIVILEGE=root SDK=$(if $(filter trinity,$(NATIVE_TARGET)),trinity,prospero) bash scripts/build-native.sh $(BUILD) $(NATIVE_TARGET)
+	@$(MAKE) eboot sce-module TARGET=$(NATIVE_TARGET) BUILD=$(BUILD) SDK=$(SDK)
+	@SELFISH=$(SELFISH) PRIVILEGE=root SDK=$(SDK) bash scripts/build-native.sh $(BUILD) $(NATIVE_TARGET)
 # The same package around the *minimal* module, which is what to send at a console first.
 # `module-min` is one import and one library, built by the same linker script through the same
 # `mkmodule` with the same tags, so everything structural is present and everything about scale

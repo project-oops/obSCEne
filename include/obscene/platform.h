@@ -128,6 +128,7 @@ OBS_WEAK int sysctlbyname(const char *name, void *oldp, size_t *oldlenp,
  * a `void *` buffer keeps this program from carrying the vendor struct it deliberately
  * does not have. (D272) */
 OBS_WEAK int statfs(const char *path, void *buf);
+
 OBS_WEAK int sceVideoOutGetResolutionStatus(int handle, void *status);
 
 /* How many frames the display has actually put on screen.
@@ -1389,13 +1390,86 @@ OBS_WEAK uint64_t sceAgcDcbStallCommandBufferParserGetSize(
     uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
     uint64_t arg5) __asm__("$+u6dKSLWM2o");
 OBS_WEAK int sceAgcInit(void *state, uint32_t version) __asm__("$23LRUSvYu1M");
+OBS_WEAK int sceAgcInit_alias(void *state, uint32_t version) __asm__("$23LRUSvYu1M");
+OBS_WEAK int sceAgcInit_named(void *state, uint32_t version) __asm__("sceAgcInit");
+OBS_WEAK int sceAgcInit_nid_916d(void *state, uint32_t version) __asm__("$kW3GLb7QfPg");
+OBS_WEAK const void *
+sceAgcGetRegisterDefaults2_static(uint32_t version) __asm__("$2JtWUUiYBXs");
+OBS_WEAK const void *
+sceAgcGetRegisterDefaults2Internal_static(uint32_t version) __asm__("$wRbq6ZjNop4");
+OBS_WEAK int sceKeyboardInit_static(void) __asm__("$wadT3QBCGY0");
+OBS_WEAK int sceKeyboardOpen_static(int32_t user, int32_t mode, int32_t index,
+                                    const void *opt) __asm__("$HJ+KnEHcaxI");
+OBS_WEAK int sceKeyboardClose_static(int32_t handle) __asm__("$0LWei+c7RNc");
+OBS_WEAK int sceKeyboardReadState_static(int32_t handle,
+                                         void *state) __asm__("$6HpE68bzX6M");
+OBS_WEAK int sceVideoRecordingInit_static(void) __asm__("$RXXBl6-iimo");
+OBS_WEAK int sceVideoRecordingOpen_static(uint64_t arg0, uint64_t arg1,
+                                          uint64_t arg2) __asm__("$7QoTYzVuzto");
+OBS_WEAK int sceVideoRecordingClose_static(uint64_t arg0) __asm__("$KHvkPQJDMLk");
+OBS_WEAK uint64_t sceVideoRecordingQueryMemSize_static(
+    uint64_t arg0, uint64_t arg1) __asm__("$ZvWzS2wTIMc");
+OBS_WEAK int sceVideoRecordingSetInfo_static(uint64_t arg0,
+                                             const void *info) __asm__("$Fc8qxlKINYQ");
 OBS_WEAK int sceAgcGetIsTrinityMode(uint8_t *out_is_trinity) __asm__("$BfBDZGbti7A");
 #if defined(OBSCENE_HOST_BUILD)
 OBS_WEAK
 #endif
 uint64_t sceAgc_nid_7d86501b8094ef57(void *arg0, uint64_t arg1, uint64_t arg2,
                                      uint64_t arg3, uint64_t arg4,
-                                     uint64_t arg5) __asm__("$fYZQG4CU71c");
+                                     uint64_t arg5) __asm__("$V++UgBtQhn0");
+OBS_WEAK int sceUserServiceGetGamePresets_static(int32_t user_id,
+                                                 void *presets) __asm__("$-sD02mFDBh4");
+OBS_WEAK int sceKernelAprResolveFilepathsToIdsAndFileSizes_static(
+    const char **paths, uint32_t count, uint32_t *out_ids, uint64_t *out_sizes,
+    int32_t *out_status, void *options) __asm__("$gEpBkcwxUjw");
+OBS_WEAK int sceKernelAprSubmitCommandBufferAndGetResult_static(
+    void *cb, uint32_t priority, uint64_t *out_result,
+    uint32_t *out_wait_id) __asm__("$ASoW5WE-UPo");
+OBS_WEAK int
+sceKernelAprWaitCommandBuffer_static(uint32_t wait_id) __asm__("$rqwFKI4PAiM");
+OBS_WEAK int sceKernelAprGetFileStat_static(uint32_t file_id,
+                                            void *out_stat) __asm__("$ApkYaHb8Sek");
+OBS_WEAK int sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes_static(
+    const char *prefix, const char **rel_paths, uint32_t count, uint32_t *out_ids,
+    uint64_t *out_sizes, int32_t *out_status) __asm__("$w5fcCG+t31g");
+OBS_WEAK void sceAmprCommandBufferConstructor_static(void *cb) __asm__("$8aI7R7WaOlc");
+OBS_WEAK void sceAmprCommandBufferReset_static(void *cb) __asm__("$baQO9ez2gL4");
+OBS_WEAK int
+sceAmprAprCommandBufferConstructor_static(void *cb, void *ptr1, void *ptr2, void *buf,
+                                          uint64_t zero,
+                                          void *buf2) __asm__("$a8uLzYY--tM");
+OBS_WEAK int
+sceAmprAprCommandBufferReadFile_static(void *cb, uint32_t file_id, void *dest,
+                                       uint64_t size,
+                                       uint64_t offset) __asm__("$mQ16-QdKv7k");
+OBS_WEAK int sceSaveDataInitialize3_static(void *param) __asm__("$TywrFKCoLGY");
+OBS_WEAK int
+sceSaveDataInitialize3_named(void *param) __asm__("sceSaveDataInitialize3");
+OBS_WEAK int sceSaveDataTerminate_static(void) __asm__("$yKDy8S5yLA0");
+OBS_WEAK int sceSaveDataTerminate_named(void) __asm__("sceSaveDataTerminate");
+OBS_WEAK int
+sceSaveDataSetupSaveDataMemory2_static(const void *param,
+                                       void *result) __asm__("$oQySEUfgXRA");
+OBS_WEAK int sceSaveDataSetupSaveDataMemory2_named(
+    const void *param, void *result) __asm__("sceSaveDataSetupSaveDataMemory2");
+OBS_WEAK int
+sceSaveDataSetSaveDataMemory2_static(const void *param) __asm__("$cduy9v4YmT4");
+OBS_WEAK int sceSaveDataSetSaveDataMemory2_named(const void *param) __asm__(
+    "sceSaveDataSetSaveDataMemory2");
+OBS_WEAK int
+sceSaveDataGetSaveDataMemory2_static(const void *param) __asm__("$QwOO7vegnV8");
+OBS_WEAK int sceSaveDataGetSaveDataMemory2_named(const void *param) __asm__(
+    "sceSaveDataGetSaveDataMemory2");
+OBS_WEAK int
+sceSaveDataSyncSaveDataMemory_static(const void *param) __asm__("$wiT9jeC7xPw");
+OBS_WEAK int sceSaveDataSyncSaveDataMemory_named(const void *param) __asm__(
+    "sceSaveDataSyncSaveDataMemory");
+OBS_WEAK void *reallocalign_static(void *ptr, size_t size,
+                                   size_t align) __asm__("$BoTA41abbDg");
+OBS_WEAK size_t
+sceLibcMspaceMallocUsableSize_static(const void *ptr) __asm__("$3j5sEugWSnw");
+OBS_WEAK size_t malloc_usable_size_static(const void *ptr) __asm__("$L0QZxn0SNzQ");
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
                                      const void *payload,
                                      uint64_t arg3) __asm__("$f3dg2CSgRKY");

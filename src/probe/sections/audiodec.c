@@ -343,6 +343,96 @@ static obs_result check_ajm_batch_initialize_nulls(void) {
     return obs_pass();
 }
 
+/* REQ-20260928T0730Z-7b14: sceAjmInitialize(0, &out, 5, 0xbb80) with 32-byte 0xff block
+ */
+static obs_result check_audiodec_ajm_initialize(void) {
+    const char *id = "108-audiodec/ajm-init";
+    const void *fn = NULL;
+    if (!fn || !obs_address_is_callable(fn)) {
+        int handle = obs_module_open("libSceAjm");
+        if (handle < 0) {
+            handle = obs_module_open("libSceAjm.sprx");
+        }
+        if (handle >= 0) {
+            fn = obs_module_symbol(handle, "sceAjmInitialize");
+            if (!fn)
+                fn = obs_module_symbol(handle, "$7lKzdHi4X3Y");
+        }
+        if (!fn)
+            fn = obs_module_symbol(OBS_HANDLE_SELF, "sceAjmInitialize");
+        if (!fn)
+            fn = obs_module_symbol(OBS_HANDLE_SELF, "$7lKzdHi4X3Y");
+        if (!fn)
+            fn = obs_module_symbol(1, "sceAjmInitialize");
+        if (!fn)
+            fn = obs_module_symbol(1, "$7lKzdHi4X3Y");
+        if (!fn && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *addr = NULL;
+            if (handle >= 0 && sceKernelDlsym(handle, "sceAjmInitialize", &addr) == 0 &&
+                obs_address_is_callable(addr)) {
+                fn = addr;
+            } else if (handle >= 0 &&
+                       sceKernelDlsym(handle, "7lKzdHi4X3Y", &addr) == 0 &&
+                       obs_address_is_callable(addr)) {
+                fn = addr;
+            } else if (sceKernelDlsym(OBS_HANDLE_SELF, "sceAjmInitialize", &addr) ==
+                           0 &&
+                       obs_address_is_callable(addr)) {
+                fn = addr;
+            } else if (sceKernelDlsym(OBS_HANDLE_SELF, "7lKzdHi4X3Y", &addr) == 0 &&
+                       obs_address_is_callable(addr)) {
+                fn = addr;
+            } else if (sceKernelDlsym(1, "sceAjmInitialize", &addr) == 0 &&
+                       obs_address_is_callable(addr)) {
+                fn = addr;
+            } else if (sceKernelDlsym(1, "7lKzdHi4X3Y", &addr) == 0 &&
+                       obs_address_is_callable(addr)) {
+                fn = addr;
+            }
+        }
+    }
+
+    int resolved = (fn != NULL && obs_address_is_callable(fn));
+    obs_report_measure(id, "sceAjmInitialize", "resolved", (uint64_t)resolved, "bool");
+    if (!resolved) {
+        return obs_skip("sceAjmInitialize not resolved");
+    }
+
+    uint8_t out_buf[64];
+    uint8_t before[64];
+    memset(out_buf, 0xff, sizeof(out_buf));
+    memset(before, 0xff, sizeof(before));
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    int rc = -1;
+    if (sig == 0) {
+        typedef int (*fn_ajm_init_t)(uint64_t, void *, uint64_t, uint64_t);
+        fn_ajm_init_t call_init = (fn_ajm_init_t)fn;
+        rc = call_init(0, out_buf, 5, 0xbb80);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "sceAjmInitialize", "fault-sig", (uint64_t)sig,
+                           "signal");
+        return obs_fail("fault during sceAjmInitialize");
+    }
+
+    obs_report_measure(id, "sceAjmInitialize", "rc", (uint64_t)(uint32_t)rc, "code");
+
+    unsigned int bytes_written = 0;
+    for (unsigned int i = 0; i < sizeof(out_buf); i++) {
+        if (out_buf[i] != before[i]) {
+            bytes_written = i + 1;
+        }
+    }
+    obs_report_measure(id, "sceAjmInitialize", "bytes-written", (uint64_t)bytes_written,
+                       "bytes");
+    obs_report_bytes(id, "sceAjmInitialize", "out-32b", 0, out_buf, 32);
+
+    return obs_pass_value((uint64_t)(uint32_t)rc);
+}
+
 static const obs_check audiodec_checks[] = {
     {"108-audiodec/library", "libSceAudiodec", "sceAudiodecInitLibrary", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_audiodec_library, check_audiodec_library,
@@ -365,6 +455,8 @@ static const obs_check audiodec_checks[] = {
     {"108-audiodec/ajm-batch-init-nulls", "libSceAjm", "sceAjmBatchInitialize",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ajm_batch_initialize_nulls,
      OBS_FROM_ASSUMED},
+    {"108-audiodec/ajm-init", "libSceAjm", "sceAjmInitialize", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_audiodec_ajm_initialize, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_audiodec = {

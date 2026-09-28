@@ -17,6 +17,7 @@
  * returning success for all three is caught by all three.
  */
 
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -1038,6 +1039,335 @@ static obs_result check_unwind_frame_abi(void) {
     return obs_pass_value((uint64_t)resolved_count);
 }
 
+/* REQ-20260927T1130Z-d5f4: reallocalign and sceLibcMspaceMallocUsableSize /
+ * malloc_usable_size */
+static obs_result check_reallocalign_and_usable_size(void) {
+    const char *check_name = "035-libc/reallocalign-usable-size";
+    int h_libc = obs_module_open("libSceLibcInternal");
+    if (h_libc < 0) {
+        h_libc = obs_module_open("libSceLibcInternal.sprx");
+    }
+    if (h_libc < 0) {
+        h_libc = 1;
+    }
+
+    void *(*fn_reallocalign)(void *, size_t, size_t) = NULL;
+    size_t (*fn_malloc_usable_size)(const void *) = NULL;
+    size_t (*fn_mspace_usable_size)(const void *) = NULL;
+
+    int mod_handles[128];
+    size_t mod_count = 0;
+    if (obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
+        if (sceKernelGetModuleList(mod_handles, 128, &mod_count) != 0) {
+            mod_count = 0;
+        }
+    }
+
+    const void *p = (const void *)&reallocalign_static;
+    if (!obs_address_is_callable(p)) {
+        p = (h_libc >= 0) ? obs_module_symbol(h_libc, "reallocalign") : NULL;
+        if (!p && h_libc >= 0) {
+            p = obs_module_symbol(h_libc, "$BoTA41abbDg");
+        }
+        if (!p) {
+            p = obs_module_symbol(OBS_HANDLE_SELF, "reallocalign");
+        }
+        if (!p) {
+            p = obs_module_symbol(OBS_HANDLE_SELF, "$BoTA41abbDg");
+        }
+        if (!p) {
+            p = obs_module_symbol(1, "reallocalign");
+        }
+        if (!p) {
+            p = obs_module_symbol(1, "$BoTA41abbDg");
+        }
+        if (!p && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *a = NULL;
+            if (h_libc >= 0 && sceKernelDlsym(h_libc, "reallocalign", &a) == 0 &&
+                obs_address_is_callable(a))
+                p = a;
+            else if (h_libc >= 0 && sceKernelDlsym(h_libc, "BoTA41abbDg", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(OBS_HANDLE_SELF, "reallocalign", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(OBS_HANDLE_SELF, "BoTA41abbDg", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(1, "reallocalign", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(1, "BoTA41abbDg", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+
+            for (size_t m = 0; !p && m < mod_count; m++) {
+                if (sceKernelDlsym(mod_handles[m], "reallocalign", &a) == 0 &&
+                    obs_address_is_callable(a))
+                    p = a;
+                else if (sceKernelDlsym(mod_handles[m], "BoTA41abbDg", &a) == 0 &&
+                         obs_address_is_callable(a))
+                    p = a;
+            }
+        }
+    }
+    fn_reallocalign = (void *(*)(void *, size_t, size_t))p;
+
+    p = (const void *)&malloc_usable_size_static;
+    if (!obs_address_is_callable(p)) {
+        p = (h_libc >= 0) ? obs_module_symbol(h_libc, "malloc_usable_size") : NULL;
+        if (!p && h_libc >= 0) {
+            p = obs_module_symbol(h_libc, "$L0QZxn0SNzQ");
+        }
+        if (!p) {
+            p = obs_module_symbol(OBS_HANDLE_SELF, "malloc_usable_size");
+        }
+        if (!p) {
+            p = obs_module_symbol(OBS_HANDLE_SELF, "$L0QZxn0SNzQ");
+        }
+        if (!p) {
+            p = obs_module_symbol(1, "malloc_usable_size");
+        }
+        if (!p) {
+            p = obs_module_symbol(1, "$L0QZxn0SNzQ");
+        }
+        if (!p && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *a = NULL;
+            if (h_libc >= 0 && sceKernelDlsym(h_libc, "malloc_usable_size", &a) == 0 &&
+                obs_address_is_callable(a))
+                p = a;
+            else if (h_libc >= 0 && sceKernelDlsym(h_libc, "L0QZxn0SNzQ", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(OBS_HANDLE_SELF, "malloc_usable_size", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(OBS_HANDLE_SELF, "L0QZxn0SNzQ", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(1, "malloc_usable_size", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(1, "L0QZxn0SNzQ", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+
+            for (size_t m = 0; !p && m < mod_count; m++) {
+                if (sceKernelDlsym(mod_handles[m], "malloc_usable_size", &a) == 0 &&
+                    obs_address_is_callable(a))
+                    p = a;
+                else if (sceKernelDlsym(mod_handles[m], "L0QZxn0SNzQ", &a) == 0 &&
+                         obs_address_is_callable(a))
+                    p = a;
+            }
+        }
+    }
+    fn_malloc_usable_size = (size_t (*)(const void *))p;
+
+    p = (const void *)&sceLibcMspaceMallocUsableSize_static;
+    if (!obs_address_is_callable(p)) {
+        p = (h_libc >= 0) ? obs_module_symbol(h_libc, "sceLibcMspaceMallocUsableSize")
+                          : NULL;
+        if (!p && h_libc >= 0) {
+            p = obs_module_symbol(h_libc, "$3j5sEugWSnw");
+        }
+        if (!p) {
+            p = obs_module_symbol(OBS_HANDLE_SELF, "sceLibcMspaceMallocUsableSize");
+        }
+        if (!p) {
+            p = obs_module_symbol(OBS_HANDLE_SELF, "$3j5sEugWSnw");
+        }
+        if (!p) {
+            p = obs_module_symbol(1, "sceLibcMspaceMallocUsableSize");
+        }
+        if (!p) {
+            p = obs_module_symbol(1, "$3j5sEugWSnw");
+        }
+        if (!p && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *a = NULL;
+            if (h_libc >= 0 &&
+                sceKernelDlsym(h_libc, "sceLibcMspaceMallocUsableSize", &a) == 0 &&
+                obs_address_is_callable(a))
+                p = a;
+            else if (h_libc >= 0 && sceKernelDlsym(h_libc, "3j5sEugWSnw", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(OBS_HANDLE_SELF, "sceLibcMspaceMallocUsableSize",
+                                    &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(OBS_HANDLE_SELF, "3j5sEugWSnw", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(1, "sceLibcMspaceMallocUsableSize", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+            else if (sceKernelDlsym(1, "3j5sEugWSnw", &a) == 0 &&
+                     obs_address_is_callable(a))
+                p = a;
+
+            for (size_t m = 0; !p && m < mod_count; m++) {
+                if (sceKernelDlsym(mod_handles[m], "sceLibcMspaceMallocUsableSize",
+                                   &a) == 0 &&
+                    obs_address_is_callable(a))
+                    p = a;
+                else if (sceKernelDlsym(mod_handles[m], "3j5sEugWSnw", &a) == 0 &&
+                         obs_address_is_callable(a))
+                    p = a;
+            }
+        }
+    }
+    fn_mspace_usable_size = (size_t (*)(const void *))p;
+
+    obs_report_measure(check_name, "reallocalign", "resolved", fn_reallocalign != NULL,
+                       "bool");
+    obs_report_measure(check_name, "malloc_usable_size", "resolved",
+                       fn_malloc_usable_size != NULL, "bool");
+    obs_report_measure(check_name, "sceLibcMspaceMallocUsableSize", "resolved",
+                       fn_mspace_usable_size != NULL, "bool");
+
+    if (fn_reallocalign == NULL) {
+        return obs_skip("reallocalign not resolved");
+    }
+
+    int *err_ptr = obs_address_is_callable((const void *)&__error) ? __error() : NULL;
+
+    /* Arm 1: reallocalign(NULL, 0x400, 16) */
+    if (err_ptr)
+        *err_ptr = 0;
+    void *p1 = fn_reallocalign(NULL, 0x400, 16);
+    int err1 = err_ptr ? *err_ptr : 0;
+    obs_report_measure(check_name, "null-0x400-16", "pointer", (uint64_t)(uintptr_t)p1,
+                       "addr");
+    obs_report_measure(check_name, "null-0x400-16", "aligned-16",
+                       (p1 != NULL && ((uintptr_t)p1 & 15) == 0) ? 1 : 0, "bool");
+    obs_report_measure(check_name, "null-0x400-16", "errno", (uint64_t)(uint32_t)err1,
+                       "code");
+
+    /* Arm 2: reallocalign(p, 0, 16) on live block */
+    void *p_live = malloc(64);
+    if (p_live)
+        __builtin_memset(p_live, 0x5a, 64);
+    if (err_ptr)
+        *err_ptr = 0;
+    void *p2 = fn_reallocalign(p_live, 0, 16);
+    int err2 = err_ptr ? *err_ptr : 0;
+    obs_report_measure(check_name, "live-0-16", "pointer", (uint64_t)(uintptr_t)p2,
+                       "addr");
+    obs_report_measure(check_name, "live-0-16", "errno", (uint64_t)(uint32_t)err2,
+                       "code");
+
+    /* Arm 3: reallocalign(p, 64, 24) (not a power of two) */
+    void *p3_src = malloc(64);
+    if (p3_src)
+        __builtin_memset(p3_src, 0xa5, 64);
+    if (err_ptr)
+        *err_ptr = 0;
+    void *p3 = fn_reallocalign(p3_src, 64, 24);
+    int err3 = err_ptr ? *err_ptr : 0;
+    int p3_survived = 0;
+    obs_jmp_buf g3;
+    if (OBS_FAULT_ARM(&g3) == 0) {
+        if (p3_src && ((const unsigned char *)p3_src)[0] == 0xa5)
+            p3_survived = 1;
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "live-64-24-nonpow2", "pointer",
+                       (uint64_t)(uintptr_t)p3, "addr");
+    obs_report_measure(check_name, "live-64-24-nonpow2", "original-survives",
+                       (uint64_t)p3_survived, "bool");
+    obs_report_measure(check_name, "live-64-24-nonpow2", "errno",
+                       (uint64_t)(uint32_t)err3, "code");
+    if (p3_src && p3 != p3_src)
+        free(p3_src);
+    if (p3)
+        free(p3);
+
+    /* Arm 4: reallocalign(p, 64, 0x10000) */
+    void *p4_src = malloc(64);
+    if (p4_src)
+        __builtin_memset(p4_src, 0x3c, 64);
+    if (err_ptr)
+        *err_ptr = 0;
+    void *p4 = fn_reallocalign(p4_src, 64, 0x10000);
+    int err4 = err_ptr ? *err_ptr : 0;
+    int p4_matches = 0;
+    if (p4 != NULL && __builtin_memcmp(p4, "\x3c\x3c\x3c\x3c", 4) == 0)
+        p4_matches = 1;
+    obs_report_measure(check_name, "live-64-0x10000", "pointer",
+                       (uint64_t)(uintptr_t)p4, "addr");
+    obs_report_measure(check_name, "live-64-0x10000", "aligned-64k",
+                       (p4 != NULL && ((uintptr_t)p4 & 0xffff) == 0) ? 1 : 0, "bool");
+    obs_report_measure(check_name, "live-64-0x10000", "pattern-preserved",
+                       (uint64_t)p4_matches, "bool");
+    obs_report_measure(check_name, "live-64-0x10000", "errno", (uint64_t)(uint32_t)err4,
+                       "code");
+    if (p4)
+        free(p4);
+
+    /* Arm 5: reallocalign(p, 0x100000, 64) on block holding known pattern */
+    void *p5_src = malloc(64);
+    if (p5_src)
+        __builtin_memset(p5_src, 0x7e, 64);
+    if (err_ptr)
+        *err_ptr = 0;
+    void *p5 = fn_reallocalign(p5_src, 0x100000, 64);
+    int err5 = err_ptr ? *err_ptr : 0;
+    int p5_matches = 0;
+    if (p5 != NULL && __builtin_memcmp(p5, "\x7e\x7e\x7e\x7e", 4) == 0)
+        p5_matches = 1;
+    obs_report_measure(check_name, "live-1mb-64", "pointer", (uint64_t)(uintptr_t)p5,
+                       "addr");
+    obs_report_measure(check_name, "live-1mb-64", "aligned-64",
+                       (p5 != NULL && ((uintptr_t)p5 & 63) == 0) ? 1 : 0, "bool");
+    obs_report_measure(check_name, "live-1mb-64", "pattern-preserved",
+                       (uint64_t)p5_matches, "bool");
+    obs_report_measure(check_name, "live-1mb-64", "errno", (uint64_t)(uint32_t)err5,
+                       "code");
+    if (p5)
+        free(p5);
+
+    /* Arm 6: usable sizes on malloc(100) and reallocalign */
+    void *bm = malloc(100);
+    if (bm) {
+        if (fn_malloc_usable_size) {
+            size_t us_m = fn_malloc_usable_size(bm);
+            obs_report_measure(check_name, "malloc-100", "malloc_usable_size",
+                               (uint64_t)us_m, "bytes");
+        }
+        if (fn_mspace_usable_size) {
+            size_t us_ms = fn_mspace_usable_size(bm);
+            obs_report_measure(check_name, "malloc-100",
+                               "sceLibcMspaceMallocUsableSize", (uint64_t)us_ms,
+                               "bytes");
+        }
+        free(bm);
+    }
+
+    void *br = fn_reallocalign(NULL, 100, 64);
+    if (br) {
+        if (fn_malloc_usable_size) {
+            size_t us_r = fn_malloc_usable_size(br);
+            obs_report_measure(check_name, "reallocalign-100-64", "malloc_usable_size",
+                               (uint64_t)us_r, "bytes");
+        }
+        if (fn_mspace_usable_size) {
+            size_t us_rs = fn_mspace_usable_size(br);
+            obs_report_measure(check_name, "reallocalign-100-64",
+                               "sceLibcMspaceMallocUsableSize", (uint64_t)us_rs,
+                               "bytes");
+        }
+        free(br);
+    }
+
+    if (p1)
+        free(p1);
+    return obs_pass();
+}
+
 static const obs_check libc_checks[] = {
     {"035-libc/strlen", "libSceLibcInternal", "strlen", OBS_CAP_NONE, OBS_CAP_LIBC,
      (const void *)&strlen, check_strlen, OBS_FROM_SPEC},
@@ -1113,6 +1443,9 @@ static const obs_check libc_checks[] = {
      OBS_FROM_ASSUMED},
     {"035-libc/unwind-frame-abi", "libSceLibcInternal", "dl_iterate_phdr", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_unwind_frame_abi, check_unwind_frame_abi,
+     OBS_FROM_ASSUMED},
+    {"035-libc/reallocalign-usable-size", "libSceLibcInternal", "reallocalign",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_reallocalign_and_usable_size,
      OBS_FROM_ASSUMED},
 };
 

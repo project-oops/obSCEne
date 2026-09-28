@@ -18,6 +18,7 @@
 
 #include "oops/freestd.h"
 #include "oops/krw.h"
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -1449,6 +1450,22 @@ static obs_result check_netctl_info(void) {
                 (code >= 14 && code <= 18)) {
                 obs_report_bytes(id, tag, "first-32-bytes", 0, buf, 32);
             }
+            if (code == 2 || code == 3 || code == 11 || code == 12 || code == 13 ||
+                code == 14 || code == 19 || code == 20) {
+                for (unsigned int off = 0; off < sizeof(buf); off += 64) {
+                    unsigned int chunk =
+                        (sizeof(buf) - off > 64) ? 64 : (sizeof(buf) - off);
+                    obs_report_bytes(id, tag, "full-256-bytes", off, buf + off, chunk);
+                }
+                size_t tail_nonzero = 0;
+                for (size_t b = 64; b < sizeof(buf); b++) {
+                    if (buf[b] != 0) {
+                        tail_nonzero++;
+                    }
+                }
+                obs_report_measure(id, tag, "tail-nonzero-bytes",
+                                   (uint64_t)tail_nonzero, "bytes");
+            }
         }
     }
 
@@ -1592,16 +1609,59 @@ static obs_result check_http_lifecycle(void) {
                 }
             }
 
+            /* 2b. Check probe-host reachability with plain connect */
+            {
+                typedef int (*fn_sceNetSocket_t)(const char *, int, int, int);
+                typedef int (*fn_sceNetConnect_t)(int, const void *, unsigned int);
+                typedef int (*fn_sceNetSocketClose_t)(int);
+                fn_sceNetSocket_t p_sock =
+                    h_net >= 0
+                        ? (fn_sceNetSocket_t)obs_module_symbol(h_net, "sceNetSocket")
+                        : NULL;
+                fn_sceNetConnect_t p_conn =
+                    h_net >= 0
+                        ? (fn_sceNetConnect_t)obs_module_symbol(h_net, "sceNetConnect")
+                        : NULL;
+                fn_sceNetSocketClose_t p_close =
+                    h_net >= 0 ? (fn_sceNetSocketClose_t)obs_module_symbol(
+                                     h_net, "sceNetSocketClose")
+                               : NULL;
+                if (p_sock && p_conn) {
+                    int sock = p_sock("obs-http-test", 2 /* AF_INET */,
+                                      1 /* SOCK_STREAM */, 0);
+                    if (sock >= 0) {
+                        obs_net_sockaddr_in saddr;
+                        memset(&saddr, 0, sizeof(saddr));
+                        saddr.sin_len = sizeof(saddr);
+                        saddr.sin_family = 2;
+                        saddr.sin_port = net_htons(8080);
+                        uint8_t *ip = (uint8_t *)&saddr.sin_addr;
+                        ip[0] = 192;
+                        ip[1] = 168;
+                        ip[2] = 1;
+                        ip[3] = 214;
+                        int c_rc = p_conn(sock, &saddr, sizeof(saddr));
+                        obs_report_measure(id, "probe-host", "connect-rc",
+                                           (uint64_t)(uint32_t)c_rc, "code");
+                        if (p_close) {
+                            p_close(sock);
+                        }
+                    }
+                }
+            }
+
             /* 3. Probe host URLs: content-length, chunked, redirect */
             static const char *const test_paths[] = {
-                "http://127.0.0.1:8080/test_content_length",
-                "http://127.0.0.1:8080/test_chunked",
-                "http://127.0.0.1:8080/test_redirect",
+                "http://192.168.1.214:8080/test_content_length",
+                "http://192.168.1.214:8080/test_chunked",
+                "http://192.168.1.214:8080/test_redirect",
+                "http://192.168.1.214:8080/test_no_length",
             };
             static const char *const test_tags[] = {
                 "test-content-length",
                 "test-chunked",
                 "test-redirect",
+                "test-no-length",
             };
             for (size_t t = 0; t < sizeof(test_paths) / sizeof(test_paths[0]); t++) {
                 int conn = fn_conn_create(tmpl, test_paths[t], 0);
@@ -1643,9 +1703,29 @@ static obs_result check_http_lifecycle(void) {
                                 obs_report_measure(id, test_tags[t], "hdrs-size",
                                                    (uint64_t)hsz, "bytes");
                                 if (hrc == 0 && hdr_buf != NULL && hsz > 0) {
-                                    obs_report_bytes(id, test_tags[t], "headers-block",
-                                                     0, (const uint8_t *)hdr_buf,
-                                                     (uint32_t)(hsz > 512 ? 512 : hsz));
+                                    for (uint32_t off = 0; off < (uint32_t)hsz;
+                                         off += 64) {
+                                        uint32_t chunk = ((uint32_t)hsz - off > 64)
+                                                             ? 64
+                                                             : ((uint32_t)hsz - off);
+                                        obs_report_bytes(
+                                            id, test_tags[t], "headers-block", off,
+                                            (const uint8_t *)hdr_buf + off, chunk);
+                                    }
+                                    uint8_t byte_at_size = 0xff;
+                                    obs_jmp_buf hguard;
+                                    int hsig = OBS_FAULT_ARM(&hguard);
+                                    if (hsig == 0) {
+                                        byte_at_size = (uint8_t)hdr_buf[hsz];
+                                        obs_fault_unregister();
+                                    } else {
+                                        obs_fault_unregister();
+                                    }
+                                    obs_report_measure(id, test_tags[t], "byte-at-size",
+                                                       (uint64_t)byte_at_size, "val");
+                                    obs_report_measure(
+                                        id, test_tags[t], "is-nul-at-size",
+                                        (uint64_t)(byte_at_size == 0), "bool");
                                 }
                             }
                         }

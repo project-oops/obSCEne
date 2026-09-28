@@ -45,6 +45,7 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "sceKernelOpen"},
     {"libkernel", "sceKernelClose"},
     {"libkernel", "sceKernelGetdents"},
+    {"libkernel", "sceKernelGetdirentries"},
     {"libkernel", "sceKernelLseek"},
     {"libkernel", "sceKernelJitCreateSharedMemory"},
     {"libkernel", "sceKernelJitMapSharedMemory"},
@@ -147,10 +148,18 @@ static const obs_import obs_platform_imports[] = {
     {"libSceVideoOut", "sceVideoOutOpen"},
     {"libSceVideoOut", "sceVideoOutClose"},
     {"libSceVideoOut", "sceVideoOutSetFlipRate"},
+    {"libSceVideoRecording", "sceVideoRecordingInit"},
+    {"libSceVideoRecording", "sceVideoRecordingOpen"},
+    {"libSceVideoRecording", "sceVideoRecordingSetInfo"},
     {"libSceVideoRecording", "sceVideoRecordingQueryMemSize"},
     {"libSceVideoRecording", "sceVideoRecordingClose"},
     {"libSceVideoRecording", "sceVideoRecordingStop"},
     {"libSceVideoRecording", "sceVideoRecordingGetStatus"},
+    {"libSceVideoRecording", "$ZvWzS2wTIMc"},
+    {"libSceVideoRecording", "$7QoTYzVuzto"},
+    {"libSceVideoRecording", "$Fc8qxlKINYQ"},
+    {"libSceVideoRecording", "$RXXBl6-iimo"},
+    {"libSceVideoRecording", "$KHvkPQJDMLk"},
     {"libSceAudioOut", "sceAudioOutInit"},
     {"libSceAudioOut", "sceAudioOutOpen"},
     {"libSceAudioOut", "sceAudioOutClose"},
@@ -168,10 +177,14 @@ static const obs_import obs_platform_imports[] = {
     {"libScePad", "scePadGetTriggerEffectState"},
     {"libScePad", "scePadGetControllerInformation"},
     {"libSceKeyboard", "sceKeyboardInit"},
+    {"libSceKeyboard", "$wadT3QBCGY0"},
     {"libSceKeyboard", "sceKeyboardOpen"},
+    {"libSceKeyboard", "$HJ+KnEHcaxI"},
     {"libSceKeyboard", "sceKeyboardClose"},
+    {"libSceKeyboard", "$0LWei+c7RNc"},
     {"libSceKeyboard", "sceKeyboardRead"},
     {"libSceKeyboard", "sceKeyboardReadState"},
+    {"libSceKeyboard", "$6HpE68bzX6M"},
     {"libSceKeyboard", "sceKeyboardSetProcessPrivilege"},
     {"libSceKeyboard", "sceKeyboardSetProcessFocus"},
     {"libSceMouse", "sceMouseInit"},
@@ -336,7 +349,7 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "sceAgcDcbWaitRegMem"},
     {"libSceAgc", "sceAgcDcbResetQueue"},
     {"libSceAgc", "$f3dg2CSgRKY"},
-    {"libSceAgc", "$fYZQG4CU71c"},
+    {"libSceAgc", "$V++UgBtQhn0"},
     {"libSceAgc", "sceAgcCreateShader"},
     {"libSceAgc", "$nQT5kYLv0cg"},
     {"libSceAgc", "sceAgcGetFusedShaderSize"},
@@ -480,12 +493,14 @@ static const obs_import obs_platform_imports[] = {
     /* Controller orientation reset */
     {"libScePad", "scePadResetOrientation"},
 
+#if !OOPS_TARGET_IS_PROSPERO
     /* Gnm driver functions used by oops-sdk gnm_display on Orbis */
     {"libSceGnmDriver", "sceGnmDispatchDirect"},
     {"libSceGnmDriver", "sceGnmDispatchInitDefaultHardwareState"},
     {"libSceGnmDriver", "sceGnmDrawIndex"},
     {"libSceGnmDriver", "sceGnmSubmitCommandBuffers"},
     {"libSceGnmDriver", "sceGnmSubmitDone"},
+#endif
 
     /* Ends the run. See src/start.c. */
     {"libSceLibcInternal", "exit"},
@@ -528,6 +543,12 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAgc", "$Y-5vneiBtzk"},
     {"libSceAgc", "$6mFxkVqdmbQ"},
     {"libSceAgc", "$cpCILPya5Zk"},
+    {"libSceAgc", "$2JtWUUiYBXs"},
+    {"libSceAgc", "$wRbq6ZjNop4"},
+    {"libSceAgc", "sceAgcGetRegisterDefaults2"},
+    {"libSceAgc", "sceAgcGetRegisterDefaults2Internal"},
+    {"libSceAgc", "$kW3GLb7QfPg"},
+    {"libSceAgc", "$U7vYK1HRcts"},
     {"libSceAgc", "$JrtiDtKeS38"},
     {"libSceAgc", "$htn36gPnBk4"},
     {"libSceAgc", "$eZ4+17OQz4Q"},
@@ -581,8 +602,10 @@ static const obs_import obs_platform_imports[] = {
     /* REQ-20260914T1558Z-7d41: Device Info */
     {"libSceAgc", "$Tasc5SLczww"},
     {"libSceAgcDriver", "$ZGMnhAlcv9Y"},
+#if !OOPS_TARGET_IS_PROSPERO
     {"libSceGnmDriver", "$GKIlegek0JQ"},
     {"libSceGnmDriver", "$Fwvh++m9IQI"},
+#endif
 
     /* ---- declared inside a section file rather than in platform.h ---------------
      *
@@ -624,6 +647,48 @@ static const obs_import obs_platform_imports[] = {
     {"libScePad", "scePadGetHandle"},
     {"libSceUserService", "sceUserServiceGetUserName"},
     {"libSceUserService", "sceUserServiceGetForegroundUser"},
+    {"libSceUserService", "$-sD02mFDBh4"},
+    {"libSceUserService", "sceUserServiceGetGamePresets"},
+    /* APR / libkernel (REQ-20260927T1300Z-r1c0) */
+    {"libkernel", "$gEpBkcwxUjw"},
+    {"libkernel", "$ASoW5WE-UPo"},
+    {"libkernel", "$rqwFKI4PAiM"},
+    {"libkernel", "$ApkYaHb8Sek"},
+    {"libkernel", "$w5fcCG+t31g"},
+    {"libkernel", "sceKernelAprResolveFilepathsToIdsAndFileSizes"},
+    {"libkernel", "sceKernelAprSubmitCommandBufferAndGetResult"},
+    {"libkernel", "sceKernelAprWaitCommandBuffer"},
+    {"libkernel", "sceKernelAprGetFileStat"},
+    {"libkernel", "sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes"},
+    /* AMPR / libSceAmpr (REQ-20260927T1300Z-r1c0) */
+    {"libSceAmpr", "$8aI7R7WaOlc"},
+    {"libSceAmpr", "$baQO9ez2gL4"},
+    {"libSceAmpr", "$a8uLzYY--tM"},
+    {"libSceAmpr", "$mQ16-QdKv7k"},
+    {"libSceAmpr", "sceAmprCommandBufferConstructor"},
+    {"libSceAmpr", "sceAmprCommandBufferReset"},
+    {"libSceAmpr", "sceAmprAprCommandBufferConstructor"},
+    {"libSceAmpr", "sceAmprAprCommandBufferReadFile"},
+    /* libSceSaveData_native (REQ-20260928T0100Z-5d20) */
+    {"libSceSaveData_native", "$TywrFKCoLGY"},
+    {"libSceSaveData_native", "sceSaveDataInitialize3"},
+    {"libSceSaveData_native", "$yKDy8S5yLA0"},
+    {"libSceSaveData_native", "sceSaveDataTerminate"},
+    {"libSceSaveData_native", "$oQySEUfgXRA"},
+    {"libSceSaveData_native", "sceSaveDataSetupSaveDataMemory2"},
+    {"libSceSaveData_native", "$cduy9v4YmT4"},
+    {"libSceSaveData_native", "sceSaveDataSetSaveDataMemory2"},
+    {"libSceSaveData_native", "$QwOO7vegnV8"},
+    {"libSceSaveData_native", "sceSaveDataGetSaveDataMemory2"},
+    {"libSceSaveData_native", "$wiT9jeC7xPw"},
+    {"libSceSaveData_native", "sceSaveDataSyncSaveDataMemory"},
+    /* libc (REQ-20260927T1130Z-d5f4) */
+    {"libSceLibcInternal", "$BoTA41abbDg"},
+    {"libSceLibcInternal", "reallocalign"},
+    {"libSceLibcInternal", "$3j5sEugWSnw"},
+    {"libSceLibcInternal", "sceLibcMspaceMallocUsableSize"},
+    {"libSceLibcInternal", "$L0QZxn0SNzQ"},
+    {"libSceLibcInternal", "malloc_usable_size"},
 };
 
 /* Calls `fn` once per import declared outside the census. */

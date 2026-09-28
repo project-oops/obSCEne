@@ -1203,6 +1203,132 @@ static obs_result check_user_service_layout(void) {
     return obs_pass_value((uint64_t)(uint32_t)initial_user_id);
 }
 
+/* REQ-20260927T2110Z-9a3e: sceUserServiceGetGamePresets */
+static obs_result check_user_game_presets(void) {
+    const char *check_id = "130-layout/user-game-presets";
+    int (*fn_user_init)(const void *) =
+        (int (*)(const void *))layout_resolve_sym("libSceUserService", "sceUserServiceInitialize");
+    if (fn_user_init != NULL && obs_address_is_callable((const void *)fn_user_init)) {
+        (void)fn_user_init(NULL);
+    }
+
+    int32_t (*fn_get_initial_user)(int32_t *userId) =
+        (int32_t (*)(int32_t *))layout_resolve_sym("libSceUserService",
+                                                  "sceUserServiceGetInitialUser");
+    int32_t initial_user_id = 1;
+    if (fn_get_initial_user != NULL && obs_address_is_callable((const void *)fn_get_initial_user)) {
+        (void)fn_get_initial_user(&initial_user_id);
+    }
+
+    int (*fn_get_presets)(int32_t userId, void *presets) =
+        (int (*)(int32_t, void *))layout_resolve_sym("libSceUserService", "sceUserServiceGetGamePresets");
+    if (fn_get_presets == NULL) {
+        fn_get_presets = (int (*)(int32_t, void *))layout_resolve_sym("libSceUserService", "$-sD02mFDBh4");
+    }
+    if (fn_get_presets == NULL && obs_address_is_callable((const void *)&sceUserServiceGetGamePresets_static)) {
+        fn_get_presets = (int (*)(int32_t, void *))&sceUserServiceGetGamePresets_static;
+    }
+
+    int resolved = (fn_get_presets != NULL && obs_address_is_callable((const void *)fn_get_presets));
+    obs_report_measure(check_id, "resolve", "resolved", (uint64_t)(resolved ? 1 : 0), "bool");
+    obs_report_measure(check_id, "resolve", "addr", (uint64_t)(uintptr_t)fn_get_presets, "address");
+    if (!resolved) {
+        return obs_skip("sceUserServiceGetGamePresets not available");
+    }
+
+    obs_jmp_buf guard;
+
+    /* Arm 1: initial_user, 0x30-byte record whose first u64 is 0x30 and rest 0xcc */
+    uint8_t rec1[0x30];
+    memset(rec1, 0xcc, sizeof(rec1));
+    *(uint64_t *)rec1 = 0x30;
+    int rc1 = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc1 = fn_get_presets(initial_user_id, rec1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_id, "size-0x30-init-user", "rc", (uint64_t)(uint32_t)rc1, "code");
+    obs_report_bytes(check_id, "size-0x30-init-user", "presets-48b", 0, rec1, 48);
+
+    /* Arm 2: first word 0 */
+    uint8_t rec2[0x30];
+    memset(rec2, 0xcc, sizeof(rec2));
+    *(uint64_t *)rec2 = 0;
+    int rc2 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc2 = fn_get_presets(initial_user_id, rec2);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_id, "size-0-init-user", "rc", (uint64_t)(uint32_t)rc2, "code");
+    obs_report_bytes(check_id, "size-0-init-user", "presets-48b", 0, rec2, 48);
+
+    /* Arm 3: first word 0x40 */
+    uint8_t rec3[0x40];
+    memset(rec3, 0xcc, sizeof(rec3));
+    *(uint64_t *)rec3 = 0x40;
+    int rc3 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc3 = fn_get_presets(initial_user_id, rec3);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_id, "size-0x40-init-user", "rc", (uint64_t)(uint32_t)rc3, "code");
+    obs_report_bytes(check_id, "size-0x40-init-user", "presets-48b", 0, rec3, 48);
+
+    /* Arm 4: user id -1 */
+    uint8_t rec4[0x30];
+    memset(rec4, 0xcc, sizeof(rec4));
+    *(uint64_t *)rec4 = 0x30;
+    int rc4 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc4 = fn_get_presets(-1, rec4);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_id, "user-neg1", "rc", (uint64_t)(uint32_t)rc4, "code");
+    obs_report_bytes(check_id, "user-neg1", "presets-48b", 0, rec4, 48);
+
+    /* Arm 5: null record */
+    int rc5 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc5 = fn_get_presets(initial_user_id, NULL);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_id, "null-presets", "rc", (uint64_t)(uint32_t)rc5, "code");
+
+    /* Arm 6: user 0 if initial_user != 0 */
+    if (initial_user_id != 0) {
+        uint8_t rec0[0x30];
+        memset(rec0, 0xcc, sizeof(rec0));
+        *(uint64_t *)rec0 = 0x30;
+        int rc0 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc0 = fn_get_presets(0, rec0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(check_id, "user-0", "rc", (uint64_t)(uint32_t)rc0, "code");
+        obs_report_bytes(check_id, "user-0", "presets-48b", 0, rec0, 48);
+    }
+
+    return obs_pass();
+}
+
 static obs_result check_app_content_layout(void) {
     typedef int (*fn_load_t)(uint16_t id);
     fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
@@ -1304,6 +1430,9 @@ static obs_result check_app_content_layout(void) {
 }
 
 static obs_result check_savedata_layout(void) {
+    const char *check_name = "130-layout/savedata-layout";
+
+    /* Sysmodule load for save data */
     typedef int (*fn_load_t)(uint16_t id);
     fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
     if (fn_load == NULL) {
@@ -1312,48 +1441,146 @@ static obs_result check_savedata_layout(void) {
     int load_rc = -1;
     if (fn_load != NULL && obs_address_is_callable((const void *)fn_load)) {
         load_rc = fn_load(0x00B6); /* OOPS_SYSMODULE_SAVE_DATA */
+    } else if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        load_rc = sceSysmoduleLoadModule(0x00B6);
     }
-    obs_report_measure("130-layout/savedata", "sceSysmoduleLoadModule", "rc",
+    obs_report_measure(check_name, "sceSysmoduleLoadModule", "rc",
                        (uint64_t)(uint32_t)load_rc, "code");
 
     int32_t (*fn_init)(void *) =
-        (int32_t (*)(void *))layout_resolve_sym("libSceSaveData", "sceSaveDataInitialize3");
-    int32_t (*fn_term)(void) =
-        (int32_t (*)(void))layout_resolve_sym("libSceSaveData", "sceSaveDataTerminate");
-    int32_t (*fn_mount2)(void *) =
-        (int32_t (*)(void *))layout_resolve_sym("libSceSaveData", "sceSaveDataMount2");
-
-    obs_report_measure("130-layout/savedata", "sceSaveDataInitialize3",
-                       "resolved", (uint64_t)(fn_init != NULL ? 1 : 0), "bool");
-    obs_report_measure("130-layout/savedata", "sceSaveDataMount2",
-                       "resolved", (uint64_t)(fn_mount2 != NULL ? 1 : 0), "bool");
-    obs_report_measure("130-layout/savedata", "sceSaveDataTerminate",
-                       "resolved", (uint64_t)(fn_term != NULL ? 1 : 0), "bool");
-
-    if (fn_init == NULL && fn_mount2 == NULL) {
-        return obs_skip("libSceSaveData symbols not available in this context");
+        (int32_t (*)(void *))layout_resolve_sym("libSceSaveData_native", "$TywrFKCoLGY");
+    if (fn_init == NULL) {
+        fn_init = (int32_t (*)(void *))layout_resolve_sym("libSceSaveData_native", "sceSaveDataInitialize3");
+    }
+    if (fn_init == NULL) {
+        fn_init = (int32_t (*)(void *))layout_resolve_sym("libSceSaveData", "sceSaveDataInitialize3");
+    }
+    if (fn_init == NULL && obs_address_is_callable((const void *)&sceSaveDataInitialize3_static)) {
+        fn_init = (int32_t (*)(void *))&sceSaveDataInitialize3_static;
+    }
+    if (fn_init == NULL && obs_address_is_callable((const void *)&sceSaveDataInitialize3_named)) {
+        fn_init = (int32_t (*)(void *))&sceSaveDataInitialize3_named;
     }
 
-    if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
-        layout_probe init_probe;
-        layout_prepare(&init_probe);
+    int32_t (*fn_term)(void) =
+        (int32_t (*)(void))layout_resolve_sym("libSceSaveData_native", "$yKDy8S5yLA0");
+    if (fn_term == NULL) {
+        fn_term = (int32_t (*)(void))layout_resolve_sym("libSceSaveData_native", "sceSaveDataTerminate");
+    }
+    if (fn_term == NULL) {
+        fn_term = (int32_t (*)(void))layout_resolve_sym("libSceSaveData", "sceSaveDataTerminate");
+    }
+    if (fn_term == NULL && obs_address_is_callable((const void *)&sceSaveDataTerminate_static)) {
+        fn_term = (int32_t (*)(void))&sceSaveDataTerminate_static;
+    }
+    if (fn_term == NULL && obs_address_is_callable((const void *)&sceSaveDataTerminate_named)) {
+        fn_term = (int32_t (*)(void))&sceSaveDataTerminate_named;
+    }
 
-        obs_jmp_buf buf;
-        int sig = OBS_FAULT_ARM(&buf);
-        if (sig == 0) {
-            int32_t rc = fn_init((void *)init_probe.buffer);
+    obs_report_measure(check_name, "resolve", "init3-slot",
+                       (uint64_t)(uintptr_t)fn_init, "address");
+    obs_report_measure(check_name, "resolve", "init3-resolved",
+                       (uint64_t)(fn_init != NULL && obs_address_is_callable((const void *)fn_init)), "bool");
+    obs_report_measure(check_name, "resolve", "term-slot",
+                       (uint64_t)(uintptr_t)fn_term, "address");
+    obs_report_measure(check_name, "resolve", "term-resolved",
+                       (uint64_t)(fn_term != NULL && obs_address_is_callable((const void *)fn_term)), "bool");
+
+    if (fn_init == NULL || !obs_address_is_callable((const void *)fn_init)) {
+        return obs_skip("libSceSaveData_native sceSaveDataInitialize3 slot not resolved/callable");
+    }
+
+    obs_jmp_buf guard;
+
+    /* 1. Arm: zeroed 64-byte parameter block */
+    uint8_t param_zero[64];
+    memset(param_zero, 0, sizeof(param_zero));
+    uint8_t param_zero_before[64];
+    memcpy(param_zero_before, param_zero, 64);
+    obs_report_bytes(check_name, "zero-param", "before", 0, param_zero_before, 64);
+
+    int32_t rc_zero = -999;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_zero = fn_init((void *)param_zero);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "zero-param", "rc",
+                       (uint64_t)(uint32_t)rc_zero, "code");
+    obs_report_bytes(check_name, "zero-param", "after", 0, param_zero, 64);
+    obs_report_measure(check_name, "zero-param", "changed-bytes",
+                       (uint64_t)(memcmp(param_zero_before, param_zero, 64) != 0), "bool");
+
+    /* 2. Arm: second call after the first */
+    uint8_t param_second[64];
+    memset(param_second, 0, sizeof(param_second));
+    uint8_t param_second_before[64];
+    memcpy(param_second_before, param_second, 64);
+
+    int32_t rc_second = -999;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_second = fn_init((void *)param_second);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "second-call", "rc",
+                       (uint64_t)(uint32_t)rc_second, "code");
+    obs_report_bytes(check_name, "second-call", "after", 0, param_second, 64);
+    obs_report_measure(check_name, "second-call", "changed-bytes",
+                       (uint64_t)(memcmp(param_second_before, param_second, 64) != 0), "bool");
+
+    /* 3. Arm: NULL parameter call */
+    int32_t rc_null = -999;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_null = fn_init(NULL);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "null-param", "rc",
+                       (uint64_t)(uint32_t)rc_null, "code");
+
+    /* 4. Arm: Terminate */
+    int32_t rc_term = -999;
+    if (fn_term != NULL && obs_address_is_callable((const void *)fn_term)) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            rc_term = fn_term();
             obs_fault_unregister();
-            obs_report_measure("130-layout/savedata", "sceSaveDataInitialize3",
-                               "return_code", (uint64_t)(uint32_t)rc, "code");
-            obs_report_bytes("130-layout/savedata", "sceSaveDataInitialize3",
-                             "init_param", 0, init_probe.buffer, 64);
-            if (rc == 0 && fn_term != NULL && obs_address_is_callable((const void *)fn_term)) {
-                (void)fn_term();
-            }
         } else {
             obs_fault_unregister();
-            obs_report_measure("130-layout/savedata", "sceSaveDataInitialize3",
-                               "faulted", (uint64_t)(uint32_t)sig, "signal");
+        }
+    }
+    obs_report_measure(check_name, "terminate", "rc",
+                       (uint64_t)(uint32_t)rc_term, "code");
+
+    /* 5. Arm: Initialize3 post-terminate call */
+    uint8_t param_post[64];
+    memset(param_post, 0, sizeof(param_post));
+    uint8_t param_post_before[64];
+    memcpy(param_post_before, param_post, 64);
+
+    int32_t rc_post = -999;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_post = fn_init((void *)param_post);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "post-terminate", "rc",
+                       (uint64_t)(uint32_t)rc_post, "code");
+    obs_report_bytes(check_name, "post-terminate", "after", 0, param_post, 64);
+    obs_report_measure(check_name, "post-terminate", "changed-bytes",
+                       (uint64_t)(memcmp(param_post_before, param_post, 64) != 0), "bool");
+
+    /* Clean up if post-terminate init succeeded */
+    if (rc_post == 0 && fn_term != NULL && obs_address_is_callable((const void *)fn_term)) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            (void)fn_term();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
         }
     }
 
@@ -1773,6 +2000,7 @@ static obs_result check_json2_init_layout(void) {
     void (*fn_param2_setalloc)(void *, void *, void *) =
         (void (*)(void *, void *, void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv", "I2QC8PYhJWY");
 
+
     obs_report_measure("130-layout/json2-init", "resolve", "memalloc_ctor",
                        (uint64_t)(fn_memalloc_ctor != NULL), "bool");
     obs_report_measure("130-layout/json2-init", "resolve", "memalloc_dtor",
@@ -1824,6 +2052,10 @@ static obs_result check_json2_init_layout(void) {
                              "bytes_0_64", 0, memalloc_probe.buffer, 64);
             obs_report_bytes("130-layout/json2-init", "MemAllocator::MemAllocator",
                              "bytes_64_128", 64, memalloc_probe.buffer + 64, 64);
+            obs_report_bytes("130-layout/json2-init", "MemAllocator::MemAllocator",
+                             "bytes_128_192", 128, memalloc_probe.buffer + 128, 64);
+            obs_report_bytes("130-layout/json2-init", "MemAllocator::MemAllocator",
+                             "bytes_192_256", 192, memalloc_probe.buffer + 192, 64);
 
             void **vptr = NULL;
             if (memcmp(memalloc_probe.before, memalloc_probe.buffer, sizeof(void *)) != 0) {
@@ -1832,6 +2064,14 @@ static obs_result check_json2_init_layout(void) {
             obs_report_measure("130-layout/json2-init", "MemAllocator_vtable", "vptr",
                                (uint64_t)(uintptr_t)vptr, "addr");
             if (vptr != NULL) {
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    obs_report_bytes("130-layout/json2-init", "MemAllocator_vtable",
+                                     "head_64b", 0, (const unsigned char *)vptr, 64);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
                 for (unsigned int v = 0; v < 8; v++) {
                     char vslot_name[16];
                     oops_snprintf(vslot_name, sizeof(vslot_name), "slot_%u", v);
@@ -1875,6 +2115,23 @@ static obs_result check_json2_init_layout(void) {
                              "bytes_128_192", 128, init_probe.buffer + 128, 64);
             obs_report_bytes("130-layout/json2-init", "Initializer::Initializer",
                              "bytes_192_256", 192, init_probe.buffer + 192, 64);
+
+            void **init_vptr = NULL;
+            if (memcmp(init_probe.before, init_probe.buffer, sizeof(void *)) != 0) {
+                init_vptr = *(void ***)init_probe.buffer;
+            }
+            obs_report_measure("130-layout/json2-init", "Initializer_vtable", "vptr",
+                               (uint64_t)(uintptr_t)init_vptr, "addr");
+            if (init_vptr != NULL) {
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    obs_report_bytes("130-layout/json2-init", "Initializer_vtable",
+                                     "head_64b", 0, (const unsigned char *)init_vptr, 64);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+            }
         } else {
             obs_fault_unregister();
             obs_report_measure("130-layout/json2-init", "Initializer::Initializer",
@@ -2194,6 +2451,809 @@ static obs_result check_font_render_glyph(void) {
     return obs_pass();
 }
 
+static obs_result check_savedata_memory_5d20(void) {
+    const char *check_name = "130-layout/savedata-memory-5d20";
+
+    /* Sysmodule load for save data */
+    typedef int (*fn_load_t)(uint16_t id);
+    fn_load_t fn_load = (fn_load_t)obs_module_symbol(1, "sceSysmoduleLoadModule");
+    if (fn_load == NULL) {
+        fn_load =
+            (fn_load_t)obs_module_symbol(OBS_HANDLE_SELF, "sceSysmoduleLoadModule");
+    }
+    int load_rc = -1;
+    if (fn_load != NULL && obs_address_is_callable((const void *)fn_load)) {
+        load_rc = fn_load(0x00B6); /* OOPS_SYSMODULE_SAVE_DATA */
+    } else if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        load_rc = sceSysmoduleLoadModule(0x00B6);
+    }
+    obs_report_measure(check_name, "sceSysmoduleLoadModule", "rc",
+                       (uint64_t)(uint32_t)load_rc, "code");
+
+    /* Static resolution first */
+    int32_t (*fn_init)(void *) = NULL;
+    if (obs_address_is_callable((const void *)&sceSaveDataInitialize3_static)) {
+        fn_init = (int32_t (*)(void *))&sceSaveDataInitialize3_static;
+    } else if (obs_address_is_callable((const void *)&sceSaveDataInitialize3_named)) {
+        fn_init = (int32_t (*)(void *))&sceSaveDataInitialize3_named;
+    } else {
+        fn_init = (int32_t (*)(void *))layout_resolve_sym("libSceSaveData_native",
+                                                          "$TywrFKCoLGY");
+        if (fn_init == NULL) {
+            fn_init = (int32_t (*)(void *))layout_resolve_sym("libSceSaveData_native",
+                                                              "sceSaveDataInitialize3");
+        }
+        if (fn_init == NULL) {
+            fn_init = (int32_t (*)(void *))layout_resolve_sym("libSceSaveData",
+                                                              "sceSaveDataInitialize3");
+        }
+    }
+
+    int32_t (*fn_term)(void) = NULL;
+    if (obs_address_is_callable((const void *)&sceSaveDataTerminate_static)) {
+        fn_term = (int32_t (*)(void))&sceSaveDataTerminate_static;
+    } else if (obs_address_is_callable((const void *)&sceSaveDataTerminate_named)) {
+        fn_term = (int32_t (*)(void))&sceSaveDataTerminate_named;
+    } else {
+        fn_term = (int32_t (*)(void))layout_resolve_sym("libSceSaveData_native",
+                                                        "$yKDy8S5yLA0");
+        if (fn_term == NULL) {
+            fn_term = (int32_t (*)(void))layout_resolve_sym("libSceSaveData_native",
+                                                            "sceSaveDataTerminate");
+        }
+        if (fn_term == NULL) {
+            fn_term = (int32_t (*)(void))layout_resolve_sym("libSceSaveData",
+                                                            "sceSaveDataTerminate");
+        }
+    }
+
+    /* sceSaveDataSetupSaveDataMemory2: $oQySEUfgXRA (0xa10c921147e05d10) */
+    int32_t (*fn_setup2)(const void *, void *) = NULL;
+    if (obs_address_is_callable(
+            (const void *)&sceSaveDataSetupSaveDataMemory2_static)) {
+        fn_setup2 =
+            (int32_t (*)(const void *, void *))&sceSaveDataSetupSaveDataMemory2_static;
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataSetupSaveDataMemory2_named)) {
+        fn_setup2 =
+            (int32_t (*)(const void *, void *))&sceSaveDataSetupSaveDataMemory2_named;
+    } else {
+        fn_setup2 = (int32_t (*)(const void *, void *))layout_resolve_sym(
+            "libSceSaveData_native", "$oQySEUfgXRA");
+        if (fn_setup2 == NULL) {
+            fn_setup2 = (int32_t (*)(const void *, void *))layout_resolve_sym(
+                "libSceSaveData_native", "sceSaveDataSetupSaveDataMemory2");
+        }
+        if (fn_setup2 == NULL) {
+            fn_setup2 = (int32_t (*)(const void *, void *))layout_resolve_sym(
+                "libSceSaveData", "sceSaveDataSetupSaveDataMemory2");
+        }
+    }
+
+    /* sceSaveDataSetSaveDataMemory2: $cduy9v4YmT4 (0x71dbb2f6fe18993e) */
+    int32_t (*fn_set2)(const void *) = NULL;
+    if (obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_static)) {
+        fn_set2 = (int32_t (*)(const void *))&sceSaveDataSetSaveDataMemory2_static;
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataSetSaveDataMemory2_named)) {
+        fn_set2 = (int32_t (*)(const void *))&sceSaveDataSetSaveDataMemory2_named;
+    } else {
+        fn_set2 = (int32_t (*)(const void *))layout_resolve_sym("libSceSaveData_native",
+                                                                "$cduy9v4YmT4");
+        if (fn_set2 == NULL) {
+            fn_set2 = (int32_t (*)(const void *))layout_resolve_sym(
+                "libSceSaveData_native", "sceSaveDataSetSaveDataMemory2");
+        }
+        if (fn_set2 == NULL) {
+            fn_set2 = (int32_t (*)(const void *))layout_resolve_sym(
+                "libSceSaveData", "sceSaveDataSetSaveDataMemory2");
+        }
+    }
+
+    /* sceSaveDataGetSaveDataMemory2: $QwOO7vegnV8 (0x43038eeef7a09d5f) */
+    int32_t (*fn_get2)(const void *) = NULL;
+    if (obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_static)) {
+        fn_get2 = (int32_t (*)(const void *))&sceSaveDataGetSaveDataMemory2_static;
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataGetSaveDataMemory2_named)) {
+        fn_get2 = (int32_t (*)(const void *))&sceSaveDataGetSaveDataMemory2_named;
+    } else {
+        fn_get2 = (int32_t (*)(const void *))layout_resolve_sym("libSceSaveData_native",
+                                                                "$QwOO7vegnV8");
+        if (fn_get2 == NULL) {
+            fn_get2 = (int32_t (*)(const void *))layout_resolve_sym(
+                "libSceSaveData_native", "sceSaveDataGetSaveDataMemory2");
+        }
+        if (fn_get2 == NULL) {
+            fn_get2 = (int32_t (*)(const void *))layout_resolve_sym(
+                "libSceSaveData", "sceSaveDataGetSaveDataMemory2");
+        }
+    }
+
+    /* sceSaveDataSyncSaveDataMemory: $wiT9jeC7xPw (0xc224fd8de0bbc4fc) */
+    int32_t (*fn_sync)(const void *) = NULL;
+    if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_static)) {
+        fn_sync = (int32_t (*)(const void *))&sceSaveDataSyncSaveDataMemory_static;
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataSyncSaveDataMemory_named)) {
+        fn_sync = (int32_t (*)(const void *))&sceSaveDataSyncSaveDataMemory_named;
+    } else {
+        fn_sync = (int32_t (*)(const void *))layout_resolve_sym("libSceSaveData_native",
+                                                                "$wiT9jeC7xPw");
+        if (fn_sync == NULL) {
+            fn_sync = (int32_t (*)(const void *))layout_resolve_sym(
+                "libSceSaveData_native", "sceSaveDataSyncSaveDataMemory");
+        }
+        if (fn_sync == NULL) {
+            fn_sync = (int32_t (*)(const void *))layout_resolve_sym(
+                "libSceSaveData", "sceSaveDataSyncSaveDataMemory");
+        }
+    }
+
+    obs_report_measure(check_name, "resolve", "init3-slot",
+                       (uint64_t)(uintptr_t)fn_init, "address");
+    obs_report_measure(
+        check_name, "resolve", "init3-resolved",
+        (uint64_t)(fn_init != NULL && obs_address_is_callable((const void *)fn_init)),
+        "bool");
+    obs_report_measure(check_name, "resolve", "term-slot", (uint64_t)(uintptr_t)fn_term,
+                       "address");
+    obs_report_measure(
+        check_name, "resolve", "term-resolved",
+        (uint64_t)(fn_term != NULL && obs_address_is_callable((const void *)fn_term)),
+        "bool");
+    obs_report_measure(check_name, "resolve", "setup2-slot",
+                       (uint64_t)(uintptr_t)fn_setup2, "address");
+    obs_report_measure(check_name, "resolve", "setup2-resolved",
+                       (uint64_t)(fn_setup2 != NULL &&
+                                  obs_address_is_callable((const void *)fn_setup2)),
+                       "bool");
+    obs_report_measure(check_name, "resolve", "set2-slot", (uint64_t)(uintptr_t)fn_set2,
+                       "address");
+    obs_report_measure(
+        check_name, "resolve", "set2-resolved",
+        (uint64_t)(fn_set2 != NULL && obs_address_is_callable((const void *)fn_set2)),
+        "bool");
+    obs_report_measure(check_name, "resolve", "get2-slot", (uint64_t)(uintptr_t)fn_get2,
+                       "address");
+    obs_report_measure(
+        check_name, "resolve", "get2-resolved",
+        (uint64_t)(fn_get2 != NULL && obs_address_is_callable((const void *)fn_get2)),
+        "bool");
+    obs_report_measure(check_name, "resolve", "sync-slot", (uint64_t)(uintptr_t)fn_sync,
+                       "address");
+    obs_report_measure(
+        check_name, "resolve", "sync-resolved",
+        (uint64_t)(fn_sync != NULL && obs_address_is_callable((const void *)fn_sync)),
+        "bool");
+
+    if (fn_setup2 == NULL || !obs_address_is_callable((const void *)fn_setup2)) {
+        return obs_skip("sceSaveDataSetupSaveDataMemory2 not resolved/callable");
+    }
+
+    obs_jmp_buf guard;
+
+    /* Initialize save data with NULL */
+    int32_t init_rc = -1;
+    if (fn_init != NULL && obs_address_is_callable((const void *)fn_init)) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            init_rc = fn_init(NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "init3", "rc", (uint64_t)(uint32_t)init_rc, "code");
+
+    /* Determine initial user */
+    int32_t user_id = -1;
+    int (*fn_user_init)(const void *) = (int (*)(const void *))layout_resolve_sym(
+        "libSceUserService", "sceUserServiceInitialize");
+    int32_t (*fn_user_get)(int32_t *) = (int32_t (*)(int32_t *))layout_resolve_sym(
+        "libSceUserService", "sceUserServiceGetInitialUser");
+    if (fn_user_init && obs_address_is_callable((const void *)fn_user_init)) {
+        (void)fn_user_init(NULL);
+    }
+    if (fn_user_get && obs_address_is_callable((const void *)fn_user_get)) {
+        (void)fn_user_get(&user_id);
+    }
+    if (user_id < 0) {
+        user_id = 0x10000000;
+    }
+    obs_report_measure(check_name, "context", "user-id", (uint64_t)(uint32_t)user_id,
+                       "id");
+
+    /* Prepare PPSA21564's parameter block:
+     * u32 0, u32 initial user, u64 0x200000 (2 MB), then zeros to 0x40 bytes */
+    uint8_t param[64];
+    memset(param, 0, sizeof(param));
+    *(uint32_t *)(void *)(param + 0) = 0;
+    *(uint32_t *)(void *)(param + 4) = (uint32_t)user_id;
+    *(uint64_t *)(void *)(param + 8) = 0x200000ULL;
+
+    uint8_t param_before[64];
+    memcpy(param_before, param, 64);
+
+    /* (1) Arm 1: sceSaveDataSetupSaveDataMemory2(param, NULL) */
+    obs_report_bytes(check_name, "setup2-null-result", "param-before", 0, param_before,
+                     64);
+    int32_t rc_arm1 = -999;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_arm1 = fn_setup2(param, NULL);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "setup2-null-result", "rc",
+                       (uint64_t)(uint32_t)rc_arm1, "code");
+    obs_report_bytes(check_name, "setup2-null-result", "param-after", 0, param, 64);
+    obs_report_measure(check_name, "setup2-null-result", "changed-bytes",
+                       (uint64_t)(memcmp(param_before, param, 64) != 0), "bool");
+
+    /* (1) Arm 2: Second call after the first without terminating */
+    uint8_t res_block2[64];
+    memset(res_block2, 0xCC, sizeof(res_block2));
+    int32_t rc_arm2 = -999;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_arm2 = fn_setup2(param, res_block2);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "setup2-second-call", "rc",
+                       (uint64_t)(uint32_t)rc_arm2, "code");
+    obs_report_bytes(check_name, "setup2-second-call", "res-after", 0, res_block2, 64);
+
+    /* Re-initialize cleanly to test fresh call with result pointer */
+    if (fn_term && obs_address_is_callable((const void *)fn_term)) {
+        (void)fn_term();
+    }
+    if (fn_init && obs_address_is_callable((const void *)fn_init)) {
+        (void)fn_init(NULL);
+    }
+
+    /* (1) Arm 3: sceSaveDataSetupSaveDataMemory2(param, res) with fresh 0x40-byte 0xcc
+     * block */
+    memcpy(param, param_before, 64);
+    uint8_t res_block[64];
+    memset(res_block, 0xCC, sizeof(res_block));
+    obs_report_bytes(check_name, "setup2-poison-result", "res-before", 0, res_block,
+                     64);
+    int32_t rc_arm3 = -999;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc_arm3 = fn_setup2(param, res_block);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "setup2-poison-result", "rc",
+                       (uint64_t)(uint32_t)rc_arm3, "code");
+    obs_report_bytes(check_name, "setup2-poison-result", "res-after", 0, res_block, 64);
+    size_t written = 0;
+    for (size_t b = 0; b < 64; b++) {
+        if (res_block[b] != 0xCC) {
+            written++;
+        }
+    }
+    obs_report_measure(check_name, "setup2-poison-result", "bytes-written",
+                       (uint64_t)written, "bytes");
+
+    /* (2) Save-memory set, get, sync via authentic SDK struct parameters */
+    typedef struct {
+        void *buf;
+        size_t buf_size;
+        int64_t offset;
+        uint8_t reserved[40];
+    } obs_sd_mem_data;
+
+    typedef struct {
+        int32_t user_id;
+        uint8_t padding[4];
+        const obs_sd_mem_data *data;
+        const void *param;
+        const void *icon;
+        uint32_t data_num;
+        uint32_t slot_id;
+        uint8_t reserved[24];
+    } obs_sd_mem_set2;
+
+    typedef struct {
+        int32_t user_id;
+        uint8_t padding[4];
+        obs_sd_mem_data *data;
+        void *param;
+        void *icon;
+        uint32_t slot_id;
+        uint8_t reserved[28];
+    } obs_sd_mem_get2;
+
+    typedef struct {
+        int32_t user_id;
+        uint32_t slot_id;
+        uint32_t option;
+        uint8_t reserved[28];
+    } obs_sd_mem_sync;
+
+    uint8_t write_16[16] = {0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49,
+                            0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51};
+    obs_report_bytes(check_name, "save-mem-set", "write-16", 0, write_16, 16);
+
+    obs_sd_mem_data set_data;
+    memset(&set_data, 0, sizeof(set_data));
+    set_data.buf = write_16;
+    set_data.buf_size = sizeof(write_16);
+    set_data.offset = 0;
+
+    obs_sd_mem_set2 set_param;
+    memset(&set_param, 0, sizeof(set_param));
+    set_param.user_id = user_id;
+    set_param.data = &set_data;
+    set_param.data_num = 1;
+    set_param.slot_id = 0;
+
+    int32_t rc_set = -999;
+    if (fn_set2 && obs_address_is_callable((const void *)fn_set2)) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            rc_set = fn_set2(&set_param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "save-mem-set", "rc", (uint64_t)(uint32_t)rc_set,
+                       "code");
+
+    uint8_t read_16[16];
+    memset(read_16, 0xAA, sizeof(read_16));
+
+    obs_sd_mem_data get_data;
+    memset(&get_data, 0, sizeof(get_data));
+    get_data.buf = read_16;
+    get_data.buf_size = sizeof(read_16);
+    get_data.offset = 0;
+
+    obs_sd_mem_get2 get_param;
+    memset(&get_param, 0, sizeof(get_param));
+    get_param.user_id = user_id;
+    get_param.data = &get_data;
+    get_param.slot_id = 0;
+
+    int32_t rc_get = -999;
+    if (fn_get2 && obs_address_is_callable((const void *)fn_get2)) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            rc_get = fn_get2(&get_param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "save-mem-get", "rc", (uint64_t)(uint32_t)rc_get,
+                       "code");
+    obs_report_bytes(check_name, "save-mem-get", "read-16", 0, read_16, 16);
+    obs_report_measure(check_name, "save-mem-get", "matches-written",
+                       (uint64_t)(memcmp(write_16, read_16, 16) == 0), "bool");
+
+    obs_sd_mem_sync sync_param;
+    memset(&sync_param, 0, sizeof(sync_param));
+    sync_param.user_id = user_id;
+    sync_param.slot_id = 0;
+    sync_param.option = 0;
+
+    int32_t rc_sync = -999;
+    if (fn_sync && obs_address_is_callable((const void *)fn_sync)) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            rc_sync = fn_sync(&sync_param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "save-mem-sync", "rc", (uint64_t)(uint32_t)rc_sync,
+                       "code");
+
+    /* Terminate save data */
+    int32_t rc_term = -999;
+    if (fn_term && obs_address_is_callable((const void *)fn_term)) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            rc_term = fn_term();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "terminate", "rc", (uint64_t)(uint32_t)rc_term,
+                       "code");
+
+    return obs_pass();
+}
+
+struct obs_statfs_layout {
+    uint32_t f_version;
+    uint32_t f_type;
+    uint64_t f_flags;
+    uint64_t f_bsize;
+    uint64_t f_iosize;
+    uint64_t f_blocks;
+    uint64_t f_bfree;
+    int64_t f_bavail;
+    uint64_t f_files;
+    int64_t f_ffree;
+    uint64_t f_syncwrites;
+    uint64_t f_asyncwrites;
+    uint64_t f_syncreads;
+    uint64_t f_asyncreads;
+    uint64_t f_spare[10];
+    uint32_t f_namemax;
+    uint32_t f_owner;
+    uint32_t f_fsid[2];
+    char f_charspare[80];
+    char f_fstypename[16];
+    char f_mntfromname[88];
+    char f_mntonname[88];
+};
+
+typedef int *(*obs_fn_error_t)(void);
+
+static inline int *obs_get_errno_location(void) {
+    int k_mod = obs_module_open("libkernel");
+    obs_fn_error_t fn_err = NULL;
+    if (k_mod >= 0) {
+        fn_err = (obs_fn_error_t)(uintptr_t)obs_module_symbol(k_mod, "__error");
+    }
+    if (!fn_err && obs_address_is_callable((const void *)&__error)) {
+        fn_err = &__error;
+    }
+    if (fn_err && obs_address_is_callable((const void *)fn_err)) {
+        return fn_err();
+    }
+    return NULL;
+}
+
+static int obs_probe_statfs(const char *path, void *buf, int *out_errno) {
+    int *err_ptr = obs_get_errno_location();
+    if (err_ptr) {
+        *err_ptr = 0;
+    }
+
+    *(uint32_t *)buf = 0x20140518u; /* STATFS_VERSION */
+
+    int k_mod = obs_module_open("libkernel");
+    int (*fn_statfs)(const char *, void *) = NULL;
+    if (k_mod >= 0) {
+        fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "_statfs");
+        if (!fn_statfs) {
+            fn_statfs =
+                (int (*)(const char *, void *))obs_module_symbol(k_mod, "statfs");
+        }
+        if (!fn_statfs) {
+            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(
+                k_mod, "$9e0667416c94bc62");
+        }
+        if (!fn_statfs) {
+            fn_statfs =
+                (int (*)(const char *, void *))obs_module_symbol(k_mod, "__sys_statfs");
+        }
+    }
+    if (!fn_statfs && obs_address_is_callable((const void *)&statfs)) {
+        fn_statfs = &statfs;
+    }
+    if (fn_statfs && obs_address_is_callable((const void *)fn_statfs)) {
+        int rc = fn_statfs(path, buf);
+        if (rc == 0) {
+            if (out_errno)
+                *out_errno = 0;
+            return 0;
+        }
+        err_ptr = obs_get_errno_location();
+        int err = err_ptr ? *err_ptr : 0;
+        if (out_errno)
+            *out_errno = err;
+        return rc;
+    }
+
+    /* Fallback to direct syscalls via libkernel gadget */
+    long sc =
+        obs_invoke_syscall(555 /* SYS_nstatfs */, (long)path, (long)buf, 0, 0, 0, 0);
+    if (sc == 0) {
+        if (out_errno)
+            *out_errno = 0;
+        return 0;
+    }
+    err_ptr = obs_get_errno_location();
+    int err = err_ptr ? *err_ptr : 0;
+    if (err == 0 && sc > 0 && sc < 256) {
+        err = (int)sc;
+    }
+
+    long sc396 =
+        obs_invoke_syscall(396 /* SYS_statfs */, (long)path, (long)buf, 0, 0, 0, 0);
+    if (sc396 == 0) {
+        if (out_errno)
+            *out_errno = 0;
+        return 0;
+    }
+    if (err == 0) {
+        err_ptr = obs_get_errno_location();
+        err = err_ptr ? *err_ptr : 0;
+        if (err == 0 && sc396 > 0 && sc396 < 256) {
+            err = (int)sc396;
+        }
+    }
+    if (out_errno)
+        *out_errno = err;
+    return (int)sc;
+}
+
+static int obs_probe_fstatfs(int fd, void *buf, int *out_errno) {
+    int *err_ptr = obs_get_errno_location();
+    if (err_ptr) {
+        *err_ptr = 0;
+    }
+
+    *(uint32_t *)buf = 0x20140518u; /* STATFS_VERSION */
+
+    int k_mod = obs_module_open("libkernel");
+    int (*fn_fstatfs)(int, void *) = NULL;
+    if (k_mod >= 0) {
+        fn_fstatfs = (int (*)(int, void *))obs_module_symbol(k_mod, "_fstatfs");
+        if (!fn_fstatfs) {
+            fn_fstatfs = (int (*)(int, void *))obs_module_symbol(k_mod, "fstatfs");
+        }
+        if (!fn_fstatfs) {
+            fn_fstatfs =
+                (int (*)(int, void *))obs_module_symbol(k_mod, "$d7b31f7b50775fa5");
+        }
+        if (!fn_fstatfs) {
+            fn_fstatfs =
+                (int (*)(int, void *))obs_module_symbol(k_mod, "__sys_fstatfs");
+        }
+    }
+    if (fn_fstatfs && obs_address_is_callable((const void *)fn_fstatfs)) {
+        int rc = fn_fstatfs(fd, buf);
+        if (rc == 0) {
+            if (out_errno)
+                *out_errno = 0;
+            return 0;
+        }
+        err_ptr = obs_get_errno_location();
+        int err = err_ptr ? *err_ptr : 0;
+        if (out_errno)
+            *out_errno = err;
+        return rc;
+    }
+
+    /* Fallback to direct syscalls via libkernel gadget */
+    long sc =
+        obs_invoke_syscall(556 /* SYS_nfstatfs */, (long)fd, (long)buf, 0, 0, 0, 0);
+    if (sc == 0) {
+        if (out_errno)
+            *out_errno = 0;
+        return 0;
+    }
+    err_ptr = obs_get_errno_location();
+    int err = err_ptr ? *err_ptr : 0;
+    if (err == 0 && sc > 0 && sc < 256) {
+        err = (int)sc;
+    }
+
+    long sc397 =
+        obs_invoke_syscall(397 /* SYS_fstatfs */, (long)fd, (long)buf, 0, 0, 0, 0);
+    if (sc397 == 0) {
+        if (out_errno)
+            *out_errno = 0;
+        return 0;
+    }
+    if (err == 0) {
+        err_ptr = obs_get_errno_location();
+        err = err_ptr ? *err_ptr : 0;
+        if (err == 0 && sc397 > 0 && sc397 < 256) {
+            err = (int)sc397;
+        }
+    }
+    if (out_errno)
+        *out_errno = err;
+    return (int)sc;
+}
+
+static obs_result check_app0_statfs(void) {
+    const char *check_name = "130-layout/app0-statfs";
+
+    /* Report the struct layout the probe passes (FreeBSD 12 472-byte statfs) */
+    obs_report_measure(check_name, "struct-statfs", "size",
+                       (uint64_t)sizeof(struct obs_statfs_layout), "bytes");
+    obs_report_measure(check_name, "struct-statfs", "f_flags-offset",
+                       (uint64_t)__builtin_offsetof(struct obs_statfs_layout, f_flags),
+                       "offset");
+    obs_report_measure(
+        check_name, "struct-statfs", "f_fstypename-offset",
+        (uint64_t)__builtin_offsetof(struct obs_statfs_layout, f_fstypename), "offset");
+    obs_report_measure(
+        check_name, "struct-statfs", "f_mntfromname-offset",
+        (uint64_t)__builtin_offsetof(struct obs_statfs_layout, f_mntfromname),
+        "offset");
+    obs_report_measure(
+        check_name, "struct-statfs", "f_mntonname-offset",
+        (uint64_t)__builtin_offsetof(struct obs_statfs_layout, f_mntonname), "offset");
+
+    static const char *const paths_to_stat[] = {
+        "/",
+        "/user/app/PPSA90000",
+        "/user/data/PPSA90000",
+        "/app0",
+        "/user/app",
+        "/user/data",
+        "/user",
+        "/system",
+        "/system_ex",
+        "/download0",
+        "/user/app/ORB90000",
+        "/user/app/ORBO00001",
+        "/user/app/PPSA21564",
+        "/user/app/PPSA25872",
+        "/user/app/PPSA04263",
+        "/user/app/PPSA02664",
+        "/user/app/PPSA28061",
+    };
+
+    uint8_t stat_buf[1024];
+    int app0_is_pfs = 0;
+
+    for (size_t i = 0; i < sizeof(paths_to_stat) / sizeof(paths_to_stat[0]); i++) {
+        const char *path = paths_to_stat[i];
+        memset(stat_buf, 0, sizeof(stat_buf));
+
+        int err = 0;
+        int rc = obs_probe_statfs(path, stat_buf, &err);
+        obs_report_measure(check_name, path, "statfs-rc", (uint64_t)(uint32_t)rc,
+                           "code");
+        obs_report_measure(check_name, path, "statfs-errno", (uint64_t)(uint32_t)err,
+                           "errno");
+
+        if (rc == 0) {
+            uint64_t flags = *(const uint64_t *)(const void *)(stat_buf + 8);
+            obs_report_measure(check_name, path, "flags", flags, "flags");
+            int is_pfs = (memcmp(stat_buf + 280, "pfs", 3) == 0);
+            obs_report_measure(check_name, path, "is-pfs", (uint64_t)is_pfs, "bool");
+            obs_report_bytes(check_name, path, "f_fstypename", 0,
+                             (const uint8_t *)(stat_buf + 280), 16);
+            obs_report_bytes(check_name, path, "f_mntfromname", 0,
+                             (const uint8_t *)(stat_buf + 296), 88);
+            obs_report_bytes(check_name, path, "f_mntonname", 0,
+                             (const uint8_t *)(stat_buf + 384), 88);
+            obs_report_bytes(check_name, path, "raw-statfs-512b", 0,
+                             (const uint8_t *)stat_buf, 512);
+            if (obs_strcmp(path, "/app0") == 0 && is_pfs) {
+                app0_is_pfs = 1;
+            }
+        }
+    }
+
+    /* Fallback: fstatfs on opened file descriptors */
+    static const char *const targets_to_fstatfs[] = {
+        "/user/app/PPSA90000/eboot.bin",
+        "/user/data/PPSA90000/eboot.bin",
+        "/system/common/lib/libkernel.sprx",
+        "/user/app/PPSA90000",
+        "/app0/eboot.bin",
+        "/app0",
+        "/",
+        "/system",
+    };
+
+    int k_mod = obs_module_open("libkernel");
+    int (*fn_open)(const char *, int, ...) = NULL;
+    int (*fn_close)(int) = NULL;
+    if (k_mod >= 0) {
+        fn_open =
+            (int (*)(const char *, int, ...))obs_module_symbol(k_mod, "sceKernelOpen");
+        fn_close = (int (*)(int))obs_module_symbol(k_mod, "sceKernelClose");
+    }
+
+    for (size_t i = 0; i < sizeof(targets_to_fstatfs) / sizeof(targets_to_fstatfs[0]);
+         i++) {
+        const char *target = targets_to_fstatfs[i];
+        int *err_ptr = obs_get_errno_location();
+        if (err_ptr)
+            *err_ptr = 0;
+        int fd = -1;
+        int open_err = 0;
+        if (fn_open && obs_address_is_callable((const void *)fn_open)) {
+            fd = fn_open(target, 0 /* O_RDONLY */, 0);
+            if (fd < 0) {
+                err_ptr = obs_get_errno_location();
+                open_err = err_ptr ? *err_ptr : 0;
+            }
+        } else if (obs_address_is_callable((const void *)&sceKernelOpen)) {
+            fd = sceKernelOpen(target, 0, 0);
+            if (fd < 0) {
+                err_ptr = obs_get_errno_location();
+                open_err = err_ptr ? *err_ptr : 0;
+            }
+        } else {
+            fd = (int)obs_invoke_syscall(5 /* SYS_open */, (long)target, 0, 0, 0, 0, 0);
+            if (fd < 0) {
+                err_ptr = obs_get_errno_location();
+                open_err = err_ptr ? *err_ptr : 0;
+            }
+        }
+
+        obs_report_measure(check_name, target, "open-rc", (uint64_t)(uint32_t)fd,
+                           "code");
+        if (fd < 0) {
+            obs_report_measure(check_name, target, "open-errno",
+                               (uint64_t)(uint32_t)open_err, "errno");
+        } else {
+            memset(stat_buf, 0, sizeof(stat_buf));
+            int f_err = 0;
+            int f_rc = obs_probe_fstatfs(fd, stat_buf, &f_err);
+            obs_report_measure(check_name, target, "fstatfs-rc",
+                               (uint64_t)(uint32_t)f_rc, "code");
+            obs_report_measure(check_name, target, "fstatfs-errno",
+                               (uint64_t)(uint32_t)f_err, "errno");
+
+            if (f_rc == 0) {
+                uint64_t f_flags = *(const uint64_t *)(const void *)(stat_buf + 8);
+                obs_report_measure(check_name, target, "f_flags", f_flags, "flags");
+                int is_pfs = (memcmp(stat_buf + 280, "pfs", 3) == 0);
+                obs_report_measure(check_name, target, "is-pfs", (uint64_t)is_pfs,
+                                   "bool");
+                obs_report_bytes(check_name, target, "f_fstypename", 0,
+                                 (const uint8_t *)(stat_buf + 280), 16);
+                obs_report_bytes(check_name, target, "f_mntfromname", 0,
+                                 (const uint8_t *)(stat_buf + 296), 88);
+                obs_report_bytes(check_name, target, "f_mntonname", 0,
+                                 (const uint8_t *)(stat_buf + 384), 88);
+                if ((obs_strcmp(target, "/app0") == 0 ||
+                     obs_strcmp(target, "/app0/eboot.bin") == 0) &&
+                    is_pfs) {
+                    app0_is_pfs = 1;
+                }
+            }
+
+            if (fn_close && obs_address_is_callable((const void *)fn_close)) {
+                fn_close(fd);
+            } else if (obs_address_is_callable((const void *)&sceKernelClose)) {
+                sceKernelClose(fd);
+            } else {
+                obs_invoke_syscall(6 /* SYS_close */, (long)fd, 0, 0, 0, 0, 0);
+            }
+        }
+    }
+
+    /* (4) -6e31's original APR resolve if /app0 was shown as PFS */
+    if (app0_is_pfs) {
+        const void *fn_apr_resolve = obs_module_symbol(
+            k_mod >= 0 ? k_mod : 1, "sceKernelAprResolveFilepathsToIdsAndFileSizes");
+        if (!fn_apr_resolve && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+            void *a = NULL;
+            if (sceKernelDlsym(k_mod >= 0 ? k_mod : 1,
+                               "sceKernelAprResolveFilepathsToIdsAndFileSizes",
+                               &a) == 0) {
+                fn_apr_resolve = a;
+            }
+        }
+        if (fn_apr_resolve && obs_address_is_callable(fn_apr_resolve)) {
+            typedef int (*fn_apr_resolve_t)(const char **, uint32_t, void *,
+                                            uint32_t *);
+            fn_apr_resolve_t call_resolve = (fn_apr_resolve_t)fn_apr_resolve;
+            const char *apr_paths[1] = {"/app0/eboot.bin"};
+            uint8_t out_ids[64];
+            uint32_t out_count = 0;
+            memset(out_ids, 0, sizeof(out_ids));
+            int apr_rc = call_resolve(apr_paths, 1, out_ids, &out_count);
+            obs_report_measure(check_name, "apr-resolve", "rc",
+                               (uint64_t)(uint32_t)apr_rc, "code");
+            obs_report_measure(check_name, "apr-resolve", "out-count",
+                               (uint64_t)out_count, "count");
+            if (apr_rc == 0) {
+                obs_report_bytes(check_name, "apr-resolve", "ids", 0, out_ids, 16);
+            }
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check layout_checks[] = {
     /* Assumed, uniformly, and the field is being used honestly: nothing here has an
      * expectation at all, and `assumed` is the closest the vocabulary comes to saying
@@ -2231,6 +3291,8 @@ static const obs_check layout_checks[] = {
      "sceUserServiceGetLoginUserIdList", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_user_service_layout, check_user_service_layout,
      OBS_FROM_ASSUMED},
+    {"130-layout/user-game-presets", "libSceUserService", "$-sD02mFDBh4", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_user_game_presets, OBS_FROM_ASSUMED},
     {"130-layout/pad-controller-layout", "libScePad", "scePadGetControllerInformation",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_pad_controller_layout,
      check_pad_controller_layout, OBS_FROM_ASSUMED},
@@ -2244,19 +3306,22 @@ static const obs_check layout_checks[] = {
      "sceCommonDialogInitialize", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_common_dialog_layout, check_common_dialog_layout,
      OBS_FROM_ASSUMED},
-    {"130-layout/savedata-layout", "libSceSaveData", "sceSaveDataInitialize3",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_savedata_layout,
-     check_savedata_layout, OBS_FROM_ASSUMED},
+    {"130-layout/savedata-layout", "libSceSaveData_native", "$TywrFKCoLGY",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_savedata_layout,
+     OBS_FROM_ASSUMED},
+    {"130-layout/savedata-memory-5d20", "libSceSaveData_native", "$oQySEUfgXRA",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_savedata_memory_5d20,
+     OBS_FROM_ASSUMED},
+    {"130-layout/app0-statfs", "libkernel", "statfs", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_app0_statfs, check_app0_statfs, OBS_FROM_ASSUMED},
     {"130-layout/savedata-event-result", "libSceSaveData", "sceSaveDataGetEventResult",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_savedata_event_result,
      check_savedata_event_result, OBS_FROM_ASSUMED},
     {"130-layout/savedata-mount-capacity", "libSceSaveData", "sceSaveDataMount2",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_savedata_mount_capacity,
      check_savedata_mount_capacity, OBS_FROM_ASSUMED},
-    {"130-layout/json2-init-layout", "libSceJson2",
-     "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE", OBS_CAP_NONE,
-     OBS_CAP_NONE, (const void *)check_json2_init_layout, check_json2_init_layout,
-     OBS_FROM_ASSUMED},
+    {"130-layout/json2-init-layout", "libSceJson2", "$Cxwy7wHq4J0", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_json2_init_layout, OBS_FROM_ASSUMED},
     {"130-layout/video-out-output-status", "libSceVideoOut",
      "sceVideoOutGetOutputStatus", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_video_out_output_status, check_video_out_output_status,

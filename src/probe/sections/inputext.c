@@ -13,6 +13,7 @@
 
 #include "oops/freestd.h"
 #include "oops/krw.h"
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -729,6 +730,186 @@ static obs_result check_periph_reachability(void) {
     return obs_pass_value((uint64_t)reachable);
 }
 
+/* REQ-20260926T2140Z-5c1e: keyboard Init/Open/Close returns, second Open, bad-handle
+ * arms */
+static obs_result check_keyboard_lifecycle(void) {
+    const char *check_name = "101-input-ext/keyboard-lifecycle";
+    const void *p_init = (const void *)&sceKeyboardInit_static;
+    if (!obs_address_is_callable(p_init))
+        p_init = inputext_sym("sceKeyboardInit", (const void *)&sceKeyboardInit);
+    const void *p_open = (const void *)&sceKeyboardOpen_static;
+    if (!obs_address_is_callable(p_open))
+        p_open = inputext_sym("sceKeyboardOpen", (const void *)&sceKeyboardOpen);
+    const void *p_close = (const void *)&sceKeyboardClose_static;
+    if (!obs_address_is_callable(p_close))
+        p_close = inputext_sym("sceKeyboardClose", (const void *)&sceKeyboardClose);
+    const void *p_read = (const void *)&sceKeyboardReadState_static;
+    if (!obs_address_is_callable(p_read))
+        p_read =
+            inputext_sym("sceKeyboardReadState", (const void *)&sceKeyboardReadState);
+
+    obs_report_measure(check_name, "resolve", "init-callable",
+                       (uint64_t)(p_init && obs_address_is_callable(p_init)), "bool");
+    obs_report_measure(check_name, "resolve", "init-addr", (uint64_t)(uintptr_t)p_init,
+                       "offset");
+    obs_report_measure(check_name, "resolve", "open-callable",
+                       (uint64_t)(p_open && obs_address_is_callable(p_open)), "bool");
+    obs_report_measure(check_name, "resolve", "open-addr", (uint64_t)(uintptr_t)p_open,
+                       "offset");
+    obs_report_measure(check_name, "resolve", "close-callable",
+                       (uint64_t)(p_close && obs_address_is_callable(p_close)), "bool");
+    obs_report_measure(check_name, "resolve", "close-addr",
+                       (uint64_t)(uintptr_t)p_close, "offset");
+    obs_report_measure(check_name, "resolve", "read-callable",
+                       (uint64_t)(p_read && obs_address_is_callable(p_read)), "bool");
+    obs_report_measure(check_name, "resolve", "read-addr", (uint64_t)(uintptr_t)p_read,
+                       "offset");
+
+    int (*fn_init)(void) = (int (*)(void))p_init;
+    int (*fn_open)(int32_t, int, int, void *) =
+        (int (*)(int32_t, int, int, void *))p_open;
+    int (*fn_close)(int) = (int (*)(int))p_close;
+    int (*fn_read)(int, void *) = (int (*)(int, void *))p_read;
+
+    obs_jmp_buf guard;
+
+    /* 1. Init return */
+    int rc_init = -1;
+    if (fn_init && obs_address_is_callable((const void *)fn_init)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_init = fn_init();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "init", "rc", (uint64_t)(uint32_t)rc_init, "code");
+
+    /* User id */
+    int32_t user = inputext_initial_user();
+    if (user < 0) {
+        user = 0x100;
+    }
+    obs_report_measure(check_name, "user", "user-id", (uint64_t)(uint32_t)user, "id");
+
+    /* 2. Open handle for user */
+    int handle1 = -1;
+    if (fn_open && obs_address_is_callable((const void *)fn_open)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            handle1 = fn_open(user, 0, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "open-1", "handle", (uint64_t)(uint32_t)handle1,
+                       "handle");
+
+    /* 3. Second Open of the same user */
+    int handle2 = -1;
+    if (fn_open && obs_address_is_callable((const void *)fn_open)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            handle2 = fn_open(user, 0, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "open-2-same-user", "handle",
+                       (uint64_t)(uint32_t)handle2, "handle");
+
+    /* 4. Open with bad user id */
+    int handle_bad_user = 0;
+    if (fn_open && obs_address_is_callable((const void *)fn_open)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            handle_bad_user = fn_open(-1, 0, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "open-bad-user", "rc",
+                       (uint64_t)(uint32_t)handle_bad_user, "code");
+
+    /* 5. ReadState on bad handle */
+    int rc_bad_read = 0;
+    uint8_t state_bad[96];
+    memset(state_bad, 0xaa, sizeof(state_bad));
+    if (fn_read && obs_address_is_callable((const void *)fn_read)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_bad_read = fn_read(-1, state_bad);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "read-bad-handle", "rc",
+                       (uint64_t)(uint32_t)rc_bad_read, "code");
+
+    /* 6. ReadState on handle1 */
+    uint8_t state1[96];
+    memset(state1, 0x55, sizeof(state1));
+    int rc_read1 = -1;
+    if (handle1 >= 0 && fn_read && obs_address_is_callable((const void *)fn_read)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_read1 = fn_read(handle1, state1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "read-handle1", "rc", (uint64_t)(uint32_t)rc_read1,
+                       "code");
+    for (unsigned int off = 0; off < sizeof(state1); off += 64) {
+        unsigned int chunk = (sizeof(state1) - off > 64) ? 64 : (sizeof(state1) - off);
+        obs_report_bytes(check_name, "read-handle1", "state-96b", off, state1 + off,
+                         chunk);
+    }
+    size_t kbd_tail_nonzero = 0;
+    for (size_t b = 64; b < sizeof(state1); b++) {
+        if (state1[b] != 0) {
+            kbd_tail_nonzero++;
+        }
+    }
+    obs_report_measure(check_name, "read-handle1", "tail-nonzero-bytes",
+                       (uint64_t)kbd_tail_nonzero, "bytes");
+
+    /* 7. Close handle1, handle2, and bad handle */
+    int rc_close_bad = 0;
+    if (fn_close && obs_address_is_callable((const void *)fn_close)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_close_bad = fn_close(-1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "close-bad-handle", "rc",
+                       (uint64_t)(uint32_t)rc_close_bad, "code");
+
+    int rc_close1 = -1, rc_close2 = -1;
+    if (handle1 >= 0 && fn_close && obs_address_is_callable((const void *)fn_close)) {
+        rc_close1 = fn_close(handle1);
+    }
+    obs_report_measure(check_name, "close-handle1", "rc", (uint64_t)(uint32_t)rc_close1,
+                       "code");
+
+    if (handle2 >= 0 && fn_close && obs_address_is_callable((const void *)fn_close)) {
+        rc_close2 = fn_close(handle2);
+    }
+    obs_report_measure(check_name, "close-handle2", "rc", (uint64_t)(uint32_t)rc_close2,
+                       "code");
+
+    return obs_pass();
+}
+
 static const obs_check input_ext_checks[] = {
     {"101-input-ext/keyboard-presence", "libSceKeyboard", "sceKeyboardReadState",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_keyboard_presence,
@@ -751,6 +932,9 @@ static const obs_check input_ext_checks[] = {
     {"101-input-ext/reachability", "libSceKeyboard", "sceKeyboardReadState",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_periph_reachability,
      check_periph_reachability, OBS_FROM_ASSUMED},
+    {"101-input-ext/keyboard-lifecycle", "libSceKeyboard", "sceKeyboardOpen",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_keyboard_lifecycle,
+     check_keyboard_lifecycle, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_input_ext = {

@@ -108,7 +108,7 @@ poll_and_stop() {
     local tmp="$1" reader="$2" runner="$3" init_bytes="${4:-0}" i=0
     while [ "$i" -lt "$SECONDS_WIN" ]; do
         sleep 2; i=$((i + 2))
-        tail -c +$((init_bytes + 1)) "$tmp" 2>/dev/null | grep -qaE '^OBS\|end\||exited on signal|# fault address:' && { sleep 2; break; }
+        tail -c +$((init_bytes + 1)) "$tmp" 2>/dev/null | grep -qaE '^OBS\|end\|' && { sleep 2; break; }
         kill -0 "$reader" 2>/dev/null || break
     done
     kill -9 "$runner" 2>/dev/null || true
@@ -214,15 +214,15 @@ leg_eboot() {
     local dir=""
     if [ "$do_build" = 1 ]; then
         echo "=== BUILD: make native (gen-5 eboot title, CORPUS=$CORPUS) ==="
-        make -C "$REPO" native BUILD="$B" TOOL_TARGET="$TT" 2>&1
+        make -C "$REPO" native BUILD="$B" TOOL_TARGET="$TT" 2>&1 || { echo "sweep: make native failed"; return 1; }
         dir="$B/prospero/$NATIVE_TITLE_ID"
     else
         echo "=== skipping build (--deploy-only) ==="
-        if [ -n "${BUILD:-}" ] && [ -d "$B/prospero/$NATIVE_TITLE_ID" ]; then
+        if [ -d "$B/prospero/$NATIVE_TITLE_ID" ]; then
             dir="$B/prospero/$NATIVE_TITLE_ID"
         elif [ -d "$REPO/build/prospero/$NATIVE_TITLE_ID" ]; then
             dir="$REPO/build/prospero/$NATIVE_TITLE_ID"
-        elif [ -n "${BUILD:-}" ] && [ -d "$B/prospero/PPSA99980" ]; then
+        elif [ -d "$B/prospero/PPSA99980" ]; then
             dir="$B/prospero/PPSA99980"
         elif [ -d "$REPO/build/prospero/PPSA99980" ]; then
             dir="$REPO/build/prospero/PPSA99980"
@@ -239,6 +239,7 @@ leg_eboot() {
     ( "$LTOOL" hw close-app PPSA99980 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app GLHW00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw close-app GLCB00001 2>&1 | tr -d '\r' ) || true
+    ( "$LTOOL" hw close-app SOHK00001 2>&1 | tr -d '\r' ) || true
     ( "$LTOOL" hw install-native "$dir" 2>&1 | tr -d '\r' )
     echo "waiting 20s for ShadowMountPlus to register the title..."; sleep 20
     echo "=== LAUNCH $NATIVE_TITLE_ID + DEVICE LOG (up to ${SECONDS_WIN}s) ==="
