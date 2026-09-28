@@ -1009,12 +1009,12 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
      OBS_FROM_ASSUMED},
-    {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
-     OBS_FROM_ASSUMED},
     {"166-agc/driver-set-hs-offchip-param", "libSceAgcDriver",
      "sceAgcDriverSetHsOffchipParam", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_set_hs_offchip_param, OBS_FROM_ASSUMED},
+    {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
+     OBS_FROM_ASSUMED},
     {"166-agc/ampr-apr-command-buffer-constructor", "libSceAmpr",
      "sceAmprAprCommandBufferConstructor", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_ampr_apr_cb_constructor, OBS_FROM_ASSUMED},
@@ -4222,6 +4222,7 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name, const cha
 }
 
 static obs_result check_agc_driver_add_eq_event(void) {
+    OBS_AGC_QUEUE_GUARD();
     int handle = obs_module_open("libSceAgcDriver");
     if (handle < 0) {
         handle = obs_module_open("libSceAgcDriver.sprx");
@@ -4313,157 +4314,158 @@ static obs_result check_agc_driver_add_eq_event(void) {
     obs_report_measure("166-agc/driver-add-eq-event", "add-eq-bad-queue", "rc",
                        (uint64_t)(uint32_t)rc_bad, "code");
 
-    /* Allocate ONION buffers for fence and DCB */
-    volatile uint32_t *fence = NULL;
-    uint32_t *dcb = NULL;
-#if !defined(OBSCENE_HOST_BUILD)
-    fence = (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-    dcb = (uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-#else
-    static _Alignas(64) uint32_t s_host_eq_fence[16];
-    static _Alignas(64) uint32_t s_host_eq_dcb[32];
-    fence = s_host_eq_fence;
-    dcb = s_host_eq_dcb;
-#endif
+    /* Three arms per REQ-20260928T1658Z-ff16 (REQ-20260928T1459Z-dea2 rerun):
+     * (1) arm-control: no AddEqEvent (control arm first per REQ-20260928T1658Z-ff16)
+     * (2) arm-mode0: AddEqEvent(eq, 0, 0)
+     * (3) arm-mode1: AddEqEvent(eq, 1, 0)
+     */
+    static const struct {
+        const char *tag;
+        int add_eq_mode; /* -1 for no AddEqEvent */
+        uint32_t ctx_id;
+        uint32_t fence_val;
+    } arms[3] = {
+        {"arm-control", -1, 0x000300, 0xbeef0003u},
+        {"arm-mode0", 0, 0x000100, 0xbeef0001u},
+        {"arm-mode1", 1, 0x000200, 0xbeef0002u},
+    };
 
-    if (fence && dcb) {
+    for (int a = 0; a < 3; a++) {
+        const char *tag = arms[a].tag;
+        int mode = arms[a].add_eq_mode;
+        uint32_t ctx_id = arms[a].ctx_id;
+        uint32_t fence_expected = arms[a].fence_val;
+
+        volatile uint32_t *fence = NULL;
+        uint32_t *dcb = NULL;
+#if !defined(OBSCENE_HOST_BUILD)
+        fence = (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+        dcb = (uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+#else
+        static _Alignas(64) uint32_t s_host_eq_fence[16];
+        static _Alignas(64) uint32_t s_host_eq_dcb[32];
+        fence = s_host_eq_fence;
+        dcb = s_host_eq_dcb;
+        *fence = fence_expected;
+#endif
+        if (!fence || !dcb) {
+            continue;
+        }
+
         uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
 
-        /* Three arms per REQ-20260928T1459Z-dea2:
-         * (1) arm-mode0: AddEqEvent(eq, 0, 0)
-         * (2) arm-mode1: AddEqEvent(eq, 1, 0)
-         * (3) arm-control: no AddEqEvent
-         */
-        static const struct {
-            const char *tag;
-            int add_eq_mode; /* -1 for no AddEqEvent */
-            uint32_t ctx_id;
-            uint32_t fence_val;
-        } arms[3] = {
-            {"arm-mode0", 0, 0x000100, 0xbeef0001u},
-            {"arm-mode1", 1, 0x000200, 0xbeef0002u},
-            {"arm-control", -1, 0x000300, 0xbeef0003u},
-        };
+        uint64_t eq = 0;
+        int rc_cr = fn_create_eq(&eq, tag);
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "create-eq-rc",
+                           (uint64_t)(uint32_t)rc_cr, "code");
 
-        for (int a = 0; a < 3; a++) {
-            const char *tag = arms[a].tag;
-            int mode = arms[a].add_eq_mode;
-            uint32_t ctx_id = arms[a].ctx_id;
-            uint32_t fence_expected = arms[a].fence_val;
+        if (mode >= 0) {
+            int rc_add = fn_add_eq(eq, mode, 0);
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "add-eq-rc",
+                               (uint64_t)(uint32_t)rc_add, "code");
+        }
 
-            uint64_t eq = 0;
-            int rc_cr = fn_create_eq(&eq, tag);
-            obs_report_measure("166-agc/driver-add-eq-event", tag, "create-eq-rc",
-                               (uint64_t)(uint32_t)rc_cr, "code");
+        *fence = 0x11111111u;
 
-            if (mode >= 0) {
-                int rc_add = fn_add_eq(eq, mode, 0);
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "add-eq-rc",
-                                   (uint64_t)(uint32_t)rc_add, "code");
-            }
+        uint32_t *dw = dcb;
+        *dw++ = 0xffff1000u; /* NOP */
+        *dw++ = 0xc0064900u; /* PACKET3_RELEASE_MEM, count 6 */
+        *dw++ = 0x06603514u; /* GCR cache flush & inv, EOP event */
+        *dw++ = 0x22000000u | (ctx_id & 0xffffffu); /* DATA_SEL(1) | INT_SEL(2) | ctx_id */
+        *dw++ = (uint32_t)fence_gpu;
+        *dw++ = (uint32_t)(fence_gpu >> 32);
+        *dw++ = fence_expected;
+        *dw++ = 0u;
+        *dw++ = 0u;
+        for (int p = 0; p < 16; p++) {
+            *dw++ = 0xffff1000u;
+        }
 
-            *fence = 0x11111111u;
+#if defined(__x86_64__)
+        __builtin_ia32_clflush((const void *)fence);
+        for (size_t cl_off = 0; cl_off < (size_t)((uintptr_t)dw - (uintptr_t)dcb); cl_off += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)dcb + cl_off));
+        }
+#endif
+        obs_agc_dcb_desc desc;
+        __builtin_memset(&desc, 0, sizeof(desc));
+        desc.gpu_addr = (uint64_t)(uintptr_t)dcb;
+        desc.size = (uint32_t)(dw - dcb);
 
-            uint32_t *dw = dcb;
-            *dw++ = 0xffff1000u; /* NOP */
-            *dw++ = 0xc0064900u; /* PACKET3_RELEASE_MEM, count 6 */
-            *dw++ = 0x06603514u; /* GCR cache flush & inv, EOP event */
-            *dw++ = 0x22000000u | (ctx_id & 0xffffffu); /* DATA_SEL(1) | INT_SEL(2) | ctx_id */
-            *dw++ = (uint32_t)fence_gpu;
-            *dw++ = (uint32_t)(fence_gpu >> 32);
-            *dw++ = fence_expected;
-            *dw++ = 0u;
-            *dw++ = 0u;
-            for (int p = 0; p < 16; p++) {
-                *dw++ = 0xffff1000u;
-            }
+        int sub_rc = sceAgcDriverSubmitDcb(&desc);
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "submit-rc",
+                           (uint64_t)(uint32_t)sub_rc, "code");
 
+        /* Poll fence up to 2 seconds */
+        uint64_t t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                          ? (uint64_t)sceKernelGetProcessTime()
+                          : 0;
+        int fence_ok = 0;
+        for (int poll = 0; poll < 20000; poll++) {
 #if defined(__x86_64__)
             __builtin_ia32_clflush((const void *)fence);
-            for (size_t cl_off = 0; cl_off < (size_t)((uintptr_t)dw - (uintptr_t)dcb); cl_off += 64) {
-                __builtin_ia32_clflush((const void *)((const char *)dcb + cl_off));
-            }
 #endif
-            obs_agc_dcb_desc desc;
-            __builtin_memset(&desc, 0, sizeof(desc));
-            desc.gpu_addr = (uint64_t)(uintptr_t)dcb;
-            desc.size = (uint32_t)(dw - dcb);
-
-            int sub_rc = sceAgcDriverSubmitDcb(&desc);
-            obs_report_measure("166-agc/driver-add-eq-event", tag, "submit-rc",
-                               (uint64_t)(uint32_t)sub_rc, "code");
-
-            /* Poll fence up to 2 seconds */
-            uint64_t t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                              ? (uint64_t)sceKernelGetProcessTime()
-                              : 0;
-            int fence_ok = 0;
-            for (int poll = 0; poll < 20000; poll++) {
-#if defined(__x86_64__)
-                __builtin_ia32_clflush((const void *)fence);
-#endif
-                if (*fence == fence_expected) {
-                    fence_ok = 1;
-                    break;
-                }
-                if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
-                    sceKernelUsleep(100);
-                }
+            if (*fence == fence_expected) {
+                fence_ok = 1;
+                break;
             }
-            uint64_t t1 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                              ? (uint64_t)sceKernelGetProcessTime()
-                              : 0;
-            obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-val",
-                               (uint64_t)*fence, "hex");
-            obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-completed",
-                               (uint64_t)fence_ok, "bool");
-            obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-elapsed-us",
-                               t1 >= t0 ? (t1 - t0) : 0, "us");
-
-            /* Wait on equeue for 2 seconds */
-            uint8_t kevent_buf[64];
-            __builtin_memset(kevent_buf, 0xcc, sizeof(kevent_buf));
-            int out_events = 0;
-            uint64_t timeout_us = 2000000; /* 2.0 s */
-            int w_rc = fn_wait_eq(eq, kevent_buf, 1, &out_events, (void *)&timeout_us);
-
-            obs_report_measure("166-agc/driver-add-eq-event", tag, "wait-rc",
-                               (uint64_t)(uint32_t)w_rc, "code");
-            obs_report_measure("166-agc/driver-add-eq-event", tag, "out-events",
-                               (uint64_t)(uint32_t)out_events, "events");
-
-            if (w_rc == 0 && out_events > 0) {
-                obs_report_bytes("166-agc/driver-add-eq-event", tag, "kevent-32b", 0,
-                                 kevent_buf, 32);
-                uint64_t k_ident = *(const uint64_t *)(const void *)(kevent_buf + 0);
-                int16_t k_filter = *(const int16_t *)(const void *)(kevent_buf + 8);
-                uint16_t k_flags = *(const uint16_t *)(const void *)(kevent_buf + 10);
-                uint32_t k_fflags = *(const uint32_t *)(const void *)(kevent_buf + 12);
-                int64_t k_data = *(const int64_t *)(const void *)(kevent_buf + 16);
-                uint64_t k_udata = *(const uint64_t *)(const void *)(kevent_buf + 24);
-
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "ident", k_ident, "ident");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "filter", (uint64_t)(int64_t)k_filter, "filter");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "flags", (uint64_t)k_flags, "flags");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "fflags", (uint64_t)k_fflags, "fflags");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "data", (uint64_t)k_data, "data");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "udata", k_udata, "udata");
-
-                if (fn_get_type) {
-                    int ev_type = fn_get_type(kevent_buf);
-                    obs_report_measure("166-agc/driver-add-eq-event", tag, "get-eq-event-type",
-                                       (uint64_t)(uint32_t)ev_type, "type");
-                }
-                if (fn_get_ctx) {
-                    int ev_ctx = fn_get_ctx(kevent_buf);
-                    obs_report_measure("166-agc/driver-add-eq-event", tag, "get-eq-context-id",
-                                       (uint64_t)(uint32_t)ev_ctx, "id");
-                }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
             }
+        }
+        uint64_t t1 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                          ? (uint64_t)sceKernelGetProcessTime()
+                          : 0;
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-val",
+                           (uint64_t)*fence, "hex");
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-completed",
+                           (uint64_t)fence_ok, "bool");
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-elapsed-us",
+                           t1 >= t0 ? (t1 - t0) : 0, "us");
 
-            if (fn_delete_eq && eq != 0) {
-                fn_delete_eq(eq);
+        /* Wait on equeue for 2 seconds */
+        uint8_t kevent_buf[64];
+        __builtin_memset(kevent_buf, 0xcc, sizeof(kevent_buf));
+        int out_events = 0;
+        uint64_t timeout_us = 2000000; /* 2.0 s */
+        int w_rc = fn_wait_eq(eq, kevent_buf, 1, &out_events, (void *)&timeout_us);
+
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "wait-rc",
+                           (uint64_t)(uint32_t)w_rc, "code");
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "out-events",
+                           (uint64_t)(uint32_t)out_events, "events");
+
+        if (w_rc == 0 && out_events > 0) {
+            obs_report_bytes("166-agc/driver-add-eq-event", tag, "kevent-32b", 0,
+                             kevent_buf, 32);
+            uint64_t k_ident = *(const uint64_t *)(const void *)(kevent_buf + 0);
+            int16_t k_filter = *(const int16_t *)(const void *)(kevent_buf + 8);
+            uint16_t k_flags = *(const uint16_t *)(const void *)(kevent_buf + 10);
+            uint32_t k_fflags = *(const uint32_t *)(const void *)(kevent_buf + 12);
+            int64_t k_data = *(const int64_t *)(const void *)(kevent_buf + 16);
+            uint64_t k_udata = *(const uint64_t *)(const void *)(kevent_buf + 24);
+
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "ident", k_ident, "ident");
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "filter", (uint64_t)(int64_t)k_filter, "filter");
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "flags", (uint64_t)k_flags, "flags");
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "fflags", (uint64_t)k_fflags, "fflags");
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "data", (uint64_t)k_data, "data");
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "udata", k_udata, "udata");
+
+            if (fn_get_type) {
+                int ev_type = fn_get_type(kevent_buf);
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "get-eq-event-type",
+                                   (uint64_t)(uint32_t)ev_type, "type");
             }
+            if (fn_get_ctx) {
+                int ev_ctx = fn_get_ctx(kevent_buf);
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "get-eq-context-id",
+                                   (uint64_t)(uint32_t)ev_ctx, "id");
+            }
+        }
+
+        if (fn_delete_eq && eq != 0) {
+            fn_delete_eq(eq);
         }
 
 #if !defined(OBSCENE_HOST_BUILD)
@@ -4590,10 +4592,13 @@ static void run_one_nop_hs_dcb(const char *arm_name, uint32_t fence_expected) {
     *dw++ = fence_expected;
     *dw++ = 0u;
     *dw++ = 0u;
+    for (int p = 0; p < 16; p++) {
+        *dw++ = 0xffff1000u;
+    }
 
 #if defined(__x86_64__)
     __builtin_ia32_clflush((const void *)fence);
-    for (size_t p = 0; p < 128; p += 64) {
+    for (size_t p = 0; p < (size_t)((uintptr_t)dw - (uintptr_t)dcb); p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)dcb + p));
     }
 #endif
@@ -4647,6 +4652,7 @@ static void run_one_nop_hs_dcb(const char *arm_name, uint32_t fence_expected) {
 }
 
 static obs_result check_agc_driver_set_hs_offchip_param(void) {
+    OBS_AGC_QUEUE_GUARD();
     int handle = obs_module_open("libSceAgcDriver");
     if (handle < 0) {
         handle = obs_module_open("libSceAgcDriver.sprx");
@@ -22670,6 +22676,14 @@ static obs_result check_agc_dcb_read_extent(void) {
 
 /* REQ-20260926T1927Z-0be8: Cross-submission GPU wait with WAIT_REG_MEM64 (PKT3 0x93) */
 static obs_result check_agc_gpu_wait_reg_mem64_sync(void) {
+#ifndef OBS_RUN_WEDGING_GPU_CHECKS
+    /* Unsatisfied WAIT_REG_MEM64 stalls the Command Processor ME waiting on GL2
+       cache update, permanently wedging the GPU ring for all subsequent submissions
+       in the process (2026-09-28 sweep 175008). Gated per D334; build with
+       -DOBS_RUN_WEDGING_GPU_CHECKS to test in isolation. */
+    return obs_skip("excluded from default suite: unsatisfied WAIT_REG_MEM64 stalls ME and wedges GPU queue; "
+                    "build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
+#endif
     OBS_AGC_QUEUE_GUARD();
     const char *check_name = "166-agc/gpu-wait-reg-mem64-sync";
 
@@ -23739,12 +23753,12 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
      OBS_FROM_ASSUMED},
-    {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
-     OBS_FROM_ASSUMED},
     {"166-agc/driver-set-hs-offchip-param", "libSceAgcDriver",
      "sceAgcDriverSetHsOffchipParam", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_set_hs_offchip_param, OBS_FROM_ASSUMED},
+    {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
+     OBS_FROM_ASSUMED},
     {"166-agc/ampr-apr-command-buffer-constructor", "libSceAmpr",
      "sceAmprAprCommandBufferConstructor", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_ampr_apr_cb_constructor, OBS_FROM_ASSUMED},
