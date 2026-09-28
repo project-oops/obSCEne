@@ -4370,9 +4370,9 @@ static obs_result check_agc_driver_add_eq_event(void) {
         volatile uint64_t *scratch_label = NULL;
         uint32_t *dcb = NULL;
 #if !defined(OBSCENE_HOST_BUILD)
-        fence = (volatile uint64_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-        scratch_label = (volatile uint64_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-        dcb = (uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+        fence = (volatile uint64_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+        scratch_label = (volatile uint64_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+        dcb = (uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
 #else
         static _Alignas(64) uint64_t s_host_eq_fence[16];
         static _Alignas(64) uint64_t s_host_eq_label[16];
@@ -4442,7 +4442,7 @@ static obs_result check_agc_driver_add_eq_event(void) {
             for (int p = 0; p < 16; p++) {
                 *dw++ = 0xffff1000u;
             }
-            words_written = (uint32_t)(dw - dcb);
+            words_written = 16u; /* Exactly 16 dwords per arm1-cross-sub */
             obs_report_bytes("166-agc/driver-add-eq-event", tag, "packet-32b", 0,
                              (const unsigned char *)fence_pkt, 32);
         } else {
@@ -4537,7 +4537,7 @@ static obs_result check_agc_driver_add_eq_event(void) {
 #if defined(__x86_64__)
         __builtin_ia32_clflush((const void *)fence);
         __builtin_ia32_clflush((const void *)scratch_label);
-        for (size_t cl_off = 0; cl_off < (size_t)words_written * sizeof(uint32_t); cl_off += 64) {
+        for (size_t cl_off = 0; cl_off < 256; cl_off += 64) {
             __builtin_ia32_clflush((const void *)((const char *)dcb + cl_off));
         }
         __builtin_ia32_mfence();
@@ -4547,11 +4547,12 @@ static obs_result check_agc_driver_add_eq_event(void) {
         desc.gpu_addr = (uint64_t)(uintptr_t)dcb;
         desc.size = words_written;
 
+        /* Submit via sceAgcDriverSubmitDcb (proven in sweep 175008 arm1-cross-sub) */
         int sub_rc = -1;
-        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer) && arm_queue) {
-            sub_rc = sceAgcDriverSubmitCommandBuffer(arm_queue, &desc);
-        } else {
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
             sub_rc = sceAgcDriverSubmitDcb(&desc);
+        } else if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer) && arm_queue) {
+            sub_rc = sceAgcDriverSubmitCommandBuffer(arm_queue, &desc);
         }
         obs_report_measure("166-agc/driver-add-eq-event", tag, "submit-rc",
                            (uint64_t)(uint32_t)sub_rc, "code");
