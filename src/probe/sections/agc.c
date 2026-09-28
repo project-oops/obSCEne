@@ -4300,14 +4300,18 @@ static obs_result check_agc_driver_add_eq_event(void) {
         return obs_skip("kernel equeue primitives not resolved");
     }
 
-    /* Create universal graphics queue (queue type 0) */
-    void *gpu_queue = NULL;
+    /* Validate initial universal graphics queue creation */
+    void *probe_queue = NULL;
     int rc_queue = -1;
     if (obs_address_is_callable((const void *)&sceAgcDriverCreateQueue)) {
-        rc_queue = sceAgcDriverCreateQueue(0u, &gpu_queue, 0u);
+        rc_queue = sceAgcDriverCreateQueue(0u, &probe_queue, 0u);
     }
     obs_report_measure("166-agc/driver-add-eq-event", "gpu-queue", "rc-create",
                        (uint64_t)(uint32_t)rc_queue, "code");
+    if (probe_queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sceAgcDriverDestroyQueue(probe_queue);
+        probe_queue = NULL;
+    }
 
     /* Negative control: AddEqEvent on invalid queue */
     int rc_bad = fn_add_eq((uint64_t)-1, 0, 0);
@@ -4319,131 +4323,221 @@ static obs_result check_agc_driver_add_eq_event(void) {
     obs_report_measure("166-agc/driver-add-eq-event", "sceAgcCbReleaseMem",
                        "resolved", (uint64_t)(fn_rel_mem != NULL), "bool");
 
-    /* Four arms per REQ-20260928T2045Z-2e11:
-     * (1) arm-control: no interrupt (a10 = 0), no AddEqEvent, no equeue wait.
-     * (2) arm-mode0: AddEqEvent(eq, 0, 0), interrupt select a10 = 2, wait 2s.
-     * (3) arm-mode1: AddEqEvent(eq, 1, 0), interrupt select a10 = 2, wait 2s.
-     * (4) arm-no-reg: no AddEqEvent, interrupt select a10 = 2, wait 2s.
+    /* Five arms per REQ-20260928T2142Z-b6fb:
+     * (0) arm0-proven-producer: exact producer DCB from gpu-wait-reg-mem64-sync arm1-cross-sub (shows submissions run).
+     * (1) arm1-title-dst0: one-NOP DCB ending in sceAgcCbReleaseMem with a3 = 0 (destination select 0: memory), a10 = 0.
+     * (2) arm2-title-dst1-gl2wb: title's packet with a3 = 1, but DCB also flushes and writes back GL2 after packet.
+     * (3a) arm3a-dst0-int2: arm 1 repeated with a10 = 2 after sceAgcDriverAddEqEvent(eq, 0, 0), waiting on equeue.
+     * (3b) arm3b-dst1-gl2wb-int2: arm 2 repeated with a10 = 2 after sceAgcDriverAddEqEvent(eq, 0, 0), waiting on equeue.
+     * Each arm runs with its own fresh queue and fence.
      */
+    typedef enum {
+        ARM_PROVEN_PRODUCER = 0,
+        ARM_TITLE_DST0,
+        ARM_TITLE_DST1_GL2WB,
+        ARM_TITLE_DST0_INT2,
+        ARM_TITLE_DST1_GL2WB_INT2
+    } arm_kind_t;
+
     static const struct {
         const char *tag;
-        int add_eq_mode; /* -2 for control, -1 for no AddEqEvent, 0 or 1 for mode */
+        arm_kind_t kind;
+        uint32_t a3_dst_sel;
         uint32_t a10_int_sel;
+        int gl2_wb;
+        int has_interrupt;
         uint64_t fence_val;
-    } arms[4] = {
-        {"arm-control", -2, 0u, 0x1111ULL},
-        {"arm-mode0",    0, 2u, 0x2222ULL},
-        {"arm-mode1",    1, 2u, 0x3333ULL},
-        {"arm-no-reg",  -1, 2u, 0x4444ULL},
+    } arms[5] = {
+        {"arm0-proven-producer", ARM_PROVEN_PRODUCER, 0u, 0u, 0, 0, 0xbeef0001ULL},
+        {"arm1-title-dst0", ARM_TITLE_DST0, 0u, 0u, 0, 0, 0x1111ULL},
+        {"arm2-title-dst1-gl2wb", ARM_TITLE_DST1_GL2WB, 1u, 0u, 1, 0, 0x2222ULL},
+        {"arm3a-dst0-int2", ARM_TITLE_DST0_INT2, 0u, 2u, 0, 1, 0x3333ULL},
+        {"arm3b-dst1-gl2wb-int2", ARM_TITLE_DST1_GL2WB_INT2, 1u, 2u, 1, 1, 0x4444ULL},
     };
 
-    int control_fence_ok = 0;
+    int arm0_fence_ok = 0;
 
-    for (int a = 0; a < 4; a++) {
+    for (int a = 0; a < 5; a++) {
         const char *tag = arms[a].tag;
-        int mode = arms[a].add_eq_mode;
+        arm_kind_t kind = arms[a].kind;
+        uint32_t a3 = arms[a].a3_dst_sel;
         uint32_t a10 = arms[a].a10_int_sel;
+        int gl2_wb = arms[a].gl2_wb;
+        int has_int = arms[a].has_interrupt;
         uint64_t fence_expected = arms[a].fence_val;
 
         volatile uint64_t *fence = NULL;
+        volatile uint64_t *scratch_label = NULL;
         uint32_t *dcb = NULL;
 #if !defined(OBSCENE_HOST_BUILD)
         fence = (volatile uint64_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+        scratch_label = (volatile uint64_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
         dcb = (uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
 #else
         static _Alignas(64) uint64_t s_host_eq_fence[16];
-        static _Alignas(64) uint32_t s_host_eq_dcb[64];
+        static _Alignas(64) uint64_t s_host_eq_label[16];
+        static _Alignas(64) uint32_t s_host_eq_dcb[256];
         fence = s_host_eq_fence;
+        scratch_label = s_host_eq_label;
         dcb = s_host_eq_dcb;
-        *fence = fence_expected;
 #endif
-        if (!fence || !dcb) {
+        if (!fence || !dcb || !scratch_label) {
             continue;
         }
 
         uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+        uint64_t label_gpu = (uint64_t)(uintptr_t)scratch_label;
         *fence = 0xdeadbeefdeadbeefULL;
+        *scratch_label = 0ULL;
 #if defined(OBSCENE_HOST_BUILD)
         *fence = fence_expected;
 #endif
 
+        /* Create this arm's dedicated graphics queue */
+        void *arm_queue = NULL;
+        int rc_q = -1;
+        if (obs_address_is_callable((const void *)&sceAgcDriverCreateQueue)) {
+            rc_q = sceAgcDriverCreateQueue(0u, &arm_queue, 0u);
+        }
+        obs_report_measure("166-agc/driver-add-eq-event", tag, "queue-rc",
+                           (uint64_t)(uint32_t)rc_q, "code");
+
         uint64_t eq = 0;
-        if (mode != -2) {
+        if (has_int) {
             int rc_cr = fn_create_eq(&eq, tag);
             obs_report_measure("166-agc/driver-add-eq-event", tag, "create-eq-rc",
                                (uint64_t)(uint32_t)rc_cr, "code");
-            if (mode >= 0) {
-                int rc_add = fn_add_eq(eq, mode, 0);
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "add-eq-rc",
-                                   (uint64_t)(uint32_t)rc_add, "code");
+            int rc_add = fn_add_eq(eq, 0, 0);
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "add-eq-rc",
+                               (uint64_t)(uint32_t)rc_add, "code");
+        }
+
+        uint32_t words_written = 0;
+
+        if (kind == ARM_PROVEN_PRODUCER) {
+            /* Exact producer DCB from gpu-wait-reg-mem64-sync arm1-cross-sub:
+             * Sub A: RELEASE_MEM c0064900 0030c528 20000000 <lo> <hi> 00000002 <value> 0
+             * Fence A: RELEASE_MEM c0064900 06603514 20000000 <lo> <hi> <value> 0 0
+             */
+            uint32_t *dw = dcb;
+            *dw++ = 0xc0064900u;
+            *dw++ = 0x0030c528u;
+            *dw++ = 0x20000000u;
+            *dw++ = (uint32_t)label_gpu;
+            *dw++ = (uint32_t)(label_gpu >> 32);
+            *dw++ = 0x00000002u;
+            *dw++ = 0x12345678u;
+            *dw++ = 0u;
+
+            uint32_t *fence_pkt = dw;
+            *dw++ = 0xc0064900u;
+            *dw++ = 0x06603514u;
+            *dw++ = 0x20000000u;
+            *dw++ = (uint32_t)fence_gpu;
+            *dw++ = (uint32_t)(fence_gpu >> 32);
+            *dw++ = (uint32_t)fence_expected;
+            *dw++ = 0u;
+            *dw++ = 0u;
+
+            for (int p = 0; p < 16; p++) {
+                *dw++ = 0xffff1000u;
             }
-        }
-
-        struct {
-            uint64_t count_prefix;
-            uint64_t begin;
-            uint64_t end;
-            uint64_t cur;
-            uint64_t end2;
-            void *overflow_cb;
-            void *overflow_ctx;
-            uint32_t reserved_dw;
-            uint32_t pad34;
-        } cb_handle;
-        __builtin_memset(&cb_handle, 0, sizeof(cb_handle));
-        cb_handle.begin = (uint64_t)(uintptr_t)dcb;
-        cb_handle.end = (uint64_t)(uintptr_t)(dcb + 512);
-        cb_handle.cur = cb_handle.begin;
-        cb_handle.end2 = cb_handle.end;
-
-        const void *fn_nop = agc_resolve_or_weak("sceAgcCbNop", (const void *)&sceAgcCbNop);
-        if (fn_nop != NULL) {
-            ((agc_cb_fn)fn_nop)(&cb_handle.begin, 1ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL);
+            words_written = (uint32_t)(dw - dcb);
+            obs_report_bytes("166-agc/driver-add-eq-event", tag, "packet-32b", 0,
+                             (const unsigned char *)fence_pkt, 32);
         } else {
-            dcb[0] = 0xffff1000u;
-            cb_handle.cur += 4;
-        }
+            struct {
+                uint64_t count_prefix;
+                uint64_t begin;
+                uint64_t end;
+                uint64_t cur;
+                uint64_t end2;
+                void *overflow_cb;
+                void *overflow_ctx;
+                uint32_t reserved_dw;
+                uint32_t pad34;
+            } cb_handle;
+            __builtin_memset(&cb_handle, 0, sizeof(cb_handle));
+            cb_handle.begin = (uint64_t)(uintptr_t)dcb;
+            cb_handle.end = (uint64_t)(uintptr_t)(dcb + 512);
+            cb_handle.cur = cb_handle.begin;
+            cb_handle.end2 = cb_handle.end;
 
-        uint32_t *pkt_ptr = (uint32_t *)(uintptr_t)cb_handle.cur;
+            const void *fn_nop = agc_resolve_or_weak("sceAgcCbNop", (const void *)&sceAgcCbNop);
+            if (fn_nop != NULL) {
+                ((agc_cb_fn)fn_nop)(&cb_handle.begin, 1ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL);
+            } else {
+                dcb[0] = 0xffff1000u;
+                cb_handle.cur += 4;
+            }
 
-        if (fn_rel_mem != NULL) {
-            ((agc_cb_fn)fn_rel_mem)(&cb_handle.begin,
-                                    0x04ULL,
-                                    0x200ULL,
-                                    1ULL,
-                                    3ULL,
-                                    fence_gpu,
-                                    2ULL,
-                                    fence_expected,
-                                    0ULL,
-                                    0ULL,
-                                    (uint64_t)a10,
-                                    0ULL);
-        }
-        if (cb_handle.cur == (uint64_t)(uintptr_t)pkt_ptr) {
-            pkt_ptr[0] = 0xc0064900u;
-            pkt_ptr[1] = 0x06200504u;
-            pkt_ptr[2] = 0x40010000u | ((uint32_t)(a10 & 7) << 24);
-            pkt_ptr[3] = (uint32_t)fence_gpu;
-            pkt_ptr[4] = (uint32_t)(fence_gpu >> 32);
-            pkt_ptr[5] = (uint32_t)fence_expected;
-            pkt_ptr[6] = (uint32_t)(fence_expected >> 32);
-            pkt_ptr[7] = 0u;
-            cb_handle.cur += 32;
-        }
+            uint32_t *pkt_ptr = (uint32_t *)(uintptr_t)cb_handle.cur;
 
-        /* Dump the packet's 32 bytes as built */
-        obs_report_bytes("166-agc/driver-add-eq-event", tag, "packet-32b", 0,
-                         (const unsigned char *)pkt_ptr, 32);
+            if (fn_rel_mem != NULL) {
+                ((agc_cb_fn)fn_rel_mem)(&cb_handle.begin,
+                                        0x04ULL,
+                                        0x200ULL,
+                                        (uint64_t)a3,
+                                        3ULL,
+                                        fence_gpu,
+                                        2ULL,
+                                        fence_expected,
+                                        0ULL,
+                                        0ULL,
+                                        (uint64_t)a10,
+                                        0ULL);
+            }
+            if (cb_handle.cur == (uint64_t)(uintptr_t)pkt_ptr) {
+                pkt_ptr[0] = 0xc0064900u;
+                pkt_ptr[1] = 0x06200504u;
+                pkt_ptr[2] = 0x40000000u | ((uint32_t)(a10 & 7) << 24) | ((uint32_t)(a3 & 3) << 16);
+                pkt_ptr[3] = (uint32_t)fence_gpu;
+                pkt_ptr[4] = (uint32_t)(fence_gpu >> 32);
+                pkt_ptr[5] = (uint32_t)fence_expected;
+                pkt_ptr[6] = (uint32_t)(fence_expected >> 32);
+                pkt_ptr[7] = 0u;
+                cb_handle.cur += 32;
+            }
 
-        uint32_t *dw = (uint32_t *)(uintptr_t)cb_handle.cur;
-        for (int p = 0; p < 16; p++) {
-            dw[p] = 0xffff1000u;
+            /* Dump the packet's 32 bytes as built */
+            obs_report_bytes("166-agc/driver-add-eq-event", tag, "packet-32b", 0,
+                             (const unsigned char *)pkt_ptr, 32);
+
+            uint32_t *dw = (uint32_t *)(uintptr_t)cb_handle.cur;
+            if (gl2_wb) {
+                /* Flush and write back GL2 after the packet per REQ-20260928T2142Z-b6fb arm (2):
+                 * 1) PACKET3_ACQUIRE_MEM with GCR_GL2_WB | GCR_GL2_INV | GCR_GLM_WB | GCR_GLM_INV | GCR_SEQ
+                 * 2) PACKET3_RELEASE_MEM with CACHE_FLUSH_AND_INV_TS and GCR_GL2_WB
+                 */
+                *dw++ = 0xc0065800u; /* PACKET3_ACQUIRE_MEM count 6 */
+                *dw++ = 0x02603000u; /* CP_COHER_CNTL: GCR_SEQ | GCR_GL2_WB | GCR_GL2_INV | GCR_GLM_WB | GCR_GLM_INV */
+                *dw++ = 0xffffffffu; /* CP_COHER_SIZE full range */
+                *dw++ = 0u;          /* CP_COHER_SIZE_HI */
+                *dw++ = 0u;          /* CP_COHER_BASE */
+                *dw++ = 0u;          /* CP_COHER_BASE_HI */
+                *dw++ = 0x0000000au; /* POLL_INTERVAL */
+
+                *dw++ = 0xc0064900u; /* PACKET3_RELEASE_MEM count 6 */
+                *dw++ = 0x06603514u; /* CACHE_FLUSH_AND_INV_TS with GCR_GL2_WB */
+                *dw++ = 0x20000000u; /* DATA_SEL 1: 32-bit int, DST_SEL 0: memory */
+                *dw++ = (uint32_t)label_gpu;
+                *dw++ = (uint32_t)(label_gpu >> 32);
+                *dw++ = 0x55aa55aau;
+                *dw++ = 0u;
+                *dw++ = 0u;
+            }
+
+            for (int p = 0; p < 16; p++) {
+                dw[p] = 0xffff1000u;
+            }
+            dw += 16;
+            words_written = (uint32_t)(dw - dcb);
         }
 
 #if defined(__x86_64__)
         __builtin_ia32_clflush((const void *)fence);
-        for (size_t cl_off = 0; cl_off < (size_t)((uintptr_t)(dw + 16) - (uintptr_t)dcb); cl_off += 64) {
+        __builtin_ia32_clflush((const void *)scratch_label);
+        for (size_t cl_off = 0; cl_off < (size_t)words_written * sizeof(uint32_t); cl_off += 64) {
             __builtin_ia32_clflush((const void *)((const char *)dcb + cl_off));
         }
         __builtin_ia32_mfence();
@@ -4451,11 +4545,11 @@ static obs_result check_agc_driver_add_eq_event(void) {
         obs_agc_dcb_desc desc;
         __builtin_memset(&desc, 0, sizeof(desc));
         desc.gpu_addr = (uint64_t)(uintptr_t)dcb;
-        desc.size = (uint32_t)(((uintptr_t)cb_handle.cur - (uintptr_t)dcb) / 4u);
+        desc.size = words_written;
 
         int sub_rc = -1;
-        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer) && gpu_queue) {
-            sub_rc = sceAgcDriverSubmitCommandBuffer(gpu_queue, &desc);
+        if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer) && arm_queue) {
+            sub_rc = sceAgcDriverSubmitCommandBuffer(arm_queue, &desc);
         } else {
             sub_rc = sceAgcDriverSubmitDcb(&desc);
         }
@@ -4470,10 +4564,18 @@ static obs_result check_agc_driver_add_eq_event(void) {
         for (int poll = 0; poll < 20000; poll++) {
 #if defined(__x86_64__)
             __builtin_ia32_clflush((const void *)fence);
+            __builtin_ia32_clflush((const void *)scratch_label);
 #endif
-            if (*fence == fence_expected) {
-                fence_ok = 1;
-                break;
+            if (kind == ARM_PROVEN_PRODUCER) {
+                if (((volatile uint32_t *)fence)[0] == (uint32_t)fence_expected) {
+                    fence_ok = 1;
+                    break;
+                }
+            } else {
+                if (*fence == fence_expected) {
+                    fence_ok = 1;
+                    break;
+                }
             }
             if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
                 sceKernelUsleep(100);
@@ -4486,14 +4588,20 @@ static obs_result check_agc_driver_add_eq_event(void) {
                            (uint64_t)*fence, "hex");
         obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-completed",
                            (uint64_t)fence_ok, "bool");
+        if (kind == ARM_PROVEN_PRODUCER) {
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "producer-fence-hit",
+                               (uint64_t)fence_ok, "bool");
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "label-val",
+                               (uint64_t)*scratch_label, "hex");
+            if (fence_ok) {
+                arm0_fence_ok = 1;
+            }
+        }
         obs_report_measure("166-agc/driver-add-eq-event", tag, "fence-elapsed-us",
                            t1 >= t0 ? (t1 - t0) : 0, "us");
-        if (a == 0 && fence_ok) {
-            control_fence_ok = 1;
-        }
 
-        /* Wait on equeue for 2 seconds (arms 2, 3, 4) */
-        if (mode != -2) {
+        /* Wait on equeue for 2 seconds (arms 3a, 3b) */
+        if (has_int) {
             uint8_t kevent_buf[64];
             __builtin_memset(kevent_buf, 0xcc, sizeof(kevent_buf));
             int out_events = 0;
@@ -4539,16 +4647,19 @@ static obs_result check_agc_driver_add_eq_event(void) {
             }
         }
 
+        if (arm_queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+            sceAgcDriverDestroyQueue(arm_queue);
+            arm_queue = NULL;
+        }
+
 #if !defined(OBSCENE_HOST_BUILD)
         oops_mem_free((void *)fence);
+        oops_mem_free((void *)scratch_label);
         oops_mem_free((void *)dcb);
 #endif
     }
 
-    if (gpu_queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
-        sceAgcDriverDestroyQueue(gpu_queue);
-    }
-    return control_fence_ok ? obs_pass() : obs_fail("arm-control fence did not complete");
+    return arm0_fence_ok ? obs_pass() : obs_fail("arm0 proven producer fence did not complete; submissions did not run");
 }
 
 static obs_result check_agc_driver_set_tf_ring(void) {
