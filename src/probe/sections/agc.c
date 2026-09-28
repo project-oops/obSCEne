@@ -991,14 +991,14 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_patch_exclusion_guard, OBS_FROM_ASSUMED},
     {"166-agc/driver-symbols", "libSceAgcDriver", "(symbols)", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_symbols, OBS_FROM_ASSUMED},
+    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
+     OBS_FROM_ASSUMED},
     {"166-agc/driver-create-queue", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_create_queue,
      OBS_FROM_ASSUMED},
     {"166-agc/driver-queue-types", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_queue_types,
-     OBS_FROM_ASSUMED},
-    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
      OBS_FROM_ASSUMED},
     {"166-agc/driver-submit-nop", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_nop,
@@ -4379,11 +4379,6 @@ static obs_result check_agc_driver_add_eq_event(void) {
             }
         }
 
-        dcb[0] = 0xffff1000u; /* NOP */
-        for (int i = 1; i < 64; i++) {
-            dcb[i] = 0;
-        }
-
         struct {
             uint64_t count_prefix;
             uint64_t begin;
@@ -4396,10 +4391,20 @@ static obs_result check_agc_driver_add_eq_event(void) {
             uint32_t pad34;
         } cb_handle;
         __builtin_memset(&cb_handle, 0, sizeof(cb_handle));
-        cb_handle.begin = (uint64_t)(uintptr_t)&dcb[1];
+        cb_handle.begin = (uint64_t)(uintptr_t)dcb;
         cb_handle.end = (uint64_t)(uintptr_t)(dcb + 512);
         cb_handle.cur = cb_handle.begin;
         cb_handle.end2 = cb_handle.end;
+
+        const void *fn_nop = agc_resolve_or_weak("sceAgcCbNop", (const void *)&sceAgcCbNop);
+        if (fn_nop != NULL) {
+            ((agc_cb_fn)fn_nop)(&cb_handle.begin, 1ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL);
+        } else {
+            dcb[0] = 0xffff1000u;
+            cb_handle.cur += 4;
+        }
+
+        uint32_t *pkt_ptr = (uint32_t *)(uintptr_t)cb_handle.cur;
 
         if (fn_rel_mem != NULL) {
             ((agc_cb_fn)fn_rel_mem)(&cb_handle.begin,
@@ -4415,31 +4420,30 @@ static obs_result check_agc_driver_add_eq_event(void) {
                                     (uint64_t)a10,
                                     0ULL);
         }
-        if (cb_handle.cur == cb_handle.begin) {
-            uint32_t *pkt = &dcb[1];
-            pkt[0] = 0xc0064900u;
-            pkt[1] = 0x06200504u;
-            pkt[2] = 0x40010000u | ((uint32_t)(a10 & 7) << 24);
-            pkt[3] = (uint32_t)fence_gpu;
-            pkt[4] = (uint32_t)(fence_gpu >> 32);
-            pkt[5] = (uint32_t)fence_expected;
-            pkt[6] = (uint32_t)(fence_expected >> 32);
-            pkt[7] = 0u;
+        if (cb_handle.cur == (uint64_t)(uintptr_t)pkt_ptr) {
+            pkt_ptr[0] = 0xc0064900u;
+            pkt_ptr[1] = 0x06200504u;
+            pkt_ptr[2] = 0x40010000u | ((uint32_t)(a10 & 7) << 24);
+            pkt_ptr[3] = (uint32_t)fence_gpu;
+            pkt_ptr[4] = (uint32_t)(fence_gpu >> 32);
+            pkt_ptr[5] = (uint32_t)fence_expected;
+            pkt_ptr[6] = (uint32_t)(fence_expected >> 32);
+            pkt_ptr[7] = 0u;
             cb_handle.cur += 32;
         }
 
         /* Dump the packet's 32 bytes as built */
         obs_report_bytes("166-agc/driver-add-eq-event", tag, "packet-32b", 0,
-                         (const unsigned char *)&dcb[1], 32);
+                         (const unsigned char *)pkt_ptr, 32);
 
         uint32_t *dw = (uint32_t *)(uintptr_t)cb_handle.cur;
         for (int p = 0; p < 16; p++) {
-            *dw++ = 0xffff1000u;
+            dw[p] = 0xffff1000u;
         }
 
 #if defined(__x86_64__)
         __builtin_ia32_clflush((const void *)fence);
-        for (size_t cl_off = 0; cl_off < (size_t)((uintptr_t)dw - (uintptr_t)dcb); cl_off += 64) {
+        for (size_t cl_off = 0; cl_off < (size_t)((uintptr_t)(dw + 16) - (uintptr_t)dcb); cl_off += 64) {
             __builtin_ia32_clflush((const void *)((const char *)dcb + cl_off));
         }
         __builtin_ia32_mfence();
@@ -4447,7 +4451,7 @@ static obs_result check_agc_driver_add_eq_event(void) {
         obs_agc_dcb_desc desc;
         __builtin_memset(&desc, 0, sizeof(desc));
         desc.gpu_addr = (uint64_t)(uintptr_t)dcb;
-        desc.size = (uint32_t)(dw - dcb);
+        desc.size = (uint32_t)(((uintptr_t)cb_handle.cur - (uintptr_t)dcb) / 4u);
 
         int sub_rc = -1;
         if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer) && gpu_queue) {
@@ -23909,15 +23913,15 @@ static const obs_check agc_checks[] = {
      check_agc_patch_cx_registers_indirect, OBS_FROM_ASSUMED},
     {"166-agc/driver-symbols", "libSceAgcDriver", "(symbols)", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_symbols, OBS_FROM_ASSUMED},
+    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
+     OBS_FROM_ASSUMED},
     {"166-agc/driver-create-queue", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverCreateQueue,
      check_agc_driver_create_queue, OBS_FROM_ASSUMED},
     {"166-agc/driver-queue-types", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverCreateQueue,
      check_agc_driver_queue_types, OBS_FROM_ASSUMED},
-    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
-     OBS_FROM_ASSUMED},
     {"166-agc/driver-submit-nop", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_driver_submit_nop, OBS_FROM_ASSUMED},
