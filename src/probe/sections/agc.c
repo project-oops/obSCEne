@@ -20103,30 +20103,88 @@ static const uint64_t agc_arg_sentinels_b[11] = {
     0xCA0CA0CA0CA0CA0CULL, 0xCBCBCBCBCBCBCBCBULL,
 };
 
+/* Distinct non-repeating markers across all argument slots (REQ-20260928T1936Z-ff23):
+ * a1 = 0x11, a2 = 0x22, a3 = 0x33, a4 = 0x44, a5 = 0x55,
+ * a6 = 0x11116666, a7 = 0x7777777777770007, a8 = 0x88880008, a9 = 0x99990009,
+ * a10 = 0xaaaa000a, a11 = 0xbbbb000b. */
+static const uint64_t agc_distinct_markers[11] = {
+    0x11ULL,
+    0x22ULL,
+    0x33ULL,
+    0x44ULL,
+    0x55ULL,
+    0x11116666ULL,
+    0x7777777777770007ULL,
+    0x88880008ULL,
+    0x99990009ULL,
+    0xaaaa000aULL,
+    0xbbbb000bULL,
+};
+
+/* PPSA03416 captured register arguments:
+ * For sceAgcCbReleaseMem: a1=0x2b, a2=0, a3=1, a4=3, a5=0, plus markers from a6 on.
+ * For sceAgcDcbDmaData: a1..a4=0, a5=2, plus markers from a6 on. */
+static const uint64_t agc_ppsa03416_release_mem[11] = {
+    0x2bULL,
+    0ULL,
+    1ULL,
+    3ULL,
+    0ULL,
+    0x11116666ULL,
+    0x7777777777770007ULL,
+    0x88880008ULL,
+    0x99990009ULL,
+    0xaaaa000aULL,
+    0xbbbb000bULL,
+};
+
+static const uint64_t agc_ppsa03416_dma_data[11] = {
+    0ULL,
+    0ULL,
+    0ULL,
+    0ULL,
+    2ULL,
+    0x11116666ULL,
+    0x7777777777770007ULL,
+    0x88880008ULL,
+    0x99990009ULL,
+    0xaaaa000aULL,
+    0xbbbb000bULL,
+};
+
+/* Target-word probe: pins whether the 'b0 bb ff ee' (0x00000007eeffbbb0) pattern
+ * observed in earlier zero-argument captures came from uninitialized stack memory
+ * in argument slot a7 (stack slot 1). */
+static const uint64_t agc_target_word_probe[11] = {
+    0ULL,
+    0ULL,
+    0ULL,
+    0ULL,
+    0ULL,
+    0ULL,
+    0x00000007eeffbbb0ULL,
+    0ULL,
+    0ULL,
+    0ULL,
+    0ULL,
+};
+
 /* Which body dwords come from arguments, and which are the library's own.
  *
- * # Why the existing captures cannot answer it
- *
- * Every command-builder check here calls with **all arguments zero**
- * (`agc_cb_run_two_pass` passes `0` in eleven slots). A body captured that way cannot
- * be read: a field the builder copied from an argument and a constant the library
- * supplies both show whatever the zero produced. `b0 bb ff ee` was recorded as
- * appearing in three of four measured bodies "from no argument the probe supplied" -
- * which is only a statement about a run in which every argument *was* zero. It cannot
- * distinguish a library constant from an argument-derived field, and that is the
- * distinction an emulator needs before it can emit one of these packets at all.
- *
- * # What this does instead
- *
- * The same builder across three distinct passes (REQ-20260915T1330Z-9e21):
+ * Runs across distinct passes (REQ-20260915T1330Z-9e21, REQ-20260928T1936Z-ff23):
  * 1. All arguments zero.
- * 2. Sentinel set A (0x1111..., 0x2222...).
- * 3. Sentinel set B (0xC1C1..., 0xC2C2...).
- * All three dumps are recorded. A dword tracking the sentinels names the slot it came
- * from; a field constant across all three is the library's own.
+ * 2. Distinct markers per slot (registers and stack alike).
+ * 3. Captured retail title register arguments (PPSA03416).
+ * 4. Target-word probe (testing whether 'b0 bb ff ee' moves with argument a7).
+ * 5. Sentinel set A (0x1111..., 0x2222...).
+ * 6. Sentinel set B (0xC1C1..., 0xC2C2...).
+ *
+ * All dumps are recorded. A dword tracking the sentinels/markers names the slot it came
+ * from; a field constant across all passes is the library's own.
  */
 static obs_result agc_arg_discriminate(const char *id, const char *symbol,
-                                       const void *fn) {
+                                       const void *fn,
+                                       const uint64_t *ppsa_args) {
     if (fn == NULL) {
         return obs_skip("libSceAgc is not loaded or the builder is absent");
     }
@@ -20139,93 +20197,100 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
         before[i] = OBS_AGC_POISON_BYTE;
     }
 
-    /* Pass 0: All zero arguments */
-    agc_cb_prepare(probe, 0);
-    uint64_t rc_zero = ((agc_cb_fn)fn)(&probe->begin, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    if (!agc_cb_guard_intact(probe)) {
-        return obs_fail("the builder wrote past its command buffer on the zero pass");
-    }
-    unsigned int extent_zero = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
-    uint64_t advance_zero = probe->cur - probe->begin;
-    obs_report_written(id, symbol, "zero-args", before, probe->cmdbuf,
-                       OBS_AGC_CMDBUF_SIZE);
-    obs_report_measure(id, symbol, "rc-zero", rc_zero, "rc");
-    obs_report_measure(id, symbol, "extent-zero", (uint64_t)extent_zero, "bytes");
-    obs_report_measure(id, symbol, "cursor-advance-zero", advance_zero, "bytes");
+    struct pass_desc {
+        const char *label;
+        const char *rc_name;
+        const char *ext_name;
+        const char *adv_name;
+        const char *fault_name;
+        const uint64_t *args;
+    };
 
-    /* Pass 1: Sentinel set A */
-    const uint64_t *sa = agc_arg_sentinels;
-    agc_cb_prepare(probe, 0);
-    obs_jmp_buf guard;
-    int sig = OBS_FAULT_ARM(&guard);
-    if (sig != 0) {
+    static const uint64_t zero_args[11] = {0};
+
+    const struct pass_desc passes[] = {
+        {"zero-args", "rc-zero", "extent-zero", "cursor-advance-zero",
+         "zero-fault", zero_args},
+        {"distinct-markers", "rc-distinct-markers", "extent-distinct-markers",
+         "cursor-advance-distinct-markers", "distinct-markers-fault",
+         agc_distinct_markers},
+        {"ppsa03416-args", "rc-ppsa03416", "extent-ppsa03416",
+         "cursor-advance-ppsa03416", "ppsa03416-fault", ppsa_args},
+        {"target-word-probe", "rc-target-word", "extent-target-word",
+         "cursor-advance-target-word", "target-word-fault",
+         agc_target_word_probe},
+        {"sentinel-args-a", "rc-sentinel-a", "extent-sentinel-a",
+         "cursor-advance-a", "sentinel-fault-a", agc_arg_sentinels},
+        {"sentinel-args-b", "rc-sentinel-b", "extent-sentinel-b",
+         "cursor-advance-b", "sentinel-fault-b", agc_arg_sentinels_b},
+    };
+
+    uint64_t extents[OBS_COUNT(passes)];
+    for (unsigned int i = 0; i < OBS_COUNT(passes); i++) {
+        extents[i] = 0;
+    }
+
+    for (unsigned int p = 0; p < OBS_COUNT(passes); p++) {
+        agc_cb_prepare(probe, 0);
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig != 0) {
+            obs_fault_unregister();
+            obs_report_measure(id, symbol, passes[p].fault_name, (uint64_t)sig,
+                               "signal");
+            return obs_partial_value(
+                "the builder dereferenced an argument", (uint64_t)sig);
+        }
+        const uint64_t *a = passes[p].args;
+        uint64_t rc =
+            ((agc_cb_fn)fn)(&probe->begin, a[0], a[1], a[2], a[3], a[4], a[5],
+                            a[6], a[7], a[8], a[9], a[10]);
         obs_fault_unregister();
-        obs_report_measure(id, symbol, "sentinel-fault-a", (uint64_t)sig, "signal");
-        return obs_partial_value(
-            "the builder dereferenced a sentinel argument (pass a)", (uint64_t)sig);
+        if (!agc_cb_guard_intact(probe)) {
+            return obs_fail("the builder wrote past its command buffer");
+        }
+        unsigned int extent = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
+        uint64_t advance = probe->cur - probe->begin;
+        obs_report_written(id, symbol, passes[p].label, before, probe->cmdbuf,
+                           OBS_AGC_CMDBUF_SIZE);
+        obs_report_measure(id, symbol, passes[p].rc_name, rc, "rc");
+        obs_report_measure(id, symbol, passes[p].ext_name, (uint64_t)extent,
+                           "bytes");
+        obs_report_measure(id, symbol, passes[p].adv_name, advance, "bytes");
+        extents[p] = (uint64_t)extent;
     }
-    uint64_t rc_senta =
-        ((agc_cb_fn)fn)(&probe->begin, sa[0], sa[1], sa[2], sa[3], sa[4], sa[5], sa[6],
-                        sa[7], sa[8], sa[9], sa[10]);
-    obs_fault_unregister();
-    if (!agc_cb_guard_intact(probe)) {
-        return obs_fail("the builder wrote past its command buffer on sentinel pass a");
-    }
-    unsigned int extent_senta = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
-    uint64_t advance_senta = probe->cur - probe->begin;
-    obs_report_written(id, symbol, "sentinel-args-a", before, probe->cmdbuf,
-                       OBS_AGC_CMDBUF_SIZE);
-    obs_report_measure(id, symbol, "rc-sentinel-a", rc_senta, "rc");
-    obs_report_measure(id, symbol, "extent-sentinel-a", (uint64_t)extent_senta,
-                       "bytes");
-    obs_report_measure(id, symbol, "cursor-advance-a", advance_senta, "bytes");
 
-    /* Pass 2: Sentinel set B */
-    const uint64_t *sb = agc_arg_sentinels_b;
-    agc_cb_prepare(probe, 0);
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig != 0) {
-        obs_fault_unregister();
-        obs_report_measure(id, symbol, "sentinel-fault-b", (uint64_t)sig, "signal");
-        return obs_partial_value(
-            "the builder dereferenced a sentinel argument (pass b)", (uint64_t)sig);
+    int all_zero = 1;
+    for (unsigned int p = 0; p < OBS_COUNT(passes); p++) {
+        if (extents[p] != 0) {
+            all_zero = 0;
+            break;
+        }
     }
-    uint64_t rc_sentb =
-        ((agc_cb_fn)fn)(&probe->begin, sb[0], sb[1], sb[2], sb[3], sb[4], sb[5], sb[6],
-                        sb[7], sb[8], sb[9], sb[10]);
-    obs_fault_unregister();
-    if (!agc_cb_guard_intact(probe)) {
-        return obs_fail("the builder wrote past its command buffer on sentinel pass b");
+    if (all_zero) {
+        return obs_partial_value("the builder wrote nothing on any pass", 0);
     }
-    unsigned int extent_sentb = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
-    uint64_t advance_sentb = probe->cur - probe->begin;
-    obs_report_written(id, symbol, "sentinel-args-b", before, probe->cmdbuf,
-                       OBS_AGC_CMDBUF_SIZE);
-    obs_report_measure(id, symbol, "rc-sentinel-b", rc_sentb, "rc");
-    obs_report_measure(id, symbol, "extent-sentinel-b", (uint64_t)extent_sentb,
-                       "bytes");
-    obs_report_measure(id, symbol, "cursor-advance-b", advance_sentb, "bytes");
-
-    if (extent_zero == 0 && extent_senta == 0 && extent_sentb == 0) {
-        return obs_partial_value("the builder wrote nothing on any pass", rc_zero);
+    for (unsigned int p = 1; p < OBS_COUNT(passes); p++) {
+        if (extents[p] != extents[0]) {
+            return obs_fail_code(
+                "the packet length depends on the argument values", extents[p]);
+        }
     }
-    if (extent_zero != extent_senta || extent_senta != extent_sentb) {
-        return obs_fail_code("the packet length depends on the argument values",
-                             (uint64_t)extent_senta);
-    }
-    return obs_pass_value((uint64_t)extent_senta);
+    return obs_pass_value(extents[0]);
 }
 
 static obs_result check_agc_dcb_dma_data_args(void) {
     return agc_arg_discriminate(
         "166-agc/dcb-dma-data-args", "sceAgcDcbDmaData",
-        agc_resolve_or_weak("sceAgcDcbDmaData", (const void *)&sceAgcDcbDmaData));
+        agc_resolve_or_weak("sceAgcDcbDmaData", (const void *)&sceAgcDcbDmaData),
+        agc_ppsa03416_dma_data);
 }
 
 static obs_result check_agc_cb_release_mem_args(void) {
     return agc_arg_discriminate(
         "166-agc/cb-release-mem-args", "sceAgcCbReleaseMem",
-        agc_resolve_or_weak("sceAgcCbReleaseMem", (const void *)&sceAgcCbReleaseMem));
+        agc_resolve_or_weak("sceAgcCbReleaseMem", (const void *)&sceAgcCbReleaseMem),
+        agc_ppsa03416_release_mem);
 }
 
 /* `sceAgcCbNop` sweeps count = 0, 1, 2.
