@@ -42,7 +42,12 @@ produced through SELFish, so a wrong magic or a stale tag cannot be introduced h
 
 ### Windows
 
-Git Bash usually has neither `clang` nor `lld`. `oops` detects that and re-enters through WSL:
+Build runners follow [CONVENTIONS.md section 8](https://github.com/project-oops/OOPS/blob/main/docs/CONVENTIONS.md#8-toolchain):
+1. **A local clang 21 on `PATH`** (portable unpacked toolchain; fastest).
+2. **`silkeh/clang:21` container** (authoritative version definition).
+3. **WSL last**, as a documented fallback when neither local clang 21 nor containers are available.
+
+When Git Bash has neither a local `clang` nor `lld` on `PATH`, `oops` detects that and can fall back through WSL:
 
 ```bash
 ./bin/oops check obscene        # from the collection root, on Windows
@@ -112,9 +117,10 @@ happened. The scripts under `scripts/` implement them and are not run directly.
 The report is captured from the **system log**, never pulled off disk: a packaged run's report
 file is sealed `0600` inside the title's sandbox where `ftpsrv` cannot read it.
 
-Every C target builds under WSL. `hw install` runs from Windows: under WSL2's default NAT the
-tool binds an address the machine cannot reach, and the install reports `fetched 0 time(s)`.
-The verbs handle the split; the repository `CLAUDE.md` explains it.
+Under the WSL fallback, C targets build under WSL while `hw install` runs from Windows: under
+WSL2's default NAT the tool binds an address the machine cannot reach, and the install reports
+`fetched 0 time(s)`. With a local Windows toolchain on `PATH`, the entire workflow runs locally
+without this split. The verbs handle the split; the repository `CLAUDE.md` explains it.
 
 ## Make targets
 
@@ -201,6 +207,6 @@ Every job reaches the build through `bin/obscene`, so CI and a person run the sa
 ./bin/oops check obscene        # also: build, test, pkg
 ```
 
-That relays to this script, and it is the recommended way in on Windows because of the WSL
-handling above. [The collection's BUILDING.md](https://github.com/project-oops/OOPS/blob/main/docs/BUILDING.md)
+That relays to this script, falling back to WSL when no local toolchain is on `PATH`.
+[The collection's BUILDING.md](https://github.com/project-oops/OOPS/blob/main/docs/BUILDING.md)
 covers `bootstrap`, `gates`, `all` and the rest.

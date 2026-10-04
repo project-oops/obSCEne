@@ -86,6 +86,7 @@ static const obs_import obs_platform_imports[] = {
     {"libkernel", "connect"},
     {"libkernel", "listen"},
     {"libkernel", "recv"},
+    {"libkernel", "sceKernelConvertUtcToLocaltime"},
     {"libSceLibcInternal", "strlen"},
     {"libSceLibcInternal", "strcmp"},
     {"libSceLibcInternal", "strncmp"},

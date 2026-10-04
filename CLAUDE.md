@@ -58,9 +58,12 @@ to pass.
 
 ## Building
 
-C builds run in the WSL2 `Ubuntu` distribution; multipass is not used. Building natively on
-Windows is not supported: `module` needs `$(BUILD)/symbols.txt`, produced by running the POSIX
-host build.
+Build runners follow CONVENTIONS section 8:
+1. **A local clang 21 on `PATH`** - portable unpacked toolchain (fastest). Building natively avoids cross-boundary filesystem latency and removes runner splits.
+2. **`silkeh/clang:21` container** - authoritative definition of the pinned version.
+3. **WSL fallback** - last resort when neither local clang 21 nor container is available.
+
+When using the WSL fallback:
 
 ```bash
 # Full gate from Git Bash, through WSL.
@@ -90,8 +93,7 @@ rustup component add clippy rustfmt
 ## Hardware round-trip
 
 Reach the round-trip through the `./bin/obscene` verbs, never by running the underlying
-scripts. Each verb runs its halves on the right side (WSL to build, Windows to install).
-`./bin/obscene help` lists the verbs; `scripts/README.md` maps each to its script. (D269)
+scripts. `./bin/obscene help` lists the verbs; `scripts/README.md` maps each to its script. (D269)
 
 ```bash
 # Build, install, launch and capture the report; flags: --gen --seconds --name --build-only --deploy-only --no-cache --jobs
@@ -108,15 +110,15 @@ title's sandbox.
 
 | `hw` subcommand | Runs on | Reason |
 |---|---|---|
-| every C target (`host`, `module`, `payload`, `eboot`, `pkg`) | WSL | the host build is POSIX |
+| every C target (`host`, `module`, `payload`, `eboot`, `pkg`) | local clang 21 / container (or WSL fallback) | local/container is fastest; WSL fallback builds host under POSIX |
 | `hw check`, `send`, `logs`, `sh`, `ls`, `pull`, `report` | either | these connect out to the hardware |
-| `hw install` | Windows | the hardware connects in to fetch the package, and WSL2's NAT address is unreachable from it |
+| `hw install` | Windows / local | the hardware connects in to fetch the package; under WSL2 NAT, run from Windows |
 
 `hw install` output of `fetched 0 time(s)` means the hardware never reached the server; the
 package is not implicated.
 
 ```powershell
-# hw install from Windows; the package itself is built in WSL.
+# hw install from Windows (when using WSL fallback for package build)
 cd <OOPS>\obscene\tool
 $env:CARGO_TARGET_DIR = "<OOPS>\obscene\tool\target-win"
 cargo build --bin obscene-tool

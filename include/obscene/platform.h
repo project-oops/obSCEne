@@ -87,6 +87,8 @@ OBS_WEAK uint64_t sceKernelGetTscFrequency(void);
  * Signatures from the OpenOrbis toolchain headers (libkernel.h), which is published
  * interface documentation. Four independent emulators implement both. */
 OBS_WEAK uint64_t sceKernelReadTsc(void);
+OBS_WEAK int sceKernelConvertUtcToLocaltime(int64_t utc, int64_t *local, int *timesec,
+                                            int *dst);
 
 /* ---- calls that fill a buffer, for 130-layout --------------------------------
  *
