@@ -4143,11 +4143,21 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name,
 
     const void *addr = NULL;
 
-    /* 1. Try name via obs_module_symbol */
+    /* 1. Try via obs_module_symbol */
     if (handle >= 0) {
         addr = obs_module_symbol(handle, name);
         if (addr && obs_address_is_callable(addr)) {
             *out_path = "name";
+            return addr;
+        }
+        addr = obs_module_symbol(handle, nid_dollar);
+        if (addr && obs_address_is_callable(addr)) {
+            *out_path = "nid";
+            return addr;
+        }
+        addr = obs_module_symbol(handle, nid);
+        if (addr && obs_address_is_callable(addr)) {
+            *out_path = "nid";
             return addr;
         }
     }
@@ -4156,23 +4166,14 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name,
         *out_path = "name";
         return addr;
     }
-    addr = obs_module_symbol(OBS_HANDLE_SELF, name);
-    if (addr && obs_address_is_callable(addr)) {
-        *out_path = "name";
-        return addr;
-    }
-
-    /* 2. Try NID via obs_module_symbol */
-    if (handle >= 0) {
-        addr = obs_module_symbol(handle, nid_dollar);
-        if (addr && obs_address_is_callable(addr)) {
-            *out_path = "nid";
-            return addr;
-        }
-    }
     addr = obs_module_symbol(1, nid_dollar);
     if (addr && obs_address_is_callable(addr)) {
         *out_path = "nid";
+        return addr;
+    }
+    addr = obs_module_symbol(OBS_HANDLE_SELF, name);
+    if (addr && obs_address_is_callable(addr)) {
+        *out_path = "name";
         return addr;
     }
     addr = obs_module_symbol(OBS_HANDLE_SELF, nid_dollar);
@@ -4181,41 +4182,50 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name,
         return addr;
     }
 
-    /* 3. Try dlsym-name */
+    /* 2. Try dlsym on handle, 0x2001, 1, 2, SELF */
     if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
-        void *a = NULL;
-        if (handle >= 0 && sceKernelDlsym(handle, name, &a) == 0 &&
-            obs_address_is_callable(a)) {
-            *out_path = "dlsym-name";
-            return a;
+        const int search_handles[] = {handle, 0x2001, 1, 2, OBS_HANDLE_SELF};
+        for (size_t h = 0; h < sizeof(search_handles) / sizeof(search_handles[0]); h++) {
+            int sh = search_handles[h];
+            if (sh < 0) continue;
+            void *a = NULL;
+            if (sceKernelDlsym(sh, name, &a) == 0 && obs_address_is_callable(a)) {
+                *out_path = "dlsym-name";
+                return a;
+            }
+            if (sceKernelDlsym(sh, nid_dollar, &a) == 0 && obs_address_is_callable(a)) {
+                *out_path = "dlsym-nid";
+                return a;
+            }
+            if (sceKernelDlsym(sh, nid, &a) == 0 && obs_address_is_callable(a)) {
+                *out_path = "dlsym-nid";
+                return a;
+            }
         }
-        if (sceKernelDlsym(1, name, &a) == 0 && obs_address_is_callable(a)) {
-            *out_path = "dlsym-name";
-            return a;
-        }
-        if (sceKernelDlsym(OBS_HANDLE_SELF, name, &a) == 0 &&
-            obs_address_is_callable(a)) {
-            *out_path = "dlsym-name";
-            return a;
-        }
-    }
 
-    /* 4. Try dlsym-nid */
-    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
-        void *a = NULL;
-        if (handle >= 0 && sceKernelDlsym(handle, nid, &a) == 0 &&
-            obs_address_is_callable(a)) {
-            *out_path = "dlsym-nid";
-            return a;
-        }
-        if (sceKernelDlsym(1, nid, &a) == 0 && obs_address_is_callable(a)) {
-            *out_path = "dlsym-nid";
-            return a;
-        }
-        if (sceKernelDlsym(OBS_HANDLE_SELF, nid, &a) == 0 &&
-            obs_address_is_callable(a)) {
-            *out_path = "dlsym-nid";
-            return a;
+        /* 3. Try all loaded modules from GetModuleList */
+        if (obs_address_is_callable((const void *)&sceKernelGetModuleList)) {
+            int mod_list[128];
+            size_t count = 0;
+            if (sceKernelGetModuleList(mod_list, 128, &count) == 0) {
+                for (size_t m = 0; m < count && m < 128; m++) {
+                    int mid = mod_list[m];
+                    if (mid <= 0) continue;
+                    void *a = NULL;
+                    if (sceKernelDlsym(mid, name, &a) == 0 && obs_address_is_callable(a)) {
+                        *out_path = "dlsym-mod-name";
+                        return a;
+                    }
+                    if (sceKernelDlsym(mid, nid_dollar, &a) == 0 && obs_address_is_callable(a)) {
+                        *out_path = "dlsym-mod-nid";
+                        return a;
+                    }
+                    if (sceKernelDlsym(mid, nid, &a) == 0 && obs_address_is_callable(a)) {
+                        *out_path = "dlsym-mod-nid";
+                        return a;
+                    }
+                }
+            }
         }
     }
 
@@ -4261,7 +4271,7 @@ static obs_result check_agc_driver_add_eq_event(void) {
     const char *path_ctx = "none";
 
     fn_add_eq = (int (*)(uint64_t, int, int))obs_resolve_agc_eq_fn(
-        handle, "sceAgcDriverAddEqEvent", "wXb+YIbJasM", &path_add);
+        handle, "sceAgcDriverAddEqEvent", NULL, &path_add);
     fn_del_eq = (int (*)(uint64_t, int))obs_resolve_agc_eq_fn(
         handle, "sceAgcDriverDeleteEqEvent", NULL, &path_del);
     fn_get_type = (int (*)(const void *))obs_resolve_agc_eq_fn(
