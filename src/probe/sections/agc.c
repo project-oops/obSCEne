@@ -98,13 +98,16 @@ static inline int obs_call_statfs(const char *path, void *buf) {
     if (k_mod >= 0) {
         fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "_statfs");
         if (!fn_statfs) {
-            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "statfs");
+            fn_statfs =
+                (int (*)(const char *, void *))obs_module_symbol(k_mod, "statfs");
         }
         if (!fn_statfs) {
-            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "$9e0667416c94bc62");
+            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(
+                k_mod, "$9e0667416c94bc62");
         }
         if (!fn_statfs) {
-            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "__sys_statfs");
+            fn_statfs =
+                (int (*)(const char *, void *))obs_module_symbol(k_mod, "__sys_statfs");
         }
     }
     if (!fn_statfs && obs_address_is_callable((const void *)&statfs)) {
@@ -117,11 +120,13 @@ static inline int obs_call_statfs(const char *path, void *buf) {
         }
     }
 
-    long sc = obs_invoke_syscall(555 /* SYS_nstatfs */, (long)path, (long)buf, 0, 0, 0, 0);
+    long sc =
+        obs_invoke_syscall(555 /* SYS_nstatfs */, (long)path, (long)buf, 0, 0, 0, 0);
     if (sc == 0) {
         return 0;
     }
-    return (int)obs_invoke_syscall(396 /* SYS_statfs */, (long)path, (long)buf, 0, 0, 0, 0);
+    return (int)obs_invoke_syscall(396 /* SYS_statfs */, (long)path, (long)buf, 0, 0, 0,
+                                   0);
 }
 
 /* REQ-20260927T1300Z-r1c0: The AMPR/APR file-read path */
@@ -135,11 +140,9 @@ static obs_result check_ampr_apr_file_read(void) {
     if (h_kernel < 0)
         h_kernel = 0x2001;
 
-    const void *fn_cmd_ctor =
-        (const void *)&sceAmprCommandBufferConstructor_static;
+    const void *fn_cmd_ctor = (const void *)&sceAmprCommandBufferConstructor_static;
     if (!obs_address_is_callable(fn_cmd_ctor) && h_ampr >= 0)
-        fn_cmd_ctor =
-            obs_module_symbol(h_ampr, "sceAmprCommandBufferConstructor");
+        fn_cmd_ctor = obs_module_symbol(h_ampr, "sceAmprCommandBufferConstructor");
 
     const void *fn_apr_cmd_ctor =
         (const void *)&sceAmprAprCommandBufferConstructor_static;
@@ -147,11 +150,9 @@ static obs_result check_ampr_apr_file_read(void) {
         fn_apr_cmd_ctor =
             obs_module_symbol(h_ampr, "sceAmprAprCommandBufferConstructor");
 
-    const void *fn_read_file =
-        (const void *)&sceAmprAprCommandBufferReadFile_static;
+    const void *fn_read_file = (const void *)&sceAmprAprCommandBufferReadFile_static;
     if (!obs_address_is_callable(fn_read_file) && h_ampr >= 0)
-        fn_read_file =
-            obs_module_symbol(h_ampr, "sceAmprAprCommandBufferReadFile");
+        fn_read_file = obs_module_symbol(h_ampr, "sceAmprAprCommandBufferReadFile");
 
     const void *fn_reset = (const void *)&sceAmprCommandBufferReset_static;
     if (!obs_address_is_callable(fn_reset) && h_ampr >= 0)
@@ -166,64 +167,60 @@ static obs_result check_ampr_apr_file_read(void) {
     const void *fn_apr_submit =
         (const void *)&sceKernelAprSubmitCommandBufferAndGetResult_static;
     if (!obs_address_is_callable(fn_apr_submit) && h_kernel >= 0)
-        fn_apr_submit = obs_module_symbol(
-            h_kernel, "sceKernelAprSubmitCommandBufferAndGetResult");
+        fn_apr_submit =
+            obs_module_symbol(h_kernel, "sceKernelAprSubmitCommandBufferAndGetResult");
 
-    const void *fn_apr_wait =
-        (const void *)&sceKernelAprWaitCommandBuffer_static;
+    const void *fn_apr_wait = (const void *)&sceKernelAprWaitCommandBuffer_static;
     if (!obs_address_is_callable(fn_apr_wait) && h_kernel >= 0)
-        fn_apr_wait =
-            obs_module_symbol(h_kernel, "sceKernelAprWaitCommandBuffer");
+        fn_apr_wait = obs_module_symbol(h_kernel, "sceKernelAprWaitCommandBuffer");
 
     const void *fn_apr_stat = (const void *)&sceKernelAprGetFileStat_static;
     if (!obs_address_is_callable(fn_apr_stat) && h_kernel >= 0)
         fn_apr_stat = obs_module_symbol(h_kernel, "sceKernelAprGetFileStat");
 
-    const void *fn_apr_prefix = (const void *)
-        &sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes_static;
+    const void *fn_apr_prefix =
+        (const void *)&sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes_static;
     if (!obs_address_is_callable(fn_apr_prefix) && h_kernel >= 0)
         fn_apr_prefix = obs_module_symbol(
             h_kernel, "sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes");
 
-    obs_report_measure(check_name, "resolve", "ampr-cmd-ctor",
-                       (uint64_t)(fn_cmd_ctor != NULL &&
-                                  obs_address_is_callable(fn_cmd_ctor)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "ampr-apr-cmd-ctor",
-                       (uint64_t)(fn_apr_cmd_ctor != NULL &&
-                                  obs_address_is_callable(fn_apr_cmd_ctor)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "ampr-read-file",
-                       (uint64_t)(fn_read_file != NULL &&
-                                  obs_address_is_callable(fn_read_file)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "ampr-reset",
-                       (uint64_t)(fn_reset != NULL &&
-                                  obs_address_is_callable(fn_reset)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "apr-resolve",
-                       (uint64_t)(fn_apr_resolve != NULL &&
-                                  obs_address_is_callable(fn_apr_resolve)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "apr-submit",
-                       (uint64_t)(fn_apr_submit != NULL &&
-                                  obs_address_is_callable(fn_apr_submit)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "apr-wait",
-                       (uint64_t)(fn_apr_wait != NULL &&
-                                  obs_address_is_callable(fn_apr_wait)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "apr-stat",
-                       (uint64_t)(fn_apr_stat != NULL &&
-                                  obs_address_is_callable(fn_apr_stat)),
-                       "bool");
-    obs_report_measure(check_name, "resolve", "apr-prefix",
-                       (uint64_t)(fn_apr_prefix != NULL &&
-                                  obs_address_is_callable(fn_apr_prefix)),
-                       "bool");
+    obs_report_measure(
+        check_name, "resolve", "ampr-cmd-ctor",
+        (uint64_t)(fn_cmd_ctor != NULL && obs_address_is_callable(fn_cmd_ctor)),
+        "bool");
+    obs_report_measure(
+        check_name, "resolve", "ampr-apr-cmd-ctor",
+        (uint64_t)(fn_apr_cmd_ctor != NULL && obs_address_is_callable(fn_apr_cmd_ctor)),
+        "bool");
+    obs_report_measure(
+        check_name, "resolve", "ampr-read-file",
+        (uint64_t)(fn_read_file != NULL && obs_address_is_callable(fn_read_file)),
+        "bool");
+    obs_report_measure(
+        check_name, "resolve", "ampr-reset",
+        (uint64_t)(fn_reset != NULL && obs_address_is_callable(fn_reset)), "bool");
+    obs_report_measure(
+        check_name, "resolve", "apr-resolve",
+        (uint64_t)(fn_apr_resolve != NULL && obs_address_is_callable(fn_apr_resolve)),
+        "bool");
+    obs_report_measure(
+        check_name, "resolve", "apr-submit",
+        (uint64_t)(fn_apr_submit != NULL && obs_address_is_callable(fn_apr_submit)),
+        "bool");
+    obs_report_measure(
+        check_name, "resolve", "apr-wait",
+        (uint64_t)(fn_apr_wait != NULL && obs_address_is_callable(fn_apr_wait)),
+        "bool");
+    obs_report_measure(
+        check_name, "resolve", "apr-stat",
+        (uint64_t)(fn_apr_stat != NULL && obs_address_is_callable(fn_apr_stat)),
+        "bool");
+    obs_report_measure(
+        check_name, "resolve", "apr-prefix",
+        (uint64_t)(fn_apr_prefix != NULL && obs_address_is_callable(fn_apr_prefix)),
+        "bool");
 
-    obs_report_measure(check_name, "context", "title-loaded-and-entered", 1u,
-                       "bool");
+    obs_report_measure(check_name, "context", "title-loaded-and-entered", 1u, "bool");
 
     obs_jmp_buf guard;
 
@@ -231,18 +228,24 @@ static obs_result check_ampr_apr_file_read(void) {
     uint8_t app0_stat[512];
     memset(app0_stat, 0, sizeof(app0_stat));
     int s_rc = obs_call_statfs("/app0", app0_stat);
-    obs_report_measure(check_name, "app0-statfs", "rc", (uint64_t)(uint32_t)s_rc, "code");
+    obs_report_measure(check_name, "app0-statfs", "rc", (uint64_t)(uint32_t)s_rc,
+                       "code");
     if (s_rc == 0) {
         uint64_t flags = *(const uint64_t *)(const void *)(app0_stat + 8);
         obs_report_measure(check_name, "app0-statfs", "flags", flags, "flags");
         obs_report_measure(check_name, "app0-statfs", "is-pfs",
                            (uint64_t)(memcmp(app0_stat + 280, "pfs", 3) == 0), "bool");
-        obs_report_bytes(check_name, "app0-statfs", "f_fstypename", 0, (const uint8_t *)(app0_stat + 280), 16);
-        obs_report_bytes(check_name, "app0-statfs", "f_mntfromname", 0, (const uint8_t *)(app0_stat + 296), 88);
-        obs_report_bytes(check_name, "app0-statfs", "f_mntonname", 0, (const uint8_t *)(app0_stat + 384), 88);
+        obs_report_bytes(check_name, "app0-statfs", "f_fstypename", 0,
+                         (const uint8_t *)(app0_stat + 280), 16);
+        obs_report_bytes(check_name, "app0-statfs", "f_mntfromname", 0,
+                         (const uint8_t *)(app0_stat + 296), 88);
+        obs_report_bytes(check_name, "app0-statfs", "f_mntonname", 0,
+                         (const uint8_t *)(app0_stat + 384), 88);
     }
-    int eboot_fd = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/app0/eboot.bin", 0, 0, 0, 0, 0);
-    obs_report_measure(check_name, "app0-eboot", "open-rc", (uint64_t)(uint32_t)eboot_fd, "code");
+    int eboot_fd = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/app0/eboot.bin", 0,
+                                           0, 0, 0, 0);
+    obs_report_measure(check_name, "app0-eboot", "open-rc",
+                       (uint64_t)(uint32_t)eboot_fd, "code");
     if (eboot_fd >= 0) {
         obs_invoke_syscall(6 /* SYS_close */, (long)eboot_fd, 0, 0, 0, 0, 0);
     }
@@ -267,8 +270,8 @@ static obs_result check_ampr_apr_file_read(void) {
     }
     obs_report_measure(check_name, "resolve-count-1", "rc",
                        (uint64_t)(uint32_t)rc_res_c1, "code");
-    obs_report_measure(check_name, "resolve-count-1", "id0",
-                       (uint64_t)out_ids_c1[0], "id");
+    obs_report_measure(check_name, "resolve-count-1", "id0", (uint64_t)out_ids_c1[0],
+                       "id");
     obs_report_measure(check_name, "resolve-count-1", "size0", out_sizes_c1[0],
                        "bytes");
     obs_report_measure(check_name, "resolve-count-1", "status0",
@@ -293,14 +296,14 @@ static obs_result check_ampr_apr_file_read(void) {
     }
     obs_report_measure(check_name, "resolve-count-2", "rc",
                        (uint64_t)(uint32_t)rc_res_c2, "code");
-    obs_report_measure(check_name, "resolve-count-2", "id0",
-                       (uint64_t)out_ids_c2[0], "id");
+    obs_report_measure(check_name, "resolve-count-2", "id0", (uint64_t)out_ids_c2[0],
+                       "id");
     obs_report_measure(check_name, "resolve-count-2", "size0", out_sizes_c2[0],
                        "bytes");
     obs_report_measure(check_name, "resolve-count-2", "status0",
                        (uint64_t)(uint32_t)out_status_c2[0], "code");
-    obs_report_measure(check_name, "resolve-count-2", "id1",
-                       (uint64_t)out_ids_c2[1], "id");
+    obs_report_measure(check_name, "resolve-count-2", "id1", (uint64_t)out_ids_c2[1],
+                       "id");
     obs_report_measure(check_name, "resolve-count-2", "size1", out_sizes_c2[1],
                        "bytes");
     obs_report_measure(check_name, "resolve-count-2", "status1",
@@ -335,11 +338,10 @@ static obs_result check_ampr_apr_file_read(void) {
             obs_fault_unregister();
         }
     }
-    obs_report_measure(check_name, "apr-cb-ctor", "rc",
-                       (uint64_t)(uint32_t)rc_ctor, "code");
+    obs_report_measure(check_name, "apr-cb-ctor", "rc", (uint64_t)(uint32_t)rc_ctor,
+                       "code");
     obs_report_bytes(check_name, "apr-cb-ctor", "cb-obj-0-64", 0, cb_obj, 64);
-    obs_report_bytes(check_name, "apr-cb-ctor", "cb-obj-64-128", 64,
-                     cb_obj + 64, 64);
+    obs_report_bytes(check_name, "apr-cb-ctor", "cb-obj-64-128", 64, cb_obj + 64, 64);
     obs_report_bytes(check_name, "apr-cb-ctor", "cb-buf-0-64", 0, cb_buf, 64);
 
     /* (3) sceAmprAprCommandBufferReadFile(cb, id, dest, size, offset) */
@@ -353,9 +355,9 @@ static obs_result check_ampr_apr_file_read(void) {
     if (fn_read_file && obs_address_is_callable(fn_read_file)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_read = ((int (*)(void *, uint32_t, void *, uint64_t,
-                                uint64_t))fn_read_file)(cb_obj, file_id,
-                                                        read_dest, read_size, 0);
+            rc_read =
+                ((int (*)(void *, uint32_t, void *, uint64_t, uint64_t))fn_read_file)(
+                    cb_obj, file_id, read_dest, read_size, 0);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -363,8 +365,7 @@ static obs_result check_ampr_apr_file_read(void) {
     }
     obs_report_measure(check_name, "apr-cb-read-file", "rc",
                        (uint64_t)(uint32_t)rc_read, "code");
-    obs_report_bytes(check_name, "apr-cb-read-file", "cb-buf-after", 0, cb_buf,
-                     64);
+    obs_report_bytes(check_name, "apr-cb-read-file", "cb-buf-after", 0, cb_buf, 64);
     obs_report_bytes(check_name, "apr-cb-read-file", "cb-buf-after-64-128", 64,
                      cb_buf + 64, 64);
 
@@ -376,9 +377,9 @@ static obs_result check_ampr_apr_file_read(void) {
     if (fn_apr_submit && obs_address_is_callable(fn_apr_submit)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_submit = ((int (*)(void *, uint32_t, uint64_t *,
-                                  uint32_t *))fn_apr_submit)(
-                cb_obj, 3u, &submit_res, &wait_id);
+            rc_submit =
+                ((int (*)(void *, uint32_t, uint64_t *, uint32_t *))fn_apr_submit)(
+                    cb_obj, 3u, &submit_res, &wait_id);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -386,10 +387,10 @@ static obs_result check_ampr_apr_file_read(void) {
     }
     obs_report_measure(check_name, "apr-submit-wait", "submit-rc",
                        (uint64_t)(uint32_t)rc_submit, "code");
-    obs_report_measure(check_name, "apr-submit-wait", "submit-result",
-                       submit_res, "hex");
-    obs_report_measure(check_name, "apr-submit-wait", "wait-id",
-                       (uint64_t)wait_id, "id");
+    obs_report_measure(check_name, "apr-submit-wait", "submit-result", submit_res,
+                       "hex");
+    obs_report_measure(check_name, "apr-submit-wait", "wait-id", (uint64_t)wait_id,
+                       "id");
 
     int rc_wait = -1;
     if (fn_apr_wait && obs_address_is_callable(fn_apr_wait) && rc_submit == 0) {
@@ -403,8 +404,7 @@ static obs_result check_ampr_apr_file_read(void) {
     }
     obs_report_measure(check_name, "apr-submit-wait", "wait-rc",
                        (uint64_t)(uint32_t)rc_wait, "code");
-    obs_report_bytes(check_name, "apr-submit-wait", "dest-first-64b", 0,
-                     read_dest, 64);
+    obs_report_bytes(check_name, "apr-submit-wait", "dest-first-64b", 0, read_dest, 64);
 
     /* Compare with real file via sceKernelOpen */
     uint8_t real_file_64b[64];
@@ -418,9 +418,9 @@ static obs_result check_ampr_apr_file_read(void) {
             (void)sceKernelClose(fd);
             obs_report_bytes(check_name, "apr-submit-wait", "real-file-64b", 0,
                              real_file_64b, 64);
-            obs_report_measure(
-                check_name, "apr-submit-wait", "matches-file",
-                (uint64_t)(memcmp(read_dest, real_file_64b, 64) == 0), "bool");
+            obs_report_measure(check_name, "apr-submit-wait", "matches-file",
+                               (uint64_t)(memcmp(read_dest, real_file_64b, 64) == 0),
+                               "bool");
         }
     }
 
@@ -431,8 +431,7 @@ static obs_result check_ampr_apr_file_read(void) {
     if (fn_apr_stat && obs_address_is_callable(fn_apr_stat)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_stat =
-                ((int (*)(uint32_t, void *))fn_apr_stat)(file_id, stat_buf);
+            rc_stat = ((int (*)(uint32_t, void *))fn_apr_stat)(file_id, stat_buf);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -440,8 +439,7 @@ static obs_result check_ampr_apr_file_read(void) {
     }
     obs_report_measure(check_name, "apr-get-file-stat", "rc",
                        (uint64_t)(uint32_t)rc_stat, "code");
-    obs_report_bytes(check_name, "apr-get-file-stat", "stat-buf-0-64", 0,
-                     stat_buf, 64);
+    obs_report_bytes(check_name, "apr-get-file-stat", "stat-buf-0-64", 0, stat_buf, 64);
     obs_report_bytes(check_name, "apr-get-file-stat", "stat-buf-64-128", 64,
                      stat_buf + 64, 64);
 
@@ -454,9 +452,8 @@ static obs_result check_ampr_apr_file_read(void) {
         int rc_pref = -1;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_pref = ((int (*)(const char *, const char **, uint32_t,
-                                uint32_t *, uint64_t *,
-                                int32_t *))fn_apr_prefix)(
+            rc_pref = ((int (*)(const char *, const char **, uint32_t, uint32_t *,
+                                uint64_t *, int32_t *))fn_apr_prefix)(
                 "/app0/", rel_paths, 1u, pref_ids, pref_sizes, pref_statuses);
             obs_fault_unregister();
         } else {
@@ -466,8 +463,8 @@ static obs_result check_ampr_apr_file_read(void) {
                            (uint64_t)(uint32_t)rc_pref, "code");
         obs_report_measure(check_name, "prefix-resolve", "file-id",
                            (uint64_t)pref_ids[0], "id");
-        obs_report_measure(check_name, "prefix-resolve", "file-size",
-                           pref_sizes[0], "bytes");
+        obs_report_measure(check_name, "prefix-resolve", "file-size", pref_sizes[0],
+                           "bytes");
         obs_report_measure(check_name, "prefix-resolve", "status",
                            (uint64_t)(uint32_t)pref_statuses[0], "code");
 
@@ -477,11 +474,11 @@ static obs_result check_ampr_apr_file_read(void) {
         int rc_pref_noslash = -1;
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_pref_noslash = ((int (*)(const char *, const char **, uint32_t,
-                                        uint32_t *, uint64_t *,
-                                        int32_t *))fn_apr_prefix)(
-                "/app0", rel_paths, 1u, pref_ids_noslash, pref_sizes_noslash,
-                pref_statuses_noslash);
+            rc_pref_noslash =
+                ((int (*)(const char *, const char **, uint32_t, uint32_t *, uint64_t *,
+                          int32_t *))fn_apr_prefix)(
+                    "/app0", rel_paths, 1u, pref_ids_noslash, pref_sizes_noslash,
+                    pref_statuses_noslash);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -964,6 +961,9 @@ static obs_result check_ppsa04263_startup_call_tracer(void) {
 }
 
 static const obs_check agc_checks[] = {
+    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
+     OBS_FROM_ASSUMED},
     {"166-agc/init-raw-gate-7e52", "libSceAgc", "$23LRUSvYu1M", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_init_raw_gate_7e52, OBS_FROM_ASSUMED},
     {"166-agc/register-defaults-walk-4e9b", "libSceAgc", "sceAgcGetRegisterDefaults2",
@@ -991,9 +991,6 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_patch_exclusion_guard, OBS_FROM_ASSUMED},
     {"166-agc/driver-symbols", "libSceAgcDriver", "(symbols)", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_symbols, OBS_FROM_ASSUMED},
-    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
-     OBS_FROM_ASSUMED},
     {"166-agc/driver-create-queue", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_create_queue,
      OBS_FROM_ASSUMED},
@@ -1722,8 +1719,8 @@ static obs_result check_agc_cb_unnamed_ef57(void) {
     }
     obs_report_measure("166-agc/cb-unnamed-ef57", "$V++UgBtQhn0", "rc-kind1-shreg",
                        (uint64_t)(uint32_t)rc_a, "code");
-    obs_report_measure("166-agc/cb-unnamed-ef57", "$V++UgBtQhn0",
-                       "out-val-kind1-shreg", out_addr, "hex");
+    obs_report_measure("166-agc/cb-unnamed-ef57", "$V++UgBtQhn0", "out-val-kind1-shreg",
+                       out_addr, "hex");
     obs_report_measure("166-agc/cb-unnamed-ef57", "$V++UgBtQhn0", "delta-kind1-shreg",
                        out_addr != 0xccccccccccccccccULL
                            ? (out_addr - (uint64_t)(uintptr_t)pkt_sh_reg)
@@ -4126,7 +4123,8 @@ static obs_result check_agc_driver_symbols(void) {
     return obs_pass_value((uint64_t)resolved);
 }
 
-static const void *obs_resolve_agc_eq_fn(int handle, const char *name, const char *explicit_nid,
+static const void *obs_resolve_agc_eq_fn(int handle, const char *name,
+                                         const char *explicit_nid,
                                          const char **out_path) {
     char nid[16];
     if (explicit_nid && explicit_nid[0]) {
@@ -4186,7 +4184,8 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name, const cha
     /* 3. Try dlsym-name */
     if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
         void *a = NULL;
-        if (handle >= 0 && sceKernelDlsym(handle, name, &a) == 0 && obs_address_is_callable(a)) {
+        if (handle >= 0 && sceKernelDlsym(handle, name, &a) == 0 &&
+            obs_address_is_callable(a)) {
             *out_path = "dlsym-name";
             return a;
         }
@@ -4194,7 +4193,8 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name, const cha
             *out_path = "dlsym-name";
             return a;
         }
-        if (sceKernelDlsym(OBS_HANDLE_SELF, name, &a) == 0 && obs_address_is_callable(a)) {
+        if (sceKernelDlsym(OBS_HANDLE_SELF, name, &a) == 0 &&
+            obs_address_is_callable(a)) {
             *out_path = "dlsym-name";
             return a;
         }
@@ -4203,7 +4203,8 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name, const cha
     /* 4. Try dlsym-nid */
     if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
         void *a = NULL;
-        if (handle >= 0 && sceKernelDlsym(handle, nid, &a) == 0 && obs_address_is_callable(a)) {
+        if (handle >= 0 && sceKernelDlsym(handle, nid, &a) == 0 &&
+            obs_address_is_callable(a)) {
             *out_path = "dlsym-nid";
             return a;
         }
@@ -4211,7 +4212,8 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name, const cha
             *out_path = "dlsym-nid";
             return a;
         }
-        if (sceKernelDlsym(OBS_HANDLE_SELF, nid, &a) == 0 && obs_address_is_callable(a)) {
+        if (sceKernelDlsym(OBS_HANDLE_SELF, nid, &a) == 0 &&
+            obs_address_is_callable(a)) {
             *out_path = "dlsym-nid";
             return a;
         }
@@ -4249,8 +4251,8 @@ static obs_result check_agc_driver_add_eq_event(void) {
 
     obs_report_measure("166-agc/driver-add-eq-event", "sceAgcDriverAddEqEvent",
                        "lookup-path", (uint64_t)(fn_add_eq != NULL), path_add);
-    obs_report_measure("166-agc/driver-add-eq-event", "sceAgcDriverAddEqEvent",
-                       "addr", (uint64_t)(uintptr_t)fn_add_eq, "address");
+    obs_report_measure("166-agc/driver-add-eq-event", "sceAgcDriverAddEqEvent", "addr",
+                       (uint64_t)(uintptr_t)fn_add_eq, "address");
 
     obs_report_measure("166-agc/driver-add-eq-event", "sceAgcDriverDeleteEqEvent",
                        "lookup-path", (uint64_t)(fn_del_eq != NULL), path_del);
@@ -4271,9 +4273,11 @@ static obs_result check_agc_driver_add_eq_event(void) {
     obs_report_measure("166-agc/driver-add-eq-event", "libSceAgcDriver",
                        "sceAgcDriverAddEqEvent-resolved", (uint64_t)resolved, "bool");
     obs_report_measure("166-agc/driver-add-eq-event", "libSceAgcDriver",
-                       "sceAgcDriverGetEqEventType-resolved", (uint64_t)(fn_get_type != NULL), "bool");
+                       "sceAgcDriverGetEqEventType-resolved",
+                       (uint64_t)(fn_get_type != NULL), "bool");
     obs_report_measure("166-agc/driver-add-eq-event", "libSceAgcDriver",
-                       "sceAgcDriverGetEqContextId-resolved", (uint64_t)(fn_get_ctx != NULL), "bool");
+                       "sceAgcDriverGetEqContextId-resolved",
+                       (uint64_t)(fn_get_ctx != NULL), "bool");
 
     if (!resolved) {
         obs_report_measure("166-agc/driver-add-eq-event", "libSceAgcDriver",
@@ -4285,16 +4289,24 @@ static obs_result check_agc_driver_add_eq_event(void) {
 
     int k_mod = obs_module_open("libkernel");
     int (*fn_create_eq)(uint64_t *, const char *) =
-        (int (*)(uint64_t *, const char *))obs_module_symbol(k_mod > 0 ? k_mod : 1, "sceKernelCreateEqueue");
-    if (!fn_create_eq) fn_create_eq = (int (*)(uint64_t *, const char *))obs_module_symbol(OBS_HANDLE_SELF, "sceKernelCreateEqueue");
+        (int (*)(uint64_t *, const char *))obs_module_symbol(k_mod > 0 ? k_mod : 1,
+                                                             "sceKernelCreateEqueue");
+    if (!fn_create_eq)
+        fn_create_eq = (int (*)(uint64_t *, const char *))obs_module_symbol(
+            OBS_HANDLE_SELF, "sceKernelCreateEqueue");
 
-    int (*fn_delete_eq)(uint64_t) =
-        (int (*)(uint64_t))obs_module_symbol(k_mod > 0 ? k_mod : 1, "sceKernelDeleteEqueue");
-    if (!fn_delete_eq) fn_delete_eq = (int (*)(uint64_t))obs_module_symbol(OBS_HANDLE_SELF, "sceKernelDeleteEqueue");
+    int (*fn_delete_eq)(uint64_t) = (int (*)(uint64_t))obs_module_symbol(
+        k_mod > 0 ? k_mod : 1, "sceKernelDeleteEqueue");
+    if (!fn_delete_eq)
+        fn_delete_eq = (int (*)(uint64_t))obs_module_symbol(OBS_HANDLE_SELF,
+                                                            "sceKernelDeleteEqueue");
 
     int (*fn_wait_eq)(uint64_t, void *, int, int *, void *) =
-        (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(k_mod > 0 ? k_mod : 1, "sceKernelWaitEqueue");
-    if (!fn_wait_eq) fn_wait_eq = (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(OBS_HANDLE_SELF, "sceKernelWaitEqueue");
+        (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(
+            k_mod > 0 ? k_mod : 1, "sceKernelWaitEqueue");
+    if (!fn_wait_eq)
+        fn_wait_eq = (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(
+            OBS_HANDLE_SELF, "sceKernelWaitEqueue");
 
     if (!fn_create_eq || !fn_wait_eq) {
         return obs_skip("kernel equeue primitives not resolved");
@@ -4308,8 +4320,11 @@ static obs_result check_agc_driver_add_eq_event(void) {
     }
     obs_report_measure("166-agc/driver-add-eq-event", "gpu-queue", "rc-create",
                        (uint64_t)(uint32_t)rc_queue, "code");
-    if (probe_queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
-        sceAgcDriverDestroyQueue(probe_queue);
+    if (probe_queue &&
+        obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        int rc_destroy = sceAgcDriverDestroyQueue(probe_queue);
+        obs_report_measure("166-agc/driver-add-eq-event", "gpu-queue", "rc-destroy",
+                           (uint64_t)(uint32_t)rc_destroy, "code");
         probe_queue = NULL;
     }
 
@@ -4320,16 +4335,19 @@ static obs_result check_agc_driver_add_eq_event(void) {
 
     const void *fn_rel_mem =
         agc_resolve_or_weak("sceAgcCbReleaseMem", (const void *)&sceAgcCbReleaseMem);
-    obs_report_measure("166-agc/driver-add-eq-event", "sceAgcCbReleaseMem",
-                       "resolved", (uint64_t)(fn_rel_mem != NULL), "bool");
+    obs_report_measure("166-agc/driver-add-eq-event", "sceAgcCbReleaseMem", "resolved",
+                       (uint64_t)(fn_rel_mem != NULL), "bool");
 
     /* Five arms per REQ-20260928T2142Z-b6fb:
-     * (0) arm0-proven-producer: exact producer DCB from gpu-wait-reg-mem64-sync arm1-cross-sub (shows submissions run).
-     * (1) arm1-title-dst0: one-NOP DCB ending in sceAgcCbReleaseMem with a3 = 0 (destination select 0: memory), a10 = 0.
-     * (2) arm2-title-dst1-gl2wb: title's packet with a3 = 1, but DCB also flushes and writes back GL2 after packet.
-     * (3a) arm3a-dst0-int2: arm 1 repeated with a10 = 2 after sceAgcDriverAddEqEvent(eq, 0, 0), waiting on equeue.
-     * (3b) arm3b-dst1-gl2wb-int2: arm 2 repeated with a10 = 2 after sceAgcDriverAddEqEvent(eq, 0, 0), waiting on equeue.
-     * Each arm runs with its own fresh queue and fence.
+     * (0) arm0-proven-producer: exact producer DCB from gpu-wait-reg-mem64-sync
+     * arm1-cross-sub (shows submissions run). (1) arm1-title-dst0: one-NOP DCB ending
+     * in sceAgcCbReleaseMem with a3 = 0 (destination select 0: memory), a10 = 0. (2)
+     * arm2-title-dst1-gl2wb: title's packet with a3 = 1, but DCB also flushes and
+     * writes back GL2 after packet. (3a) arm3a-dst0-int2: arm 1 repeated with a10 = 2
+     * after sceAgcDriverAddEqEvent(eq, 0, 0), waiting on equeue. (3b)
+     * arm3b-dst1-gl2wb-int2: arm 2 repeated with a10 = 2 after
+     * sceAgcDriverAddEqEvent(eq, 0, 0), waiting on equeue. Each arm runs with its own
+     * fresh queue and fence.
      */
     typedef enum {
         ARM_PROVEN_PRODUCER = 0,
@@ -4370,8 +4388,10 @@ static obs_result check_agc_driver_add_eq_event(void) {
         volatile uint64_t *scratch_label = NULL;
         uint32_t *dcb = NULL;
 #if !defined(OBSCENE_HOST_BUILD)
-        fence = (volatile uint64_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
-        scratch_label = (volatile uint64_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+        fence =
+            (volatile uint64_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
+        scratch_label =
+            (volatile uint64_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
         dcb = (uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
 #else
         static _Alignas(64) uint64_t s_host_eq_fence[16];
@@ -4416,8 +4436,8 @@ static obs_result check_agc_driver_add_eq_event(void) {
 
         if (kind == ARM_PROVEN_PRODUCER) {
             /* Exact producer DCB from gpu-wait-reg-mem64-sync arm1-cross-sub:
-             * Sub A: RELEASE_MEM c0064900 0030c528 20000000 <lo> <hi> 00000002 <value> 0
-             * Fence A: RELEASE_MEM c0064900 06603514 20000000 <lo> <hi> <value> 0 0
+             * Sub A: RELEASE_MEM c0064900 0030c528 20000000 <lo> <hi> 00000002 <value>
+             * 0 Fence A: RELEASE_MEM c0064900 06603514 20000000 <lo> <hi> <value> 0 0
              */
             uint32_t *dw = dcb;
             *dw++ = 0xc0064900u;
@@ -4463,9 +4483,11 @@ static obs_result check_agc_driver_add_eq_event(void) {
             cb_handle.cur = cb_handle.begin;
             cb_handle.end2 = cb_handle.end;
 
-            const void *fn_nop = agc_resolve_or_weak("sceAgcCbNop", (const void *)&sceAgcCbNop);
+            const void *fn_nop =
+                agc_resolve_or_weak("sceAgcCbNop", (const void *)&sceAgcCbNop);
             if (fn_nop != NULL) {
-                ((agc_cb_fn)fn_nop)(&cb_handle.begin, 1ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL);
+                ((agc_cb_fn)fn_nop)(&cb_handle.begin, 1ULL, 0ULL, 0ULL, 0ULL, 0ULL,
+                                    0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL);
             } else {
                 dcb[0] = 0xffff1000u;
                 cb_handle.cur += 4;
@@ -4474,23 +4496,15 @@ static obs_result check_agc_driver_add_eq_event(void) {
             uint32_t *pkt_ptr = (uint32_t *)(uintptr_t)cb_handle.cur;
 
             if (fn_rel_mem != NULL) {
-                ((agc_cb_fn)fn_rel_mem)(&cb_handle.begin,
-                                        0x04ULL,
-                                        0x200ULL,
-                                        (uint64_t)a3,
-                                        3ULL,
-                                        fence_gpu,
-                                        2ULL,
-                                        fence_expected,
-                                        0ULL,
-                                        0ULL,
-                                        (uint64_t)a10,
-                                        0ULL);
+                ((agc_cb_fn)fn_rel_mem)(
+                    &cb_handle.begin, 0x04ULL, 0x200ULL, (uint64_t)a3, 3ULL, fence_gpu,
+                    2ULL, fence_expected, 0ULL, 0ULL, (uint64_t)a10, 0ULL);
             }
             if (cb_handle.cur == (uint64_t)(uintptr_t)pkt_ptr) {
                 pkt_ptr[0] = 0xc0064900u;
                 pkt_ptr[1] = 0x06200504u;
-                pkt_ptr[2] = 0x40000000u | ((uint32_t)(a10 & 7) << 24) | ((uint32_t)(a3 & 3) << 16);
+                pkt_ptr[2] = 0x40000000u | ((uint32_t)(a10 & 7) << 24) |
+                             ((uint32_t)(a3 & 3) << 16);
                 pkt_ptr[3] = (uint32_t)fence_gpu;
                 pkt_ptr[4] = (uint32_t)(fence_gpu >> 32);
                 pkt_ptr[5] = (uint32_t)fence_expected;
@@ -4505,12 +4519,14 @@ static obs_result check_agc_driver_add_eq_event(void) {
 
             uint32_t *dw = (uint32_t *)(uintptr_t)cb_handle.cur;
             if (gl2_wb) {
-                /* Flush and write back GL2 after the packet per REQ-20260928T2142Z-b6fb arm (2):
-                 * 1) PACKET3_ACQUIRE_MEM with GCR_GL2_WB | GCR_GL2_INV | GCR_GLM_WB | GCR_GLM_INV | GCR_SEQ
-                 * 2) PACKET3_RELEASE_MEM with CACHE_FLUSH_AND_INV_TS and GCR_GL2_WB
+                /* Flush and write back GL2 after the packet per REQ-20260928T2142Z-b6fb
+                 * arm (2): 1) PACKET3_ACQUIRE_MEM with GCR_GL2_WB | GCR_GL2_INV |
+                 * GCR_GLM_WB | GCR_GLM_INV | GCR_SEQ 2) PACKET3_RELEASE_MEM with
+                 * CACHE_FLUSH_AND_INV_TS and GCR_GL2_WB
                  */
                 *dw++ = 0xc0065800u; /* PACKET3_ACQUIRE_MEM count 6 */
-                *dw++ = 0x02603000u; /* CP_COHER_CNTL: GCR_SEQ | GCR_GL2_WB | GCR_GL2_INV | GCR_GLM_WB | GCR_GLM_INV */
+                *dw++ = 0x02603000u; /* CP_COHER_CNTL: GCR_SEQ | GCR_GL2_WB |
+                                        GCR_GL2_INV | GCR_GLM_WB | GCR_GLM_INV */
                 *dw++ = 0xffffffffu; /* CP_COHER_SIZE full range */
                 *dw++ = 0u;          /* CP_COHER_SIZE_HI */
                 *dw++ = 0u;          /* CP_COHER_BASE */
@@ -4551,7 +4567,9 @@ static obs_result check_agc_driver_add_eq_event(void) {
         int sub_rc = -1;
         if (obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb)) {
             sub_rc = sceAgcDriverSubmitDcb(&desc);
-        } else if (obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer) && arm_queue) {
+        } else if (obs_address_is_callable(
+                       (const void *)&sceAgcDriverSubmitCommandBuffer) &&
+                   arm_queue) {
             sub_rc = sceAgcDriverSubmitCommandBuffer(arm_queue, &desc);
         }
         obs_report_measure("166-agc/driver-add-eq-event", tag, "submit-rc",
@@ -4624,22 +4642,30 @@ static obs_result check_agc_driver_add_eq_event(void) {
                 int64_t k_data = *(const int64_t *)(const void *)(kevent_buf + 16);
                 uint64_t k_udata = *(const uint64_t *)(const void *)(kevent_buf + 24);
 
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "ident", k_ident, "ident");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "filter", (uint64_t)(int64_t)k_filter, "filter");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "flags", (uint64_t)k_flags, "flags");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "fflags", (uint64_t)k_fflags, "fflags");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "data", (uint64_t)k_data, "data");
-                obs_report_measure("166-agc/driver-add-eq-event", tag, "udata", k_udata, "udata");
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "ident", k_ident,
+                                   "ident");
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "filter",
+                                   (uint64_t)(int64_t)k_filter, "filter");
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "flags",
+                                   (uint64_t)k_flags, "flags");
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "fflags",
+                                   (uint64_t)k_fflags, "fflags");
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "data",
+                                   (uint64_t)k_data, "data");
+                obs_report_measure("166-agc/driver-add-eq-event", tag, "udata", k_udata,
+                                   "udata");
 
                 if (fn_get_type) {
                     int ev_type = fn_get_type(kevent_buf);
-                    obs_report_measure("166-agc/driver-add-eq-event", tag, "get-eq-event-type",
-                                       (uint64_t)(uint32_t)ev_type, "type");
+                    obs_report_measure("166-agc/driver-add-eq-event", tag,
+                                       "get-eq-event-type", (uint64_t)(uint32_t)ev_type,
+                                       "type");
                 }
                 if (fn_get_ctx) {
                     int ev_ctx = fn_get_ctx(kevent_buf);
-                    obs_report_measure("166-agc/driver-add-eq-event", tag, "get-eq-context-id",
-                                       (uint64_t)(uint32_t)ev_ctx, "id");
+                    obs_report_measure("166-agc/driver-add-eq-event", tag,
+                                       "get-eq-context-id", (uint64_t)(uint32_t)ev_ctx,
+                                       "id");
                 }
             }
 
@@ -4648,8 +4674,11 @@ static obs_result check_agc_driver_add_eq_event(void) {
             }
         }
 
-        if (arm_queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
-            sceAgcDriverDestroyQueue(arm_queue);
+        if (arm_queue &&
+            obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+            int rc_destroy = sceAgcDriverDestroyQueue(arm_queue);
+            obs_report_measure("166-agc/driver-add-eq-event", tag, "destroy-queue-rc",
+                               (uint64_t)(uint32_t)rc_destroy, "code");
             arm_queue = NULL;
         }
 
@@ -4660,7 +4689,9 @@ static obs_result check_agc_driver_add_eq_event(void) {
 #endif
     }
 
-    return arm0_fence_ok ? obs_pass() : obs_fail("arm0 proven producer fence did not complete; submissions did not run");
+    return arm0_fence_ok ? obs_pass()
+                         : obs_fail("arm0 proven producer fence did not complete; "
+                                    "submissions did not run");
 }
 
 static obs_result check_agc_driver_set_tf_ring(void) {
@@ -4800,8 +4831,8 @@ static void run_one_nop_hs_dcb(const char *arm_name, uint32_t fence_expected) {
     } else {
         obs_fault_unregister();
     }
-    obs_report_measure("166-agc/driver-set-hs-offchip-param", arm_name,
-                       "submit-rc", (uint64_t)(uint32_t)submit_rc, "code");
+    obs_report_measure("166-agc/driver-set-hs-offchip-param", arm_name, "submit-rc",
+                       (uint64_t)(uint32_t)submit_rc, "code");
 
     uint64_t t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
                       ? (uint64_t)sceKernelGetProcessTime()
@@ -4826,8 +4857,8 @@ static void run_one_nop_hs_dcb(const char *arm_name, uint32_t fence_expected) {
                        "fence-completed", (uint64_t)fence_ok, "bool");
     obs_report_measure("166-agc/driver-set-hs-offchip-param", arm_name,
                        "fence-elapsed-us", t1 >= t0 ? (t1 - t0) : 0, "us");
-    obs_report_measure("166-agc/driver-set-hs-offchip-param", arm_name,
-                       "fence-val", (uint64_t)*fence, "hex");
+    obs_report_measure("166-agc/driver-set-hs-offchip-param", arm_name, "fence-val",
+                       (uint64_t)*fence, "hex");
 
 #if !defined(OBSCENE_HOST_BUILD)
     oops_mem_free((void *)fence);
@@ -20338,17 +20369,7 @@ static const uint64_t agc_ppsa03416_dma_data[11] = {
  * observed in earlier zero-argument captures came from uninitialized stack memory
  * in argument slot a7 (stack slot 1). */
 static const uint64_t agc_target_word_probe[11] = {
-    0ULL,
-    0ULL,
-    0ULL,
-    0ULL,
-    0ULL,
-    0ULL,
-    0x00000007eeffbbb0ULL,
-    0ULL,
-    0ULL,
-    0ULL,
-    0ULL,
+    0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0x00000007eeffbbb0ULL, 0ULL, 0ULL, 0ULL, 0ULL,
 };
 
 static int agc_run_one_pass(const char *id, const char *symbol, const char *label,
@@ -20365,17 +20386,15 @@ static int agc_run_one_pass(const char *id, const char *symbol, const char *labe
         obs_report_measure(id, symbol, fault_name, (uint64_t)sig, "signal");
         return -1;
     }
-    uint64_t rc =
-        ((agc_cb_fn)fn)(&probe->begin, a[0], a[1], a[2], a[3], a[4], a[5],
-                        a[6], a[7], a[8], a[9], a[10]);
+    uint64_t rc = ((agc_cb_fn)fn)(&probe->begin, a[0], a[1], a[2], a[3], a[4], a[5],
+                                  a[6], a[7], a[8], a[9], a[10]);
     obs_fault_unregister();
     if (!agc_cb_guard_intact(probe)) {
         return -2;
     }
     unsigned int extent = agc_cb_written_bytes(probe, OBS_AGC_POISON_BYTE);
     uint64_t advance = probe->cur - probe->begin;
-    obs_report_written(id, symbol, label, before, probe->cmdbuf,
-                       OBS_AGC_CMDBUF_SIZE);
+    obs_report_written(id, symbol, label, before, probe->cmdbuf, OBS_AGC_CMDBUF_SIZE);
     obs_report_measure(id, symbol, rc_name, rc, "rc");
     obs_report_measure(id, symbol, ext_name, (uint64_t)extent, "bytes");
     obs_report_measure(id, symbol, adv_name, advance, "bytes");
@@ -20390,7 +20409,8 @@ static int agc_run_one_pass(const char *id, const char *symbol, const char *labe
  * Runs across distinct passes (REQ-20260915T1330Z-9e21, REQ-20260928T1936Z-ff23,
  * REQ-20260928T2011Z-1044):
  * 1. All arguments zero.
- * 2. Single-argument sweeps: each of a1..a11 set to all-ones alone with all others zero.
+ * 2. Single-argument sweeps: each of a1..a11 set to all-ones alone with all others
+ * zero.
  * 3. Isolated event-type calls for sceAgcCbReleaseMem: a1=0x01 and a1=0x2b alone.
  * 4. Distinct markers per slot (registers and stack alike).
  * 5. Captured retail title register arguments (PPSA03416).
@@ -20399,8 +20419,7 @@ static int agc_run_one_pass(const char *id, const char *symbol, const char *labe
  * 8. Sentinel set B (0xC1C1..., 0xC2C2...).
  */
 static obs_result agc_arg_discriminate(const char *id, const char *symbol,
-                                       const void *fn,
-                                       const uint64_t *ppsa_args) {
+                                       const void *fn, const uint64_t *ppsa_args) {
     if (fn == NULL) {
         return obs_skip("libSceAgc is not loaded or the builder is absent");
     }
@@ -20416,8 +20435,8 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
     uint64_t ext_zero = 0;
     static const uint64_t zero_args[11] = {0};
     int r = agc_run_one_pass(id, symbol, "zero-args", "rc-zero", "extent-zero",
-                             "cursor-advance-zero", "zero-fault", fn, probe,
-                             before, zero_args, &ext_zero);
+                             "cursor-advance-zero", "zero-fault", fn, probe, before,
+                             zero_args, &ext_zero);
     if (r == -1) {
         return obs_partial_value("builder dereferenced zero arguments", 0);
     }
@@ -20425,7 +20444,8 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
         return obs_fail("builder wrote past command buffer on zero arguments");
     }
 
-    /* 1. Single argument sweeps with only that argument all-ones (REQ-20260928T2011Z-1044) */
+    /* 1. Single argument sweeps with only that argument all-ones
+     * (REQ-20260928T2011Z-1044) */
     for (unsigned int k = 0; k < 11; k++) {
         uint64_t a_ones[11] = {0};
         a_ones[k] = 0xffffffffffffffffULL;
@@ -20436,8 +20456,8 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
         oops_snprintf(adv_name, sizeof(adv_name), "cursor-advance-a%u-all-ones", k + 1);
         oops_snprintf(fault_name, sizeof(fault_name), "a%u-all-ones-fault", k + 1);
         uint64_t ext_k = 0;
-        agc_run_one_pass(id, symbol, label, rc_name, ext_name, adv_name,
-                         fault_name, fn, probe, before, a_ones, &ext_k);
+        agc_run_one_pass(id, symbol, label, rc_name, ext_name, adv_name, fault_name, fn,
+                         probe, before, a_ones, &ext_k);
     }
 
     /* 2. Isolated event-type calls for sceAgcCbReleaseMem (REQ-20260928T2011Z-1044) */
@@ -20473,21 +20493,18 @@ static obs_result agc_arg_discriminate(const char *id, const char *symbol,
         {"ppsa03416-args", "rc-ppsa03416", "extent-ppsa03416",
          "cursor-advance-ppsa03416", "ppsa03416-fault", ppsa_args},
         {"target-word-probe", "rc-target-word", "extent-target-word",
-         "cursor-advance-target-word", "target-word-fault",
-         agc_target_word_probe},
-        {"sentinel-args-a", "rc-sentinel-a", "extent-sentinel-a",
-         "cursor-advance-a", "sentinel-fault-a", agc_arg_sentinels},
-        {"sentinel-args-b", "rc-sentinel-b", "extent-sentinel-b",
-         "cursor-advance-b", "sentinel-fault-b", agc_arg_sentinels_b},
+         "cursor-advance-target-word", "target-word-fault", agc_target_word_probe},
+        {"sentinel-args-a", "rc-sentinel-a", "extent-sentinel-a", "cursor-advance-a",
+         "sentinel-fault-a", agc_arg_sentinels},
+        {"sentinel-args-b", "rc-sentinel-b", "extent-sentinel-b", "cursor-advance-b",
+         "sentinel-fault-b", agc_arg_sentinels_b},
     };
 
     for (unsigned int p = 0; p < OBS_COUNT(composite_passes); p++) {
         uint64_t ext_p = 0;
         agc_run_one_pass(id, symbol, composite_passes[p].label,
-                         composite_passes[p].rc_name,
-                         composite_passes[p].ext_name,
-                         composite_passes[p].adv_name,
-                         composite_passes[p].fault_name,
+                         composite_passes[p].rc_name, composite_passes[p].ext_name,
+                         composite_passes[p].adv_name, composite_passes[p].fault_name,
                          fn, probe, before, composite_passes[p].args, &ext_p);
     }
 
@@ -21719,7 +21736,8 @@ static obs_result check_agc_dcb_set_flip(void) {
             }
         }
 
-        /* REQ-20260927T1130Z-c4e3: (1) Flip modes 0, 2, 3 with arg 0x1122334455667788ULL */
+        /* REQ-20260927T1130Z-c4e3: (1) Flip modes 0, 2, 3 with arg
+         * 0x1122334455667788ULL */
         static const int extra_modes[] = {0, 2, 3};
         for (size_t m_i = 0; m_i < 3; m_i++) {
             int mode = extra_modes[m_i];
@@ -21763,7 +21781,8 @@ static obs_result check_agc_dcb_set_flip(void) {
             }
         }
 
-        /* REQ-20260927T1130Z-c4e3: (2) Close port, open a second one, register buffers and flip */
+        /* REQ-20260927T1130Z-c4e3: (2) Close port, open a second one, register buffers
+         * and flip */
         if (vo_handle > 0 && obs_address_is_callable((const void *)&sceVideoOutClose)) {
             sceVideoOutClose(vo_handle);
         }
@@ -21791,7 +21810,8 @@ static obs_result check_agc_dcb_set_flip(void) {
                 vo_handle2 = sceVideoOutOpen(0xFF, OBS_VIDEO_BUS_MAIN, 0, NULL);
             }
         }
-        obs_report_measure(id, sym, "port2-handle", (uint64_t)(int64_t)vo_handle2, "handle");
+        obs_report_measure(id, sym, "port2-handle", (uint64_t)(int64_t)vo_handle2,
+                           "handle");
 
         if (vo_handle2 > 0) {
 #if !defined(OBSCENE_HOST_BUILD)
@@ -21804,8 +21824,10 @@ static obs_result check_agc_dcb_set_flip(void) {
 #endif
             unsigned char p2_attr[256];
             __builtin_memset(p2_attr, 0, sizeof(p2_attr));
-            if (obs_address_is_callable((const void *)&sceVideoOutSetBufferAttribute2)) {
-                sceVideoOutSetBufferAttribute2(p2_attr, 0x8000000000000000ULL, 0, 1920, 1080, 0, 0, 0);
+            if (obs_address_is_callable(
+                    (const void *)&sceVideoOutSetBufferAttribute2)) {
+                sceVideoOutSetBufferAttribute2(p2_attr, 0x8000000000000000ULL, 0, 1920,
+                                               1080, 0, 0, 0);
             }
             struct {
                 void *data;
@@ -21817,12 +21839,15 @@ static obs_result check_agc_dcb_set_flip(void) {
             p2_bufs[1].data = p2_b1;
             int reg_rc = -1;
             if (obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers2)) {
-                reg_rc = sceVideoOutRegisterBuffers2(vo_handle2, 0, 0, p2_bufs, 2, p2_attr, 0, 0);
-            } else if (obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers)) {
+                reg_rc = sceVideoOutRegisterBuffers2(vo_handle2, 0, 0, p2_bufs, 2,
+                                                     p2_attr, 0, 0);
+            } else if (obs_address_is_callable(
+                           (const void *)&sceVideoOutRegisterBuffers)) {
                 void *addrs[2] = {p2_b0, p2_b1};
                 reg_rc = sceVideoOutRegisterBuffers(vo_handle2, 0, addrs, 2, p2_attr);
             }
-            obs_report_measure(id, sym, "port2-reg-rc", (uint64_t)(uint32_t)reg_rc, "rc");
+            obs_report_measure(id, sym, "port2-reg-rc", (uint64_t)(uint32_t)reg_rc,
+                               "rc");
 
             agc_cb_prepare(probe, 0);
             uint64_t cur_before_p2 = probe->cur;
@@ -21858,35 +21883,48 @@ static obs_result check_agc_dcb_set_flip(void) {
                     uint32_t int_sel = (dw2 >> 29) & 0x7;
                     uint32_t counter = *(const uint32_t *)(probe->cmdbuf + 60);
                     obs_report_measure(id, sym, "port2-label-addr", label_addr, "addr");
-                    obs_report_measure(id, sym, "port2-int-ctxid", (uint64_t)int_ctxid, "ctxid");
-                    obs_report_measure(id, sym, "port2-int-sel", (uint64_t)int_sel, "sel");
-                    obs_report_measure(id, sym, "port2-counter", (uint64_t)counter, "counter");
+                    obs_report_measure(id, sym, "port2-int-ctxid", (uint64_t)int_ctxid,
+                                       "ctxid");
+                    obs_report_measure(id, sym, "port2-int-sel", (uint64_t)int_sel,
+                                       "sel");
+                    obs_report_measure(id, sym, "port2-counter", (uint64_t)counter,
+                                       "counter");
                 }
                 if (len_p2 > max_bytes)
                     max_bytes = len_p2;
             }
 
-            /* REQ-20260927T1130Z-c4e3: (3) 5 successive flips with timestamp and low 16 bits */
+            /* REQ-20260927T1130Z-c4e3: (3) 5 successive flips with timestamp and low 16
+             * bits */
             int (*fn_create_eq)(uint64_t *, const char *) =
-                (int (*)(uint64_t *, const char *))obs_module_symbol(OBS_HANDLE_SELF, "sceKernelCreateEqueue");
+                (int (*)(uint64_t *, const char *))obs_module_symbol(
+                    OBS_HANDLE_SELF, "sceKernelCreateEqueue");
             if (!fn_create_eq)
-                fn_create_eq = (int (*)(uint64_t *, const char *))obs_module_symbol(1, "sceKernelCreateEqueue");
+                fn_create_eq = (int (*)(uint64_t *, const char *))obs_module_symbol(
+                    1, "sceKernelCreateEqueue");
             int (*fn_add_flip_ev)(uint64_t, int, void *) =
-                (int (*)(uint64_t, int, void *))obs_module_symbol(OBS_HANDLE_SELF, "sceVideoOutAddFlipEvent");
+                (int (*)(uint64_t, int, void *))obs_module_symbol(
+                    OBS_HANDLE_SELF, "sceVideoOutAddFlipEvent");
             if (!fn_add_flip_ev)
-                fn_add_flip_ev = (int (*)(uint64_t, int, void *))obs_module_symbol(1, "sceVideoOutAddFlipEvent");
+                fn_add_flip_ev = (int (*)(uint64_t, int, void *))obs_module_symbol(
+                    1, "sceVideoOutAddFlipEvent");
             int (*fn_wait_eq)(uint64_t, void *, int, int *, void *) =
-                (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(OBS_HANDLE_SELF, "sceKernelWaitEqueue");
+                (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(
+                    OBS_HANDLE_SELF, "sceKernelWaitEqueue");
             if (!fn_wait_eq)
-                fn_wait_eq = (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(1, "sceKernelWaitEqueue");
+                fn_wait_eq =
+                    (int (*)(uint64_t, void *, int, int *, void *))obs_module_symbol(
+                        1, "sceKernelWaitEqueue");
 
             if (fn_create_eq != NULL && fn_add_flip_ev != NULL && fn_wait_eq != NULL) {
                 uint64_t eq2 = 0;
                 int eq_rc = fn_create_eq(&eq2, "p2_flip_eq");
-                obs_report_measure(id, sym, "port2-eq-create-rc", (uint64_t)(uint32_t)eq_rc, "rc");
+                obs_report_measure(id, sym, "port2-eq-create-rc",
+                                   (uint64_t)(uint32_t)eq_rc, "rc");
                 if (eq_rc == 0 && eq2 != 0) {
                     int add_rc = fn_add_flip_ev(eq2, vo_handle2, (void *)0xabcd);
-                    obs_report_measure(id, sym, "port2-eq-add-rc", (uint64_t)(uint32_t)add_rc, "rc");
+                    obs_report_measure(id, sym, "port2-eq-add-rc",
+                                       (uint64_t)(uint32_t)add_rc, "rc");
                     for (int flip_i = 1; flip_i <= 5; flip_i++) {
                         char f_tag[64];
                         snprintf(f_tag, sizeof(f_tag), "port2-flip%d", flip_i);
@@ -21894,19 +21932,25 @@ static obs_result check_agc_dcb_set_flip(void) {
                         __builtin_memset(ev_buf, 0xC7, sizeof(ev_buf));
                         int out_events = 0;
                         uint64_t t_before = 0;
-                        if (obs_address_is_callable((const void *)&sceKernelGetProcessTime)) {
+                        if (obs_address_is_callable(
+                                (const void *)&sceKernelGetProcessTime)) {
                             t_before = (uint64_t)sceKernelGetProcessTime();
                         }
                         int flip_rc = 0;
-                        if (obs_address_is_callable((const void *)&sceVideoOutSubmitFlip)) {
-                            flip_rc = sceVideoOutSubmitFlip(vo_handle2, flip_i % 2, 1, 0x123456789aULL);
+                        if (obs_address_is_callable(
+                                (const void *)&sceVideoOutSubmitFlip)) {
+                            flip_rc = sceVideoOutSubmitFlip(vo_handle2, flip_i % 2, 1,
+                                                            0x123456789aULL);
                         }
                         uint64_t to_wait = 200000; /* 200ms */
-                        int w_rc = fn_wait_eq(eq2, ev_buf, 1, &out_events, (void *)&to_wait);
-                        obs_report_measure(id, sym, f_tag, (uint64_t)(uint32_t)flip_rc, "flip-rc");
+                        int w_rc =
+                            fn_wait_eq(eq2, ev_buf, 1, &out_events, (void *)&to_wait);
+                        obs_report_measure(id, sym, f_tag, (uint64_t)(uint32_t)flip_rc,
+                                           "flip-rc");
                         char w_tag[64];
                         snprintf(w_tag, sizeof(w_tag), "%s-wait-rc", f_tag);
-                        obs_report_measure(id, sym, w_tag, (uint64_t)(uint32_t)w_rc, "rc");
+                        obs_report_measure(id, sym, w_tag, (uint64_t)(uint32_t)w_rc,
+                                           "rc");
                         if (w_rc == 0 && out_events > 0) {
                             uint64_t ev_ident = *(const uint64_t *)(ev_buf + 0);
                             int64_t ev_data = *(const int64_t *)(ev_buf + 16);
@@ -21917,13 +21961,16 @@ static obs_result check_agc_dcb_set_flip(void) {
                             snprintf(lo_tag, sizeof(lo_tag), "%s-data-lo16", f_tag);
                             snprintf(time_tag, sizeof(time_tag), "%s-time", f_tag);
                             obs_report_measure(id, sym, id_tag, ev_ident, "ident");
-                            obs_report_measure(id, sym, data_tag, (uint64_t)ev_data, "data");
-                            obs_report_measure(id, sym, lo_tag, (uint64_t)low16, "lo16");
+                            obs_report_measure(id, sym, data_tag, (uint64_t)ev_data,
+                                               "data");
+                            obs_report_measure(id, sym, lo_tag, (uint64_t)low16,
+                                               "lo16");
                             obs_report_measure(id, sym, time_tag, t_before, "time");
                         }
                     }
                     int (*fn_delete_eq)(uint64_t) =
-                        (int (*)(uint64_t))obs_module_symbol(OBS_HANDLE_SELF, "sceKernelDeleteEqueue");
+                        (int (*)(uint64_t))obs_module_symbol(OBS_HANDLE_SELF,
+                                                             "sceKernelDeleteEqueue");
                     if (fn_delete_eq != NULL) {
                         fn_delete_eq(eq2);
                     }
@@ -22168,9 +22215,8 @@ static obs_result check_agc_dcb_wait_until_safe_for_rendering(void) {
                 sig = OBS_FAULT_ARM(&guard);
                 uint64_t rc_wait = 0;
                 if (sig == 0) {
-                    rc_wait =
-                        fn_wait(&probe->begin, (uint64_t)vo_handle, (uint64_t)b_idx, 0,
-                                0, 0, 0, 0, 0, 0, 0, 0);
+                    rc_wait = fn_wait(&probe->begin, (uint64_t)vo_handle,
+                                      (uint64_t)b_idx, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                     obs_fault_unregister();
                 } else {
                     obs_fault_unregister();
@@ -22205,8 +22251,8 @@ static obs_result check_agc_dcb_wait_until_safe_for_rendering(void) {
             sig = OBS_FAULT_ARM(&guard);
             uint64_t rc_sw = 0;
             if (sig == 0) {
-                rc_sw = fn_wait(&probe->begin, (uint64_t)0, (uint64_t)vo_handle, 0,
-                                0, 0, 0, 0, 0, 0, 0, 0);
+                rc_sw = fn_wait(&probe->begin, (uint64_t)0, (uint64_t)vo_handle, 0, 0,
+                                0, 0, 0, 0, 0, 0, 0);
                 obs_fault_unregister();
             } else {
                 obs_fault_unregister();
@@ -22971,7 +23017,8 @@ static obs_result check_agc_gpu_wait_reg_mem64_sync(void) {
        cache update, permanently wedging the GPU ring for all subsequent submissions
        in the process (2026-09-28 sweep 175008). Gated per D334; build with
        -DOBS_RUN_WEDGING_GPU_CHECKS to test in isolation. */
-    return obs_skip("excluded from default suite: unsatisfied WAIT_REG_MEM64 stalls ME and wedges GPU queue; "
+    return obs_skip("excluded from default suite: unsatisfied WAIT_REG_MEM64 stalls ME "
+                    "and wedges GPU queue; "
                     "build -DOBS_RUN_WEDGING_GPU_CHECKS to re-test in isolation");
 #endif
     OBS_AGC_QUEUE_GUARD();
@@ -23673,8 +23720,8 @@ static obs_result check_agc_unnamed_nids(void) {
     return obs_pass();
 }
 
-/* REQ-20260927T1730Z-7e52: raw NID 0x53bbd82b51d172db with PPSA02664's exact (state, 8) call
- * in a fresh process, and whether a prior sceAgcInit closes its gate.
+/* REQ-20260927T1730Z-7e52: raw NID 0x53bbd82b51d172db with PPSA02664's exact (state, 8)
+ * call in a fresh process, and whether a prior sceAgcInit closes its gate.
  */
 static obs_result check_agc_init_raw_gate_7e52(void) {
     const char *check_name = "166-agc/init-raw-gate-7e52";
@@ -23705,37 +23752,38 @@ static obs_result check_agc_init_raw_gate_7e52(void) {
     /* PPSA02664 32-byte state prefilled: 00000000 01000000 then zeros */
     static const uint32_t state_template[8] = {0u, 1u, 0u, 0u, 0u, 0u, 0u, 0u};
 
-#define RUN_INIT_STEP(step_tag, fn_ptr, ver)                                         \
-    do {                                                                             \
-        uint32_t state_buf[8];                                                       \
-        memcpy(state_buf, state_template, sizeof(state_buf));                        \
-        int rc = -1;                                                                 \
-        obs_jmp_buf guard;                                                           \
-        if ((fn_ptr) && obs_address_is_callable(fn_ptr)) {                           \
-            int sig = OBS_FAULT_ARM(&guard);                                         \
-            if (sig == 0) {                                                          \
-                rc = ((int (*)(void *, uint32_t))(fn_ptr))(state_buf, (ver));       \
-                obs_fault_unregister();                                              \
-            } else {                                                                 \
-                obs_fault_unregister();                                              \
-            }                                                                        \
-        }                                                                            \
-        obs_report_measure(check_name, (step_tag), "ver", (uint64_t)(ver), "val");   \
-        obs_report_measure(check_name, (step_tag), "rc", (uint64_t)(uint32_t)rc,     \
-                           "code");                                                  \
-        size_t changed = 0;                                                          \
-        for (size_t b = 0; b < sizeof(state_buf); b++) {                             \
-            if (((const uint8_t *)state_buf)[b] !=                                   \
-                ((const uint8_t *)state_template)[b])                                \
-                changed++;                                                           \
-        }                                                                            \
+#define RUN_INIT_STEP(step_tag, fn_ptr, ver)                                           \
+    do {                                                                               \
+        uint32_t state_buf[8];                                                         \
+        memcpy(state_buf, state_template, sizeof(state_buf));                          \
+        int rc = -1;                                                                   \
+        obs_jmp_buf guard;                                                             \
+        if ((fn_ptr) && obs_address_is_callable(fn_ptr)) {                             \
+            int sig = OBS_FAULT_ARM(&guard);                                           \
+            if (sig == 0) {                                                            \
+                rc = ((int (*)(void *, uint32_t))(fn_ptr))(state_buf, (ver));          \
+                obs_fault_unregister();                                                \
+            } else {                                                                   \
+                obs_fault_unregister();                                                \
+            }                                                                          \
+        }                                                                              \
+        obs_report_measure(check_name, (step_tag), "ver", (uint64_t)(ver), "val");     \
+        obs_report_measure(check_name, (step_tag), "rc", (uint64_t)(uint32_t)rc,       \
+                           "code");                                                    \
+        size_t changed = 0;                                                            \
+        for (size_t b = 0; b < sizeof(state_buf); b++) {                               \
+            if (((const uint8_t *)state_buf)[b] !=                                     \
+                ((const uint8_t *)state_template)[b])                                  \
+                changed++;                                                             \
+        }                                                                              \
         obs_report_measure(check_name, (step_tag), "changed-bytes", (uint64_t)changed, \
-                           "bytes");                                                 \
-        obs_report_bytes(check_name, (step_tag), "state-32b", 0,                     \
-                         (const uint8_t *)state_buf, sizeof(state_buf));             \
+                           "bytes");                                                   \
+        obs_report_bytes(check_name, (step_tag), "state-32b", 0,                       \
+                         (const uint8_t *)state_buf, sizeof(state_buf));               \
     } while (0)
 
-    /* (1) the raw NID with PPSA02664's exact arguments: state, version 8 - rc and bytes written */
+    /* (1) the raw NID with PPSA02664's exact arguments: state, version 8 - rc and bytes
+     * written */
     RUN_INIT_STEP("step1-raw-ver8", fn_alias, 8);
 
     /* (2) the same state with 13, then with 12 and 14 */
@@ -23860,8 +23908,7 @@ static obs_result check_agc_register_defaults_walk_4e9b(void) {
 
             uintptr_t rec_ptr = (uintptr_t)*(const uint64_t *)(desc_copy + 0x30);
             uint32_t count = *(const uint32_t *)(desc_copy + 0x38);
-            obs_report_measure(check_name, tag, "rec-ptr", (uint64_t)rec_ptr,
-                               "offset");
+            obs_report_measure(check_name, tag, "rec-ptr", (uint64_t)rec_ptr, "offset");
             obs_report_measure(check_name, tag, "count", (uint64_t)count, "count");
 
             if (rec_ptr < 0x10000UL || count == 0 || count > 1000)
@@ -23870,9 +23917,8 @@ static obs_result check_agc_register_defaults_walk_4e9b(void) {
             /* Dump whole record array (count * 12 bytes) in 64-byte chunks */
             uint32_t total_rec_bytes = count * 12u;
             for (uint32_t off = 0; off < total_rec_bytes; off += 64) {
-                uint32_t chunk_len = (total_rec_bytes - off > 64)
-                                         ? 64
-                                         : (total_rec_bytes - off);
+                uint32_t chunk_len =
+                    (total_rec_bytes - off > 64) ? 64 : (total_rec_bytes - off);
                 uint8_t chunk_buf[64];
                 memset(chunk_buf, 0, sizeof(chunk_buf));
                 int sig_chunk = OBS_FAULT_ARM(&guard);
@@ -23887,7 +23933,8 @@ static obs_result check_agc_register_defaults_walk_4e9b(void) {
                 }
             }
 
-            /* For each record: resolve entry = *(uint64_t *)(table + (loc & 0x3fc) * 2) */
+            /* For each record: resolve entry = *(uint64_t *)(table + (loc & 0x3fc) * 2)
+             */
             for (uint32_t i = 0; i < count; i++) {
                 uint32_t rec_id = 0, loc = 0, third = 0;
                 int sig_r = OBS_FAULT_ARM(&guard);
@@ -23960,6 +24007,9 @@ static obs_result check_ppsa04263_startup_call_tracer(void) {
 }
 
 static const obs_check agc_checks[] = {
+    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
+     OBS_FROM_ASSUMED},
     {"166-agc/init-raw-gate-7e52", "libSceAgc", "$23LRUSvYu1M", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_init_raw_gate_7e52, OBS_FROM_ASSUMED},
     {"166-agc/register-defaults-walk-4e9b", "libSceAgc", "sceAgcGetRegisterDefaults2",
@@ -24025,9 +24075,6 @@ static const obs_check agc_checks[] = {
      check_agc_patch_cx_registers_indirect, OBS_FROM_ASSUMED},
     {"166-agc/driver-symbols", "libSceAgcDriver", "(symbols)", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_symbols, OBS_FROM_ASSUMED},
-    {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
-     OBS_FROM_ASSUMED},
     {"166-agc/driver-create-queue", "libSceAgcDriver", "sceAgcDriverCreateQueue",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverCreateQueue,
      check_agc_driver_create_queue, OBS_FROM_ASSUMED},
