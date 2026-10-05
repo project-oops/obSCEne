@@ -603,6 +603,12 @@ OBS_WEAK int sceKernelPollEventFlag(SceKernelEventFlag flag, uint64_t bits,
 /* Wait until every named bit is set. */
 #define OBS_EVF_WAITMODE_AND 0x01u
 
+/* ---- libkernel: event queues ----------------------------------------------- */
+OBS_WEAK int sceKernelCreateEqueue(void *eq, const char *name);
+OBS_WEAK int sceKernelDeleteEqueue(uint64_t eq);
+OBS_WEAK int sceKernelWaitEqueue(uint64_t eq, void *event, int num_events,
+                                 int *out_events, void *timeout);
+
 /* ---- libkernel: which machine this is ---------------------------------------
  *
  * Both were missing from this program entirely until an emulator's release notes named
@@ -1670,6 +1676,10 @@ OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t f
 OBS_WEAK int sceAgcDriverDestroyQueue(void *queue);
 OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb);
 OBS_WEAK int sceAgcDriverSubmitCommandBuffer(void *queue, const void *dcb);
+OBS_WEAK int sceAgcDriverAddEqEvent(uint64_t queue, int arg1, int arg2);
+OBS_WEAK int sceAgcDriverDeleteEqEvent(uint64_t queue, int arg1);
+OBS_WEAK int sceAgcDriverGetEqEventType(const void *event);
+OBS_WEAK int sceAgcDriverGetEqContextId(const void *event);
 OBS_WEAK int sceAgcDriverQueryResourceRegistrationUserMemoryRequirements(
     uint64_t *out_size) __asm__("$AOLcoIkQDgM");
 OBS_WEAK int
