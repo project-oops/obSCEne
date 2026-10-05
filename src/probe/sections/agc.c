@@ -4225,7 +4225,14 @@ static const void *obs_resolve_agc_eq_fn(int handle, const char *name,
 
 static obs_result check_agc_driver_add_eq_event(void) {
     OBS_AGC_QUEUE_GUARD();
+    (void)agc_get_handle();
     int handle = obs_module_open("libSceAgcDriver");
+    if (handle < 0) {
+        if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+            handle = sceKernelLoadStartModule("/system/common/lib/libSceAgcDriver.sprx",
+                                              0, NULL, 0, NULL, NULL);
+        }
+    }
     if (handle < 0) {
         handle = obs_module_open("libSceAgcDriver.sprx");
     }
