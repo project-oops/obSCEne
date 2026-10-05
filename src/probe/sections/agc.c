@@ -961,11 +961,11 @@ static obs_result check_ppsa04263_startup_call_tracer(void) {
 }
 
 static const obs_check agc_checks[] = {
+    {"166-agc/init-raw-gate-7e52", "libSceAgc", "$23LRUSvYu1M", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_init_raw_gate_7e52, OBS_FROM_ASSUMED},
     {"166-agc/driver-add-eq-event", "libSceAgcDriver", "sceAgcDriverAddEqEvent",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_add_eq_event,
      OBS_FROM_ASSUMED},
-    {"166-agc/init-raw-gate-7e52", "libSceAgc", "$23LRUSvYu1M", OBS_CAP_NONE,
-     OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_init_raw_gate_7e52, OBS_FROM_ASSUMED},
     {"166-agc/register-defaults-walk-4e9b", "libSceAgc", "sceAgcGetRegisterDefaults2",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_register_defaults_walk_4e9b,
      OBS_FROM_ASSUMED},
@@ -4227,6 +4227,19 @@ static obs_result check_agc_driver_add_eq_event(void) {
     OBS_AGC_QUEUE_GUARD();
     (void)agc_get_handle();
     int handle = obs_module_open("libSceAgcDriver");
+    if (handle < 0) {
+        const void *fn_init = agc_resolve("sceAgcInit");
+        if (!fn_init) {
+            fn_init = agc_resolve("$23LRUSvYu1M");
+        }
+        if (fn_init && obs_address_is_callable(fn_init)) {
+            static const uint32_t state_template[8] = {0u, 1u, 0u, 0u, 0u, 0u, 0u, 0u};
+            uint32_t state_buf[8];
+            memcpy(state_buf, state_template, sizeof(state_buf));
+            ((int (*)(void *, uint32_t))fn_init)(state_buf, 8);
+        }
+        handle = obs_module_open("libSceAgcDriver");
+    }
     if (handle < 0) {
         if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
             handle = sceKernelLoadStartModule("/system/common/lib/libSceAgcDriver.sprx",
