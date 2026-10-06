@@ -512,29 +512,23 @@ static obs_result check_system_software_version(void) {
 static obs_result check_resolution_status(void) {
     OBS_REQUIRE(&sceVideoOutOpen, &sceVideoOutClose, &sceUserServiceGetInitialUser);
 
-    /* Needs a real output to ask about, so it opens one rather than guessing a handle -
-     * a query against an invalid handle would report its refusal code and no bytes,
-     * which is the least useful of the outcomes available. */
-    int32_t user = 0;
-    if (sceUserServiceGetInitialUser(&user) != 0) {
-        return obs_skip("no initial user to open an output for");
-    }
-    int handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
-    if (handle <= 0) {
-        /* Two different reasons an open is refused, and only one is a fact about the
-         * platform. If this run's own display path already opened and holds the main
-         * output, this second open is refused *because of that* - the same
-         * handle-still-held trap display.c documents (its D169 note) - and the
-         * resolution is simply not a thing this run can go on to ask. Saying "no video
-         * output to query" for that case reads as "the console has no display", which
-         * on a run whose header shows `display|ready|1920x1080` is a plain untruth. So
-         * name which. */
-        if (obs_display_holds_output()) {
-            return obs_skip(
-                "the display path already holds the main output, so a second open here "
-                "is refused - this run cannot add the resolution, but a display is up");
+    int borrowed = 0;
+    int handle = -1;
+    if (obs_display_holds_output()) {
+        handle = obs_display_get_video_handle();
+        if (handle > 0) {
+            borrowed = 1;
         }
-        return obs_skip("no video output to query");
+    }
+    if (handle <= 0) {
+        int32_t user = 0;
+        if (sceUserServiceGetInitialUser(&user) != 0) {
+            return obs_skip("no initial user to open an output for");
+        }
+        handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
+        if (handle <= 0) {
+            return obs_skip("no video output to query");
+        }
     }
     layout_probe probe;
     layout_prepare(&probe);
@@ -542,7 +536,9 @@ static obs_result check_resolution_status(void) {
     obs_result result =
         layout_report("130-layout/resolution-status", "sceVideoOutGetResolutionStatus",
                       "status", &probe, rc);
-    (void)sceVideoOutClose(handle);
+    if (!borrowed) {
+        (void)sceVideoOutClose(handle);
+    }
     return result;
 }
 
@@ -690,6 +686,219 @@ static obs_result check_video_out_output_status(void) {
         obs_address_is_callable((const void *)&sceVideoOutClose)) {
         (void)sceVideoOutClose(handle);
     }
+    return obs_pass();
+}
+
+/* REQ-20261006T1230Z-u7b2: sceVideoOutUnregisterBuffers */
+static obs_result check_video_out_unregister_buffers(void) {
+    const char *id = "130-layout/video-out-unregister-buffers";
+    const char *sym = "sceVideoOutUnregisterBuffers";
+
+    obs_report_measure(
+        id, sym, "resolved",
+        (uint64_t)obs_address_is_callable((const void *)&sceVideoOutUnregisterBuffers),
+        "bool");
+
+    /* 1. Bad handle test */
+    if (obs_address_is_callable((const void *)&sceVideoOutUnregisterBuffers)) {
+        obs_jmp_buf guard;
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_bad = sceVideoOutUnregisterBuffers(-1, 0);
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-bad-handle", (uint64_t)(uint32_t)rc_bad,
+                               "rc");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "fault-bad-handle", 1u, "bool");
+        }
+    }
+
+    /* 2. On the display handle (borrowed or open) */
+    int borrowed = 0;
+    int handle = -1;
+    if (obs_display_holds_output()) {
+        handle = obs_display_get_video_handle();
+        if (handle > 0) {
+            borrowed = 1;
+        }
+    }
+
+    if (handle > 0 &&
+        obs_address_is_callable((const void *)&sceVideoOutUnregisterBuffers)) {
+        obs_jmp_buf guard;
+        /* Unused set index 1 test */
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_set1 = sceVideoOutUnregisterBuffers(handle, 1);
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-unregister-unused-set1",
+                               (uint64_t)(uint32_t)rc_set1, "rc");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "fault-unused-set1", 1u, "bool");
+        }
+
+        /* Negative set index test */
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_neg = sceVideoOutUnregisterBuffers(handle, -1);
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-unregister-neg-set",
+                               (uint64_t)(uint32_t)rc_neg, "rc");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "fault-neg-set", 1u, "bool");
+        }
+
+        /* Active set 0 test (is it refused with 0x80290009 RESOURCE_BUSY while scanning
+         * out?) */
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_active = sceVideoOutUnregisterBuffers(handle, 0);
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "rc-unregister-active-set0",
+                               (uint64_t)(uint32_t)rc_active, "rc");
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, sym, "fault-active-set0", 1u, "bool");
+        }
+    }
+
+    /* 3. Register -> Unregister -> Register-again sequence on secondary bus (1) or
+     * fresh handle */
+    int32_t user = 0;
+    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
+        (void)sceUserServiceGetInitialUser(&user);
+    }
+    int test_handle = -1;
+    if (obs_address_is_callable((const void *)&sceVideoOutOpen)) {
+        test_handle = sceVideoOutOpen(user, 1 /* OBS_VIDEO_BUS_SUB */, 0, 0);
+        if (test_handle <= 0 && !borrowed) {
+            test_handle = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, 0);
+        }
+    }
+
+    if (test_handle > 0 &&
+        obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory) &&
+        obs_address_is_callable((const void *)&sceKernelMapDirectMemory) &&
+        obs_address_is_callable((const void *)&sceVideoOutUnregisterBuffers)) {
+
+        obs_report_measure(id, sym, "test-handle-opened", (uint64_t)test_handle,
+                           "handle");
+
+        size_t vb_bytes = 1920u * 1088u * 4u;
+        size_t vb_align = 2u * 1024u * 1024u;
+        sce_off_t physA = 0;
+        sce_off_t physB = 0;
+        int mrcA = sceKernelAllocateDirectMemory(
+            0, (sce_off_t)sceKernelGetDirectMemorySize(), vb_bytes, vb_align,
+            OBS_MEM_TYPE_WC_GARLIC, &physA);
+        int mrcB = sceKernelAllocateDirectMemory(
+            0, (sce_off_t)sceKernelGetDirectMemorySize(), vb_bytes, vb_align,
+            OBS_MEM_TYPE_WC_GARLIC, &physB);
+        void *mapA = NULL;
+        void *mapB = NULL;
+        if (mrcA == 0) {
+            sceKernelMapDirectMemory(&mapA, vb_bytes,
+                                     OBS_PROT_CPU_RW | OBS_PROT_GPU_READ |
+                                         OBS_PROT_GPU_WRITE,
+                                     0, physA, vb_align);
+        }
+        if (mrcB == 0) {
+            sceKernelMapDirectMemory(&mapB, vb_bytes,
+                                     OBS_PROT_CPU_RW | OBS_PROT_GPU_READ |
+                                         OBS_PROT_GPU_WRITE,
+                                     0, physB, vb_align);
+        }
+
+        if (mapA != NULL && mapB != NULL) {
+            unsigned char attr[256];
+            memset(attr, 0, sizeof(attr));
+            if (obs_address_is_callable(
+                    (const void *)&sceVideoOutSetBufferAttribute2)) {
+                sceVideoOutSetBufferAttribute2(attr, 0x80000000u, 1u, 1920u, 1080u, 0,
+                                               0, 0);
+            } else if (obs_address_is_callable(
+                           (const void *)&sceVideoOutSetBufferAttribute)) {
+                sceVideoOutSetBufferAttribute(attr, 0x80000000u, 1u, 0u, 1920u, 1080u,
+                                              1920u);
+            }
+
+            /* Step 1: Register set 0 with buffer A */
+            int reg1_rc = -1;
+            if (obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers2)) {
+                struct {
+                    void *data;
+                } bufs[1];
+                bufs[0].data = mapA;
+                reg1_rc =
+                    sceVideoOutRegisterBuffers2(test_handle, 0, 0, bufs, 1, attr, 0, 0);
+            } else if (obs_address_is_callable(
+                           (const void *)&sceVideoOutRegisterBuffers)) {
+                void *addrs[1] = {mapA};
+                reg1_rc = sceVideoOutRegisterBuffers(test_handle, 0, addrs, 1, attr);
+            }
+            obs_report_measure(id, sym, "rc-seq-register1", (uint64_t)(uint32_t)reg1_rc,
+                               "rc");
+
+            /* Step 2: Unregister set 0 */
+            int unreg_rc = sceVideoOutUnregisterBuffers(test_handle, 0);
+            obs_report_measure(id, sym, "rc-seq-unregister",
+                               (uint64_t)(uint32_t)unreg_rc, "rc");
+
+            /* Step 3: Register-again set 0 with buffer B */
+            int reg2_rc = -1;
+            if (obs_address_is_callable((const void *)&sceVideoOutRegisterBuffers2)) {
+                struct {
+                    void *data;
+                } bufs[1];
+                bufs[0].data = mapB;
+                reg2_rc =
+                    sceVideoOutRegisterBuffers2(test_handle, 0, 0, bufs, 1, attr, 0, 0);
+            } else if (obs_address_is_callable(
+                           (const void *)&sceVideoOutRegisterBuffers)) {
+                void *addrs[1] = {mapB};
+                reg2_rc = sceVideoOutRegisterBuffers(test_handle, 0, addrs, 1, attr);
+            }
+            obs_report_measure(id, sym, "rc-seq-reregister",
+                               (uint64_t)(uint32_t)reg2_rc, "rc");
+
+            /* Teardown */
+            (void)sceVideoOutUnregisterBuffers(test_handle, 0);
+            (void)sceVideoOutClose(test_handle);
+            test_handle = -1;
+            if (obs_address_is_callable((const void *)&sceKernelMunmap)) {
+                sceKernelMunmap(mapA, vb_bytes);
+                sceKernelMunmap(mapB, vb_bytes);
+            }
+            if (obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
+                sceKernelReleaseDirectMemory(physA, vb_bytes);
+                sceKernelReleaseDirectMemory(physB, vb_bytes);
+            }
+        } else {
+            if (mapA != NULL &&
+                obs_address_is_callable((const void *)&sceKernelMunmap)) {
+                sceKernelMunmap(mapA, vb_bytes);
+            }
+            if (mapB != NULL &&
+                obs_address_is_callable((const void *)&sceKernelMunmap)) {
+                sceKernelMunmap(mapB, vb_bytes);
+            }
+            if (physA != 0 &&
+                obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
+                sceKernelReleaseDirectMemory(physA, vb_bytes);
+            }
+            if (physB != 0 &&
+                obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
+                sceKernelReleaseDirectMemory(physB, vb_bytes);
+            }
+            if (test_handle > 0 &&
+                obs_address_is_callable((const void *)&sceVideoOutClose)) {
+                (void)sceVideoOutClose(test_handle);
+            }
+        }
+    } else if (test_handle > 0 &&
+               obs_address_is_callable((const void *)&sceVideoOutClose)) {
+        (void)sceVideoOutClose(test_handle);
+    }
+
     return obs_pass();
 }
 
@@ -3277,6 +3486,10 @@ static const obs_check layout_checks[] = {
     {"130-layout/resolution-status", "libSceVideoOut", "sceVideoOutGetResolutionStatus",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutGetResolutionStatus,
      check_resolution_status, OBS_FROM_ASSUMED},
+    {"130-layout/video-out-unregister-buffers", "libSceVideoOut",
+     "sceVideoOutUnregisterBuffers", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)&sceVideoOutUnregisterBuffers, check_video_out_unregister_buffers,
+     OBS_FROM_ASSUMED},
     /* The one check in this section whose provenance is not `assumed`: the platform
      * draws the boundary, this only reports where it fell. */
     {"130-layout/query-size-ladder", "libkernel", "sceKernelDirectMemoryQuery",

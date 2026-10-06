@@ -12,6 +12,7 @@
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 #include "oops/freestd.h"
+#include "oops/time.h"
 
 /* ---- 040-file -------------------------------------------------------------- */
 
@@ -194,9 +195,57 @@ static obs_result check_usleep(void) {
     return obs_pass_value(after - before);
 }
 
+static obs_result check_convert_utc_to_localtime(void) {
+    if (!obs_address_is_callable((const void *)&sceKernelConvertUtcToLocaltime)) {
+        return obs_skip("sceKernelConvertUtcToLocaltime is not callable");
+    }
+
+    const char *id = "050-time/convert-utc-to-localtime";
+    const char *sym = "sceKernelConvertUtcToLocaltime";
+
+    /* Fixed test timestamp: 1791288000LL = 2026-10-06 12:00:00 UTC */
+    int64_t test_utc = 1791288000LL;
+    int64_t local = 0;
+    uint8_t timesec_buf[64];
+    uint8_t dst_buf[64];
+    memset(timesec_buf, 0xcc, sizeof(timesec_buf));
+    memset(dst_buf, 0xcc, sizeof(dst_buf));
+
+    obs_jmp_buf guard;
+    int rc = -1;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        rc = sceKernelConvertUtcToLocaltime(
+            test_utc, &local, (int *)(void *)timesec_buf, (int *)(void *)dst_buf);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, sym, "fault", 1u, "bool");
+        return obs_fail("fault during sceKernelConvertUtcToLocaltime");
+    }
+
+    obs_report_measure(id, sym, "rc", (uint64_t)(uint32_t)rc, "rc");
+    obs_report_measure(id, sym, "utc-input", (uint64_t)test_utc, "seconds");
+    obs_report_measure(id, sym, "local-time", (uint64_t)local, "seconds");
+    obs_report_measure(id, sym, "calculated-offset",
+                       (uint64_t)(int64_t)(local - test_utc), "seconds");
+    obs_report_bytes(id, sym, "timesec-buf-32b", 0, timesec_buf, 32);
+    obs_report_bytes(id, sym, "dst-buf-32b", 0, dst_buf, 32);
+
+    int32_t offset_s = 0;
+    int offset_rc = oops_time_utc_offset(test_utc, &offset_s);
+    obs_report_measure(id, sym, "oops-offset-rc", (uint64_t)(uint32_t)offset_rc, "rc");
+    obs_report_measure(id, sym, "oops-offset-seconds", (uint64_t)(int64_t)offset_s,
+                       "seconds");
+
+    return obs_pass_value((uint64_t)(uint32_t)rc);
+}
+
 static const obs_check time_checks[] = {
     {"050-time/usleep", "libkernel", "sceKernelUsleep", OBS_CAP_TIME, OBS_CAP_NONE,
      (const void *)&sceKernelUsleep, check_usleep, OBS_FROM_DERIVED},
+    {"050-time/convert-utc-to-localtime", "libkernel", "sceKernelConvertUtcToLocaltime",
+     OBS_CAP_TIME, OBS_CAP_NONE, (const void *)&sceKernelConvertUtcToLocaltime,
+     check_convert_utc_to_localtime, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_time = {

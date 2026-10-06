@@ -484,6 +484,7 @@ static const obs_import obs_platform_imports[] = {
     /* The current generation's forms. See platform.h: the two generations expose
      * different entry points and display.c takes whichever pair resolved. */
     {"libSceVideoOut", "sceVideoOutRegisterBuffers2"},
+    {"libSceVideoOut", "sceVideoOutUnregisterBuffers"},
     {"libSceVideoOut", "sceVideoOutSetBufferAttribute2"},
     {"libSceVideoOut", "sceVideoOutSubmitFlip"},
     {"libSceVideoOut", "sceVideoOutAddFlipEvent"},

@@ -959,6 +959,8 @@ OBS_WEAK int sceVideoOutRegisterBuffers2(int handle, int set_index, int start_in
                                          const void *buffers, int buffer_count,
                                          const void *attribute, int category,
                                          void *option);
+/* Unregisters a buffer set previously registered on the video handle. */
+OBS_WEAK int sceVideoOutUnregisterBuffers(int handle, int set_index);
 /* Puts a registered buffer on the screen. */
 OBS_WEAK int sceVideoOutSubmitFlip(int handle, int buffer_index, uint32_t flip_mode,
                                    int64_t flip_argument);

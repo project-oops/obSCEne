@@ -34,6 +34,7 @@
 #define _DEFAULT_SOURCE 1
 
 #include "obscene/platform.h"
+#include "oops/time.h"
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -1553,4 +1554,25 @@ int sceKernelSyncOnAddressWake(void *address, uint64_t count) {
     pthread_cond_broadcast(&s_host_sync_cond);
     pthread_mutex_unlock(&s_host_sync_lock);
     return 0;
+}
+
+int sceKernelConvertUtcToLocaltime(int64_t utc, int64_t *local, int *timesec,
+                                   int *dst) {
+    (void)utc;
+    (void)local;
+    (void)timesec;
+    (void)dst;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int oops_time_utc_offset(int64_t utc_seconds, int32_t *offset_s) {
+    (void)utc_seconds;
+    (void)offset_s;
+    return -1;
+}
+
+int sceVideoOutUnregisterBuffers(int handle, int set_index) {
+    (void)handle;
+    (void)set_index;
+    return OBS_HOST_NOT_IMPLEMENTED;
 }
