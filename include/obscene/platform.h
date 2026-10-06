@@ -1485,6 +1485,33 @@ OBS_WEAK void *reallocalign_static(void *ptr, size_t size,
 OBS_WEAK size_t
 sceLibcMspaceMallocUsableSize_static(const void *ptr) __asm__("$3j5sEugWSnw");
 OBS_WEAK size_t malloc_usable_size_static(const void *ptr) __asm__("$L0QZxn0SNzQ");
+OBS_WEAK void *sceLibcMspaceCreate_static(const char *name, void *base, size_t size,
+                                          uint64_t flags) __asm__("$-hn1tcVHq5Q");
+OBS_WEAK void *sceLibcMspaceCreate(const char *name, void *base, size_t size,
+                                   uint64_t flags);
+OBS_WEAK int sceLibcMspaceDestroy_static(void *msp) __asm__("$W6SiVSiCDtI");
+OBS_WEAK int sceLibcMspaceDestroy(void *msp);
+OBS_WEAK int sceFontMemoryInit_static(void *obj, void *base, uint32_t size, void *memIf,
+                                      void *msp, void *destroyCb,
+                                      uint64_t zero) __asm__("$whrS4oksXc4");
+OBS_WEAK int sceFontMemoryInit(void *obj, void *base, uint32_t size, void *memIf,
+                               void *msp, void *destroyCb, uint64_t zero);
+OBS_WEAK int sceFontMemoryTerm_static(void *obj) __asm__("$h6hIgxXEiEc");
+OBS_WEAK int sceFontMemoryTerm(void *obj);
+/* libSceJson2 (REQ-20261006T1505Z-js01) */
+OBS_WEAK void sceJsonMemAllocatorCtor_static(void *obj) __asm__("$-hJRce8wn1U");
+OBS_WEAK void sceJsonMemAllocatorDtor_static(void *obj) __asm__("$OcAgPxcq5Vk");
+OBS_WEAK void sceJsonInitializerCtor_static(void *obj) __asm__("$cK6bYHf-Q5E");
+OBS_WEAK void sceJsonInitializerDtor_static(void *obj) __asm__("$RujUxbr3haM");
+OBS_WEAK int
+sceJsonInitializerInitialize_static(void *obj,
+                                    const void *param) __asm__("$Cxwy7wHq4J0");
+OBS_WEAK int sceJsonInitializerTerminate_static(void *obj) __asm__("$PR5k1penBLM");
+OBS_WEAK void sceJsonInitParameter2Ctor_static(void *obj) __asm__("$WSOuge5IsCg");
+OBS_WEAK void
+sceJsonInitParameter2SetAllocator_static(void *param, void *alloc,
+                                         void *user) __asm__("$I2QC8PYhJWY");
+
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
                                      const void *payload,
                                      uint64_t arg3) __asm__("$f3dg2CSgRKY");

@@ -706,6 +706,25 @@ static const obs_import obs_platform_imports[] = {
     {"libSceLibcInternal", "sceLibcMspaceMallocUsableSize"},
     {"libSceLibcInternal", "$L0QZxn0SNzQ"},
     {"libSceLibcInternal", "malloc_usable_size"},
+    /* libSceFont (REQ-20261006T1450Z-fm01) */
+    {"libSceFont", "$whrS4oksXc4"},
+    {"libSceFont", "sceFontMemoryInit"},
+    {"libSceFont", "$h6hIgxXEiEc"},
+    {"libSceFont", "sceFontMemoryTerm"},
+    /* libc mspace (REQ-20261006T1450Z-fm01) */
+    {"libSceLibcInternal", "$-hn1tcVHq5Q"},
+    {"libSceLibcInternal", "sceLibcMspaceCreate"},
+    {"libSceLibcInternal", "$W6SiVSiCDtI"},
+    {"libSceLibcInternal", "sceLibcMspaceDestroy"},
+    /* libSceJson2 (REQ-20261006T1505Z-js01) */
+    {"libSceJson2", "$-hJRce8wn1U"},
+    {"libSceJson2", "$OcAgPxcq5Vk"},
+    {"libSceJson2", "$cK6bYHf-Q5E"},
+    {"libSceJson2", "$RujUxbr3haM"},
+    {"libSceJson2", "$Cxwy7wHq4J0"},
+    {"libSceJson2", "$PR5k1penBLM"},
+    {"libSceJson2", "$WSOuge5IsCg"},
+    {"libSceJson2", "$I2QC8PYhJWY"},
 };
 
 /* Calls `fn` once per import declared outside the census. */

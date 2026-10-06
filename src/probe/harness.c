@@ -613,15 +613,6 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out) {
                     if (tier_out != NULL) {
                         *tier_out = OBS_TIER_SYSMODULE;
                     }
-                    if (fn_sysmodule_get_handle != NULL) {
-                        int h = -1;
-                        if (fn_sysmodule_get_handle((uint32_t)obs_sysmodules[i].id,
-                                                    &h) == 0 &&
-                            h > 0) {
-                            obs_sysmodule_cache_handle(library, h);
-                            return h;
-                        }
-                    }
                     if (obs_address_is_callable(
                             (const void *)&sceKernelGetModuleList)) {
                         int mod_list_after[128];

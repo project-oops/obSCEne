@@ -195,6 +195,10 @@ static obs_result check_ampr_apr_file_read(void) {
     if (h_kernel < 0)
         h_kernel = 0x2001;
 
+    int h_apr = obs_module_open("libSceApr");
+    if (h_apr < 0)
+        h_apr = obs_module_open("libSceApr.sprx");
+
     const void *fn_cmd_ctor = (const void *)&sceAmprCommandBufferConstructor_static;
     if (!obs_address_is_callable(fn_cmd_ctor) && h_ampr >= 0)
         fn_cmd_ctor = obs_module_symbol(h_ampr, "sceAmprCommandBufferConstructor");
@@ -204,14 +208,20 @@ static obs_result check_ampr_apr_file_read(void) {
     if (!obs_address_is_callable(fn_apr_cmd_ctor) && h_ampr >= 0)
         fn_apr_cmd_ctor =
             obs_module_symbol(h_ampr, "sceAmprAprCommandBufferConstructor");
+    if (!obs_address_is_callable(fn_apr_cmd_ctor) && h_ampr >= 0)
+        fn_apr_cmd_ctor = obs_module_symbol(h_ampr, "$a8uLzYY--tM");
 
     const void *fn_read_file = (const void *)&sceAmprAprCommandBufferReadFile_static;
     if (!obs_address_is_callable(fn_read_file) && h_ampr >= 0)
         fn_read_file = obs_module_symbol(h_ampr, "sceAmprAprCommandBufferReadFile");
+    if (!obs_address_is_callable(fn_read_file) && h_ampr >= 0)
+        fn_read_file = obs_module_symbol(h_ampr, "$mQ16-QdKv7k");
 
     const void *fn_reset = (const void *)&sceAmprCommandBufferReset_static;
     if (!obs_address_is_callable(fn_reset) && h_ampr >= 0)
         fn_reset = obs_module_symbol(h_ampr, "sceAmprCommandBufferReset");
+    if (!obs_address_is_callable(fn_reset) && h_ampr >= 0)
+        fn_reset = obs_module_symbol(h_ampr, "$baQO9ez2gL4");
 
     const void *fn_set_buffer = (const void *)&sceAmprCommandBufferSetBuffer_static;
     if (!obs_address_is_callable(fn_set_buffer) && h_ampr >= 0) {
@@ -226,26 +236,76 @@ static obs_result check_ampr_apr_file_read(void) {
     if (!obs_address_is_callable(fn_apr_resolve) && h_kernel >= 0)
         fn_apr_resolve = obs_module_symbol(
             h_kernel, "sceKernelAprResolveFilepathsToIdsAndFileSizes");
+    if (!obs_address_is_callable(fn_apr_resolve) && h_kernel >= 0)
+        fn_apr_resolve = obs_module_symbol(h_kernel, "$gEpBkcwxUjw");
+    if (!obs_address_is_callable(fn_apr_resolve))
+        fn_apr_resolve = obs_module_symbol(1, "$gEpBkcwxUjw");
+    if (!obs_address_is_callable(fn_apr_resolve))
+        fn_apr_resolve = obs_module_symbol(0x2001, "$gEpBkcwxUjw");
+    if (!obs_address_is_callable(fn_apr_resolve) && h_ampr >= 0)
+        fn_apr_resolve = obs_module_symbol(h_ampr, "$gEpBkcwxUjw");
+    if (!obs_address_is_callable(fn_apr_resolve) && h_apr >= 0)
+        fn_apr_resolve = obs_module_symbol(h_apr, "$gEpBkcwxUjw");
 
     const void *fn_apr_submit =
         (const void *)&sceKernelAprSubmitCommandBufferAndGetResult_static;
     if (!obs_address_is_callable(fn_apr_submit) && h_kernel >= 0)
         fn_apr_submit =
             obs_module_symbol(h_kernel, "sceKernelAprSubmitCommandBufferAndGetResult");
+    if (!obs_address_is_callable(fn_apr_submit) && h_kernel >= 0)
+        fn_apr_submit = obs_module_symbol(h_kernel, "$ASoW5WE-UPo");
+    if (!obs_address_is_callable(fn_apr_submit))
+        fn_apr_submit = obs_module_symbol(1, "$ASoW5WE-UPo");
+    if (!obs_address_is_callable(fn_apr_submit))
+        fn_apr_submit = obs_module_symbol(0x2001, "$ASoW5WE-UPo");
+    if (!obs_address_is_callable(fn_apr_submit) && h_ampr >= 0)
+        fn_apr_submit = obs_module_symbol(h_ampr, "$ASoW5WE-UPo");
+    if (!obs_address_is_callable(fn_apr_submit) && h_apr >= 0)
+        fn_apr_submit = obs_module_symbol(h_apr, "$ASoW5WE-UPo");
 
     const void *fn_apr_wait = (const void *)&sceKernelAprWaitCommandBuffer_static;
     if (!obs_address_is_callable(fn_apr_wait) && h_kernel >= 0)
         fn_apr_wait = obs_module_symbol(h_kernel, "sceKernelAprWaitCommandBuffer");
+    if (!obs_address_is_callable(fn_apr_wait) && h_kernel >= 0)
+        fn_apr_wait = obs_module_symbol(h_kernel, "$rqwFKI4PAiM");
+    if (!obs_address_is_callable(fn_apr_wait))
+        fn_apr_wait = obs_module_symbol(1, "$rqwFKI4PAiM");
+    if (!obs_address_is_callable(fn_apr_wait))
+        fn_apr_wait = obs_module_symbol(0x2001, "$rqwFKI4PAiM");
+    if (!obs_address_is_callable(fn_apr_wait) && h_ampr >= 0)
+        fn_apr_wait = obs_module_symbol(h_ampr, "$rqwFKI4PAiM");
+    if (!obs_address_is_callable(fn_apr_wait) && h_apr >= 0)
+        fn_apr_wait = obs_module_symbol(h_apr, "$rqwFKI4PAiM");
 
     const void *fn_apr_stat = (const void *)&sceKernelAprGetFileStat_static;
     if (!obs_address_is_callable(fn_apr_stat) && h_kernel >= 0)
         fn_apr_stat = obs_module_symbol(h_kernel, "sceKernelAprGetFileStat");
+    if (!obs_address_is_callable(fn_apr_stat) && h_kernel >= 0)
+        fn_apr_stat = obs_module_symbol(h_kernel, "$ApkYaHb8Sek");
+    if (!obs_address_is_callable(fn_apr_stat))
+        fn_apr_stat = obs_module_symbol(1, "$ApkYaHb8Sek");
+    if (!obs_address_is_callable(fn_apr_stat))
+        fn_apr_stat = obs_module_symbol(0x2001, "$ApkYaHb8Sek");
+    if (!obs_address_is_callable(fn_apr_stat) && h_ampr >= 0)
+        fn_apr_stat = obs_module_symbol(h_ampr, "$ApkYaHb8Sek");
+    if (!obs_address_is_callable(fn_apr_stat) && h_apr >= 0)
+        fn_apr_stat = obs_module_symbol(h_apr, "$ApkYaHb8Sek");
 
     const void *fn_apr_prefix =
         (const void *)&sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes_static;
     if (!obs_address_is_callable(fn_apr_prefix) && h_kernel >= 0)
         fn_apr_prefix = obs_module_symbol(
             h_kernel, "sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes");
+    if (!obs_address_is_callable(fn_apr_prefix) && h_kernel >= 0)
+        fn_apr_prefix = obs_module_symbol(h_kernel, "$w5fcCG+t31g");
+    if (!obs_address_is_callable(fn_apr_prefix))
+        fn_apr_prefix = obs_module_symbol(1, "$w5fcCG+t31g");
+    if (!obs_address_is_callable(fn_apr_prefix))
+        fn_apr_prefix = obs_module_symbol(0x2001, "$w5fcCG+t31g");
+    if (!obs_address_is_callable(fn_apr_prefix) && h_ampr >= 0)
+        fn_apr_prefix = obs_module_symbol(h_ampr, "$w5fcCG+t31g");
+    if (!obs_address_is_callable(fn_apr_prefix) && h_apr >= 0)
+        fn_apr_prefix = obs_module_symbol(h_apr, "$w5fcCG+t31g");
 
     obs_report_measure(
         check_name, "resolve", "ampr-cmd-ctor",
@@ -502,157 +562,195 @@ static obs_result check_ampr_apr_file_read(void) {
                                    sb40_tags[si], sb40_sizes[si], 0);
     }
 
-    /* (3) sceAmprAprCommandBufferConstructor(obj3, buf3, 0x1000, 0, 0, 0) */
-    uint8_t obj3[0x200];
-    uint8_t buf3[0x1000];
-    uint8_t obj3_before[0x200];
-    uint8_t buf3_before[0x200];
-    memset(obj3, 0xcc, sizeof(obj3));
-    memset(buf3, 0xcc, sizeof(buf3));
-    memcpy(obj3_before, obj3, sizeof(obj3));
-    memcpy(buf3_before, buf3, sizeof(buf3_before));
+    /* =========================================================================
+     * REQ-20261006T1510Z-apr1: The APR file path in the titles' own shapes
+     * ========================================================================= */
 
-    uint64_t rc3 = 0xffffffffffffffffULL;
+    /* (1) sceAmprAprCommandBufferConstructor(p0, p1, p2, 0, 0, 0)
+     * Every object/buffer is 0x200 bytes, 0xcc-filled, before/after dumps and rc */
+    uint8_t p0[0x200], p1[0x200], p2[0x200];
+    uint8_t p0_before[0x200], p1_before[0x200], p2_before[0x200];
+    memset(p0, 0xcc, sizeof(p0));
+    memset(p1, 0xcc, sizeof(p1));
+    memset(p2, 0xcc, sizeof(p2));
+    memcpy(p0_before, p0, sizeof(p0));
+    memcpy(p1_before, p1, sizeof(p1));
+    memcpy(p2_before, p2, sizeof(p2));
+
+    uint64_t rc_apr_ctor = 0xffffffffffffffffULL;
     if (fn_apr_cmd_ctor && obs_address_is_callable(fn_apr_cmd_ctor)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc3 = ((uint64_t (*)(void *, void *, uint64_t, uint64_t, uint64_t,
-                                 uint64_t))fn_apr_cmd_ctor)(obj3, buf3, 0x1000, 0,
-                                                           0, 0);
+            rc_apr_ctor = ((uint64_t (*)(void *, void *, void *, uint64_t, uint64_t,
+                                         uint64_t))fn_apr_cmd_ctor)(p0, p1, p2, 0, 0,
+                                                                    0);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(check_name, "ampr-apr-cb-ctor-title", "fault",
+            obs_report_measure(check_name, "apr-cb-ctor-3ptr", "fault",
                                (uint64_t)sig, "signal");
         }
     }
-    obs_report_measure(check_name, "ampr-apr-cb-ctor-title", "rc", rc3, "code");
-    obs_report_written(check_name, "sceAmprAprCommandBufferConstructor",
-                       "apr-ctor-obj", obj3_before, obj3, sizeof(obj3));
-    obs_report_written(check_name, "sceAmprAprCommandBufferConstructor",
-                       "apr-ctor-buf", buf3_before, buf3, sizeof(buf3_before));
+    obs_report_measure(check_name, "apr-cb-ctor-3ptr", "rc", rc_apr_ctor, "code");
+    obs_report_written(check_name, "sceAmprAprCommandBufferConstructor", "p0",
+                       p0_before, p0, sizeof(p0));
+    obs_report_written(check_name, "sceAmprAprCommandBufferConstructor", "p1",
+                       p1_before, p1, sizeof(p1));
+    obs_report_written(check_name, "sceAmprAprCommandBufferConstructor", "p2",
+                       p2_before, p2, sizeof(p2));
     for (unsigned int off = 0; off < 0x200; off += 32) {
-        obs_report_bytes(check_name, "ampr-apr-cb-ctor-title", "obj-after", off,
-                         obj3 + off, 32);
-        obs_report_bytes(check_name, "ampr-apr-cb-ctor-title", "buf-after", off,
-                         buf3 + off, 32);
+        obs_report_bytes(check_name, "apr-cb-ctor-3ptr", "p0-after", off, p0 + off, 32);
+        obs_report_bytes(check_name, "apr-cb-ctor-3ptr", "p1-after", off, p1 + off, 32);
+        obs_report_bytes(check_name, "apr-cb-ctor-3ptr", "p2-after", off, p2 + off, 32);
     }
 
-    /* (3b) sceAmprAprCommandBufferConstructor with arg1/arg2 swapped */
-    uint8_t obj3b[0x200];
-    uint8_t buf3b[0x1000];
-    uint8_t obj3b_before[0x200];
-    uint8_t buf3b_before[0x200];
-    memset(obj3b, 0xcc, sizeof(obj3b));
-    memset(buf3b, 0xcc, sizeof(buf3b));
-    memcpy(obj3b_before, obj3b, sizeof(obj3b));
-    memcpy(buf3b_before, buf3b, sizeof(buf3b_before));
+    /* (2) sceAmprCommandBufferSetBuffer on whichever object (1) shows to be the command buffer (p0),
+     * with 0x1000 bytes. Then sceAmprAprCommandBufferReadFile on it for file id 0, offset 0, 0x100 bytes */
+    uint8_t setbuf_mem[0x1000];
+    memset(setbuf_mem, 0xcc, sizeof(setbuf_mem));
+    uint8_t p0_pre_setbuf[0x200];
+    memcpy(p0_pre_setbuf, p0, sizeof(p0));
 
-    uint64_t rc3b = 0xffffffffffffffffULL;
-    if (fn_apr_cmd_ctor && obs_address_is_callable(fn_apr_cmd_ctor)) {
+    uint64_t rc_setbuf = 0xffffffffffffffffULL;
+    if (fn_set_buffer && obs_address_is_callable(fn_set_buffer)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc3b = ((uint64_t (*)(void *, void *, void *, uint64_t, uint64_t,
-                                  uint64_t))fn_apr_cmd_ctor)(
-                obj3b, (void *)(uintptr_t)0x1000, buf3b, 0, 0, 0);
+            rc_setbuf = ((uint64_t (*)(void *, void *, uint32_t, uint64_t, void *,
+                                       uint64_t))fn_set_buffer)(
+                p0, setbuf_mem, 0x1000, 0, NULL, 0);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(check_name, "ampr-apr-cb-ctor-swapped", "fault",
+            obs_report_measure(check_name, "apr-cb-setbuffer", "fault",
                                (uint64_t)sig, "signal");
         }
     }
-    obs_report_measure(check_name, "ampr-apr-cb-ctor-swapped", "rc", rc3b,
-                       "code");
-    obs_report_written(check_name, "sceAmprAprCommandBufferConstructor",
-                       "apr-ctor-obj-swapped", obj3b_before, obj3b,
-                       sizeof(obj3b));
-    obs_report_written(check_name, "sceAmprAprCommandBufferConstructor",
-                       "apr-ctor-buf-swapped", buf3b_before, buf3b,
-                       sizeof(buf3b_before));
-    for (unsigned int off = 0; off < 0x200; off += 32) {
-        obs_report_bytes(check_name, "ampr-apr-cb-ctor-swapped", "obj-after",
-                         off, obj3b + off, 32);
-        obs_report_bytes(check_name, "ampr-apr-cb-ctor-swapped", "buf-after",
-                         off, buf3b + off, 32);
-    }
+    obs_report_measure(check_name, "apr-cb-setbuffer", "rc", rc_setbuf, "code");
+    obs_report_written(check_name, "sceAmprCommandBufferSetBuffer", "apr-cb-after-setbuf",
+                       p0_pre_setbuf, p0, sizeof(p0));
 
-    /* (4) sceAmprCommandBufferReset(obj1) after (2) */
-    uint8_t obj4_before[0x200];
-    memcpy(obj4_before, obj1, sizeof(obj4_before));
-    uint64_t rc4 = 0xffffffffffffffffULL;
-    if (fn_reset && obs_address_is_callable(fn_reset)) {
+    uint8_t read_dest[0x100];
+    memset(read_dest, 0xcc, sizeof(read_dest));
+    uint8_t setbuf_pre_read[0x1000];
+    memcpy(setbuf_pre_read, setbuf_mem, sizeof(setbuf_mem));
+    uint64_t rc_read = 0xffffffffffffffffULL;
+    if (fn_read_file && obs_address_is_callable(fn_read_file)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc4 = ((uint64_t (*)(void *))fn_reset)(obj1);
+            rc_read = ((uint64_t (*)(void *, uint32_t, void *, uint64_t,
+                                     uint64_t))fn_read_file)(
+                p0, 0u, read_dest, 0x100u, 0u);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(check_name, "ampr-cb-reset-after-2", "fault",
+            obs_report_measure(check_name, "apr-read-file", "fault",
                                (uint64_t)sig, "signal");
         }
     }
-    obs_report_measure(check_name, "ampr-cb-reset-after-2", "rc", rc4, "code");
-    obs_report_written(check_name, "sceAmprCommandBufferReset", "reset-obj",
-                       obj4_before, obj1, sizeof(obj1));
-    for (unsigned int off = 0; off < 0x200; off += 32) {
-        obs_report_bytes(check_name, "ampr-cb-reset-after-2", "obj-after", off,
-                         obj1 + off, 32);
+    obs_report_measure(check_name, "apr-read-file", "rc", rc_read, "code");
+    obs_report_written(check_name, "sceAmprAprCommandBufferReadFile", "setbuf-stream",
+                       setbuf_pre_read, setbuf_mem, 0x200);
+    obs_report_bytes(check_name, "apr-read-file", "setbuf-head64", 0, setbuf_mem, 64);
+    obs_report_bytes(check_name, "apr-read-file", "dest-head64", 0, read_dest, 64);
+
+    /* (3) Path resolution on paths the probe can reach:
+     * Write /data/apr_test.bin first (64 bytes of known data) */
+    const char *test_path = "/data/apr_test.bin";
+    int fd = -1;
+    if (obs_address_is_callable((const void *)&sceKernelOpen)) {
+        fd = sceKernelOpen(test_path, 0x0001 | 0x0200 /* O_WRONLY | O_CREAT */, 0666);
+    }
+    if (fd >= 0) {
+        uint8_t dummy_data[64];
+        memset(dummy_data, 0x42, sizeof(dummy_data));
+        if (obs_address_is_callable((const void *)&sceKernelWrite)) {
+            sceKernelWrite(fd, dummy_data, sizeof(dummy_data));
+        }
+        if (obs_address_is_callable((const void *)&sceKernelClose)) {
+            sceKernelClose(fd);
+        }
     }
 
-    /* Steps (3)-(5) (read, submit, stat) require a real package-mounted /app0.
-     * As settled in REQ-20260928T1512Z-c635, the homebrew probe lacks /app0 mount,
-     * and submitting unmapped buffers to the hardware APR engine causes an asynchronous
-     * IOMMU page fault (0xa002c502 APR_FATAL_ERROR_ASYNC). Thus, skip hardware submission. */
+    uint32_t resolved_ids[2] = {0, 0};
+    uint64_t resolved_sizes[2] = {0, 0};
+    int32_t resolved_statuses[2] = {-1, -1};
+    const char *paths_to_resolve[] = {
+        "/system/common/lib/libSceJson2.sprx",
+        "/data/apr_test.bin"
+    };
+    int rc_resolve_abs = -1;
+    if (fn_apr_resolve && obs_address_is_callable(fn_apr_resolve)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_resolve_abs = ((int (*)(const char **, uint32_t, uint32_t *, uint64_t *,
+                                       int32_t *))fn_apr_resolve)(
+                paths_to_resolve, 2u, resolved_ids, resolved_sizes, resolved_statuses);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "apr-resolve-paths", "rc",
+                       (uint64_t)(uint32_t)rc_resolve_abs, "code");
+    obs_report_measure(check_name, "apr-resolve-paths", "id0",
+                       (uint64_t)resolved_ids[0], "id");
+    obs_report_measure(check_name, "apr-resolve-paths", "size0",
+                       resolved_sizes[0], "bytes");
+    obs_report_measure(check_name, "apr-resolve-paths", "status0",
+                       (uint64_t)(uint32_t)resolved_statuses[0], "code");
+    obs_report_measure(check_name, "apr-resolve-paths", "id1",
+                       (uint64_t)resolved_ids[1], "id");
+    obs_report_measure(check_name, "apr-resolve-paths", "size1",
+                       resolved_sizes[1], "bytes");
+    obs_report_measure(check_name, "apr-resolve-paths", "status1",
+                       (uint64_t)(uint32_t)resolved_statuses[1], "code");
 
-    /* (6) the prefix-resolve form with a prefix that exists */
+    /* WithPrefix form, prefix /system/common/lib/ */
+    uint32_t pref_ids[1] = {0};
+    uint64_t pref_sizes[1] = {0};
+    int32_t pref_statuses[1] = {-1};
+    const char *rel_paths[] = {"libSceJson2.sprx"};
+    int rc_prefix = -1;
     if (fn_apr_prefix && obs_address_is_callable(fn_apr_prefix)) {
-        uint32_t pref_ids[1] = {0};
-        uint64_t pref_sizes[1] = {0};
-        int32_t pref_statuses[1] = {-1};
-        const char *rel_paths[] = {"eboot.bin"};
-        int rc_pref = -1;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_pref = ((int (*)(const char *, const char **, uint32_t, uint32_t *,
-                                uint64_t *, int32_t *))fn_apr_prefix)(
-                "/app0/", rel_paths, 1u, pref_ids, pref_sizes, pref_statuses);
+            rc_prefix = ((int (*)(const char *, const char **, uint32_t, uint32_t *,
+                                  uint64_t *, int32_t *))fn_apr_prefix)(
+                "/system/common/lib/", rel_paths, 1u, pref_ids, pref_sizes,
+                pref_statuses);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
         }
-        obs_report_measure(check_name, "prefix-resolve", "rc",
-                           (uint64_t)(uint32_t)rc_pref, "code");
-        obs_report_measure(check_name, "prefix-resolve", "file-id",
-                           (uint64_t)pref_ids[0], "id");
-        obs_report_measure(check_name, "prefix-resolve", "file-size", pref_sizes[0],
-                           "bytes");
-        obs_report_measure(check_name, "prefix-resolve", "status",
-                           (uint64_t)(uint32_t)pref_statuses[0], "code");
+    }
+    obs_report_measure(check_name, "apr-resolve-prefix", "rc",
+                       (uint64_t)(uint32_t)rc_prefix, "code");
+    obs_report_measure(check_name, "apr-resolve-prefix", "id0",
+                       (uint64_t)pref_ids[0], "id");
+    obs_report_measure(check_name, "apr-resolve-prefix", "size0",
+                       pref_sizes[0], "bytes");
+    obs_report_measure(check_name, "apr-resolve-prefix", "status0",
+                       (uint64_t)(uint32_t)pref_statuses[0], "code");
 
-        uint32_t pref_ids_noslash[1] = {0};
-        uint64_t pref_sizes_noslash[1] = {0};
-        int32_t pref_statuses_noslash[1] = {-1};
-        int rc_pref_noslash = -1;
-        sig = OBS_FAULT_ARM(&guard);
-        if (sig == 0) {
-            rc_pref_noslash =
-                ((int (*)(const char *, const char **, uint32_t, uint32_t *, uint64_t *,
-                          int32_t *))fn_apr_prefix)(
-                    "/app0", rel_paths, 1u, pref_ids_noslash, pref_sizes_noslash,
-                    pref_statuses_noslash);
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
+    /* (4) sceKernelAprGetFileStat on each id from (3): rc and stat block bytes */
+    for (int i = 0; i < 2; i++) {
+        uint32_t fid = resolved_ids[i];
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "stat-id%d", i);
+        uint8_t stat_block[0x100];
+        memset(stat_block, 0xcc, sizeof(stat_block));
+        int rc_stat = -1;
+        if (fn_apr_stat && obs_address_is_callable(fn_apr_stat)) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_stat = ((int (*)(uint32_t, void *))fn_apr_stat)(fid, stat_block);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
         }
-        obs_report_measure(check_name, "prefix-resolve-noslash", "rc",
-                           (uint64_t)(uint32_t)rc_pref_noslash, "code");
-        obs_report_measure(check_name, "prefix-resolve-noslash", "file-id",
-                           (uint64_t)pref_ids_noslash[0], "id");
-        obs_report_measure(check_name, "prefix-resolve-noslash", "file-size",
-                           pref_sizes_noslash[0], "bytes");
-        obs_report_measure(check_name, "prefix-resolve-noslash", "status",
-                           (uint64_t)(uint32_t)pref_statuses_noslash[0], "code");
+        obs_report_measure(check_name, tag, "rc", (uint64_t)(uint32_t)rc_stat, "code");
+        obs_report_bytes(check_name, tag, "stat-bytes", 0, stat_block, 0x80);
     }
 
     return obs_pass();
