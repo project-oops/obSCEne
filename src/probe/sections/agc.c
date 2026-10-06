@@ -57,6 +57,7 @@
 #include "oops/display.h"
 #include "oops/target.h"
 #include "oops/freestd.h"
+#include "oops/gpu.h"
 #if !defined(OBSCENE_HOST_BUILD)
 #include "oops/heap.h"
 #include "oops/memory.h"
@@ -6259,10 +6260,14 @@ static obs_result check_agc_compute_dispatch(void) {
                              (uint64_t)(uint32_t)submit_rc);
 }
 
-/* REQ-20261006T1240Z-cs01: Where a dispatch's grid starts when nothing wrote
- * COMPUTE_START_X/Y/Z, as PPSA03416's first dispatch */
+/* REQ-20261006T1640Z-cs02: Where a dispatch's grid starts when nothing wrote
+ * COMPUTE_START_X/Y/Z, built on oops-sdk's compute API so the dispatch retires */
 static obs_result check_agc_compute_start_grid(void) {
     const char *check_name = "166-agc/compute-start-grid";
+#if defined(OBSCENE_HOST_BUILD)
+    (void)check_name;
+    return obs_skip("GPU compute not available on host build");
+#else
     if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
         !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb) ||
         !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
@@ -6276,50 +6281,48 @@ static obs_result check_agc_compute_start_grid(void) {
         return obs_fail_code("fault before queue/shader creation", (uint64_t)sig);
     }
 
-    /* Allocate GPU payload, fence buffer, and out buffers in Onion memory */
-#if !defined(OBSCENE_HOST_BUILD)
-    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x1000, 256, OOPS_MEM_WB_ONION);
-    volatile uint32_t *fence =
-        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-    volatile uint32_t *out_buf1 =
-        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-    volatile uint32_t *out_buf2 =
-        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-#else
-    static _Alignas(256) uint8_t s_host_payload[sizeof(agc_retail_payload_0)];
-    static _Alignas(64) uint32_t s_host_fence[16];
-    static _Alignas(64) uint32_t s_host_out1[16];
-    static _Alignas(64) uint32_t s_host_out2[16];
-    uint8_t *gpu_payload = s_host_payload;
-    volatile uint32_t *fence = s_host_fence;
-    volatile uint32_t *out_buf1 = s_host_out1;
-    volatile uint32_t *out_buf2 = s_host_out2;
-#endif
-
+    /* 1. Create hardware queue via oops_gpu_create_compute_queue() or graphics queue fallback */
+    oops_gpu_queue_t *queue = oops_gpu_create_compute_queue();
+    if (queue == NULL) {
+        queue = oops_gpu_create_graphics_queue();
+    }
     obs_fault_unregister();
 
-    if (gpu_payload == NULL || fence == NULL || out_buf1 == NULL || out_buf2 == NULL) {
-        return obs_skip("failed to allocate Onion memory for shader, fence or out_buf");
+    obs_report_measure(check_name, "queue", "created", (uint64_t)(queue != NULL), "bool");
+    if (queue == NULL) {
+        return obs_skip("oops_gpu queue creation failed");
     }
 
-    for (size_t i = 0; i < sizeof(agc_retail_payload_0); i++) {
-        gpu_payload[i] = agc_retail_payload_0[i];
-    }
-    *fence = 0x11111111u;
+    /* 2. Prepare shader header from agc_retail_hdr_full_0 */
+    uint8_t hdr_buf[384];
+    memset(hdr_buf, 0, sizeof(hdr_buf));
+    memcpy(hdr_buf, agc_retail_hdr_full_0, sizeof(agc_retail_hdr_full_0));
 
-    /* Pre-fill buffers with 0xcc */
-    for (size_t i = 0; i < 16; i++) {
-        out_buf1[i] = 0xccccccccu;
-        out_buf2[i] = 0xccccccccu;
+    /* In register table at hdr_buf + 0x88, patch reg 6 (COMPUTE_PGM_RSRC2, 0x213)
+     * from 0x00000992 to 0x0084u (USER_SGPR=2, TGID_X_EN=1).
+     * Offset 0x88 + 6*8 + 4 = 0xbc:
+     */
+    *(uint32_t *)(hdr_buf + 0xbc) = 0x0084u;
+
+    /* (2) Record register table the shader header gave (indices and values) */
+    const uint32_t *reg_table = (const uint32_t *)(hdr_buf + 0x88);
+    for (int i = 0; i < 11; i++) {
+        uint32_t reg_idx = reg_table[i * 2];
+        uint32_t reg_val = reg_table[i * 2 + 1];
+        char tag_idx[32], tag_val[32];
+        oops_snprintf(tag_idx, sizeof(tag_idx), "reg%d-idx", i);
+        oops_snprintf(tag_val, sizeof(tag_val), "reg%d-val", i);
+        obs_report_measure(check_name, "hdr-reg-table", tag_idx, (uint64_t)reg_idx, "val");
+        obs_report_measure(check_name, "hdr-reg-table", tag_val, (uint64_t)reg_val, "val");
     }
 
-    /* RDNA2 Compute Shader:
-     * s0: out_gpu_lo
-     * s1: out_gpu_hi
-     * s2: WORKGROUP_ID_X (from SPI with TGID_X_EN=1)
+    /* 3. Prepare shader bytecode:
+     * s0: out_gpu_lo (COMPUTE_USER_DATA_0)
+     * s1: out_gpu_hi (COMPUTE_USER_DATA_1)
+     * s2: WORKGROUP_ID_X (from SPI with USER_SGPR=2, TGID_X_EN=1)
      *
      * 1. s_waitcnt 0                                 [0xbf8c0000]
-     * 2. s_mov_b32 exec_lo, 1 (lane 0 only)          [0xbefe0381]
+     * 2. s_mov_b64 exec, 1 (lane 0 only)             [0xbefe0481]
      * 3. s_add_u32 s3, s2, s2 (s3 = s2 * 2)          [0x80030202]
      * 4. s_add_u32 s3, s3, s3 (s3 = s2 * 4)          [0x80030303]
      * 5. s_add_u32 s4, s0, s3 (s4 = out_lo + s2 * 4) [0x80040300]
@@ -6330,9 +6333,11 @@ static obs_result check_agc_compute_start_grid(void) {
      * 10. s_waitcnt vmcnt(0)                         [0xbf8c3f70]
      * 11. s_endpgm                                   [0xbf810000]
      */
-    uint32_t *code = (uint32_t *)gpu_payload;
+    uint8_t payload[sizeof(agc_retail_payload_0)];
+    memset(payload, 0, sizeof(payload));
+    uint32_t *code = (uint32_t *)payload;
     code[0] = 0xbf8c0000u;
-    code[1] = 0xbefe0381u;
+    code[1] = 0xbefe0481u;
     code[2] = 0x80030202u;
     code[3] = 0x80030303u;
     code[4] = 0x80040300u;
@@ -6343,195 +6348,91 @@ static obs_result check_agc_compute_start_grid(void) {
     code[9] = 0x007d0200u;
     code[10] = 0xbf8c3f70u;
     code[11] = 0xbf810000u;
-    for (size_t k = 12; k < 0x3b0u / 4u; k++) {
+    for (size_t k = 12; k < sizeof(payload) / 4u; k++) {
         code[k] = 0xbf9f0000u; /* s_nop 0 */
     }
 
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        oops_gpu_destroy_queue(queue);
+        return obs_fail_code("fault during shader creation", (uint64_t)sig);
+    }
+    oops_gpu_shader_t *shader =
+        oops_gpu_create_shader(hdr_buf, sizeof(hdr_buf), payload, sizeof(payload));
+    obs_fault_unregister();
+
+    obs_report_measure(check_name, "shader", "created", (uint64_t)(shader != NULL), "bool");
+    if (shader == NULL) {
+        oops_gpu_destroy_queue(queue);
+        return obs_skip("oops_gpu shader creation failed");
+    }
+
+    /* 4. Allocate coherent Onion memory for output buffers */
+    volatile uint32_t *out_buf1 = (volatile uint32_t *)oops_mem_alloc(64, 64, OOPS_MEM_WB_ONION);
+    volatile uint32_t *out_buf2 = (volatile uint32_t *)oops_mem_alloc(64, 64, OOPS_MEM_WB_ONION);
+
+    if (out_buf1 == NULL || out_buf2 == NULL) {
+        oops_gpu_destroy_shader(shader);
+        oops_gpu_destroy_queue(queue);
+        return obs_skip("failed to allocate Onion memory for out buffers");
+    }
+
+    for (size_t i = 0; i < 16; i++) {
+        out_buf1[i] = 0xccccccccu;
+        out_buf2[i] = 0xccccccccu;
+    }
 #if defined(__x86_64__)
-    __builtin_ia32_clflush((const void *)gpu_payload);
-    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x100));
-    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x200));
     for (size_t p = 0; p < 64; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)out_buf1 + p));
         __builtin_ia32_clflush((const void *)((const char *)out_buf2 + p));
     }
+    __builtin_ia32_mfence();
 #endif
 
-    /* Instantiate compute shader */
-    uint8_t hdr_buf[384];
-    for (size_t i = 0; i < sizeof(hdr_buf); i++) {
-        hdr_buf[i] = 0;
-    }
-    for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0); i++) {
-        hdr_buf[i] = agc_retail_hdr_full_0[i];
-    }
-
-    void *shader_obj = NULL;
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig != 0) {
-        obs_fault_unregister();
-        return obs_fail("fault during shader instantiation");
-    }
-    uint64_t rc_shader =
-        sceAgcCreateShader(&shader_obj, (void *)hdr_buf, gpu_payload, 0);
-    obs_fault_unregister();
-    obs_report_measure(check_name, "sceAgcCreateShader", "rc-shader", rc_shader, "code");
-    if (rc_shader != 0 || shader_obj == NULL) {
-        return obs_fail("failed to instantiate shader");
-    }
-
-    /* Create fresh GPU queue */
-    void *queue = NULL;
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig != 0) {
-        obs_fault_unregister();
-        return obs_fail("fault during queue creation");
-    }
-    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
-    obs_fault_unregister();
-    obs_report_measure(check_name, "sceAgcDriverCreateQueue", "rc-create",
-                       (uint64_t)(uint32_t)rc_create, "code");
-    if (rc_create != 0 || queue == NULL) {
-        return obs_skip("queue creation failed; skipping dispatch");
-    }
-
-    obs_agc_cb_probe *probe = get_agc_probe();
-    if (probe == NULL) {
-        if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
-            sceAgcDriverDestroyQueue(queue);
-        }
-        return obs_skip("failed to get command buffer probe");
-    }
-
-    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
-    const uint32_t *reg_table = (const uint32_t *)(hdr_buf + 0x88);
-    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
-
-    /* Resolve sceAgcCbDispatch */
-    agc_cb_fn fn_dispatch = (agc_cb_fn)agc_resolve_or_weak("sceAgcCbDispatch",
-                                                           (const void *)&sceAgcCbDispatch);
-
     /* =========================================================================
-     * (1) Arm 1: Fresh DCB on fresh queue, NO COMPUTE_START_* written.
-     * sceAgcCbDispatch(cb, 4, 1, 1, 0, 0)
+     * (1) Arm 1: Default start (fresh queue, no COMPUTE_START_* written)
+     * Grid: 4x1x1 threadgroups via oops_gpu_dispatch
      * ========================================================================= */
-    agc_cb_prepare(probe, 0x1000);
-    uint32_t *dw = (uint32_t *)probe->cur;
+    uint32_t ud1[2];
+    ud1[0] = (uint32_t)(uintptr_t)out_buf1;
+    ud1[1] = (uint32_t)((uintptr_t)out_buf1 >> 32);
 
-    for (int i = 0; i < 11; i++) {
-        uint32_t reg_idx = reg_table[i * 2];
-        uint32_t reg_val = reg_table[i * 2 + 1];
-        if (reg_idx == 0x20c) {
-            reg_val = (uint32_t)(payload_va >> 8);
-        } else if (reg_idx == 0x20d) {
-            reg_val = (uint32_t)(payload_va >> 40);
-        } else if (reg_idx == 0x213) {
-            /* COMPUTE_PGM_RSRC2: USER_SGPR=2 (bits 5:1), TGID_X_EN=1 (bit 7) */
-            reg_val = 0x0084u;
-        }
-        *dw++ = 0xc0017600u;
-        *dw++ = reg_idx;
-        *dw++ = reg_val;
-    }
+    oops_gpu_dispatch_t disp1;
+    disp1.shader = shader;
+    disp1.user_data = ud1;
+    disp1.user_data_count = 2;
+    disp1.grid_x = 4;
+    disp1.grid_y = 1;
+    disp1.grid_z = 1;
 
-    /* Bind out_buf1 to COMPUTE_USER_DATA_0 and 1 */
-    uint64_t out1_gpu = (uint64_t)(uintptr_t)out_buf1;
-    *dw++ = 0xc0017600u;
-    *dw++ = 0x240u;
-    *dw++ = (uint32_t)out1_gpu;
-    *dw++ = 0xc0017600u;
-    *dw++ = 0x241u;
-    *dw++ = (uint32_t)(out1_gpu >> 32);
-
-    /* Dispatch: 4x1x1 threadgroups via sceAgcCbDispatch(cb, 4, 1, 1, 0, 0) or direct PM4 */
-    probe->cur = (uint64_t)(uintptr_t)dw;
-    if (fn_dispatch && obs_address_is_callable((const void *)fn_dispatch)) {
-        fn_dispatch(&probe->begin, 4ULL, 1ULL, 1ULL, 0ULL, 0ULL, 0, 0, 0, 0, 0, 0);
-        dw = (uint32_t *)probe->cur;
+    sig = OBS_FAULT_ARM(&guard);
+    int rc1 = -1;
+    if (sig == 0) {
+        rc1 = oops_gpu_dispatch(queue, &disp1);
+        obs_fault_unregister();
     } else {
-        *dw++ = 0xc0031500u;
-        *dw++ = 4u;
-        *dw++ = 1u;
-        *dw++ = 1u;
-        *dw++ = 0x41u;
+        obs_fault_unregister();
     }
-
-    /* Release Mem */
-    *dw++ = 0xc0064900u;
-    *dw++ = 0x06603514u;
-    *dw++ = 0x20000000u;
-    *dw++ = (uint32_t)fence_gpu;
-    *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xca110001u; /* fence 1 */
-    *dw++ = 0u;
-    *dw++ = 0u;
-    for (int p = 0; p < 16; p++) {
-        *dw++ = 0xffff1000u;
-    }
-    probe->cur = (uint64_t)(uintptr_t)dw;
-    uint32_t bytes1 = (uint32_t)(probe->cur - probe->begin);
+    obs_report_measure(check_name, "arm1-default-start", "fence-rc",
+                       (uint64_t)(int64_t)rc1, "rc");
+    obs_report_measure(check_name, "arm1-default-start", "last-fence",
+                       (uint64_t)oops_gpu_get_last_fence(queue), "val");
 
 #if defined(__x86_64__)
-    __builtin_ia32_clflush((const void *)fence);
-    for (size_t p = 0; p < (size_t)bytes1; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
-    }
-    for (size_t p = 0; p < 0x3b0u; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
-    }
     for (size_t p = 0; p < 64; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)out_buf1 + p));
     }
     __builtin_ia32_mfence();
 #endif
 
-    obs_agc_dcb_desc desc1;
-    desc1.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
-    desc1.size = bytes1 / 4u;
-    desc1.flags = 0u;
-    desc1.pad[0] = desc1.pad[1] = desc1.pad[2] = 0u;
-
-    int submit_rc1 = -1;
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig == 0) {
-        submit_rc1 = sceAgcDriverSubmitDcb(&desc1);
-        obs_fault_unregister();
-    } else {
-        obs_fault_unregister();
-    }
-    obs_report_measure(check_name, "arm1-default-start", "rc-submit",
-                       (uint64_t)(uint32_t)submit_rc1, "code");
-
-    int fence_hit1 = 0;
-    if (submit_rc1 == 0) {
-        for (int iter = 0; iter < 10000; iter++) {
-#if defined(__x86_64__)
-            __builtin_ia32_clflush((const void *)fence);
-#endif
-            if (*fence == 0xca110001u) {
-                fence_hit1 = 1;
-                break;
-            }
-            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
-                sceKernelUsleep(100);
-            }
-        }
-    }
-    obs_report_measure(check_name, "arm1-default-start", "fence-hit",
-                       (uint64_t)fence_hit1, "bool");
-
-#if defined(__x86_64__)
-    for (size_t p = 0; p < 64; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)out_buf1 + p));
-    }
-#endif
     obs_report_bytes(check_name, "arm1-default-start", "buffer-out", 0,
                      (const uint8_t *)out_buf1, 64);
 
-    uint32_t written_slots1 = 0;
+    uint32_t written1 = 0;
     for (uint32_t i = 0; i < 16; i++) {
         if (out_buf1[i] != 0xccccccccu) {
-            written_slots1++;
+            written1++;
             char slot_name[32];
             oops_snprintf(slot_name, sizeof(slot_name), "slot-%u", i);
             obs_report_measure(check_name, "arm1-default-start", slot_name,
@@ -6539,218 +6440,171 @@ static obs_result check_agc_compute_start_grid(void) {
         }
     }
     obs_report_measure(check_name, "arm1-default-start", "written-slots-count",
-                       (uint64_t)written_slots1, "count");
+                       (uint64_t)written1, "count");
 
     /* =========================================================================
-     * (2a) Intermediate dispatch: write COMPUTE_START_X = 2
+     * (3) Arm 2: After a dispatch whose DCB first writes COMPUTE_START_X = 2
      * ========================================================================= */
-    agc_cb_prepare(probe, 0x1000);
-    dw = (uint32_t *)probe->cur;
+    struct oops_gpu_queue_intern {
+        void *agc_queue_handle;
+        uint8_t *dcb_mem;
+        size_t dcb_size;
+        volatile uint32_t *fence;
+        uint32_t last_fence;
+    };
+    struct oops_gpu_shader_intern {
+        void *shader_obj;
+        void *payload_mem;
+        size_t payload_size;
+        uint8_t hdr[384];
+        size_t hdr_size;
+    };
 
+    struct oops_gpu_queue_intern *qi = (struct oops_gpu_queue_intern *)queue;
+    struct oops_gpu_shader_intern *si = (struct oops_gpu_shader_intern *)shader;
+
+    uint32_t *dw = (uint32_t *)qi->dcb_mem;
+    uint64_t payload_va = (uint64_t)(uintptr_t)si->payload_mem;
+    const uint32_t *sh_regs = (const uint32_t *)(si->hdr + 0x88);
     for (int i = 0; i < 11; i++) {
-        uint32_t reg_idx = reg_table[i * 2];
-        uint32_t reg_val = reg_table[i * 2 + 1];
+        uint32_t reg_idx = sh_regs[i * 2];
+        uint32_t reg_val = sh_regs[i * 2 + 1];
         if (reg_idx == 0x20c) {
             reg_val = (uint32_t)(payload_va >> 8);
         } else if (reg_idx == 0x20d) {
             reg_val = (uint32_t)(payload_va >> 40);
-        } else if (reg_idx == 0x213) {
-            reg_val = 0x0084u;
         }
         *dw++ = 0xc0017600u;
         *dw++ = reg_idx;
         *dw++ = reg_val;
     }
 
-    /* Set COMPUTE_START_X = 2 */
+    /* Write COMPUTE_START_X = 2 */
     *dw++ = 0xc0017600u;
     *dw++ = 0x204u; /* mmCOMPUTE_START_X */
     *dw++ = 2u;
 
+    /* Bind user data for arm 2a (points to out_buf1) */
     *dw++ = 0xc0017600u;
     *dw++ = 0x240u;
-    *dw++ = (uint32_t)out1_gpu;
+    *dw++ = ud1[0];
     *dw++ = 0xc0017600u;
     *dw++ = 0x241u;
-    *dw++ = (uint32_t)(out1_gpu >> 32);
+    *dw++ = ud1[1];
 
-    /* 1 dispatch */
+    /* Dispatch 1x1x1 */
     *dw++ = 0xc0031500u;
     *dw++ = 1u;
     *dw++ = 1u;
     *dw++ = 1u;
     *dw++ = 0x41u;
 
-    /* Release Mem */
+    /* RELEASE_MEM fence */
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)qi->fence;
+    uint32_t next_fence = qi->last_fence + 1u;
+    if (next_fence == 0) next_fence = 1u;
+    *qi->fence = 0x0u;
+
     *dw++ = 0xc0064900u;
     *dw++ = 0x06603514u;
     *dw++ = 0x20000000u;
     *dw++ = (uint32_t)fence_gpu;
     *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xca110002u; /* fence 2a */
+    *dw++ = next_fence;
     *dw++ = 0u;
     *dw++ = 0u;
-    for (int p = 0; p < 16; p++) {
-        *dw++ = 0xffff1000u;
-    }
-    probe->cur = (uint64_t)(uintptr_t)dw;
-    uint32_t bytes2a = (uint32_t)(probe->cur - probe->begin);
 
+    for (int p = 0; p < 16; p++) {
+        dw[p] = 0xffff1000u;
+    }
+    dw += 16;
+
+    uint32_t dwords2a = (uint32_t)(dw - (uint32_t *)qi->dcb_mem);
 #if defined(__x86_64__)
-    __builtin_ia32_clflush((const void *)fence);
-    for (size_t p = 0; p < (size_t)bytes2a; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    __builtin_ia32_clflush((const void *)qi->fence);
+    for (size_t p = 0; p < dwords2a * 4; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)qi->dcb_mem + p));
     }
     __builtin_ia32_mfence();
 #endif
 
     obs_agc_dcb_desc desc2a;
-    desc2a.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
-    desc2a.size = bytes2a / 4u;
-    desc2a.flags = 0u;
-    desc2a.pad[0] = desc2a.pad[1] = desc2a.pad[2] = 0u;
+    desc2a.gpu_addr = (uint64_t)(uintptr_t)qi->dcb_mem;
+    desc2a.size = dwords2a;
+    desc2a.flags = 0;
+    desc2a.pad[0] = desc2a.pad[1] = desc2a.pad[2] = 0;
 
-    int submit_rc2a = -1;
+    int submit_2a = -1;
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
-        submit_rc2a = sceAgcDriverSubmitDcb(&desc2a);
+        submit_2a = sceAgcDriverSubmitDcb(&desc2a);
         obs_fault_unregister();
     } else {
         obs_fault_unregister();
     }
-    if (submit_rc2a == 0) {
-        for (int iter = 0; iter < 10000; iter++) {
+
+    int retired_2a = 0;
+    if (submit_2a == 0) {
+        for (int poll = 0; poll < 10000; poll++) {
 #if defined(__x86_64__)
-            __builtin_ia32_clflush((const void *)fence);
+            __builtin_ia32_clflush((const void *)qi->fence);
 #endif
-            if (*fence == 0xca110002u) {
+            if (*qi->fence == next_fence) {
+                retired_2a = 1;
+                qi->last_fence = next_fence;
                 break;
             }
             if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
-                sceKernelUsleep(100);
+                sceKernelUsleep(10);
             }
         }
     }
+    obs_report_measure(check_name, "arm2-pre-dispatch", "submit-rc",
+                       (uint64_t)(uint32_t)submit_2a, "code");
+    obs_report_measure(check_name, "arm2-pre-dispatch", "fence-retired",
+                       (uint64_t)retired_2a, "bool");
 
-    /* =========================================================================
-     * (2b) Arm 2: Second dispatch with NO COMPUTE_START_* written,
-     * to test whether COMPUTE_START_X = 2 persisted!
-     * ========================================================================= */
-    agc_cb_prepare(probe, 0x1000);
-    dw = (uint32_t *)probe->cur;
+    /* Now run dispatch 2 via oops_gpu_dispatch (which writes NO COMPUTE_START_*) */
+    uint32_t ud2[2];
+    ud2[0] = (uint32_t)(uintptr_t)out_buf2;
+    ud2[1] = (uint32_t)((uintptr_t)out_buf2 >> 32);
 
-    for (int i = 0; i < 11; i++) {
-        uint32_t reg_idx = reg_table[i * 2];
-        uint32_t reg_val = reg_table[i * 2 + 1];
-        if (reg_idx == 0x20c) {
-            reg_val = (uint32_t)(payload_va >> 8);
-        } else if (reg_idx == 0x20d) {
-            reg_val = (uint32_t)(payload_va >> 40);
-        } else if (reg_idx == 0x213) {
-            reg_val = 0x0084u;
-        }
-        *dw++ = 0xc0017600u;
-        *dw++ = reg_idx;
-        *dw++ = reg_val;
-    }
+    oops_gpu_dispatch_t disp2;
+    disp2.shader = shader;
+    disp2.user_data = ud2;
+    disp2.user_data_count = 2;
+    disp2.grid_x = 4;
+    disp2.grid_y = 1;
+    disp2.grid_z = 1;
 
-    /* Bind out_buf2 to COMPUTE_USER_DATA_0 and 1 */
-    uint64_t out2_gpu = (uint64_t)(uintptr_t)out_buf2;
-    *dw++ = 0xc0017600u;
-    *dw++ = 0x240u;
-    *dw++ = (uint32_t)out2_gpu;
-    *dw++ = 0xc0017600u;
-    *dw++ = 0x241u;
-    *dw++ = (uint32_t)(out2_gpu >> 32);
-
-    /* Notice: NO COMPUTE_START_* is written here! */
-
-    /* Dispatch: 4x1x1 threadgroups via sceAgcCbDispatch(cb, 4, 1, 1, 0, 0) or direct PM4 */
-    probe->cur = (uint64_t)(uintptr_t)dw;
-    if (fn_dispatch && obs_address_is_callable((const void *)fn_dispatch)) {
-        fn_dispatch(&probe->begin, 4ULL, 1ULL, 1ULL, 0ULL, 0ULL, 0, 0, 0, 0, 0, 0);
-        dw = (uint32_t *)probe->cur;
+    sig = OBS_FAULT_ARM(&guard);
+    int rc2 = -1;
+    if (sig == 0) {
+        rc2 = oops_gpu_dispatch(queue, &disp2);
+        obs_fault_unregister();
     } else {
-        *dw++ = 0xc0031500u;
-        *dw++ = 4u;
-        *dw++ = 1u;
-        *dw++ = 1u;
-        *dw++ = 0x41u;
+        obs_fault_unregister();
     }
 
-    /* Release Mem */
-    *dw++ = 0xc0064900u;
-    *dw++ = 0x06603514u;
-    *dw++ = 0x20000000u;
-    *dw++ = (uint32_t)fence_gpu;
-    *dw++ = (uint32_t)(fence_gpu >> 32);
-    *dw++ = 0xca110003u; /* fence 2b */
-    *dw++ = 0u;
-    *dw++ = 0u;
-    for (int p = 0; p < 16; p++) {
-        *dw++ = 0xffff1000u;
-    }
-    probe->cur = (uint64_t)(uintptr_t)dw;
-    uint32_t bytes2 = (uint32_t)(probe->cur - probe->begin);
+    obs_report_measure(check_name, "arm2-post-start-x", "fence-rc",
+                       (uint64_t)(int64_t)rc2, "rc");
+    obs_report_measure(check_name, "arm2-post-start-x", "last-fence",
+                       (uint64_t)oops_gpu_get_last_fence(queue), "val");
 
 #if defined(__x86_64__)
-    __builtin_ia32_clflush((const void *)fence);
-    for (size_t p = 0; p < (size_t)bytes2; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
-    }
     for (size_t p = 0; p < 64; p += 64) {
         __builtin_ia32_clflush((const void *)((const char *)out_buf2 + p));
     }
     __builtin_ia32_mfence();
 #endif
 
-    obs_agc_dcb_desc desc2;
-    desc2.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
-    desc2.size = bytes2 / 4u;
-    desc2.flags = 0u;
-    desc2.pad[0] = desc2.pad[1] = desc2.pad[2] = 0u;
-
-    int submit_rc2 = -1;
-    sig = OBS_FAULT_ARM(&guard);
-    if (sig == 0) {
-        submit_rc2 = sceAgcDriverSubmitDcb(&desc2);
-        obs_fault_unregister();
-    } else {
-        obs_fault_unregister();
-    }
-    obs_report_measure(check_name, "arm2-post-start-x", "rc-submit",
-                       (uint64_t)(uint32_t)submit_rc2, "code");
-
-    int fence_hit2 = 0;
-    if (submit_rc2 == 0) {
-        for (int iter = 0; iter < 10000; iter++) {
-#if defined(__x86_64__)
-            __builtin_ia32_clflush((const void *)fence);
-#endif
-            if (*fence == 0xca110003u) {
-                fence_hit2 = 1;
-                break;
-            }
-            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
-                sceKernelUsleep(100);
-            }
-        }
-    }
-    obs_report_measure(check_name, "arm2-post-start-x", "fence-hit",
-                       (uint64_t)fence_hit2, "bool");
-
-#if defined(__x86_64__)
-    for (size_t p = 0; p < 64; p += 64) {
-        __builtin_ia32_clflush((const void *)((const char *)out_buf2 + p));
-    }
-#endif
     obs_report_bytes(check_name, "arm2-post-start-x", "buffer-out", 0,
                      (const uint8_t *)out_buf2, 64);
 
-    uint32_t written_slots2 = 0;
+    uint32_t written2 = 0;
     for (uint32_t i = 0; i < 16; i++) {
         if (out_buf2[i] != 0xccccccccu) {
-            written_slots2++;
+            written2++;
             char slot_name[32];
             oops_snprintf(slot_name, sizeof(slot_name), "slot-%u", i);
             obs_report_measure(check_name, "arm2-post-start-x", slot_name,
@@ -6758,24 +6612,22 @@ static obs_result check_agc_compute_start_grid(void) {
         }
     }
     obs_report_measure(check_name, "arm2-post-start-x", "written-slots-count",
-                       (uint64_t)written_slots2, "count");
+                       (uint64_t)written2, "count");
 
-    /* Destroy queue */
-    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
-        sceAgcDriverDestroyQueue(queue);
-    }
+    /* Cleanup */
+    oops_gpu_destroy_shader(shader);
+    oops_gpu_destroy_queue(queue);
+    if (out_buf1) oops_mem_free((void *)out_buf1);
+    if (out_buf2) oops_mem_free((void *)out_buf2);
 
-    if (submit_rc1 == 0 && fence_hit1 == 1 && submit_rc2 == 0 && fence_hit2 == 1) {
+    if (rc1 == 0 && rc2 == 0) {
         return obs_pass();
     }
-    if (submit_rc1 == 0 && fence_hit1 == 1) {
-        return obs_partial_value("arm 1 passed but arm 2 fence not hit", (uint64_t)fence_hit2);
+    if (rc1 == 0) {
+        return obs_partial_value("arm 1 passed, arm 2 fence rc", (uint64_t)(int64_t)rc2);
     }
-    if (submit_rc1 == 0) {
-        return obs_partial_value("arm 1 fence not hit after dispatch", (uint64_t)fence_hit1);
-    }
-    return obs_partial_value("submit dcb returned non-zero code",
-                             (uint64_t)(uint32_t)submit_rc1);
+    return obs_partial_value("arm 1 fence rc", (uint64_t)(int64_t)rc1);
+#endif
 }
 
 static obs_result check_agc_graphics_submit(void) {
