@@ -709,6 +709,9 @@ static obs_result check_agc_driver_submit_fence(void) {
 static obs_result check_agc_compute_dispatch(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
+static obs_result check_agc_compute_start_grid(void) {
+    return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
+}
 static obs_result check_agc_graphics_submit(void) {
     return obs_skip("libSceAgc is current-generation; excluded from Orbis target");
 }
@@ -1180,6 +1183,9 @@ static const obs_check agc_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_hardware_registers, OBS_FROM_ASSUMED},
     {"166-agc/compute-dispatch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_compute_dispatch,
+     OBS_FROM_ASSUMED},
+    {"166-agc/compute-start-grid", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_compute_start_grid,
      OBS_FROM_ASSUMED},
     {"166-agc/typed-buffer-formats", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_typed_buffer_formats,
@@ -6088,7 +6094,7 @@ static obs_result check_agc_compute_dispatch(void) {
         obs_fault_unregister();
         return obs_fail("fault during queue creation");
     }
-    int rc_create = sceAgcDriverCreateQueue(3u, &queue, 0u);
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
     obs_fault_unregister();
     obs_report_measure("166-agc/compute-dispatch", "sceAgcDriverCreateQueue",
                        "rc-create", (uint64_t)(uint32_t)rc_create, "code");
@@ -6148,13 +6154,25 @@ static obs_result check_agc_compute_dispatch(void) {
 
     /* Pad trailing area with PM4 NOPs to ensure prefetch safety */
     for (int p = 0; p < 16; p++) {
-        dw[p] = 0xffff1000u;
+        *dw++ = 0xffff1000u;
     }
 
     probe->cur = (uint64_t)(uintptr_t)dw;
     uint32_t bytes_written = (uint32_t)(probe->cur - probe->begin);
     obs_report_measure("166-agc/compute-dispatch", "sceAgcDriverSubmitDcb",
                        "bytes-written", (uint64_t)bytes_written, "size");
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes_written; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+    for (size_t p = 0; p < sizeof(agc_retail_payload_0); p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+    }
+    __builtin_ia32_clflush((const void *)out_buf);
+    __builtin_ia32_mfence();
+#endif
 
     /* 5. Submit DCB */
     obs_agc_dcb_desc desc;
@@ -6239,6 +6257,525 @@ static obs_result check_agc_compute_dispatch(void) {
     }
     return obs_partial_value("submit dcb returned non-zero code",
                              (uint64_t)(uint32_t)submit_rc);
+}
+
+/* REQ-20261006T1240Z-cs01: Where a dispatch's grid starts when nothing wrote
+ * COMPUTE_START_X/Y/Z, as PPSA03416's first dispatch */
+static obs_result check_agc_compute_start_grid(void) {
+    const char *check_name = "166-agc/compute-start-grid";
+    if (!obs_address_is_callable((const void *)&sceAgcDriverCreateQueue) ||
+        !obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb) ||
+        !obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        return obs_skip("AGC symbols not callable");
+    }
+
+    obs_jmp_buf guard;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail_code("fault before queue/shader creation", (uint64_t)sig);
+    }
+
+    /* Allocate GPU payload, fence buffer, and out buffers in Onion memory */
+#if !defined(OBSCENE_HOST_BUILD)
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x1000, 256, OOPS_MEM_WB_ONION);
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *out_buf1 =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *out_buf2 =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(256) uint8_t s_host_payload[sizeof(agc_retail_payload_0)];
+    static _Alignas(64) uint32_t s_host_fence[16];
+    static _Alignas(64) uint32_t s_host_out1[16];
+    static _Alignas(64) uint32_t s_host_out2[16];
+    uint8_t *gpu_payload = s_host_payload;
+    volatile uint32_t *fence = s_host_fence;
+    volatile uint32_t *out_buf1 = s_host_out1;
+    volatile uint32_t *out_buf2 = s_host_out2;
+#endif
+
+    obs_fault_unregister();
+
+    if (gpu_payload == NULL || fence == NULL || out_buf1 == NULL || out_buf2 == NULL) {
+        return obs_skip("failed to allocate Onion memory for shader, fence or out_buf");
+    }
+
+    for (size_t i = 0; i < sizeof(agc_retail_payload_0); i++) {
+        gpu_payload[i] = agc_retail_payload_0[i];
+    }
+    *fence = 0x11111111u;
+
+    /* Pre-fill buffers with 0xcc */
+    for (size_t i = 0; i < 16; i++) {
+        out_buf1[i] = 0xccccccccu;
+        out_buf2[i] = 0xccccccccu;
+    }
+
+    /* RDNA2 Compute Shader:
+     * s0: out_gpu_lo
+     * s1: out_gpu_hi
+     * s2: WORKGROUP_ID_X (from SPI with TGID_X_EN=1)
+     *
+     * 1. s_waitcnt 0                                 [0xbf8c0000]
+     * 2. s_mov_b32 exec_lo, 1 (lane 0 only)          [0xbefe0381]
+     * 3. s_add_u32 s3, s2, s2 (s3 = s2 * 2)          [0x80030202]
+     * 4. s_add_u32 s3, s3, s3 (s3 = s2 * 4)          [0x80030303]
+     * 5. s_add_u32 s4, s0, s3 (s4 = out_lo + s2 * 4) [0x80040300]
+     * 6. v_mov_b32_e32 v0, s4 (v0 = addr_lo)         [0x7e000204]
+     * 7. v_mov_b32_e32 v1, s1 (v1 = addr_hi)         [0x7e020201]
+     * 8. v_mov_b32_e32 v2, s2 (v2 = WORKGROUP_ID_X)  [0x7e040202]
+     * 9. global_store_dword v[0:1], v2, off          [0xdc708000, 0x007d0200]
+     * 10. s_waitcnt vmcnt(0)                         [0xbf8c3f70]
+     * 11. s_endpgm                                   [0xbf810000]
+     */
+    uint32_t *code = (uint32_t *)gpu_payload;
+    code[0] = 0xbf8c0000u;
+    code[1] = 0xbefe0381u;
+    code[2] = 0x80030202u;
+    code[3] = 0x80030303u;
+    code[4] = 0x80040300u;
+    code[5] = 0x7e000204u;
+    code[6] = 0x7e020201u;
+    code[7] = 0x7e040202u;
+    code[8] = 0xdc708000u;
+    code[9] = 0x007d0200u;
+    code[10] = 0xbf8c3f70u;
+    code[11] = 0xbf810000u;
+    for (size_t k = 12; k < 0x3b0u / 4u; k++) {
+        code[k] = 0xbf9f0000u; /* s_nop 0 */
+    }
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)gpu_payload);
+    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x100));
+    __builtin_ia32_clflush((const void *)((const char *)gpu_payload + 0x200));
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)out_buf1 + p));
+        __builtin_ia32_clflush((const void *)((const char *)out_buf2 + p));
+    }
+#endif
+
+    /* Instantiate compute shader */
+    uint8_t hdr_buf[384];
+    for (size_t i = 0; i < sizeof(hdr_buf); i++) {
+        hdr_buf[i] = 0;
+    }
+    for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0); i++) {
+        hdr_buf[i] = agc_retail_hdr_full_0[i];
+    }
+
+    void *shader_obj = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during shader instantiation");
+    }
+    uint64_t rc_shader =
+        sceAgcCreateShader(&shader_obj, (void *)hdr_buf, gpu_payload, 0);
+    obs_fault_unregister();
+    obs_report_measure(check_name, "sceAgcCreateShader", "rc-shader", rc_shader, "code");
+    if (rc_shader != 0 || shader_obj == NULL) {
+        return obs_fail("failed to instantiate shader");
+    }
+
+    /* Create fresh GPU queue */
+    void *queue = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig != 0) {
+        obs_fault_unregister();
+        return obs_fail("fault during queue creation");
+    }
+    int rc_create = sceAgcDriverCreateQueue(0u, &queue, 0u);
+    obs_fault_unregister();
+    obs_report_measure(check_name, "sceAgcDriverCreateQueue", "rc-create",
+                       (uint64_t)(uint32_t)rc_create, "code");
+    if (rc_create != 0 || queue == NULL) {
+        return obs_skip("queue creation failed; skipping dispatch");
+    }
+
+    obs_agc_cb_probe *probe = get_agc_probe();
+    if (probe == NULL) {
+        if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+            sceAgcDriverDestroyQueue(queue);
+        }
+        return obs_skip("failed to get command buffer probe");
+    }
+
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+    const uint32_t *reg_table = (const uint32_t *)(hdr_buf + 0x88);
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+
+    /* Resolve sceAgcCbDispatch */
+    agc_cb_fn fn_dispatch = (agc_cb_fn)agc_resolve_or_weak("sceAgcCbDispatch",
+                                                           (const void *)&sceAgcCbDispatch);
+
+    /* =========================================================================
+     * (1) Arm 1: Fresh DCB on fresh queue, NO COMPUTE_START_* written.
+     * sceAgcCbDispatch(cb, 4, 1, 1, 0, 0)
+     * ========================================================================= */
+    agc_cb_prepare(probe, 0x1000);
+    uint32_t *dw = (uint32_t *)probe->cur;
+
+    for (int i = 0; i < 11; i++) {
+        uint32_t reg_idx = reg_table[i * 2];
+        uint32_t reg_val = reg_table[i * 2 + 1];
+        if (reg_idx == 0x20c) {
+            reg_val = (uint32_t)(payload_va >> 8);
+        } else if (reg_idx == 0x20d) {
+            reg_val = (uint32_t)(payload_va >> 40);
+        } else if (reg_idx == 0x213) {
+            /* COMPUTE_PGM_RSRC2: USER_SGPR=2 (bits 5:1), TGID_X_EN=1 (bit 7) */
+            reg_val = 0x0084u;
+        }
+        *dw++ = 0xc0017600u;
+        *dw++ = reg_idx;
+        *dw++ = reg_val;
+    }
+
+    /* Bind out_buf1 to COMPUTE_USER_DATA_0 and 1 */
+    uint64_t out1_gpu = (uint64_t)(uintptr_t)out_buf1;
+    *dw++ = 0xc0017600u;
+    *dw++ = 0x240u;
+    *dw++ = (uint32_t)out1_gpu;
+    *dw++ = 0xc0017600u;
+    *dw++ = 0x241u;
+    *dw++ = (uint32_t)(out1_gpu >> 32);
+
+    /* Dispatch: 4x1x1 threadgroups via sceAgcCbDispatch(cb, 4, 1, 1, 0, 0) or direct PM4 */
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    if (fn_dispatch && obs_address_is_callable((const void *)fn_dispatch)) {
+        fn_dispatch(&probe->begin, 4ULL, 1ULL, 1ULL, 0ULL, 0ULL, 0, 0, 0, 0, 0, 0);
+        dw = (uint32_t *)probe->cur;
+    } else {
+        *dw++ = 0xc0031500u;
+        *dw++ = 4u;
+        *dw++ = 1u;
+        *dw++ = 1u;
+        *dw++ = 0x41u;
+    }
+
+    /* Release Mem */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xca110001u; /* fence 1 */
+    *dw++ = 0u;
+    *dw++ = 0u;
+    for (int p = 0; p < 16; p++) {
+        *dw++ = 0xffff1000u;
+    }
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    uint32_t bytes1 = (uint32_t)(probe->cur - probe->begin);
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes1; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+    for (size_t p = 0; p < 0x3b0u; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+    }
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)out_buf1 + p));
+    }
+    __builtin_ia32_mfence();
+#endif
+
+    obs_agc_dcb_desc desc1;
+    desc1.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc1.size = bytes1 / 4u;
+    desc1.flags = 0u;
+    desc1.pad[0] = desc1.pad[1] = desc1.pad[2] = 0u;
+
+    int submit_rc1 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        submit_rc1 = sceAgcDriverSubmitDcb(&desc1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "arm1-default-start", "rc-submit",
+                       (uint64_t)(uint32_t)submit_rc1, "code");
+
+    int fence_hit1 = 0;
+    if (submit_rc1 == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            if (*fence == 0xca110001u) {
+                fence_hit1 = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+    obs_report_measure(check_name, "arm1-default-start", "fence-hit",
+                       (uint64_t)fence_hit1, "bool");
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)out_buf1 + p));
+    }
+#endif
+    obs_report_bytes(check_name, "arm1-default-start", "buffer-out", 0,
+                     (const uint8_t *)out_buf1, 64);
+
+    uint32_t written_slots1 = 0;
+    for (uint32_t i = 0; i < 16; i++) {
+        if (out_buf1[i] != 0xccccccccu) {
+            written_slots1++;
+            char slot_name[32];
+            oops_snprintf(slot_name, sizeof(slot_name), "slot-%u", i);
+            obs_report_measure(check_name, "arm1-default-start", slot_name,
+                               (uint64_t)out_buf1[i], "val");
+        }
+    }
+    obs_report_measure(check_name, "arm1-default-start", "written-slots-count",
+                       (uint64_t)written_slots1, "count");
+
+    /* =========================================================================
+     * (2a) Intermediate dispatch: write COMPUTE_START_X = 2
+     * ========================================================================= */
+    agc_cb_prepare(probe, 0x1000);
+    dw = (uint32_t *)probe->cur;
+
+    for (int i = 0; i < 11; i++) {
+        uint32_t reg_idx = reg_table[i * 2];
+        uint32_t reg_val = reg_table[i * 2 + 1];
+        if (reg_idx == 0x20c) {
+            reg_val = (uint32_t)(payload_va >> 8);
+        } else if (reg_idx == 0x20d) {
+            reg_val = (uint32_t)(payload_va >> 40);
+        } else if (reg_idx == 0x213) {
+            reg_val = 0x0084u;
+        }
+        *dw++ = 0xc0017600u;
+        *dw++ = reg_idx;
+        *dw++ = reg_val;
+    }
+
+    /* Set COMPUTE_START_X = 2 */
+    *dw++ = 0xc0017600u;
+    *dw++ = 0x204u; /* mmCOMPUTE_START_X */
+    *dw++ = 2u;
+
+    *dw++ = 0xc0017600u;
+    *dw++ = 0x240u;
+    *dw++ = (uint32_t)out1_gpu;
+    *dw++ = 0xc0017600u;
+    *dw++ = 0x241u;
+    *dw++ = (uint32_t)(out1_gpu >> 32);
+
+    /* 1 dispatch */
+    *dw++ = 0xc0031500u;
+    *dw++ = 1u;
+    *dw++ = 1u;
+    *dw++ = 1u;
+    *dw++ = 0x41u;
+
+    /* Release Mem */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xca110002u; /* fence 2a */
+    *dw++ = 0u;
+    *dw++ = 0u;
+    for (int p = 0; p < 16; p++) {
+        *dw++ = 0xffff1000u;
+    }
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    uint32_t bytes2a = (uint32_t)(probe->cur - probe->begin);
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes2a; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+    __builtin_ia32_mfence();
+#endif
+
+    obs_agc_dcb_desc desc2a;
+    desc2a.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc2a.size = bytes2a / 4u;
+    desc2a.flags = 0u;
+    desc2a.pad[0] = desc2a.pad[1] = desc2a.pad[2] = 0u;
+
+    int submit_rc2a = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        submit_rc2a = sceAgcDriverSubmitDcb(&desc2a);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    if (submit_rc2a == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            if (*fence == 0xca110002u) {
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+
+    /* =========================================================================
+     * (2b) Arm 2: Second dispatch with NO COMPUTE_START_* written,
+     * to test whether COMPUTE_START_X = 2 persisted!
+     * ========================================================================= */
+    agc_cb_prepare(probe, 0x1000);
+    dw = (uint32_t *)probe->cur;
+
+    for (int i = 0; i < 11; i++) {
+        uint32_t reg_idx = reg_table[i * 2];
+        uint32_t reg_val = reg_table[i * 2 + 1];
+        if (reg_idx == 0x20c) {
+            reg_val = (uint32_t)(payload_va >> 8);
+        } else if (reg_idx == 0x20d) {
+            reg_val = (uint32_t)(payload_va >> 40);
+        } else if (reg_idx == 0x213) {
+            reg_val = 0x0084u;
+        }
+        *dw++ = 0xc0017600u;
+        *dw++ = reg_idx;
+        *dw++ = reg_val;
+    }
+
+    /* Bind out_buf2 to COMPUTE_USER_DATA_0 and 1 */
+    uint64_t out2_gpu = (uint64_t)(uintptr_t)out_buf2;
+    *dw++ = 0xc0017600u;
+    *dw++ = 0x240u;
+    *dw++ = (uint32_t)out2_gpu;
+    *dw++ = 0xc0017600u;
+    *dw++ = 0x241u;
+    *dw++ = (uint32_t)(out2_gpu >> 32);
+
+    /* Notice: NO COMPUTE_START_* is written here! */
+
+    /* Dispatch: 4x1x1 threadgroups via sceAgcCbDispatch(cb, 4, 1, 1, 0, 0) or direct PM4 */
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    if (fn_dispatch && obs_address_is_callable((const void *)fn_dispatch)) {
+        fn_dispatch(&probe->begin, 4ULL, 1ULL, 1ULL, 0ULL, 0ULL, 0, 0, 0, 0, 0, 0);
+        dw = (uint32_t *)probe->cur;
+    } else {
+        *dw++ = 0xc0031500u;
+        *dw++ = 4u;
+        *dw++ = 1u;
+        *dw++ = 1u;
+        *dw++ = 0x41u;
+    }
+
+    /* Release Mem */
+    *dw++ = 0xc0064900u;
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xca110003u; /* fence 2b */
+    *dw++ = 0u;
+    *dw++ = 0u;
+    for (int p = 0; p < 16; p++) {
+        *dw++ = 0xffff1000u;
+    }
+    probe->cur = (uint64_t)(uintptr_t)dw;
+    uint32_t bytes2 = (uint32_t)(probe->cur - probe->begin);
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < (size_t)bytes2; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)probe->begin + p));
+    }
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)out_buf2 + p));
+    }
+    __builtin_ia32_mfence();
+#endif
+
+    obs_agc_dcb_desc desc2;
+    desc2.gpu_addr = (uint64_t)(uintptr_t)probe->begin;
+    desc2.size = bytes2 / 4u;
+    desc2.flags = 0u;
+    desc2.pad[0] = desc2.pad[1] = desc2.pad[2] = 0u;
+
+    int submit_rc2 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        submit_rc2 = sceAgcDriverSubmitDcb(&desc2);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(check_name, "arm2-post-start-x", "rc-submit",
+                       (uint64_t)(uint32_t)submit_rc2, "code");
+
+    int fence_hit2 = 0;
+    if (submit_rc2 == 0) {
+        for (int iter = 0; iter < 10000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            if (*fence == 0xca110003u) {
+                fence_hit2 = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+    obs_report_measure(check_name, "arm2-post-start-x", "fence-hit",
+                       (uint64_t)fence_hit2, "bool");
+
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 64; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)out_buf2 + p));
+    }
+#endif
+    obs_report_bytes(check_name, "arm2-post-start-x", "buffer-out", 0,
+                     (const uint8_t *)out_buf2, 64);
+
+    uint32_t written_slots2 = 0;
+    for (uint32_t i = 0; i < 16; i++) {
+        if (out_buf2[i] != 0xccccccccu) {
+            written_slots2++;
+            char slot_name[32];
+            oops_snprintf(slot_name, sizeof(slot_name), "slot-%u", i);
+            obs_report_measure(check_name, "arm2-post-start-x", slot_name,
+                               (uint64_t)out_buf2[i], "val");
+        }
+    }
+    obs_report_measure(check_name, "arm2-post-start-x", "written-slots-count",
+                       (uint64_t)written_slots2, "count");
+
+    /* Destroy queue */
+    if (obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        sceAgcDriverDestroyQueue(queue);
+    }
+
+    if (submit_rc1 == 0 && fence_hit1 == 1 && submit_rc2 == 0 && fence_hit2 == 1) {
+        return obs_pass();
+    }
+    if (submit_rc1 == 0 && fence_hit1 == 1) {
+        return obs_partial_value("arm 1 passed but arm 2 fence not hit", (uint64_t)fence_hit2);
+    }
+    if (submit_rc1 == 0) {
+        return obs_partial_value("arm 1 fence not hit after dispatch", (uint64_t)fence_hit1);
+    }
+    return obs_partial_value("submit dcb returned non-zero code",
+                             (uint64_t)(uint32_t)submit_rc1);
 }
 
 static obs_result check_agc_graphics_submit(void) {
@@ -24527,6 +25064,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/compute-dispatch", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_compute_dispatch, OBS_FROM_ASSUMED},
+    {"166-agc/compute-start-grid", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_compute_start_grid, OBS_FROM_ASSUMED},
     {"166-agc/typed-buffer-formats", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
      check_agc_typed_buffer_formats, OBS_FROM_ASSUMED},
