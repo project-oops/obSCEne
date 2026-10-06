@@ -670,8 +670,10 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAmpr", "$baQO9ez2gL4"},
     {"libSceAmpr", "$a8uLzYY--tM"},
     {"libSceAmpr", "$mQ16-QdKv7k"},
+    {"libSceAmpr", "$N-FSPA4S3nI"},
     {"libSceAmpr", "sceAmprCommandBufferConstructor"},
     {"libSceAmpr", "sceAmprCommandBufferReset"},
+    {"libSceAmpr", "sceAmprCommandBufferSetBuffer"},
     {"libSceAmpr", "sceAmprAprCommandBufferConstructor"},
     {"libSceAmpr", "sceAmprAprCommandBufferReadFile"},
     /* libSceSaveData_native (REQ-20260928T0100Z-5d20) */

@@ -1443,6 +1443,11 @@ OBS_WEAK int sceKernelAprResolveFilepathsWithPrefixToIdsAndFileSizes_static(
     uint64_t *out_sizes, int32_t *out_status) __asm__("$w5fcCG+t31g");
 OBS_WEAK void sceAmprCommandBufferConstructor_static(void *cb) __asm__("$8aI7R7WaOlc");
 OBS_WEAK void sceAmprCommandBufferReset_static(void *cb) __asm__("$baQO9ez2gL4");
+OBS_WEAK int sceAmprCommandBufferSetBuffer_static(void *cb, void *buf, uint32_t size,
+                                                  uint64_t a3, uint64_t a4,
+                                                  uint64_t a5) __asm__("$N-FSPA4S3nI");
+OBS_WEAK int sceAmprCommandBufferSetBuffer(void *cb, void *buf, uint32_t size,
+                                           uint64_t a3, uint64_t a4, uint64_t a5);
 OBS_WEAK int
 sceAmprAprCommandBufferConstructor_static(void *cb, void *ptr1, void *ptr2, void *buf,
                                           uint64_t zero,
