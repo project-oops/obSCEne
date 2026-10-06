@@ -78,6 +78,9 @@ int obs_sink_backend_mkdir(const char *path);
 /* Returns current wall clock time or process time in seconds/ticks, or 0. */
 uint64_t obs_sink_backend_time(void);
 
+/* Restores authentic process sandbox after privileged sink setup. */
+void obs_sink_backend_restore_sandbox(void);
+
 #endif /* OBSCENE_SINK_H */
 
 /* ---- resuming past a check that did not return

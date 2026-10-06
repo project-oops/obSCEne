@@ -1862,10 +1862,37 @@ static obs_result check_savedata_mount_capacity(void) {
     typedef int (*fn_mount2_t)(void *);
     typedef int (*fn_mount_info_t)(const void *, void *);
 
-    fn_init_t fn_init = (fn_init_t)layout_resolve_sym("libSceSaveData", "sceSaveDataInitialize3");
-    fn_term_t fn_term = (fn_term_t)layout_resolve_sym("libSceSaveData", "sceSaveDataTerminate");
-    fn_mount2_t fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData", "sceSaveDataMount2");
-    fn_mount_info_t fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData", "sceSaveDataGetMountInfo");
+    fn_init_t fn_init = (fn_init_t)layout_resolve_sym("libSceSaveData_native", "$TywrFKCoLGY");
+    if (fn_init == NULL) {
+        fn_init = (fn_init_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataInitialize3");
+    }
+    if (fn_init == NULL) {
+        fn_init = (fn_init_t)layout_resolve_sym("libSceSaveData", "sceSaveDataInitialize3");
+    }
+
+    fn_term_t fn_term = (fn_term_t)layout_resolve_sym("libSceSaveData_native", "$yKDy8S5yLA0");
+    if (fn_term == NULL) {
+        fn_term = (fn_term_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataTerminate");
+    }
+    if (fn_term == NULL) {
+        fn_term = (fn_term_t)layout_resolve_sym("libSceSaveData", "sceSaveDataTerminate");
+    }
+
+    fn_mount2_t fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData_native", "$0kj-gTw5PtM");
+    if (fn_mount2 == NULL) {
+        fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataMount2");
+    }
+    if (fn_mount2 == NULL) {
+        fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData", "sceSaveDataMount2");
+    }
+
+    fn_mount_info_t fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData_native", "$q8-aBtFHles");
+    if (fn_minfo == NULL) {
+        fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataGetMountInfo");
+    }
+    if (fn_minfo == NULL) {
+        fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData", "sceSaveDataGetMountInfo");
+    }
     if (fn_minfo == NULL) {
         fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData", "sceSaveDataGetMountInfo2");
     }
@@ -2586,12 +2613,22 @@ static obs_result check_font_render_glyph(void) {
     obs_report_measure(id, "sceSysmoduleLoadModule", "rc-font",
                        (uint64_t)(uint32_t)load_rc, "code");
 
-    const void *fn_render_sym =
-        obs_module_symbol(OBS_HANDLE_SELF, "sceFontRenderCharGlyphImage");
+    const void *fn_render_sym = layout_resolve_sym("libSceFont", "$T8SuAoYzbtw");
+    if (!fn_render_sym)
+        fn_render_sym = layout_resolve_sym("libSceFont", "sceFontRenderCharGlyphImage");
+    if (!fn_render_sym)
+        fn_render_sym =
+            obs_module_symbol(OBS_HANDLE_SELF, "sceFontRenderCharGlyphImage");
     if (!fn_render_sym)
         fn_render_sym = obs_module_symbol(1, "sceFontRenderCharGlyphImage");
-    const void *fn_render_h_sym =
-        obs_module_symbol(OBS_HANDLE_SELF, "sceFontRenderCharGlyphImageHorizontal");
+
+    const void *fn_render_h_sym = layout_resolve_sym("libSceFont", "$msNZLVunB5A");
+    if (!fn_render_h_sym)
+        fn_render_h_sym =
+            layout_resolve_sym("libSceFont", "sceFontRenderCharGlyphImageHorizontal");
+    if (!fn_render_h_sym)
+        fn_render_h_sym =
+            obs_module_symbol(OBS_HANDLE_SELF, "sceFontRenderCharGlyphImageHorizontal");
     if (!fn_render_h_sym)
         fn_render_h_sym = obs_module_symbol(1, "sceFontRenderCharGlyphImageHorizontal");
 

@@ -677,7 +677,7 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAmpr", "sceAmprCommandBufferSetBuffer"},
     {"libSceAmpr", "sceAmprAprCommandBufferConstructor"},
     {"libSceAmpr", "sceAmprAprCommandBufferReadFile"},
-    /* libSceSaveData_native (REQ-20260928T0100Z-5d20) */
+    /* libSceSaveData_native (REQ-20260928T0100Z-5d20, REQ-20260926T1952Z-130e) */
     {"libSceSaveData_native", "$TywrFKCoLGY"},
     {"libSceSaveData_native", "sceSaveDataInitialize3"},
     {"libSceSaveData_native", "$yKDy8S5yLA0"},
@@ -690,6 +690,15 @@ static const obs_import obs_platform_imports[] = {
     {"libSceSaveData_native", "sceSaveDataGetSaveDataMemory2"},
     {"libSceSaveData_native", "$wiT9jeC7xPw"},
     {"libSceSaveData_native", "sceSaveDataSyncSaveDataMemory"},
+    {"libSceSaveData_native", "$0kj-gTw5PtM"},
+    {"libSceSaveData_native", "sceSaveDataMount2"},
+    {"libSceSaveData_native", "$q8-aBtFHles"},
+    {"libSceSaveData_native", "sceSaveDataGetMountInfo"},
+    /* libSceFont (REQ-20260926T1952Z-7795) */
+    {"libSceFont", "$T8SuAoYzbtw"},
+    {"libSceFont", "sceFontRenderCharGlyphImage"},
+    {"libSceFont", "$msNZLVunB5A"},
+    {"libSceFont", "sceFontRenderCharGlyphImageHorizontal"},
     /* libc (REQ-20260927T1130Z-d5f4) */
     {"libSceLibcInternal", "$BoTA41abbDg"},
     {"libSceLibcInternal", "reallocalign"},

@@ -187,3 +187,11 @@ uint64_t obs_sink_backend_time(void) {
     }
     return 0;
 }
+
+void obs_sink_backend_restore_sandbox(void) {
+#if !defined(OBSCENE_HOST_BUILD)
+#if defined(OBSCENE_TARGET_EBOOT)
+    (void)oops_system_unescape_sandbox();
+#endif
+#endif
+}

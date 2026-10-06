@@ -170,11 +170,13 @@ const char *obs_sink_open(void) {
                 n++;
             }
             obs_sink_reported_path[n] = '\0';
+            obs_sink_backend_restore_sandbox();
             return obs_sink_reported_path;
         }
     }
 
     /* If primary failed but timestamped succeeded, report the timestamped path */
+    obs_sink_backend_restore_sandbox();
     if (obs_sink_ts_fd >= 0) {
         return "timestamped-archive";
     }

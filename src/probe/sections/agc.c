@@ -1167,9 +1167,6 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-set-hs-offchip-param", "libSceAgcDriver",
      "sceAgcDriverSetHsOffchipParam", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_set_hs_offchip_param, OBS_FROM_ASSUMED},
-    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_fence,
-     OBS_FROM_ASSUMED},
     {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
      OBS_FROM_ASSUMED},
@@ -1513,6 +1510,9 @@ static const obs_check agc_checks[] = {
     {"166-agc/patch-queue-eop-address", "libSceAgc",
      "sceAgcQueueEndOfPipeActionPatchAddress", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_agc_patch_queue_eop_address, OBS_FROM_ASSUMED},
+    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_submit_fence,
+     OBS_FROM_ASSUMED},
 };
 #else
 
@@ -24513,9 +24513,6 @@ static const obs_check agc_checks[] = {
     {"166-agc/driver-set-hs-offchip-param", "libSceAgcDriver",
      "sceAgcDriverSetHsOffchipParam", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
      check_agc_driver_set_hs_offchip_param, OBS_FROM_ASSUMED},
-    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
-     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
-     check_agc_driver_submit_fence, OBS_FROM_ASSUMED},
     {"166-agc/driver-set-tf-ring", "libSceAgcDriver", "sceAgcDriverSetTFRing",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_agc_driver_set_tf_ring,
      OBS_FROM_ASSUMED},
@@ -24884,6 +24881,9 @@ static const obs_check agc_checks[] = {
      "sceAgcQueueEndOfPipeActionPatchAddress", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)&sceAgcQueueEndOfPipeActionPatchAddress,
      check_agc_patch_queue_eop_address, OBS_FROM_ASSUMED},
+    {"166-agc/driver-submit-fence", "libSceAgcDriver", "sceAgcDriverSubmitDcb",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceAgcDriverSubmitDcb,
+     check_agc_driver_submit_fence, OBS_FROM_ASSUMED},
 };
 #endif
 

@@ -55,3 +55,5 @@ uint64_t obs_sink_backend_time(void) {
     time_t now = time(NULL);
     return now > 0 ? (uint64_t)now : 0;
 }
+
+void obs_sink_backend_restore_sandbox(void) {}
