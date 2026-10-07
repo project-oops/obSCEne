@@ -1498,19 +1498,36 @@ OBS_WEAK int sceFontMemoryInit(void *obj, void *base, uint32_t size, void *memIf
                                void *msp, void *destroyCb, uint64_t zero);
 OBS_WEAK int sceFontMemoryTerm_static(void *obj) __asm__("$h6hIgxXEiEc");
 OBS_WEAK int sceFontMemoryTerm(void *obj);
-/* libSceJson2 (REQ-20261006T1505Z-js01) */
+/* libSceJson2 (REQ-20261006T1505Z-js01, REQ-20261006T2220Z-js02) */
 OBS_WEAK void sceJsonMemAllocatorCtor_static(void *obj) __asm__("$-hJRce8wn1U");
+OBS_WEAK void
+sceJsonMemAllocatorCtor_named(void *obj) __asm__("_ZN3sce4Json12MemAllocatorC2Ev");
 OBS_WEAK void sceJsonMemAllocatorDtor_static(void *obj) __asm__("$OcAgPxcq5Vk");
+OBS_WEAK void
+sceJsonMemAllocatorDtor_named(void *obj) __asm__("_ZN3sce4Json12MemAllocatorD2Ev");
 OBS_WEAK void sceJsonInitializerCtor_static(void *obj) __asm__("$cK6bYHf-Q5E");
+OBS_WEAK void
+sceJsonInitializerCtor_named(void *obj) __asm__("_ZN3sce4Json11InitializerC1Ev");
 OBS_WEAK void sceJsonInitializerDtor_static(void *obj) __asm__("$RujUxbr3haM");
+OBS_WEAK void
+sceJsonInitializerDtor_named(void *obj) __asm__("_ZN3sce4Json11InitializerD1Ev");
 OBS_WEAK int
 sceJsonInitializerInitialize_static(void *obj,
                                     const void *param) __asm__("$Cxwy7wHq4J0");
+OBS_WEAK int sceJsonInitializerInitialize_named(void *obj, const void *param) __asm__(
+    "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE");
 OBS_WEAK int sceJsonInitializerTerminate_static(void *obj) __asm__("$PR5k1penBLM");
+OBS_WEAK int sceJsonInitializerTerminate_named(void *obj) __asm__(
+    "_ZN3sce4Json11Initializer9terminateEv");
 OBS_WEAK void sceJsonInitParameter2Ctor_static(void *obj) __asm__("$WSOuge5IsCg");
+OBS_WEAK void
+sceJsonInitParameter2Ctor_named(void *obj) __asm__("_ZN3sce4Json14InitParameter2C1Ev");
 OBS_WEAK void
 sceJsonInitParameter2SetAllocator_static(void *param, void *alloc,
                                          void *user) __asm__("$I2QC8PYhJWY");
+OBS_WEAK void
+sceJsonInitParameter2SetAllocator_named(void *param, void *alloc, void *user) __asm__(
+    "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv");
 
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
                                      const void *payload,

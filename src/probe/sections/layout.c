@@ -2098,20 +2098,22 @@ static obs_result check_network_interface_layout(void) {
 static uint64_t s_json_alloc_calls = 0;
 static uint64_t s_json_dealloc_calls = 0;
 static size_t s_json_alloc_sizes[16];
+static size_t s_json_alloc_aligns[16];
 static size_t s_json_alloc_sizes_count = 0;
-static uint8_t s_json_dummy_heap[4096];
+static uint8_t s_json_dummy_heap[65536];
 static size_t s_json_dummy_offset = 0;
 
 static void *custom_json_alloc(void *this_ptr, size_t size, uint32_t align) {
     (void)this_ptr;
     if (s_json_alloc_sizes_count < 16) {
-        s_json_alloc_sizes[s_json_alloc_sizes_count++] = size;
+        s_json_alloc_sizes[s_json_alloc_sizes_count] = size;
+        s_json_alloc_aligns[s_json_alloc_sizes_count] = align;
+        s_json_alloc_sizes_count++;
     }
     s_json_alloc_calls++;
-    if (align < 8) {
-        align = 8;
-    }
-    size_t aligned_off = (s_json_dummy_offset + (align - 1)) & ~(align - 1);
+    uint32_t eff_align = (align < 8) ? 8 : align;
+    size_t aligned_off =
+        (s_json_dummy_offset + (eff_align - 1)) & ~((size_t)eff_align - 1);
     if (aligned_off + size > sizeof(s_json_dummy_heap)) {
         return NULL;
     }
@@ -2123,6 +2125,10 @@ static void custom_json_dealloc(void *this_ptr, void *ptr) {
     (void)this_ptr;
     (void)ptr;
     s_json_dealloc_calls++;
+}
+
+static void custom_json_dtor(void *this_ptr) {
+    (void)this_ptr;
 }
 
 static int s_json2_rtld_handle = -1;
@@ -2301,45 +2307,93 @@ static obs_result check_json2_init_layout(void) {
                        (uint64_t)(int64_t)mod_h, "val");
 
     /* 2. Resolve target symbols via link imports or dynamically */
-    void (*fn_memalloc_ctor)(void *) = (void (*)(void *))&sceJsonMemAllocatorCtor_static;
-    if (!obs_address_is_callable((const void *)fn_memalloc_ctor)) {
-        fn_memalloc_ctor =
-            (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json12MemAllocatorC2Ev", "$-hJRce8wn1U");
+    void (*fn_memalloc_ctor)(void *) =
+        (void (*)(void *))&sceJsonMemAllocatorCtor_static;
+    if (fn_memalloc_ctor == NULL) {
+        fn_memalloc_ctor = (void (*)(void *))&sceJsonMemAllocatorCtor_named;
     }
-    void (*fn_memalloc_dtor)(void *) = (void (*)(void *))&sceJsonMemAllocatorDtor_static;
-    if (!obs_address_is_callable((const void *)fn_memalloc_dtor)) {
-        fn_memalloc_dtor =
-            (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json12MemAllocatorD2Ev", "$OcAgPxcq5Vk");
+    if (fn_memalloc_ctor == NULL) {
+        fn_memalloc_ctor = (void (*)(void *))layout_resolve_json_sym(
+            mod_h, "_ZN3sce4Json12MemAllocatorC2Ev", "$-hJRce8wn1U");
     }
-    void (*fn_init_ctor)(void *) = (void (*)(void *))&sceJsonInitializerCtor_static;
-    if (!obs_address_is_callable((const void *)fn_init_ctor)) {
-        fn_init_ctor =
-            (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11InitializerC1Ev", "$cK6bYHf-Q5E");
+
+    void (*fn_memalloc_dtor)(void *) =
+        (void (*)(void *))&sceJsonMemAllocatorDtor_static;
+    if (fn_memalloc_dtor == NULL) {
+        fn_memalloc_dtor = (void (*)(void *))&sceJsonMemAllocatorDtor_named;
     }
-    void (*fn_init_dtor)(void *) = (void (*)(void *))&sceJsonInitializerDtor_static;
-    if (!obs_address_is_callable((const void *)fn_init_dtor)) {
-        fn_init_dtor =
-            (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11InitializerD1Ev", "$RujUxbr3haM");
+    if (fn_memalloc_dtor == NULL) {
+        fn_memalloc_dtor = (void (*)(void *))layout_resolve_json_sym(
+            mod_h, "_ZN3sce4Json12MemAllocatorD2Ev", "$OcAgPxcq5Vk");
     }
-    int (*fn_initialize)(void *, const void *) = (int (*)(void *, const void *))&sceJsonInitializerInitialize_static;
-    if (!obs_address_is_callable((const void *)fn_initialize)) {
+
+    void (*fn_init_ctor)(void *) =
+        (void (*)(void *))&sceJsonInitializerCtor_static;
+    if (fn_init_ctor == NULL) {
+        fn_init_ctor = (void (*)(void *))&sceJsonInitializerCtor_named;
+    }
+    if (fn_init_ctor == NULL) {
+        fn_init_ctor = (void (*)(void *))layout_resolve_json_sym(
+            mod_h, "_ZN3sce4Json11InitializerC1Ev", "$cK6bYHf-Q5E");
+    }
+
+    void (*fn_init_dtor)(void *) =
+        (void (*)(void *))&sceJsonInitializerDtor_static;
+    if (fn_init_dtor == NULL) {
+        fn_init_dtor = (void (*)(void *))&sceJsonInitializerDtor_named;
+    }
+    if (fn_init_dtor == NULL) {
+        fn_init_dtor = (void (*)(void *))layout_resolve_json_sym(
+            mod_h, "_ZN3sce4Json11InitializerD1Ev", "$RujUxbr3haM");
+    }
+
+    int (*fn_initialize)(void *, const void *) =
+        (int (*)(void *, const void *))&sceJsonInitializerInitialize_static;
+    if (fn_initialize == NULL) {
         fn_initialize =
-            (int (*)(void *, const void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE", "$Cxwy7wHq4J0");
+            (int (*)(void *, const void *))&sceJsonInitializerInitialize_named;
     }
-    int (*fn_terminate)(void *) = (int (*)(void *))&sceJsonInitializerTerminate_static;
-    if (!obs_address_is_callable((const void *)fn_terminate)) {
-        fn_terminate =
-            (int (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11Initializer9terminateEv", "$PR5k1penBLM");
+    if (fn_initialize == NULL) {
+        fn_initialize = (int (*)(void *, const void *))layout_resolve_json_sym(
+            mod_h,
+            "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE",
+            "$Cxwy7wHq4J0");
     }
-    void (*fn_param2_ctor)(void *) = (void (*)(void *))&sceJsonInitParameter2Ctor_static;
-    if (!obs_address_is_callable((const void *)fn_param2_ctor)) {
-        fn_param2_ctor =
-            (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json14InitParameter2C1Ev", "$WSOuge5IsCg");
+
+    int (*fn_terminate)(void *) =
+        (int (*)(void *))&sceJsonInitializerTerminate_static;
+    if (fn_terminate == NULL) {
+        fn_terminate = (int (*)(void *))&sceJsonInitializerTerminate_named;
     }
-    void (*fn_param2_setalloc)(void *, void *, void *) = (void (*)(void *, void *, void *))&sceJsonInitParameter2SetAllocator_static;
-    if (!obs_address_is_callable((const void *)fn_param2_setalloc)) {
-        fn_param2_setalloc =
-            (void (*)(void *, void *, void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv", "$I2QC8PYhJWY");
+    if (fn_terminate == NULL) {
+        fn_terminate = (int (*)(void *))layout_resolve_json_sym(
+            mod_h, "_ZN3sce4Json11Initializer9terminateEv", "$PR5k1penBLM");
+    }
+
+    void (*fn_param2_ctor)(void *) =
+        (void (*)(void *))&sceJsonInitParameter2Ctor_static;
+    if (fn_param2_ctor == NULL) {
+        fn_param2_ctor = (void (*)(void *))&sceJsonInitParameter2Ctor_named;
+    }
+    if (fn_param2_ctor == NULL) {
+        fn_param2_ctor = (void (*)(void *))layout_resolve_json_sym(
+            mod_h, "_ZN3sce4Json14InitParameter2C1Ev", "$WSOuge5IsCg");
+    }
+
+    void (*fn_param2_setalloc)(void *, void *, void *) =
+        (void (*)(void *, void *, void *))&
+            sceJsonInitParameter2SetAllocator_static;
+    if (fn_param2_setalloc == NULL) {
+        fn_param2_setalloc = (void (*)(void *, void *, void *))&
+            sceJsonInitParameter2SetAllocator_named;
+    }
+    if (fn_param2_setalloc == NULL) {
+        fn_param2_setalloc = (void (*)(void *, void *, void *))
+            layout_resolve_json_sym(
+                mod_h,
+                "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_"
+                "12MemAllocatorEPv",
+                "$I2QC8PYhJWY");
     }
 
     obs_report_measure("130-layout/json2-init", "resolve", "memalloc_ctor",
@@ -2361,10 +2415,6 @@ static obs_result check_json2_init_layout(void) {
     obs_report_measure("130-layout/json2-init", "libSceJson2", "rtld_handle",
                        (uint64_t)(int64_t)s_json2_rtld_handle, "val");
 
-    if (fn_memalloc_ctor == NULL && fn_init_ctor == NULL && fn_initialize == NULL) {
-        return obs_skip("libSceJson2 symbols not available in this context");
-    }
-
     obs_jmp_buf guard;
     int sig = 0;
 
@@ -2374,7 +2424,7 @@ static obs_result check_json2_init_layout(void) {
     uint8_t init_obj1_before[0x40];
     memcpy(init_obj1_before, init_obj1, sizeof(init_obj1));
 
-    if (fn_init_ctor != NULL && obs_address_is_callable((const void *)fn_init_ctor)) {
+    if (fn_init_ctor != NULL) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             fn_init_ctor(init_obj1);
@@ -2391,7 +2441,7 @@ static obs_result check_json2_init_layout(void) {
     /* (2) MemAllocator subclass over malloc/free counting calls + InitParameter + initialize(&param) */
     uint8_t base_alloc[0x40];
     memset(base_alloc, 0xcc, sizeof(base_alloc));
-    if (fn_memalloc_ctor != NULL && obs_address_is_callable((const void *)fn_memalloc_ctor)) {
+    if (fn_memalloc_ctor != NULL) {
         fn_memalloc_ctor(base_alloc);
     }
     obs_report_bytes("130-layout/json2-init", "MemAllocator", "base-obj-after", 0, base_alloc, 0x40);
@@ -2400,23 +2450,33 @@ static obs_result check_json2_init_layout(void) {
 
     static void *subclass_vtable[16];
     for (int i = 0; i < 16; i++) {
-        subclass_vtable[i] = (base_vptr != NULL && i < 8) ? base_vptr[i] : NULL;
+        subclass_vtable[i] =
+            (base_vptr != NULL &&
+             obs_address_is_callable((const void *)base_vptr) && i < 8)
+                ? base_vptr[i]
+                : NULL;
+    }
+    if (subclass_vtable[0] == NULL) {
+        subclass_vtable[0] = (void *)&custom_json_dtor;
+    }
+    if (subclass_vtable[1] == NULL) {
+        subclass_vtable[1] = (void *)&custom_json_dtor;
     }
     subclass_vtable[2] = (void *)&custom_json_alloc;
     subclass_vtable[3] = (void *)&custom_json_dealloc;
 
     uint8_t sub_alloc[0x40];
     memset(sub_alloc, 0xcc, sizeof(sub_alloc));
-    if (fn_memalloc_ctor != NULL && obs_address_is_callable((const void *)fn_memalloc_ctor)) {
+    if (fn_memalloc_ctor != NULL) {
         fn_memalloc_ctor(sub_alloc);
     }
     *(void ***)sub_alloc = subclass_vtable;
 
     uint8_t param[0x40];
     memset(param, 0xcc, sizeof(param));
-    if (fn_param2_ctor != NULL && obs_address_is_callable((const void *)fn_param2_ctor)) {
+    if (fn_param2_ctor != NULL) {
         fn_param2_ctor(param);
-        if (fn_param2_setalloc != NULL && obs_address_is_callable((const void *)fn_param2_setalloc)) {
+        if (fn_param2_setalloc != NULL) {
             fn_param2_setalloc(param, sub_alloc, (void *)0x12345678ULL);
         } else {
             *(void **)param = (void *)sub_alloc;
@@ -2431,7 +2491,7 @@ static obs_result check_json2_init_layout(void) {
 
     uint8_t init_obj2[0x40];
     memset(init_obj2, 0xcc, sizeof(init_obj2));
-    if (fn_init_ctor != NULL && obs_address_is_callable((const void *)fn_init_ctor)) {
+    if (fn_init_ctor != NULL) {
         fn_init_ctor(init_obj2);
     }
     uint8_t init_obj2_before[0x40];
@@ -2442,7 +2502,7 @@ static obs_result check_json2_init_layout(void) {
     s_json_alloc_sizes_count = 0;
 
     int rc_init2 = -999;
-    if (fn_initialize != NULL && obs_address_is_callable((const void *)fn_initialize)) {
+    if (fn_initialize != NULL) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             rc_init2 = fn_initialize(init_obj2, param);
@@ -2463,11 +2523,14 @@ static obs_result check_json2_init_layout(void) {
         char sz_tag[32];
         oops_snprintf(sz_tag, sizeof(sz_tag), "alloc-size-%zu", si);
         obs_report_measure("130-layout/json2-init", "arm2-init", sz_tag, (uint64_t)s_json_alloc_sizes[si], "bytes");
+        char al_tag[32];
+        oops_snprintf(al_tag, sizeof(al_tag), "alloc-align-%zu", si);
+        obs_report_measure("130-layout/json2-init", "arm2-init", al_tag, (uint64_t)s_json_alloc_aligns[si], "bytes");
     }
 
     /* (3) initialize again on the same object: the rc for a second initialisation */
     int rc_reinit = -999;
-    if (fn_initialize != NULL && obs_address_is_callable((const void *)fn_initialize)) {
+    if (fn_initialize != NULL) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             rc_reinit = fn_initialize(init_obj2, param);
@@ -2481,7 +2544,7 @@ static obs_result check_json2_init_layout(void) {
 
     /* (4) terminate(): the rc and the allocator's counts after it */
     int rc_term = -999;
-    if (fn_terminate != NULL && obs_address_is_callable((const void *)fn_terminate)) {
+    if (fn_terminate != NULL) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             rc_term = fn_terminate(init_obj2);
@@ -2497,11 +2560,11 @@ static obs_result check_json2_init_layout(void) {
     obs_report_bytes("130-layout/json2-init", "arm4-term", "obj-after", 0, init_obj2, 0x40);
 
     /* Also clean up dtors */
-    if (fn_init_dtor != NULL && obs_address_is_callable((const void *)fn_init_dtor)) {
+    if (fn_init_dtor != NULL) {
         fn_init_dtor(init_obj1);
         fn_init_dtor(init_obj2);
     }
-    if (fn_memalloc_dtor != NULL && obs_address_is_callable((const void *)fn_memalloc_dtor)) {
+    if (fn_memalloc_dtor != NULL) {
         fn_memalloc_dtor(base_alloc);
         fn_memalloc_dtor(sub_alloc);
     }

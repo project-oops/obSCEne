@@ -716,15 +716,24 @@ static const obs_import obs_platform_imports[] = {
     {"libSceLibcInternal", "sceLibcMspaceCreate"},
     {"libSceLibcInternal", "$W6SiVSiCDtI"},
     {"libSceLibcInternal", "sceLibcMspaceDestroy"},
-    /* libSceJson2 (REQ-20261006T1505Z-js01) */
+    /* libSceJson2 (REQ-20261006T1505Z-js01, REQ-20261006T2220Z-js02) */
     {"libSceJson2", "$-hJRce8wn1U"},
+    {"libSceJson2", "_ZN3sce4Json12MemAllocatorC2Ev"},
     {"libSceJson2", "$OcAgPxcq5Vk"},
+    {"libSceJson2", "_ZN3sce4Json12MemAllocatorD2Ev"},
     {"libSceJson2", "$cK6bYHf-Q5E"},
+    {"libSceJson2", "_ZN3sce4Json11InitializerC1Ev"},
     {"libSceJson2", "$RujUxbr3haM"},
+    {"libSceJson2", "_ZN3sce4Json11InitializerD1Ev"},
     {"libSceJson2", "$Cxwy7wHq4J0"},
+    {"libSceJson2", "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE"},
     {"libSceJson2", "$PR5k1penBLM"},
+    {"libSceJson2", "_ZN3sce4Json11Initializer9terminateEv"},
     {"libSceJson2", "$WSOuge5IsCg"},
+    {"libSceJson2", "_ZN3sce4Json14InitParameter2C1Ev"},
     {"libSceJson2", "$I2QC8PYhJWY"},
+    {"libSceJson2",
+     "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv"},
 };
 
 /* Calls `fn` once per import declared outside the census. */
