@@ -1529,6 +1529,37 @@ OBS_WEAK void
 sceJsonInitParameter2SetAllocator_named(void *param, void *alloc, void *user) __asm__(
     "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv");
 
+/* libSceFontFt (REQ-20261007T0850Z-fm02) */
+OBS_WEAK void *sceFontSelectLibraryFt_static(uint64_t mode) __asm__("$oM+XCzVG3oM");
+OBS_WEAK void *sceFontSelectLibraryFt(uint64_t mode);
+
+/* libSceFont (REQ-20261007T0850Z-fm02) */
+OBS_WEAK int
+sceFontCreateLibraryWithEdition_static(void *memory, void *selection, uint64_t edition,
+                                       void **library) __asm__("$n590hj5Oe-k");
+OBS_WEAK int sceFontCreateLibraryWithEdition(void *memory, void *selection,
+                                             uint64_t edition, void **library);
+OBS_WEAK int sceFontDestroyLibrary_static(void **library) __asm__("$FXP359ygujs");
+OBS_WEAK int sceFontDestroyLibrary(void **library);
+
+/* libSceNet (REQ-20261007T0915Z-ht01) */
+OBS_WEAK int sceNetPoolCreate_static(const char *name, int size,
+                                     int flags) __asm__("$dgJBaeJnGpo");
+OBS_WEAK int sceNetPoolCreate(const char *name, int size, int flags);
+
+/* libSceSsl (REQ-20261007T0915Z-ht01) */
+OBS_WEAK int sceSslInit_static(size_t poolsize) __asm__("$hdpVEUDFW3s");
+OBS_WEAK int sceSslInit(size_t poolsize);
+OBS_WEAK int sceSslTerm_static(int ssl_ctx) __asm__("$0K1yQ6Lv-Yc");
+OBS_WEAK int sceSslTerm(int ssl_ctx);
+
+/* libSceHttp2 (REQ-20261007T0915Z-ht01) */
+OBS_WEAK int sceHttp2Init_static(int pool, int ssl, size_t pool_size,
+                                 int mode) __asm__("$3JCe3lCbQ8A");
+OBS_WEAK int sceHttp2Init(int pool, int ssl, size_t pool_size, int mode);
+OBS_WEAK int sceHttp2Term_static(int id) __asm__("$YiBUtz-pGkc");
+OBS_WEAK int sceHttp2Term(int id);
+
 OBS_WEAK uint64_t sceAgcCreateShader(void *out_slot, const void *header,
                                      const void *payload,
                                      uint64_t arg3) __asm__("$f3dg2CSgRKY");

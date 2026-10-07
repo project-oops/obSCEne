@@ -2948,6 +2948,597 @@ static obs_result check_font_memory_init(void) {
     return obs_pass();
 }
 
+/* REQ-20261007T0850Z-fm02: sceFontSelectLibraryFt and sceFontCreateLibraryWithEdition
+ * in PPSA21564's call shape */
+static uint64_t s_font_ft_destroy_cb_calls = 0;
+static void *s_font_ft_destroy_cb_arg = NULL;
+static void s_font_ft_destroy_cb(void *arg) {
+    s_font_ft_destroy_cb_calls++;
+    s_font_ft_destroy_cb_arg = arg;
+}
+
+static uint64_t s_font_ft_alloc_calls = 0;
+static uint64_t s_font_ft_free_calls = 0;
+static void *(*s_fn_msp_malloc)(void *msp, size_t size) = NULL;
+static void (*s_fn_msp_free)(void *msp, void *ptr) = NULL;
+
+static void *s_font_ft_alloc(void *msp, size_t size) {
+    s_font_ft_alloc_calls++;
+    if (s_fn_msp_malloc && obs_address_is_callable((const void *)s_fn_msp_malloc)) {
+        return s_fn_msp_malloc(msp, size);
+    }
+    return malloc(size);
+}
+
+static void s_font_ft_free(void *msp, void *ptr) {
+    s_font_ft_free_calls++;
+    if (s_fn_msp_free && obs_address_is_callable((const void *)s_fn_msp_free)) {
+        s_fn_msp_free(msp, ptr);
+    } else {
+        free(ptr);
+    }
+}
+
+static obs_result check_font_create_library_ft(void) {
+    const char *id = "130-layout/font-create-library-ft";
+    obs_jmp_buf guard;
+
+    /* Sysmodule load */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x000eu /* libSceFont */);
+    }
+    int res = 0;
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        (void)sceKernelLoadStartModule("/system/common/lib/libSceFont.sprx", 0, NULL, 0,
+                                       NULL, &res);
+        (void)sceKernelLoadStartModule("/system/common/lib/libSceFontFt.sprx", 0, NULL,
+                                       0, NULL, &res);
+    }
+
+    void *(*fn_select_ft)(uint64_t) =
+        (void *(*)(uint64_t)) & sceFontSelectLibraryFt_static;
+    if (!obs_address_is_callable((const void *)fn_select_ft)) {
+        fn_select_ft = (void *(*)(uint64_t)) & sceFontSelectLibraryFt;
+    }
+    if (!obs_address_is_callable((const void *)fn_select_ft)) {
+        fn_select_ft = (void *(*)(uint64_t))layout_resolve_sym(
+            "libSceFontFt", "sceFontSelectLibraryFt");
+    }
+    if (!obs_address_is_callable((const void *)fn_select_ft)) {
+        fn_select_ft =
+            (void *(*)(uint64_t))layout_resolve_sym("libSceFontFt", "$oM+XCzVG3oM");
+    }
+
+    int (*fn_create_lib)(void *, void *, uint64_t, void **) = (int (*)(
+        void *, void *, uint64_t, void **))&sceFontCreateLibraryWithEdition_static;
+    if (!obs_address_is_callable((const void *)fn_create_lib)) {
+        fn_create_lib = (int (*)(void *, void *, uint64_t,
+                                 void **))&sceFontCreateLibraryWithEdition;
+    }
+    if (!obs_address_is_callable((const void *)fn_create_lib)) {
+        fn_create_lib = (int (*)(void *, void *, uint64_t, void **))layout_resolve_sym(
+            "libSceFont", "sceFontCreateLibraryWithEdition");
+    }
+    if (!obs_address_is_callable((const void *)fn_create_lib)) {
+        fn_create_lib = (int (*)(void *, void *, uint64_t, void **))layout_resolve_sym(
+            "libSceFont", "$n590hj5Oe-k");
+    }
+
+    int (*fn_destroy_lib)(void **) = (int (*)(void **))&sceFontDestroyLibrary_static;
+    if (!obs_address_is_callable((const void *)fn_destroy_lib)) {
+        fn_destroy_lib = (int (*)(void **))&sceFontDestroyLibrary;
+    }
+    if (!obs_address_is_callable((const void *)fn_destroy_lib)) {
+        fn_destroy_lib =
+            (int (*)(void **))layout_resolve_sym("libSceFont", "sceFontDestroyLibrary");
+    }
+    if (!obs_address_is_callable((const void *)fn_destroy_lib)) {
+        fn_destroy_lib =
+            (int (*)(void **))layout_resolve_sym("libSceFont", "$FXP359ygujs");
+    }
+
+    int (*fn_mem_init)(void *, void *, uint32_t, void *, void *, void *, uint64_t) =
+        (int (*)(void *, void *, uint32_t, void *, void *, void *,
+                 uint64_t))&sceFontMemoryInit_static;
+    if (!obs_address_is_callable((const void *)fn_mem_init)) {
+        fn_mem_init = (int (*)(void *, void *, uint32_t, void *, void *, void *,
+                               uint64_t))&sceFontMemoryInit;
+    }
+    if (!obs_address_is_callable((const void *)fn_mem_init)) {
+        fn_mem_init =
+            (int (*)(void *, void *, uint32_t, void *, void *, void *,
+                     uint64_t))layout_resolve_sym("libSceFont", "sceFontMemoryInit");
+    }
+
+    void *(*fn_msp_create)(const char *, void *, size_t, uint64_t) =
+        (void *(*)(const char *, void *, size_t, uint64_t)) &
+        sceLibcMspaceCreate_static;
+    if (!obs_address_is_callable((const void *)fn_msp_create)) {
+        fn_msp_create =
+            (void *(*)(const char *, void *, size_t, uint64_t)) & sceLibcMspaceCreate;
+    }
+    if (!obs_address_is_callable((const void *)fn_msp_create)) {
+        fn_msp_create =
+            (void *(*)(const char *, void *, size_t, uint64_t))layout_resolve_sym(
+                "libSceLibcInternal", "sceLibcMspaceCreate");
+    }
+
+    int (*fn_msp_destroy)(void *) = (int (*)(void *))&sceLibcMspaceDestroy_static;
+    if (!obs_address_is_callable((const void *)fn_msp_destroy)) {
+        fn_msp_destroy = (int (*)(void *))&sceLibcMspaceDestroy;
+    }
+    if (!obs_address_is_callable((const void *)fn_msp_destroy)) {
+        fn_msp_destroy = (int (*)(void *))layout_resolve_sym("libSceLibcInternal",
+                                                             "sceLibcMspaceDestroy");
+    }
+
+    s_fn_msp_malloc = (void *(*)(void *, size_t))layout_resolve_sym(
+        "libSceLibcInternal", "sceLibcMspaceMalloc");
+    if (!s_fn_msp_malloc) {
+        s_fn_msp_malloc = (void *(*)(void *, size_t))layout_resolve_sym(
+            "libSceLibcInternal", "$OJjm-QOIHlI");
+    }
+    s_fn_msp_free = (void (*)(void *, void *))layout_resolve_sym("libSceLibcInternal",
+                                                                 "sceLibcMspaceFree");
+    if (!s_fn_msp_free) {
+        s_fn_msp_free = (void (*)(void *, void *))layout_resolve_sym(
+            "libSceLibcInternal", "$Vla-Z+eXlxo");
+    }
+
+    obs_report_measure(
+        id, "resolve", "select-ft-callable",
+        fn_select_ft && obs_address_is_callable((const void *)fn_select_ft) ? 1 : 0,
+        "bool");
+    obs_report_measure(
+        id, "resolve", "create-lib-callable",
+        fn_create_lib && obs_address_is_callable((const void *)fn_create_lib) ? 1 : 0,
+        "bool");
+    obs_report_measure(
+        id, "resolve", "destroy-lib-callable",
+        fn_destroy_lib && obs_address_is_callable((const void *)fn_destroy_lib) ? 1 : 0,
+        "bool");
+    obs_report_measure(
+        id, "resolve", "mem-init-callable",
+        fn_mem_init && obs_address_is_callable((const void *)fn_mem_init) ? 1 : 0,
+        "bool");
+
+    if (!fn_select_ft || !fn_create_lib || !fn_mem_init) {
+        return obs_skip("required font symbols not callable");
+    }
+
+    /* (1) sceFontSelectLibraryFt(0) and (1) */
+    void *sel0 = NULL;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sel0 = fn_select_ft(0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm1-select", "fault-0", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm1-select", "sel0", (uint64_t)(uintptr_t)sel0, "addr");
+    if ((uintptr_t)sel0 >= 0x10000UL) {
+        uint8_t sel0_buf[64];
+        memset(sel0_buf, 0, sizeof(sel0_buf));
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            memcpy(sel0_buf, sel0, 0x40);
+            obs_fault_unregister();
+            obs_report_bytes(id, "arm1-select", "sel0-40b", 0, sel0_buf, 0x40);
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    void *sel1 = NULL;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        sel1 = fn_select_ft(1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm1-select", "fault-1", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm1-select", "sel1", (uint64_t)(uintptr_t)sel1, "addr");
+    if ((uintptr_t)sel1 >= 0x10000UL) {
+        uint8_t sel1_buf[64];
+        memset(sel1_buf, 0, sizeof(sel1_buf));
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            memcpy(sel1_buf, sel1, 0x40);
+            obs_fault_unregister();
+            obs_report_bytes(id, "arm1-select", "sel1-40b", 0, sel1_buf, 0x40);
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* Setup font memory object: mspace over 0x10000 buffer, destroy callback */
+    static _Alignas(4096) uint8_t s_font_ft_base[0x10000];
+    memset(s_font_ft_base, 0xcc, sizeof(s_font_ft_base));
+    void *msp = NULL;
+    if (fn_msp_create && obs_address_is_callable((const void *)fn_msp_create)) {
+        msp = fn_msp_create("font_ft_msp", s_font_ft_base, sizeof(s_font_ft_base), 0);
+    }
+
+    /* Arm (2a): literal 5 sentinels from -fm01 arm 1 */
+    uint8_t obj_sentinel[0x40];
+    memset(obj_sentinel, 0xcc, sizeof(obj_sentinel));
+    void *memIf_sentinel[8];
+    memIf_sentinel[0] = (void *)0x11110001ULL;
+    memIf_sentinel[1] = (void *)0x11110002ULL;
+    memIf_sentinel[2] = (void *)0x11110003ULL;
+    memIf_sentinel[3] = (void *)0x11110004ULL;
+    memIf_sentinel[4] = (void *)0x11110005ULL;
+    memIf_sentinel[5] = (void *)0x11110006ULL;
+    memIf_sentinel[6] = (void *)0x11110007ULL;
+    memIf_sentinel[7] = (void *)0x11110008ULL;
+    (void)fn_mem_init(obj_sentinel, s_font_ft_base, sizeof(s_font_ft_base),
+                      memIf_sentinel, msp, (void *)&s_font_ft_destroy_cb, 0);
+
+    uint64_t lib_sentinel = 0xccccccccccccccccULL;
+    int rc_sentinel = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_sentinel = fn_create_lib(obj_sentinel, sel0, 0x0007001000000000ULL,
+                                    (void **)&lib_sentinel);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm2a-sentinel", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm2a-sentinel", "rc", (uint64_t)(uint32_t)rc_sentinel,
+                       "code");
+    obs_report_measure(id, "arm2a-sentinel", "library", lib_sentinel, "addr");
+
+    /* Arm (2b): callable memIf allocator (so library is created, allowing dump &
+     * destroy) */
+    uint8_t obj[0x40];
+    memset(obj, 0xcc, sizeof(obj));
+    void *memIf_callable[8];
+    memIf_callable[0] = (void *)&s_font_ft_alloc;
+    memIf_callable[1] = (void *)&s_font_ft_free;
+    memIf_callable[2] = (void *)&s_font_ft_alloc;
+    memIf_callable[3] = (void *)&s_font_ft_alloc;
+    memIf_callable[4] = (void *)&s_font_ft_alloc;
+    memIf_callable[5] = NULL;
+    memIf_callable[6] = NULL;
+    memIf_callable[7] = NULL;
+    (void)fn_mem_init(obj, s_font_ft_base, sizeof(s_font_ft_base), memIf_callable, msp,
+                      (void *)&s_font_ft_destroy_cb, 0);
+
+    uint8_t base_before[0x40];
+    memcpy(base_before, s_font_ft_base, sizeof(base_before));
+    uint8_t obj_before[0x40];
+    memcpy(obj_before, obj, sizeof(obj));
+
+    uint64_t library = 0xccccccccccccccccULL;
+    int rc2 = -1;
+    s_font_ft_alloc_calls = 0;
+    s_font_ft_free_calls = 0;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc2 = fn_create_lib(obj, sel0, 0x0007001000000000ULL, (void **)&library);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm2-create", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm2-create", "rc", (uint64_t)(uint32_t)rc2, "code");
+    obs_report_measure(id, "arm2-create", "library", library, "addr");
+    obs_report_measure(id, "arm2-create", "alloc-calls", s_font_ft_alloc_calls,
+                       "count");
+
+    if (library >= 0x10000UL) {
+        uint8_t lib_bytes[0x100];
+        memset(lib_bytes, 0, sizeof(lib_bytes));
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            memcpy(lib_bytes, (const void *)(uintptr_t)library, sizeof(lib_bytes));
+            obs_fault_unregister();
+            for (uint32_t off = 0; off < 0x100; off += 64) {
+                obs_report_bytes(id, "arm2-create", "lib-bytes", off, lib_bytes + off,
+                                 64);
+            }
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    obs_report_bytes(id, "arm2-create", "obj-after", 0, obj, sizeof(obj));
+    obs_report_written(id, "sceFontCreateLibraryWithEdition", "mspace-head40",
+                       base_before, s_font_ft_base, sizeof(base_before));
+    obs_report_bytes(id, "arm2-create", "mspace-after-head40", 0, s_font_ft_base,
+                     sizeof(base_before));
+
+    /* (3) memory = NULL and edition = 0 */
+    uint64_t lib_null_mem = 0xccccccccccccccccULL;
+    int rc_null_mem = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_null_mem =
+            fn_create_lib(NULL, sel0, 0x0007001000000000ULL, (void **)&lib_null_mem);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm3-null-mem", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm3-null-mem", "rc", (uint64_t)(uint32_t)rc_null_mem,
+                       "code");
+    obs_report_measure(id, "arm3-null-mem", "library", lib_null_mem, "addr");
+
+    uint64_t lib_zero_ed = 0xccccccccccccccccULL;
+    int rc_zero_ed = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_zero_ed = fn_create_lib(obj, sel0, 0, (void **)&lib_zero_ed);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm3-zero-ed", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm3-zero-ed", "rc", (uint64_t)(uint32_t)rc_zero_ed,
+                       "code");
+    obs_report_measure(id, "arm3-zero-ed", "library", lib_zero_ed, "addr");
+    if (lib_zero_ed >= 0x10000UL && fn_destroy_lib) {
+        (void)fn_destroy_lib((void **)&lib_zero_ed);
+    }
+
+    /* (4) sceFontDestroyLibrary(&library) */
+    int rc4 = -1;
+    if (fn_destroy_lib) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc4 = fn_destroy_lib((void **)&library);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "arm4-destroy", "fault", (uint64_t)sig, "signal");
+        }
+    }
+    obs_report_measure(id, "arm4-destroy", "rc", (uint64_t)(uint32_t)rc4, "code");
+    obs_report_measure(id, "arm4-destroy", "library-after", library, "addr");
+    obs_report_measure(id, "arm4-destroy", "free-calls", s_font_ft_free_calls, "count");
+
+    /* Cleanup mspace */
+    if (msp && fn_msp_destroy &&
+        obs_address_is_callable((const void *)fn_msp_destroy)) {
+        fn_msp_destroy(msp);
+    }
+
+    return obs_pass();
+}
+
+/* REQ-20261007T0915Z-ht01: sceHttp2Init after sceNetPoolCreate and sceSslInit */
+static obs_result check_http2_init(void) {
+    const char *id = "130-layout/http2-init";
+    obs_jmp_buf guard;
+
+    /* Sysmodule load */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x0013u /* libSceNet */);
+        (void)sceSysmoduleLoadModule(0x0017u /* libSceSsl */);
+        (void)sceSysmoduleLoadModule(0x001bu /* libSceHttp2 */);
+    }
+    int res = 0;
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        (void)sceKernelLoadStartModule("/system/common/lib/libSceNet.sprx", 0, NULL, 0,
+                                       NULL, &res);
+        (void)sceKernelLoadStartModule("/system/common/lib/libSceSsl.sprx", 0, NULL, 0,
+                                       NULL, &res);
+        (void)sceKernelLoadStartModule("/system/common/lib/libSceHttp2.sprx", 0, NULL,
+                                       0, NULL, &res);
+    }
+
+    /* Initialize net */
+    int (*fn_net_init)(void) = (int (*)(void))&sceNetInit;
+    if (!obs_address_is_callable((const void *)fn_net_init)) {
+        fn_net_init = (int (*)(void))layout_resolve_sym("libSceNet", "sceNetInit");
+    }
+    if (fn_net_init && obs_address_is_callable((const void *)fn_net_init)) {
+        (void)fn_net_init();
+    }
+
+    int (*fn_pool_create)(const char *, int, int) =
+        (int (*)(const char *, int, int))&sceNetPoolCreate_static;
+    if (!obs_address_is_callable((const void *)fn_pool_create)) {
+        fn_pool_create = (int (*)(const char *, int, int))&sceNetPoolCreate;
+    }
+    if (!obs_address_is_callable((const void *)fn_pool_create)) {
+        fn_pool_create = (int (*)(const char *, int, int))layout_resolve_sym(
+            "libSceNet", "sceNetPoolCreate");
+    }
+    if (!obs_address_is_callable((const void *)fn_pool_create)) {
+        fn_pool_create = (int (*)(const char *, int, int))layout_resolve_sym(
+            "libSceNet", "$dgJBaeJnGpo");
+    }
+
+    int (*fn_ssl_init)(size_t) = (int (*)(size_t))&sceSslInit_static;
+    if (!obs_address_is_callable((const void *)fn_ssl_init)) {
+        fn_ssl_init = (int (*)(size_t))&sceSslInit;
+    }
+    if (!obs_address_is_callable((const void *)fn_ssl_init)) {
+        fn_ssl_init = (int (*)(size_t))layout_resolve_sym("libSceSsl", "sceSslInit");
+    }
+    if (!obs_address_is_callable((const void *)fn_ssl_init)) {
+        fn_ssl_init = (int (*)(size_t))layout_resolve_sym("libSceSsl", "$hdpVEUDFW3s");
+    }
+
+    int (*fn_ssl_term)(int) = (int (*)(int))&sceSslTerm_static;
+    if (!obs_address_is_callable((const void *)fn_ssl_term)) {
+        fn_ssl_term = (int (*)(int))&sceSslTerm;
+    }
+    if (!obs_address_is_callable((const void *)fn_ssl_term)) {
+        fn_ssl_term = (int (*)(int))layout_resolve_sym("libSceSsl", "sceSslTerm");
+    }
+    if (!obs_address_is_callable((const void *)fn_ssl_term)) {
+        fn_ssl_term = (int (*)(int))layout_resolve_sym("libSceSsl", "$0K1yQ6Lv-Yc");
+    }
+
+    int (*fn_http2_init)(int, int, size_t, int) =
+        (int (*)(int, int, size_t, int))&sceHttp2Init_static;
+    if (!obs_address_is_callable((const void *)fn_http2_init)) {
+        fn_http2_init = (int (*)(int, int, size_t, int))&sceHttp2Init;
+    }
+    if (!obs_address_is_callable((const void *)fn_http2_init)) {
+        fn_http2_init = (int (*)(int, int, size_t, int))layout_resolve_sym(
+            "libSceHttp2", "sceHttp2Init");
+    }
+    if (!obs_address_is_callable((const void *)fn_http2_init)) {
+        fn_http2_init = (int (*)(int, int, size_t, int))layout_resolve_sym(
+            "libSceHttp2", "$3JCe3lCbQ8A");
+    }
+
+    int (*fn_http2_term)(int) = (int (*)(int))&sceHttp2Term_static;
+    if (!obs_address_is_callable((const void *)fn_http2_term)) {
+        fn_http2_term = (int (*)(int))&sceHttp2Term;
+    }
+    if (!obs_address_is_callable((const void *)fn_http2_term)) {
+        fn_http2_term = (int (*)(int))layout_resolve_sym("libSceHttp2", "sceHttp2Term");
+    }
+    if (!obs_address_is_callable((const void *)fn_http2_term)) {
+        fn_http2_term = (int (*)(int))layout_resolve_sym("libSceHttp2", "$YiBUtz-pGkc");
+    }
+
+    obs_report_measure(
+        id, "resolve", "pool-create-callable",
+        fn_pool_create && obs_address_is_callable((const void *)fn_pool_create) ? 1 : 0,
+        "bool");
+    obs_report_measure(
+        id, "resolve", "ssl-init-callable",
+        fn_ssl_init && obs_address_is_callable((const void *)fn_ssl_init) ? 1 : 0,
+        "bool");
+    obs_report_measure(
+        id, "resolve", "http2-init-callable",
+        fn_http2_init && obs_address_is_callable((const void *)fn_http2_init) ? 1 : 0,
+        "bool");
+    obs_report_measure(
+        id, "resolve", "http2-term-callable",
+        fn_http2_term && obs_address_is_callable((const void *)fn_http2_term) ? 1 : 0,
+        "bool");
+
+    if (!fn_pool_create || !fn_ssl_init || !fn_http2_init || !fn_http2_term) {
+        return obs_skip("required http2 / net / ssl symbols not callable");
+    }
+
+    /* (1) sceNetPoolCreate("http2", 0x40000, 0), then sceSslInit(0x40000) */
+    int pool_id = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        pool_id = fn_pool_create("http2", 0x40000, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm1-pool-ssl", "pool-fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm1-pool-ssl", "pool-id", (uint64_t)(uint32_t)pool_id,
+                       "id");
+
+    int ssl_id = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        ssl_id = fn_ssl_init(0x40000);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm1-pool-ssl", "ssl-fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm1-pool-ssl", "ssl-id", (uint64_t)(uint32_t)ssl_id, "id");
+
+    /* (2) sceHttp2Init(pool, ssl, 0x40000, 1): rc; if id, call again same way */
+    int h2_id = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        h2_id = fn_http2_init(pool_id, ssl_id, 0x40000, 1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm2-init", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm2-init", "rc", (uint64_t)(uint32_t)h2_id, "code");
+
+    if (h2_id >= 0) {
+        int h2_second = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            h2_second = fn_http2_init(pool_id, ssl_id, 0x40000, 1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "arm2-init", "fault-second", (uint64_t)sig,
+                               "signal");
+        }
+        obs_report_measure(id, "arm2-init", "rc-second", (uint64_t)(uint32_t)h2_second,
+                           "code");
+        if (h2_second >= 0 && h2_second != h2_id) {
+            (void)fn_http2_term(h2_second);
+        }
+    }
+
+    /* (3) sceHttp2Init with pool id 0, and again with ssl id 0 */
+    int rc_pool0 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_pool0 = fn_http2_init(0, ssl_id, 0x40000, 1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm3-zero-ids", "pool0-fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm3-zero-ids", "rc-pool0", (uint64_t)(uint32_t)rc_pool0,
+                       "code");
+    if (rc_pool0 >= 0) {
+        (void)fn_http2_term(rc_pool0);
+    }
+
+    int rc_ssl0 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_ssl0 = fn_http2_init(pool_id, 0, 0x40000, 1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm3-zero-ids", "ssl0-fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm3-zero-ids", "rc-ssl0", (uint64_t)(uint32_t)rc_ssl0,
+                       "code");
+    if (rc_ssl0 >= 0) {
+        (void)fn_http2_term(rc_ssl0);
+    }
+
+    /* (4) sceHttp2Term on (2)'s id: rc, and rc of second sceHttp2Term on it */
+    int rc_term1 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_term1 = fn_http2_term(h2_id);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm4-term", "fault-1", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm4-term", "rc", (uint64_t)(uint32_t)rc_term1, "code");
+
+    int rc_term2 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_term2 = fn_http2_term(h2_id);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "arm4-term", "fault-2", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "arm4-term", "rc-second", (uint64_t)(uint32_t)rc_term2,
+                       "code");
+
+    /* Cleanup SSL */
+    if (ssl_id >= 0 && fn_ssl_term &&
+        obs_address_is_callable((const void *)fn_ssl_term)) {
+        (void)fn_ssl_term(ssl_id);
+    }
+
+    return obs_pass();
+}
+
 static obs_result check_savedata_memory_5d20(void) {
     const char *check_name = "130-layout/savedata-memory-5d20";
 
@@ -3844,6 +4435,11 @@ static const obs_check layout_checks[] = {
     {"130-layout/font-memory-init", "libSceFont", "sceFontMemoryInit", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)check_font_memory_init, check_font_memory_init,
      OBS_FROM_ASSUMED},
+    {"130-layout/font-create-library-ft", "libSceFontFt", "sceFontSelectLibraryFt",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_font_create_library_ft,
+     check_font_create_library_ft, OBS_FROM_ASSUMED},
+    {"130-layout/http2-init", "libSceHttp2", "sceHttp2Init", OBS_CAP_NONE, OBS_CAP_NONE,
+     (const void *)check_http2_init, check_http2_init, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_layout = {

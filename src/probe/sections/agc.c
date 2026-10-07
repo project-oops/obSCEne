@@ -24843,35 +24843,80 @@ static obs_result check_agc_register_defaults_walk_4e9b(void) {
                 }
             }
 
-            /* For each record: resolve entry = *(uint64_t *)(table + (loc & 0x3fc) * 2)
-             */
-            for (uint32_t i = 0; i < count; i++) {
-                uint32_t rec_id = 0, loc = 0, third = 0;
+            /* Pre-collect records and their resolved entry addresses */
+            static struct {
+                uint32_t rec_id;
+                uint32_t loc;
+                uint32_t third;
+                uint64_t entry;
+            } s_recs[512];
+            uint32_t num_recs = (count > 512) ? 512 : count;
+
+            static uint64_t s_sorted_entries[512];
+            uint32_t num_unique_entries = 0;
+
+            for (uint32_t i = 0; i < num_recs; i++) {
+                s_recs[i].rec_id = 0;
+                s_recs[i].loc = 0;
+                s_recs[i].third = 0;
+                s_recs[i].entry = 0;
+
                 int sig_r = OBS_FAULT_ARM(&guard);
                 if (sig_r == 0) {
                     const uint32_t *r = (const uint32_t *)(rec_ptr + i * 12u);
-                    rec_id = r[0];
-                    loc = r[1];
-                    third = r[2];
+                    s_recs[i].rec_id = r[0];
+                    s_recs[i].loc = r[1];
+                    s_recs[i].third = r[2];
                     obs_fault_unregister();
                 } else {
                     obs_fault_unregister();
                     continue;
                 }
 
-                uint32_t tbl_idx = loc & 3u;
+                uint32_t tbl_idx = s_recs[i].loc & 3u;
                 uintptr_t table = (tbl_idx < 4) ? (uintptr_t)tables[tbl_idx] : 0;
-                uint32_t slot = (loc & 0x3fcu) * 2u;
-                uint64_t entry = 0;
+                uint32_t slot = (s_recs[i].loc & 0x3fcu) * 2u;
                 if (table >= 0x10000UL) {
                     int sig_e = OBS_FAULT_ARM(&guard);
                     if (sig_e == 0) {
-                        entry = *(const uint64_t *)(table + slot);
+                        s_recs[i].entry = *(const uint64_t *)(table + slot);
                         obs_fault_unregister();
                     } else {
                         obs_fault_unregister();
                     }
                 }
+
+                if (s_recs[i].entry >= 0x10000ULL) {
+                    int found = 0;
+                    for (uint32_t u = 0; u < num_unique_entries; u++) {
+                        if (s_sorted_entries[u] == s_recs[i].entry) {
+                            found = 1;
+                            break;
+                        }
+                    }
+                    if (!found && num_unique_entries < 512) {
+                        s_sorted_entries[num_unique_entries++] = s_recs[i].entry;
+                    }
+                }
+            }
+
+            /* Sort unique entries in ascending order */
+            for (uint32_t a = 0; a < num_unique_entries; a++) {
+                for (uint32_t b = a + 1; b < num_unique_entries; b++) {
+                    if (s_sorted_entries[a] > s_sorted_entries[b]) {
+                        uint64_t tmp = s_sorted_entries[a];
+                        s_sorted_entries[a] = s_sorted_entries[b];
+                        s_sorted_entries[b] = tmp;
+                    }
+                }
+            }
+
+            /* For each record: report fields, entry-len, entry-16b, and entry-bytes whole */
+            for (uint32_t i = 0; i < num_recs; i++) {
+                uint32_t rec_id = s_recs[i].rec_id;
+                uint32_t loc = s_recs[i].loc;
+                uint32_t third = s_recs[i].third;
+                uint64_t entry = s_recs[i].entry;
 
                 char rec_tag[96];
                 oops_snprintf(rec_tag, sizeof(rec_tag), "%s-rec%03u-id0x%04x", tag,
@@ -24882,6 +24927,28 @@ static obs_result check_agc_register_defaults_walk_4e9b(void) {
                 obs_report_measure(check_name, rec_tag, "entry", entry, "offset");
 
                 if (entry >= 0x10000ULL) {
+                    uint64_t next_addr = 0;
+                    for (uint32_t u = 0; u < num_unique_entries; u++) {
+                        if (s_sorted_entries[u] == entry) {
+                            if (u + 1 < num_unique_entries) {
+                                next_addr = s_sorted_entries[u + 1];
+                            } else {
+                                next_addr = (uintptr_t)tables[0];
+                            }
+                            break;
+                        }
+                    }
+
+                    uint32_t entry_len = 16;
+                    if (next_addr > entry) {
+                        uint64_t dist = next_addr - entry;
+                        entry_len = (dist > 0x400) ? 0x400 : (uint32_t)dist;
+                    }
+                    if (entry_len == 0)
+                        entry_len = 16;
+
+                    obs_report_measure(check_name, rec_tag, "entry-len", (uint64_t)entry_len, "bytes");
+
                     uint8_t entry_bytes[16];
                     memset(entry_bytes, 0, sizeof(entry_bytes));
                     int sig_eb = OBS_FAULT_ARM(&guard);
@@ -24892,6 +24959,24 @@ static obs_result check_agc_register_defaults_walk_4e9b(void) {
                                          entry_bytes, 16);
                     } else {
                         obs_fault_unregister();
+                    }
+
+                    /* REQ-20261007T0905Z-rd01: dump entry whole up to next entry (capped at 0x400) */
+                    for (uint32_t off = 0; off < entry_len; off += 64) {
+                        uint32_t chunk_len =
+                            (entry_len - off > 64) ? 64 : (entry_len - off);
+                        uint8_t chunk_buf[64];
+                        memset(chunk_buf, 0, sizeof(chunk_buf));
+                        int sig_chunk = OBS_FAULT_ARM(&guard);
+                        if (sig_chunk == 0) {
+                            memcpy(chunk_buf, (const void *)(uintptr_t)(entry + off), chunk_len);
+                            obs_fault_unregister();
+                            obs_report_bytes(check_name, rec_tag, "entry-bytes", off,
+                                             chunk_buf, chunk_len);
+                        } else {
+                            obs_fault_unregister();
+                            break;
+                        }
                     }
                 }
             }

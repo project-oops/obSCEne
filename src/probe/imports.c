@@ -734,6 +734,27 @@ static const obs_import obs_platform_imports[] = {
     {"libSceJson2", "$I2QC8PYhJWY"},
     {"libSceJson2",
      "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv"},
+    /* libSceFontFt (REQ-20261007T0850Z-fm02) */
+    {"libSceFontFt", "$oM+XCzVG3oM"},
+    {"libSceFontFt", "sceFontSelectLibraryFt"},
+    /* libSceFont (REQ-20261007T0850Z-fm02) */
+    {"libSceFont", "$n590hj5Oe-k"},
+    {"libSceFont", "sceFontCreateLibraryWithEdition"},
+    {"libSceFont", "$FXP359ygujs"},
+    {"libSceFont", "sceFontDestroyLibrary"},
+    /* libSceNet (REQ-20261007T0915Z-ht01) */
+    {"libSceNet", "$dgJBaeJnGpo"},
+    {"libSceNet", "sceNetPoolCreate"},
+    /* libSceSsl (REQ-20261007T0915Z-ht01) */
+    {"libSceSsl", "$hdpVEUDFW3s"},
+    {"libSceSsl", "sceSslInit"},
+    {"libSceSsl", "$0K1yQ6Lv-Yc"},
+    {"libSceSsl", "sceSslTerm"},
+    /* libSceHttp2 (REQ-20261007T0915Z-ht01) */
+    {"libSceHttp2", "$3JCe3lCbQ8A"},
+    {"libSceHttp2", "sceHttp2Init"},
+    {"libSceHttp2", "$YiBUtz-pGkc"},
+    {"libSceHttp2", "sceHttp2Term"},
 };
 
 /* Calls `fn` once per import declared outside the census. */
