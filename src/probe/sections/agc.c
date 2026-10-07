@@ -671,72 +671,88 @@ static obs_result check_ampr_apr_file_read(void) {
         }
     }
 
-    uint32_t resolved_ids[2] = {0, 0};
-    uint64_t resolved_sizes[2] = {0, 0};
-    int32_t resolved_statuses[2] = {-1, -1};
-    const char *paths_to_resolve[] = {
-        "/system/common/lib/libSceJson2.sprx",
-        "/data/apr_test.bin"
-    };
-    int rc_resolve_abs = -1;
+    /* REQ-20261007T0930Z-ap02: APR resolve and stat on files under /app0 */
+    /* (1) sceKernelAprResolveFilepathsToIdsAndFileSizes on /app0/eboot.bin and /app0/sce_sys/param.json */
+    uint32_t ap02_ids[2] = {0xffffffff, 0xffffffff};
+    uint64_t ap02_sizes[2] = {0, 0};
+    int32_t ap02_statuses[2] = {-1, -1};
+    const char *ap02_paths[2] = {"/app0/eboot.bin", "/app0/sce_sys/param.json"};
+    int rc_ap02_res = -1;
     if (fn_apr_resolve && obs_address_is_callable(fn_apr_resolve)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_resolve_abs = ((int (*)(const char **, uint32_t, uint32_t *, uint64_t *,
-                                       int32_t *))fn_apr_resolve)(
-                paths_to_resolve, 2u, resolved_ids, resolved_sizes, resolved_statuses);
+            rc_ap02_res = ((int (*)(const char **, uint32_t, uint32_t *, uint64_t *,
+                                    int32_t *, void *))fn_apr_resolve)(
+                ap02_paths, 2u, ap02_ids, ap02_sizes, ap02_statuses, NULL);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
         }
     }
-    obs_report_measure(check_name, "apr-resolve-paths", "rc",
-                       (uint64_t)(uint32_t)rc_resolve_abs, "code");
-    obs_report_measure(check_name, "apr-resolve-paths", "id0",
-                       (uint64_t)resolved_ids[0], "id");
-    obs_report_measure(check_name, "apr-resolve-paths", "size0",
-                       resolved_sizes[0], "bytes");
-    obs_report_measure(check_name, "apr-resolve-paths", "status0",
-                       (uint64_t)(uint32_t)resolved_statuses[0], "code");
-    obs_report_measure(check_name, "apr-resolve-paths", "id1",
-                       (uint64_t)resolved_ids[1], "id");
-    obs_report_measure(check_name, "apr-resolve-paths", "size1",
-                       resolved_sizes[1], "bytes");
-    obs_report_measure(check_name, "apr-resolve-paths", "status1",
-                       (uint64_t)(uint32_t)resolved_statuses[1], "code");
+    obs_report_measure(check_name, "ap02-arm1-resolve", "rc",
+                       (uint64_t)(uint32_t)rc_ap02_res, "code");
+    obs_report_measure(check_name, "ap02-arm1-resolve", "id0",
+                       (uint64_t)ap02_ids[0], "id");
+    obs_report_measure(check_name, "ap02-arm1-resolve", "size0",
+                       ap02_sizes[0], "bytes");
+    obs_report_measure(check_name, "ap02-arm1-resolve", "status0",
+                       (uint64_t)(uint32_t)ap02_statuses[0], "code");
+    obs_report_measure(check_name, "ap02-arm1-resolve", "id1",
+                       (uint64_t)ap02_ids[1], "id");
+    obs_report_measure(check_name, "ap02-arm1-resolve", "size1",
+                       ap02_sizes[1], "bytes");
+    obs_report_measure(check_name, "ap02-arm1-resolve", "status1",
+                       (uint64_t)(uint32_t)ap02_statuses[1], "code");
+    obs_report_bytes(check_name, "ap02-arm1-resolve", "ids-bytes", 0,
+                     (const uint8_t *)ap02_ids, sizeof(ap02_ids));
+    obs_report_bytes(check_name, "ap02-arm1-resolve", "sizes-bytes", 0,
+                     (const uint8_t *)ap02_sizes, sizeof(ap02_sizes));
+    obs_report_bytes(check_name, "ap02-arm1-resolve", "statuses-bytes", 0,
+                     (const uint8_t *)ap02_statuses, sizeof(ap02_statuses));
 
-    /* WithPrefix form, prefix /system/common/lib/ */
-    uint32_t pref_ids[1] = {0};
-    uint64_t pref_sizes[1] = {0};
-    int32_t pref_statuses[1] = {-1};
-    const char *rel_paths[] = {"libSceJson2.sprx"};
+    /* (2) the WithPrefix form, prefix /app0/, paths eboot.bin and sce_sys/param.json */
+    uint32_t pref_ids[2] = {0xffffffff, 0xffffffff};
+    uint64_t pref_sizes[2] = {0, 0};
+    int32_t pref_statuses[2] = {-1, -1};
+    const char *rel_paths[2] = {"eboot.bin", "sce_sys/param.json"};
     int rc_prefix = -1;
     if (fn_apr_prefix && obs_address_is_callable(fn_apr_prefix)) {
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             rc_prefix = ((int (*)(const char *, const char **, uint32_t, uint32_t *,
                                   uint64_t *, int32_t *))fn_apr_prefix)(
-                "/system/common/lib/", rel_paths, 1u, pref_ids, pref_sizes,
-                pref_statuses);
+                "/app0/", rel_paths, 2u, pref_ids, pref_sizes, pref_statuses);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
         }
     }
-    obs_report_measure(check_name, "apr-resolve-prefix", "rc",
+    obs_report_measure(check_name, "ap02-arm2-prefix", "rc",
                        (uint64_t)(uint32_t)rc_prefix, "code");
-    obs_report_measure(check_name, "apr-resolve-prefix", "id0",
+    obs_report_measure(check_name, "ap02-arm2-prefix", "id0",
                        (uint64_t)pref_ids[0], "id");
-    obs_report_measure(check_name, "apr-resolve-prefix", "size0",
+    obs_report_measure(check_name, "ap02-arm2-prefix", "size0",
                        pref_sizes[0], "bytes");
-    obs_report_measure(check_name, "apr-resolve-prefix", "status0",
+    obs_report_measure(check_name, "ap02-arm2-prefix", "status0",
                        (uint64_t)(uint32_t)pref_statuses[0], "code");
+    obs_report_measure(check_name, "ap02-arm2-prefix", "id1",
+                       (uint64_t)pref_ids[1], "id");
+    obs_report_measure(check_name, "ap02-arm2-prefix", "size1",
+                       pref_sizes[1], "bytes");
+    obs_report_measure(check_name, "ap02-arm2-prefix", "status1",
+                       (uint64_t)(uint32_t)pref_statuses[1], "code");
+    obs_report_bytes(check_name, "ap02-arm2-prefix", "ids-bytes", 0,
+                     (const uint8_t *)pref_ids, sizeof(pref_ids));
+    obs_report_bytes(check_name, "ap02-arm2-prefix", "sizes-bytes", 0,
+                     (const uint8_t *)pref_sizes, sizeof(pref_sizes));
+    obs_report_bytes(check_name, "ap02-arm2-prefix", "statuses-bytes", 0,
+                     (const uint8_t *)pref_statuses, sizeof(pref_statuses));
 
-    /* (4) sceKernelAprGetFileStat on each id from (3): rc and stat block bytes */
+    /* (3) sceKernelAprGetFileStat on each id from (1) */
     for (int i = 0; i < 2; i++) {
-        uint32_t fid = resolved_ids[i];
+        uint32_t fid = ap02_ids[i];
         char tag[32];
-        oops_snprintf(tag, sizeof(tag), "stat-id%d", i);
+        oops_snprintf(tag, sizeof(tag), "ap02-arm3-stat-id%d", i);
         uint8_t stat_block[0x100];
         memset(stat_block, 0xcc, sizeof(stat_block));
         int rc_stat = -1;
@@ -752,6 +768,38 @@ static obs_result check_ampr_apr_file_read(void) {
         obs_report_measure(check_name, tag, "rc", (uint64_t)(uint32_t)rc_stat, "code");
         obs_report_bytes(check_name, tag, "stat-bytes", 0, stat_block, 0x80);
     }
+
+    /* (4) one path under /app0 that does not exist, through (1) */
+    uint32_t missing_ids[1] = {0xffffffff};
+    uint64_t missing_sizes[1] = {0};
+    int32_t missing_statuses[1] = {-1};
+    const char *missing_paths[1] = {"/app0/nonexistent_file_999.dat"};
+    int rc_missing = -1;
+    if (fn_apr_resolve && obs_address_is_callable(fn_apr_resolve)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_missing = ((int (*)(const char **, uint32_t, uint32_t *, uint64_t *,
+                                   int32_t *, void *))fn_apr_resolve)(
+                missing_paths, 1u, missing_ids, missing_sizes, missing_statuses, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(check_name, "ap02-arm4-missing", "rc",
+                       (uint64_t)(uint32_t)rc_missing, "code");
+    obs_report_measure(check_name, "ap02-arm4-missing", "id0",
+                       (uint64_t)missing_ids[0], "id");
+    obs_report_measure(check_name, "ap02-arm4-missing", "size0",
+                       missing_sizes[0], "bytes");
+    obs_report_measure(check_name, "ap02-arm4-missing", "status0",
+                       (uint64_t)(uint32_t)missing_statuses[0], "code");
+    obs_report_bytes(check_name, "ap02-arm4-missing", "ids-bytes", 0,
+                     (const uint8_t *)missing_ids, sizeof(missing_ids));
+    obs_report_bytes(check_name, "ap02-arm4-missing", "sizes-bytes", 0,
+                     (const uint8_t *)missing_sizes, sizeof(missing_sizes));
+    obs_report_bytes(check_name, "ap02-arm4-missing", "statuses-bytes", 0,
+                     (const uint8_t *)missing_statuses, sizeof(missing_statuses));
 
     return obs_pass();
 }

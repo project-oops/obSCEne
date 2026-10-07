@@ -129,6 +129,7 @@ extern const obs_section obs_section_gnm;
 extern const obs_section obs_section_agc;
 extern const obs_section obs_section_gpucap;
 extern const obs_section obs_section_surface;
+extern const obs_section obs_section_census;
 
 /* The blind prober. Compiled in only under OBS_BULK - it is the one section expected to
  * end the process, and the default suite has to run to completion. */
