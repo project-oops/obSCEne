@@ -782,9 +782,12 @@ static const obs_import obs_platform_imports[] = {
     {"libSceJson2", "$I2QC8PYhJWY"},
     {"libSceJson2",
      "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv"},
-    /* libSceFontFt (REQ-20261007T0850Z-fm02) */
+    /* libSceFontFt (REQ-20261007T0850Z-fm02, REQ-20261013T1730Z-fr03) */
     {"libSceFontFt", "$oM+XCzVG3oM"},
     {"libSceFontFt", "sceFontSelectLibraryFt"},
+    {"libSceFontFt", "$Xx974EW-QFY"},
+    {"libSceFontFt", "$Xx974EW+QFY"},
+    {"libSceFontFt", "sceFontSelectRendererFt"},
     /* libSceFont (REQ-20261007T0850Z-fm02) */
     {"libSceFont", "$n590hj5Oe-k"},
     {"libSceFont", "sceFontCreateLibraryWithEdition"},
@@ -850,7 +853,10 @@ static const obs_import obs_platform_imports[] = {
     {"libSceSaveData", "sceSaveDataGetMountInfo"},
     /* libSceSigninDialog */
     {"libSceSigninDialog", "$2m077aeC-PA"},
+    {"libSceSigninDialog", "$2m077aeC+PA"},
     {"libSceSigninDialog", "$8PiCp-07bdo"},
+    {"libSceSigninDialog", "$8PiCp+07bdo"},
+    {"libSceSigninDialog", "$Bw31liTFT3A"},
     {"libSceSigninDialog", "$cE-FJJb1DQc"},
     {"libSceSigninDialog", "$mlYGfmqE3fQ"},
     {"libSceSigninDialog", "$LXlmS6PvJdU"},

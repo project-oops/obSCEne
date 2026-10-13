@@ -6,6 +6,7 @@
  * no report at all.
  */
 
+#include "obscene/display.h"
 #include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
@@ -4529,12 +4530,16 @@ static obs_result check_ux01_calls(void) {
         if (obs_address_is_callable((const void *)&scePadOpen)) {
             pad_h = scePadOpen(user, 0, 0, NULL);
         }
+        uint8_t cinfo[0x80];
+        memset(cinfo, 0, sizeof(cinfo));
+        int rc_cinfo = -1;
         if (pad_h > 0 && obs_address_is_callable(
                              (const void *)&scePadGetControllerInformation_static)) {
-            uint8_t cinfo[0x80];
-            memset(cinfo, 0, sizeof(cinfo));
-            scePadGetControllerInformation_static(pad_h, cinfo);
+            rc_cinfo = scePadGetControllerInformation_static(pad_h, cinfo);
         }
+        obs_report_measure(id, "pad-controller-info", "rc",
+                           (uint64_t)(uint32_t)rc_cinfo, "code");
+        obs_report_bytes(id, "pad-controller-info", "cinfo-32b", 0, cinfo, 32);
 
         uint8_t out[0x100];
         memset(out, 0xcc, sizeof(out));
@@ -4554,6 +4559,7 @@ static obs_result check_ux01_calls(void) {
                            (uint64_t)(uint32_t)rc_pe, "code");
         obs_report_written(id, "PadGetExtendedInfo-open", "bytes-changed", before, out,
                            sizeof(out));
+        obs_report_bytes(id, "PadGetExtendedInfo-open", "out-20h", 0, out, 0x20);
         obs_report_bytes(id, "PadGetExtendedInfo-open", "out-80h", 0, out, 0x80);
 
         uint8_t bad_out[0x100];
@@ -4657,9 +4663,55 @@ static obs_result check_ux01_calls(void) {
         if (fn_uds_handle)
             fn_uds_handle(&h);
 
+        /* REQ-20261013T1730Z-rf01 item 4:
+         * s6W4Zl4Slgk(context, handle, name, name + 1, buf, buf) with name "activityId"
+         * and buf 0x100 of 0xcc */
+        const char *name_act = "activityId";
+        uint8_t uds_b4[0x100];
+        uint8_t uds_b5[0x100];
+        memset(uds_b4, 0xcc, sizeof(uds_b4));
+        memset(uds_b5, 0xcc, sizeof(uds_b5));
+        uint8_t before_uds_cc[0x100];
+        memset(before_uds_cc, 0xcc, sizeof(before_uds_cc));
+
+        uint64_t rc_uds_act = 0xffffffffffffffffULL;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_uds_act =
+                fn_uds_0996((void *)(uintptr_t)ctx, (void *)(uintptr_t)h,
+                            (void *)name_act, (void *)(name_act + 1), uds_b4, uds_b5);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "uds-activity-call", "fault", (uint64_t)sig,
+                               "signal");
+        }
+        obs_report_measure(id, "uds-activity-call", "rc", rc_uds_act, "code");
+        obs_report_written(id, "uds-activity-call", "buf4-changed", before_uds_cc,
+                           uds_b4, sizeof(uds_b4));
+        obs_report_written(id, "uds-activity-call", "buf5-changed", before_uds_cc,
+                           uds_b5, sizeof(uds_b5));
+        if (memcmp(before_uds_cc, uds_b4, sizeof(uds_b4)) != 0) {
+            obs_report_bytes(id, "uds-activity-call", "buf4-out", 0, uds_b4, 64);
+        }
+        if (memcmp(before_uds_cc, uds_b5, sizeof(uds_b5)) != 0) {
+            obs_report_bytes(id, "uds-activity-call", "buf5-out", 0, uds_b5, 64);
+        }
+
+        /* Then the same with every argument zero */
+        uint64_t rc_uds_zero = 0xffffffffffffffffULL;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_uds_zero = fn_uds_0996(NULL, NULL, NULL, NULL, NULL, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "uds-allzero-call", "rc", rc_uds_zero, "code");
+
         /* Census pair: every argument zero */
         uint64_t rc0 = 0;
-        int sig = OBS_FAULT_ARM(&guard);
+        sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             rc0 = fn_uds_0996(NULL, NULL, NULL, NULL, NULL, NULL);
             obs_fault_unregister();

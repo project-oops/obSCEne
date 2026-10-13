@@ -453,34 +453,83 @@ static obs_result check_png_dec_enc(void) {
 
     /* PngEnc Tests */
     if (obs_address_is_callable((const void *)fn_enc_query)) {
-        ScePngEncCreateParam ep;
-        ep.this_size = 16;
-        ep.attribute = 0;
-        ep.max_image_width = 64;
-        ep.max_filter = 4;
-        size_t enc_mem_sz = 0;
-        int rc = fn_enc_query(&ep, &enc_mem_sz);
-        obs_report_measure(id, "enc-query-size", "rc", (uint64_t)(uint32_t)rc, "code");
-        obs_report_measure(id, "enc-query-size", "mem-size", (uint64_t)enc_mem_sz, "bytes");
-
-        if (enc_mem_sz == 0 || enc_mem_sz > sizeof(dec_mem)) {
-            enc_mem_sz = 0x20000;
+        /* Arm 1: QueryMemorySize for max widths 1, 4, 64, 4096 and filters 0..4 */
+        static const uint32_t q_widths[] = {1, 4, 64, 4096};
+        static const uint32_t q_filters[] = {0, 1, 2, 3, 4};
+        for (size_t w = 0; w < OBS_COUNT(q_widths); w++) {
+            for (size_t f = 0; f < OBS_COUNT(q_filters); f++) {
+                ScePngEncCreateParam qp;
+                memset(&qp, 0, sizeof(qp));
+                qp.this_size = 16;
+                qp.attribute = 0;
+                qp.max_image_width = q_widths[w];
+                qp.max_filter = q_filters[f];
+                size_t q_mem = 0;
+                int q_rc = -1;
+                int sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    q_rc = fn_enc_query(&qp, &q_mem);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                char qtag[64];
+                snprintf(qtag, sizeof(qtag), "query-w%u-f%u", q_widths[w], q_filters[f]);
+                obs_report_measure(id, qtag, "rc", (uint64_t)(uint32_t)q_rc, "code");
+                obs_report_measure(id, qtag, "mem-size", (uint64_t)q_mem, "bytes");
+            }
         }
 
+        /* Arm 2: Create attempts varying this_size, attribute, max width */
+        static _Alignas(64) uint8_t enc_mem[512 * 1024];
+        static const uint32_t try_sizes[] = {12, 16, 24, 32};
+        static const uint32_t try_attrs[] = {0, 1};
+        uint32_t valid_enc_h = 0xffffffff;
+
         if (obs_address_is_callable((const void *)fn_enc_create)) {
-            /* Create with this_size 12 (should fail) */
-            uint32_t enc_h = 0xffffffff;
-            ep.this_size = 12;
-            int rc_bad_create = fn_enc_create(&ep, dec_mem, enc_mem_sz, &enc_h);
-            obs_report_measure(id, "enc-create-this-size-12", "rc", (uint64_t)(uint32_t)rc_bad_create, "code");
+            for (size_t s = 0; s < OBS_COUNT(try_sizes); s++) {
+                for (size_t a = 0; a < OBS_COUNT(try_attrs); a++) {
+                    ScePngEncCreateParam cp;
+                    memset(&cp, 0, sizeof(cp));
+                    cp.this_size = try_sizes[s];
+                    cp.attribute = try_attrs[a];
+                    cp.max_image_width = 64;
+                    cp.max_filter = 4;
+                    uint32_t h = 0xffffffff;
+                    memset(enc_mem, 0xcc, sizeof(enc_mem));
+                    int rc = -1;
+                    int sig = OBS_FAULT_ARM(&guard);
+                    if (sig == 0) {
+                        rc = fn_enc_create(&cp, enc_mem, sizeof(enc_mem), &h);
+                        obs_fault_unregister();
+                    } else {
+                        obs_fault_unregister();
+                    }
+                    char ctag[64];
+                    snprintf(ctag, sizeof(ctag), "create-sz%u-attr%u", try_sizes[s], try_attrs[a]);
+                    obs_report_measure(id, ctag, "rc", (uint64_t)(uint32_t)rc, "code");
+                    obs_report_measure(id, ctag, "handle", (uint64_t)h, "handle");
+                    if (rc == 0) {
+                        obs_report_bytes(id, ctag, "context-first-64", 0, enc_mem, 64);
+                        if (obs_address_is_callable((const void *)fn_enc_delete)) {
+                            fn_enc_delete(h);
+                        }
+                    }
+                }
+            }
 
-            /* Create with this_size 16 */
-            ep.this_size = 16;
-            int rc_create = fn_enc_create(&ep, dec_mem, enc_mem_sz, &enc_h);
-            obs_report_measure(id, "enc-create-normal", "rc", (uint64_t)(uint32_t)rc_create, "code");
-            obs_report_measure(id, "enc-create-normal", "handle", (uint64_t)enc_h, "handle");
+            /* Dedicated create for Arm 3 & Arm 4 with clean buffer */
+            memset(enc_mem, 0, sizeof(enc_mem));
+            ScePngEncCreateParam cp_act;
+            memset(&cp_act, 0, sizeof(cp_act));
+            cp_act.this_size = 16;
+            cp_act.attribute = 0;
+            cp_act.max_image_width = 64;
+            cp_act.max_filter = 4;
+            (void)fn_enc_create(&cp_act, enc_mem, sizeof(enc_mem), &valid_enc_h);
 
-            if (obs_address_is_callable((const void *)fn_enc_encode) && enc_h != 0xffffffff) {
+            /* Arm 3: Encode on 4x4 RGBA image with valid encoder */
+            if (obs_address_is_callable((const void *)fn_enc_encode) && valid_enc_h != 0xffffffff) {
                 static uint8_t raw_4x4[4 * 4 * 4];
                 static uint8_t enc_out[4096];
                 for (size_t i = 0; i < sizeof(raw_4x4); i++) {
@@ -488,12 +537,13 @@ static obs_result check_png_dec_enc(void) {
                 }
 
                 static const uint16_t compressions[] = {0, 9};
-                static const uint16_t filters[] = {1, 2, 4, 8};
+                static const uint16_t filters[] = {1, 2, 4, 8, 15};
 
                 for (size_t c = 0; c < OBS_COUNT(compressions); c++) {
                     for (size_t f = 0; f < OBS_COUNT(filters); f++) {
                         memset(enc_out, 0xcc, sizeof(enc_out));
                         ScePngEncEncodeParam p;
+                        memset(&p, 0, sizeof(p));
                         p.image_addr = raw_4x4;
                         p.png_addr = enc_out;
                         p.image_size = sizeof(raw_4x4);
@@ -510,10 +560,10 @@ static obs_result check_png_dec_enc(void) {
 
                         ScePngEncOutputInfo out_info;
                         memset(&out_info, 0xcc, sizeof(out_info));
-                        rc = -1;
+                        int rc = -1;
                         int sig = OBS_FAULT_ARM(&guard);
                         if (sig == 0) {
-                            rc = fn_enc_encode(enc_h, &p, &out_info);
+                            rc = fn_enc_encode(valid_enc_h, &p, &out_info);
                             obs_fault_unregister();
                         } else {
                             obs_fault_unregister();
@@ -522,14 +572,44 @@ static obs_result check_png_dec_enc(void) {
                         snprintf(tag, sizeof(tag), "encode-c%u-f%u", compressions[c], filters[f]);
                         obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
                         obs_report_measure(id, tag, "out-size", (uint64_t)out_info.png_size, "bytes");
+                        obs_report_bytes(id, tag, "out-info", 0, (const unsigned char *)&out_info, sizeof(out_info));
                         if (out_info.png_size > 0 && out_info.png_size <= sizeof(enc_out)) {
-                            obs_report_bytes(id, tag, "png-first-64", 0, enc_out, out_info.png_size > 64 ? 64 : out_info.png_size);
+                            obs_report_bytes(id, tag, "png-first-64", 0, enc_out,
+                                             out_info.png_size > 64 ? 64 : out_info.png_size);
                         }
                     }
                 }
 
+                /* Pitch below width x 4 */
+                ScePngEncEncodeParam p_pitch;
+                memset(&p_pitch, 0, sizeof(p_pitch));
+                p_pitch.image_addr = raw_4x4;
+                p_pitch.png_addr = enc_out;
+                p_pitch.image_size = sizeof(raw_4x4);
+                p_pitch.png_size = sizeof(enc_out);
+                p_pitch.width = 4;
+                p_pitch.height = 4;
+                p_pitch.pitch = 8; /* below 4*4 */
+                p_pitch.pixel_format = 0;
+                p_pitch.color_space = 19;
+                p_pitch.bit_depth = 8;
+                p_pitch.filter_type = 1;
+                p_pitch.compression_level = 0;
+                ScePngEncOutputInfo info_pitch;
+                memset(&info_pitch, 0xcc, sizeof(info_pitch));
+                int rc_pitch = -1;
+                int sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_pitch = fn_enc_encode(valid_enc_h, &p_pitch, &info_pitch);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                obs_report_measure(id, "encode-small-pitch", "rc", (uint64_t)(uint32_t)rc_pitch, "code");
+
                 /* Unaligned image address */
                 ScePngEncEncodeParam p_unaligned;
+                memset(&p_unaligned, 0, sizeof(p_unaligned));
                 p_unaligned.image_addr = raw_4x4 + 1;
                 p_unaligned.png_addr = enc_out;
                 p_unaligned.image_size = sizeof(raw_4x4) - 1;
@@ -540,25 +620,56 @@ static obs_result check_png_dec_enc(void) {
                 p_unaligned.pixel_format = 0;
                 p_unaligned.color_space = 19;
                 p_unaligned.bit_depth = 8;
-                p_unaligned.clut_number = 0;
                 p_unaligned.filter_type = 1;
                 p_unaligned.compression_level = 0;
 
-                ScePngEncOutputInfo out_info;
-                rc = -1;
-                int sig = OBS_FAULT_ARM(&guard);
+                ScePngEncOutputInfo info_unalign;
+                memset(&info_unalign, 0xcc, sizeof(info_unalign));
+                int rc_unalign = -1;
+                sig = OBS_FAULT_ARM(&guard);
                 if (sig == 0) {
-                    rc = fn_enc_encode(enc_h, &p_unaligned, &out_info);
+                    rc_unalign = fn_enc_encode(valid_enc_h, &p_unaligned, &info_unalign);
                     obs_fault_unregister();
                 } else {
                     obs_fault_unregister();
                 }
-                obs_report_measure(id, "encode-unaligned-addr", "rc", (uint64_t)(uint32_t)rc, "code");
+                obs_report_measure(id, "encode-unaligned-addr", "rc", (uint64_t)(uint32_t)rc_unalign, "code");
+
+                /* Output buffer too small */
+                ScePngEncEncodeParam p_small;
+                memset(&p_small, 0, sizeof(p_small));
+                p_small.image_addr = raw_4x4;
+                p_small.png_addr = enc_out;
+                p_small.image_size = sizeof(raw_4x4);
+                p_small.png_size = 1; /* too small */
+                p_small.width = 4;
+                p_small.height = 4;
+                p_small.pitch = 4 * 4;
+                p_small.pixel_format = 0;
+                p_small.color_space = 19;
+                p_small.bit_depth = 8;
+                p_small.filter_type = 1;
+                p_small.compression_level = 0;
+
+                ScePngEncOutputInfo info_small;
+                memset(&info_small, 0xcc, sizeof(info_small));
+                int rc_small = -1;
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_small = fn_enc_encode(valid_enc_h, &p_small, &info_small);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                obs_report_measure(id, "encode-small-outbuf", "rc", (uint64_t)(uint32_t)rc_small, "code");
             }
 
-            if (obs_address_is_callable((const void *)fn_enc_delete) && enc_h != 0xffffffff) {
-                int rc_del = fn_enc_delete(enc_h);
-                obs_report_measure(id, "enc-delete", "rc", (uint64_t)(uint32_t)rc_del, "code");
+            /* Arm 4: Delete once and twice */
+            if (obs_address_is_callable((const void *)fn_enc_delete) && valid_enc_h != 0xffffffff) {
+                int rc_del1 = fn_enc_delete(valid_enc_h);
+                obs_report_measure(id, "enc-delete-first", "rc", (uint64_t)(uint32_t)rc_del1, "code");
+                int rc_del2 = fn_enc_delete(valid_enc_h);
+                obs_report_measure(id, "enc-delete-second", "rc", (uint64_t)(uint32_t)rc_del2, "code");
             }
         }
     }
@@ -2108,38 +2219,218 @@ static obs_result check_ag02_shapes(void) {
     }
     obs_report_measure(id, "setup", "user-id", (uint64_t)(uint32_t)user, "id");
 
-    /* 1. VideoOut: open port 255, test 0xd000000a, 0, 0xd0000000 */
+    /* 1. VideoOut: open main port, borrow handle if needed */
+    int rc_open_user = -1;
+    int rc_open_ff = -1;
     int vo_handle = -1;
     if (obs_address_is_callable((const void *)&sceVideoOutOpen)) {
-        vo_handle = sceVideoOutOpen(255, 0, 0, NULL);
+        rc_open_user = sceVideoOutOpen(user, OBS_VIDEO_BUS_MAIN, 0, NULL);
+        if (rc_open_user > 0) {
+            vo_handle = rc_open_user;
+        } else {
+            rc_open_ff = sceVideoOutOpen(0xff, OBS_VIDEO_BUS_MAIN, 0, NULL);
+            if (rc_open_ff > 0) {
+                vo_handle = rc_open_ff;
+            }
+        }
     }
-    obs_report_measure(id, "video-out", "open-rc", (uint64_t)(uint32_t)vo_handle, "handle");
+    if (vo_handle <= 0) {
+        vo_handle = obs_display_get_video_handle();
+    }
+    obs_report_measure(id, "video-out", "open-user-rc", (uint64_t)(int64_t)rc_open_user, "handle");
+    obs_report_measure(id, "video-out", "open-0xff-rc", (uint64_t)(int64_t)rc_open_ff, "handle");
+    obs_report_measure(id, "video-out", "open-rc", (uint64_t)(int64_t)vo_handle, "handle");
 
-    if (vo_handle > 0 && obs_address_is_callable((const void *)&sceVideoOutIsOutputSupported)) {
-        int rc_d0a = sceVideoOutIsOutputSupported(vo_handle, (int)0xd000000a);
-        obs_report_measure(id, "video-out", "supported-0xd000000a-rc", (uint64_t)(uint32_t)rc_d0a, "code");
+    /* eb-gvTYQcoY (0x86721036bde0bf79) */
+    int h_vo = obs_module_open("libSceVideoOut");
+    if (h_vo < 0) h_vo = obs_module_open("libSceVideoOut.sprx");
+    typedef int (*fn_eb_gv_t)(int, void *, int);
+    fn_eb_gv_t fn_eb_gv = NULL;
+    if (h_vo > 0) {
+        fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(h_vo, "$eb-gvTYQcoY");
+        if (!fn_eb_gv) fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(h_vo, "$eb+gvTYQcoY");
+        if (!fn_eb_gv) fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(h_vo, "0x86721036bde0bf79");
+    }
+    if (!fn_eb_gv) {
+        fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(OBS_HANDLE_SELF, "$eb-gvTYQcoY");
+    }
+    if (!fn_eb_gv && obs_address_is_callable((const void *)&sceVideoOutUnknown_86721036bde0bf79_static)) {
+        fn_eb_gv = (fn_eb_gv_t)(void *)&sceVideoOutUnknown_86721036bde0bf79_static;
+    }
 
-        int rc_0 = sceVideoOutIsOutputSupported(vo_handle, 0);
-        obs_report_measure(id, "video-out", "supported-0-rc", (uint64_t)(uint32_t)rc_0, "code");
+    if (vo_handle > 0) {
+        if (fn_eb_gv && obs_address_is_callable((const void *)fn_eb_gv)) {
+            obs_jmp_buf guard;
+            uint8_t buf0[0x20];
+            memset(buf0, 0, sizeof(buf0));
+            int sig = OBS_FAULT_ARM(&guard);
+            int rc0 = -1;
+            if (sig == 0) {
+                rc0 = fn_eb_gv(vo_handle, buf0, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "eb-gvTYQcoY-zeroed", "rc", (uint64_t)(uint32_t)rc0, "code");
+            obs_report_bytes(id, "eb-gvTYQcoY-zeroed", "buf-20h", 0, buf0, 0x20);
 
-        int rc_d00 = sceVideoOutIsOutputSupported(vo_handle, (int)0xd0000000);
-        obs_report_measure(id, "video-out", "supported-0xd0000000-rc", (uint64_t)(uint32_t)rc_d00, "code");
+            uint8_t bufcc[0x20];
+            memset(bufcc, 0xcc, sizeof(bufcc));
+            sig = OBS_FAULT_ARM(&guard);
+            int rccc = -1;
+            if (sig == 0) {
+                rccc = fn_eb_gv(vo_handle, bufcc, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "eb-gvTYQcoY-0xcc", "rc", (uint64_t)(uint32_t)rccc, "code");
+            obs_report_bytes(id, "eb-gvTYQcoY-0xcc", "buf-20h", 0, bufcc, 0x20);
+        }
 
-        if (obs_address_is_callable((const void *)&sceVideoOutClose)) {
-            sceVideoOutClose(vo_handle);
+        if (obs_address_is_callable((const void *)&sceVideoOutIsOutputSupported)) {
+            int rc_d0a = sceVideoOutIsOutputSupported(vo_handle, (int)0xd000000a);
+            obs_report_measure(id, "video-out", "supported-0xd000000a-rc", (uint64_t)(uint32_t)rc_d0a, "code");
+
+            int rc_0 = sceVideoOutIsOutputSupported(vo_handle, 0);
+            obs_report_measure(id, "video-out", "supported-0-rc", (uint64_t)(uint32_t)rc_0, "code");
+
+            int rc_d00 = sceVideoOutIsOutputSupported(vo_handle, (int)0xd0000000);
+            obs_report_measure(id, "video-out", "supported-0xd0000000-rc", (uint64_t)(uint32_t)rc_d00, "code");
         }
     }
 
-    /* 2 & 3. SaveDataMemory2 */
-    /* Sync before any Setup in fresh process */
+    /* 2 & 3. SaveDataMemory2, after library is initialised */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x00B6);
+    }
+    int h_sd = obs_module_open("libSceSaveData_native");
+    if (h_sd <= 1) {
+        h_sd = obs_module_open("libSceSaveData");
+    }
+    typedef int (*fn_sd_init3_t)(void *);
+    typedef int (*fn_sd_setup_t)(void *, void *);
+    typedef int (*fn_sd_set_t)(void *);
+    typedef int (*fn_sd_get_t)(void *);
+    typedef int (*fn_sd_sync_t)(void *);
+
+    fn_sd_init3_t fn_sd_init3 = NULL;
+    fn_sd_setup_t fn_sd_setup = NULL;
+    fn_sd_set_t fn_sd_set = NULL;
+    fn_sd_get_t fn_sd_get = NULL;
+    fn_sd_sync_t fn_sd_sync = NULL;
+
+    if (h_sd > 1) {
+        fn_sd_init3 = (fn_sd_init3_t)obs_module_symbol(h_sd, "TywrFKCoLGY#j#U");
+        if (!fn_sd_init3) fn_sd_init3 = (fn_sd_init3_t)obs_module_symbol(h_sd, "$TywrFKCoLGY");
+        if (!fn_sd_init3) fn_sd_init3 = (fn_sd_init3_t)obs_module_symbol(h_sd, "sceSaveDataInitialize3");
+        fn_sd_setup = (fn_sd_setup_t)obs_module_symbol(h_sd, "oQySEUfgXRA#T#U");
+        if (!fn_sd_setup) fn_sd_setup = (fn_sd_setup_t)obs_module_symbol(h_sd, "$oQySEUfgXRA");
+        if (!fn_sd_setup) fn_sd_setup = (fn_sd_setup_t)obs_module_symbol(h_sd, "sceSaveDataSetupSaveDataMemory2");
+        fn_sd_set = (fn_sd_set_t)obs_module_symbol(h_sd, "cduy9v4YmT4#T#U");
+        if (!fn_sd_set) fn_sd_set = (fn_sd_set_t)obs_module_symbol(h_sd, "$cduy9v4YmT4");
+        if (!fn_sd_set) fn_sd_set = (fn_sd_set_t)obs_module_symbol(h_sd, "sceSaveDataSetSaveDataMemory2");
+        fn_sd_get = (fn_sd_get_t)obs_module_symbol(h_sd, "QwOO7vegnV8#T#U");
+        if (!fn_sd_get) fn_sd_get = (fn_sd_get_t)obs_module_symbol(h_sd, "$QwOO7vegnV8");
+        if (!fn_sd_get) fn_sd_get = (fn_sd_get_t)obs_module_symbol(h_sd, "sceSaveDataGetSaveDataMemory2");
+        fn_sd_sync = (fn_sd_sync_t)obs_module_symbol(h_sd, "wiT9jeC7xPw#T#U");
+        if (!fn_sd_sync) fn_sd_sync = (fn_sd_sync_t)obs_module_symbol(h_sd, "$wiT9jeC7xPw");
+        if (!fn_sd_sync) fn_sd_sync = (fn_sd_sync_t)obs_module_symbol(h_sd, "sceSaveDataSyncSaveDataMemory");
+    }
+    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        if (!fn_sd_init3) {
+            for (int h = 1; h <= 256; h++) {
+                void *p = NULL;
+                if (sceKernelDlsym(h, "TywrFKCoLGY#j#U", &p) == 0 && obs_address_is_callable(p)) {
+                    fn_sd_init3 = (fn_sd_init3_t)p;
+                    break;
+                }
+            }
+        }
+        if (!fn_sd_setup) {
+            for (int h = 1; h <= 256; h++) {
+                void *p = NULL;
+                if (sceKernelDlsym(h, "oQySEUfgXRA#T#U", &p) == 0 && obs_address_is_callable(p)) {
+                    fn_sd_setup = (fn_sd_setup_t)p;
+                    break;
+                }
+            }
+        }
+        if (!fn_sd_set) {
+            for (int h = 1; h <= 256; h++) {
+                void *p = NULL;
+                if (sceKernelDlsym(h, "cduy9v4YmT4#T#U", &p) == 0 && obs_address_is_callable(p)) {
+                    fn_sd_set = (fn_sd_set_t)p;
+                    break;
+                }
+            }
+        }
+        if (!fn_sd_get) {
+            for (int h = 1; h <= 256; h++) {
+                void *p = NULL;
+                if (sceKernelDlsym(h, "QwOO7vegnV8#T#U", &p) == 0 && obs_address_is_callable(p)) {
+                    fn_sd_get = (fn_sd_get_t)p;
+                    break;
+                }
+            }
+        }
+        if (!fn_sd_sync) {
+            for (int h = 1; h <= 256; h++) {
+                void *p = NULL;
+                if (sceKernelDlsym(h, "wiT9jeC7xPw#T#U", &p) == 0 && obs_address_is_callable(p)) {
+                    fn_sd_sync = (fn_sd_sync_t)p;
+                    break;
+                }
+            }
+        }
+    }
+    if (!fn_sd_init3 && obs_address_is_callable((const void *)&sceSaveDataInitialize3_static)) {
+        fn_sd_init3 = (fn_sd_init3_t)&sceSaveDataInitialize3_static;
+    } else if (!fn_sd_init3 && obs_address_is_callable((const void *)&sceSaveDataInitialize3_named)) {
+        fn_sd_init3 = (fn_sd_init3_t)&sceSaveDataInitialize3_named;
+    }
+    if (!fn_sd_setup && obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_static)) {
+        fn_sd_setup = (fn_sd_setup_t)&sceSaveDataSetupSaveDataMemory2_static;
+    } else if (!fn_sd_setup && obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_named)) {
+        fn_sd_setup = (fn_sd_setup_t)&sceSaveDataSetupSaveDataMemory2_named;
+    }
+    if (!fn_sd_set && obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_static)) {
+        fn_sd_set = (fn_sd_set_t)&sceSaveDataSetSaveDataMemory2_static;
+    } else if (!fn_sd_set && obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_named)) {
+        fn_sd_set = (fn_sd_set_t)&sceSaveDataSetSaveDataMemory2_named;
+    }
+    if (!fn_sd_get && obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_static)) {
+        fn_sd_get = (fn_sd_get_t)&sceSaveDataGetSaveDataMemory2_static;
+    } else if (!fn_sd_get && obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_named)) {
+        fn_sd_get = (fn_sd_get_t)&sceSaveDataGetSaveDataMemory2_named;
+    }
+    if (!fn_sd_sync && obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_static)) {
+        fn_sd_sync = (fn_sd_sync_t)&sceSaveDataSyncSaveDataMemory_static;
+    } else if (!fn_sd_sync && obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_named)) {
+        fn_sd_sync = (fn_sd_sync_t)&sceSaveDataSyncSaveDataMemory_named;
+    }
+
+    int rc_init_null = -1;
+    if (fn_sd_init3) {
+        rc_init_null = fn_sd_init3(NULL);
+    }
+    obs_report_measure(id, "savedata-memory2", "init3-null-rc", (uint64_t)(uint32_t)rc_init_null, "code");
+
+    uint8_t init_param[64];
+    memset(init_param, 0, sizeof(init_param));
+    int rc_init_valid = -1;
+    if (fn_sd_init3) {
+        rc_init_valid = fn_sd_init3(init_param);
+    }
+    obs_report_measure(id, "savedata-memory2", "init3-param-rc", (uint64_t)(uint32_t)rc_init_valid, "code");
+
+    /* Sync before any Setup */
     uint8_t sync_param[32];
     memset(sync_param, 0, sizeof(sync_param));
     *(uint32_t *)sync_param = (uint32_t)user;
     int rc_sync_before = -1;
-    if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_static)) {
-        rc_sync_before = sceSaveDataSyncSaveDataMemory_static(sync_param);
-    } else if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_named)) {
-        rc_sync_before = sceSaveDataSyncSaveDataMemory_named(sync_param);
+    if (fn_sd_sync) {
+        rc_sync_before = fn_sd_sync(sync_param);
     }
     obs_report_measure(id, "savedata-memory2", "sync-before-setup-rc", (uint64_t)(uint32_t)rc_sync_before, "code");
 
@@ -2151,10 +2442,8 @@ static obs_result check_ag02_shapes(void) {
     uint8_t setup_result[0x40];
     memset(setup_result, 0, sizeof(setup_result));
     int rc_setup = -1;
-    if (obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_static)) {
-        rc_setup = sceSaveDataSetupSaveDataMemory2_static(setup_param, setup_result);
-    } else if (obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_named)) {
-        rc_setup = sceSaveDataSetupSaveDataMemory2_named(setup_param, setup_result);
+    if (fn_sd_setup) {
+        rc_setup = fn_sd_setup(setup_param, setup_result);
     }
     obs_report_measure(id, "savedata-memory2", "setup-rc", (uint64_t)(uint32_t)rc_setup, "code");
 
@@ -2169,10 +2458,8 @@ static obs_result check_ag02_shapes(void) {
     *(uint64_t *)(set_param + 0x10) = 16; /* size */
     *(uint64_t *)(set_param + 0x18) = (uintptr_t)sample_data;
     int rc_set = -1;
-    if (obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_static)) {
-        rc_set = sceSaveDataSetSaveDataMemory2_static(set_param);
-    } else if (obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_named)) {
-        rc_set = sceSaveDataSetSaveDataMemory2_named(set_param);
+    if (fn_sd_set) {
+        rc_set = fn_sd_set(set_param);
     }
     obs_report_measure(id, "savedata-memory2", "set-rc", (uint64_t)(uint32_t)rc_set, "code");
 
@@ -2186,20 +2473,16 @@ static obs_result check_ag02_shapes(void) {
     *(uint64_t *)(get_param + 0x10) = 16; /* size */
     *(uint64_t *)(get_param + 0x18) = (uintptr_t)readback_buf;
     int rc_get = -1;
-    if (obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_static)) {
-        rc_get = sceSaveDataGetSaveDataMemory2_static(get_param);
-    } else if (obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_named)) {
-        rc_get = sceSaveDataGetSaveDataMemory2_named(get_param);
+    if (fn_sd_get) {
+        rc_get = fn_sd_get(get_param);
     }
     obs_report_measure(id, "savedata-memory2", "get-rc", (uint64_t)(uint32_t)rc_get, "code");
     obs_report_bytes(id, "savedata-memory2", "get-16b", 0, readback_buf, 16);
 
     /* Sync after set */
     int rc_sync_after = -1;
-    if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_static)) {
-        rc_sync_after = sceSaveDataSyncSaveDataMemory_static(sync_param);
-    } else if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_named)) {
-        rc_sync_after = sceSaveDataSyncSaveDataMemory_named(sync_param);
+    if (fn_sd_sync) {
+        rc_sync_after = fn_sd_sync(sync_param);
     }
     obs_report_measure(id, "savedata-memory2", "sync-after-set-rc", (uint64_t)(uint32_t)rc_sync_after, "code");
 
@@ -2690,6 +2973,12 @@ static obs_result check_aw03_ampr_command_buffer(void) {
             fn_apr_wait = obs_module_symbol(h_kernel, "$rqwFKI4PAiM");
     }
 
+    const void *fn_read_file = (const void *)&sceAmprAprCommandBufferReadFile_static;
+    if (!obs_address_is_callable(fn_read_file) && h_ampr > 0)
+        fn_read_file = obs_module_symbol(h_ampr, "sceAmprAprCommandBufferReadFile");
+    if (!obs_address_is_callable(fn_read_file) && h_ampr > 0)
+        fn_read_file = obs_module_symbol(h_ampr, "$mQ16-QdKv7k");
+
     /* REQ-aw02 setup: constructed object, 0x1000 buffer bound, filled 0xcc */
     static _Alignas(64) uint8_t obj[0x200];
     static _Alignas(64) uint8_t cbuf[0x200];
@@ -2751,7 +3040,7 @@ static obs_result check_aw03_ampr_command_buffer(void) {
     obs_report_measure(id, "after-write-address", "num-commands", num1, "count");
     obs_report_measure(id, "after-write-address", "size", sz1, "bytes");
 
-    /* 3. Submit buffer */
+    /* 3. Submit buffer with lone WriteAddress */
     uint64_t rc_submit = 0xffffffffffffffffULL;
     if (fn_apr_submit) {
         sig = OBS_FAULT_ARM(&guard);
@@ -2776,6 +3065,79 @@ static obs_result check_aw03_ampr_command_buffer(void) {
         }
     }
     obs_report_measure(id, "wait-nowrite", "rc", rc_wait, "code");
+
+    /* REQ-20261013T1730Z-rf01 item 1:
+     * ReadFile of a small file, then WriteAddress_04_00, submit and wait */
+    if (fn_reset) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            fn_reset(obj);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    if (fn_setbuf) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            ((int (*)(void *, void *, uint32_t, uint64_t, uint64_t, uint64_t))
+                 fn_setbuf)(obj, fresh_buf, 0x1000, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    uint8_t read_dest[0x100];
+    memset(read_dest, 0xcc, sizeof(read_dest));
+    uint64_t rc_read = 0xffffffffffffffffULL;
+    if (fn_read_file && obs_address_is_callable(fn_read_file)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_read = ((uint64_t (*)(void *, uint32_t, void *, uint64_t, uint64_t))fn_read_file)(
+                obj, 0u, read_dest, 0x100u, 0u);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "apr-read-file", "rc", rc_read, "code");
+
+    memset(slot, 0xcc, sizeof(slot));
+    int rc_wa2 = -1;
+    if (fn_write_addr) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_wa2 = fn_write_addr(obj, slot, 0x12345678, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "write-address-after-read", "rc", (uint64_t)(uint32_t)rc_wa2, "code");
+
+    uint64_t rc_submit_read = 0xffffffffffffffffULL;
+    if (fn_apr_submit) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_submit_read = ((uint64_t (*)(void *, void *))fn_apr_submit)(obj, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "submit-after-read", "rc", rc_submit_read, "code");
+
+    uint64_t rc_wait_read = 0xffffffffffffffffULL;
+    if (fn_apr_wait && (int64_t)rc_submit_read >= 0) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_wait_read = ((uint64_t (*)(void *, uint64_t))fn_apr_wait)(obj, 1000000ULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "wait-after-read", "rc", rc_wait_read, "code");
     obs_report_bytes(id, "slot-after-wait", "slot-8b", 0, slot, 8);
 
     if (obs_address_is_callable((const void *)&sceKernelUsleep)) {

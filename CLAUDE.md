@@ -22,6 +22,8 @@ to pass.
   parsers. Field order and meaning change only with a version bump; new fields append to the
   end of a line. Check identifiers are the key for diffing runs and are treated as a public
   API.
+- **Track cited reports.** A resolution's `logs`/`sweep` file is committed in the same change
+  that marks it RESOLVED, so its citation never names an untracked file.
 - **The host build is required.** `make host` runs the harness against stubs on an ordinary
   machine, which separates a probe bug from a platform bug. Keep it building. (D001)
 - **ABI identifiers stay as spelled.** The symbol and library name strings in

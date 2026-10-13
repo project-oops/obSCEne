@@ -1746,7 +1746,15 @@ static obs_result check_signin_dialog_lifecycle(void) {
                 if (mid <= 1)
                     continue;
                 const void *addr = obs_dlsym_probe_handle(
-                    fn_dlsym, mid, NULL, "2m077aeC-PA", "sceSigninDialogGetStatus");
+                    fn_dlsym, mid, NULL, "2m077aeC+PA", "sceSigninDialogGetStatus");
+                if (addr == NULL) {
+                    addr = obs_dlsym_probe_handle(fn_dlsym, mid, NULL, "2m077aeC-PA",
+                                                  "sceSigninDialogGetStatus");
+                }
+                if (addr == NULL) {
+                    addr = obs_dlsym_probe_handle(fn_dlsym, mid, NULL, "8PiCp+07bdo",
+                                                  "sceSigninDialogGetStatus");
+                }
                 if (addr == NULL) {
                     addr = obs_dlsym_probe_handle(fn_dlsym, mid, NULL, "8PiCp-07bdo",
                                                   "sceSigninDialogGetStatus");
@@ -1771,10 +1779,31 @@ static obs_result check_signin_dialog_lifecycle(void) {
     typedef uint64_t (*fn_status_t)(void);
     typedef int (*fn_close_t)(void);
 
-    fn_status_t fn_get_status = (fn_status_t)obs_resolve_dialog_sym(
-        h, "2m077aeC-PA", "8PiCp-07bdo", "sceSigninDialogGetStatus");
-    fn_status_t fn_update_status = (fn_status_t)obs_resolve_dialog_sym(
-        h, "Bw31liTFT3A", "cE-FJJb1DQc", "sceSigninDialogUpdateStatus");
+    fn_status_t fn_get_status = NULL;
+    if (obs_address_is_callable((const void *)&sceSigninDialogGetStatus_static)) {
+        fn_get_status = (fn_status_t)&sceSigninDialogGetStatus_static;
+    }
+    if (!fn_get_status) {
+        fn_get_status = (fn_status_t)obs_resolve_dialog_sym(
+            h, "2m077aeC+PA", "8PiCp+07bdo", "sceSigninDialogGetStatus");
+    }
+    if (!fn_get_status) {
+        fn_get_status = (fn_status_t)obs_resolve_dialog_sym(
+            h, "2m077aeC-PA", "8PiCp-07bdo", "sceSigninDialogGetStatus");
+    }
+
+    fn_status_t fn_update_status = NULL;
+    if (obs_address_is_callable((const void *)&sceSigninDialogUpdateStatus_static)) {
+        fn_update_status = (fn_status_t)&sceSigninDialogUpdateStatus_static;
+    }
+    if (!fn_update_status) {
+        fn_update_status = (fn_status_t)obs_resolve_dialog_sym(
+            h, "Bw31liTFT3A", "cE-FJJb1DQc", "sceSigninDialogUpdateStatus");
+    }
+    if (!fn_update_status) {
+        fn_update_status = (fn_status_t)obs_resolve_dialog_sym(
+            h, "cE/FJJb1DQc", "cE+FJJb1DQc", "sceSigninDialogUpdateStatus");
+    }
     fn_init_t fn_init = (fn_init_t)obs_resolve_dialog_sym(
         h, "mlYGfmqE3fQ", "9N2Ean4GVpo", "sceSigninDialogInitialize");
     fn_term_t fn_term = (fn_term_t)obs_resolve_dialog_sym(

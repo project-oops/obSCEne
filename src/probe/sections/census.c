@@ -1280,6 +1280,19 @@ static obs_result check_sp01_shader_pair(void) {
     uint8_t aux[0x400];
     uint8_t state[0x400];
 
+    obs_report_measure(id, "addresses", "out-addr", (uint64_t)(uintptr_t)out, "hex");
+    obs_report_measure(id, "addresses", "aux-addr", (uint64_t)(uintptr_t)aux, "hex");
+    obs_report_measure(id, "addresses", "state-addr", (uint64_t)(uintptr_t)state,
+                       "hex");
+    obs_report_measure(id, "addresses", "obj-A-addr", (uint64_t)(uintptr_t)s_obj_A,
+                       "hex");
+    obs_report_measure(id, "addresses", "obj-B-addr", (uint64_t)(uintptr_t)s_obj_B,
+                       "hex");
+    obs_report_measure(id, "addresses", "code-A-addr", (uint64_t)(uintptr_t)s_code_A,
+                       "hex");
+    obs_report_measure(id, "addresses", "code-B-addr", (uint64_t)(uintptr_t)s_code_B,
+                       "hex");
+
     /* 1. 0x0a4e469ba741de7d(out, A, B, aux, 4, 0) with out and aux 0x400-byte buffers
      * filled 0xcc */
     if (call_0a4e && obs_address_is_callable((const void *)call_0a4e)) {
@@ -1297,8 +1310,16 @@ static obs_result check_sp01_shader_pair(void) {
                                "signal");
         }
         obs_report_measure(id, "0x0a4e-AB-arg5-4", "rc", rc1, "code");
-        obs_report_bytes(id, "0x0a4e-AB-arg5-4", "out-100h", 0, out, 0x100);
-        obs_report_bytes(id, "0x0a4e-AB-arg5-4", "aux-100h", 0, aux, 0x100);
+        for (unsigned int off = 0; off < 0x200; off += 64) {
+            obs_report_bytes(id, "0x0a4e-AB-arg5-4", "out-200h", off, out + off, 64);
+            obs_report_bytes(id, "0x0a4e-AB-arg5-4", "aux-200h", off, aux + off, 64);
+        }
+        for (unsigned int off = 0; off < 0x180; off += 64) {
+            obs_report_bytes(id, "0x0a4e-AB-arg5-4", "obj-A-180h", off, s_obj_A + off,
+                             64);
+            obs_report_bytes(id, "0x0a4e-AB-arg5-4", "obj-B-180h", off, s_obj_B + off,
+                             64);
+        }
 
         /* 3a. 0x0a4e again with arg5 = 1 */
         memset(out, 0xcc, sizeof(out));
@@ -1357,8 +1378,11 @@ static obs_result check_sp01_shader_pair(void) {
                                "signal");
         }
         obs_report_measure(id, "0xe486-AB-arg5-4", "rc", rc2, "code");
-        obs_report_bytes(id, "0xe486-AB-arg5-4", "out-100h", 0, out, 0x100);
-        obs_report_bytes(id, "0xe486-AB-arg5-4", "state-100h", 0, state, 0x100);
+        for (unsigned int off = 0; off < 0x200; off += 64) {
+            obs_report_bytes(id, "0xe486-AB-arg5-4", "out-200h", off, out + off, 64);
+            obs_report_bytes(id, "0xe486-AB-arg5-4", "state-200h", off, state + off,
+                             64);
+        }
 
         /* 3d. 0xe486 again with arg5 = 1 */
         memset(out, 0xcc, sizeof(out));
@@ -1372,6 +1396,11 @@ static obs_result check_sp01_shader_pair(void) {
             obs_fault_unregister();
         }
         obs_report_measure(id, "0xe486-AB-arg5-1", "rc", rc2_arg1, "code");
+        for (unsigned int off = 0; off < 0x200; off += 64) {
+            obs_report_bytes(id, "0xe486-AB-arg5-1", "out-200h", off, out + off, 64);
+            obs_report_bytes(id, "0xe486-AB-arg5-1", "state-200h", off, state + off,
+                             64);
+        }
 
         /* 3e. 0xe486 with A and B swapped, arg5 = 4 */
         memset(out, 0xcc, sizeof(out));

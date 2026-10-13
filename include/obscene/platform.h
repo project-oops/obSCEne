@@ -1690,9 +1690,14 @@ OBS_WEAK void
 sceJsonInitParameter2SetAllocator_named(void *param, void *alloc, void *user) __asm__(
     "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorEPv");
 
-/* libSceFontFt (REQ-20261007T0850Z-fm02) */
+/* libSceFontFt (REQ-20261007T0850Z-fm02, REQ-20261013T1730Z-fr03) */
 OBS_WEAK void *sceFontSelectLibraryFt_static(uint64_t mode) __asm__("$oM+XCzVG3oM");
 OBS_WEAK void *sceFontSelectLibraryFt(uint64_t mode);
+OBS_WEAK void *sceFontSelectRendererFt_static(uint64_t mode) __asm__("$Xx974EW-QFY");
+OBS_WEAK void *sceFontSelectRendererFt_alt(uint64_t mode) __asm__("$Xx974EW+QFY");
+OBS_WEAK void *sceFontSelectRendererFt(uint64_t mode);
+OBS_WEAK uint64_t sceSigninDialogGetStatus_static(void) __asm__("$2m077aeC+PA");
+OBS_WEAK uint64_t sceSigninDialogUpdateStatus_static(void) __asm__("$Bw31liTFT3A");
 
 /* libSceFont (REQ-20261007T0850Z-fm02) */
 OBS_WEAK int

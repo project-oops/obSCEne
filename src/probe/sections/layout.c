@@ -1971,6 +1971,7 @@ static void *savedata_resolve_sym(int h_sd, const char *full_nid,
             cand[cand_count++] = "q8+aBtFHles#T#U";
             cand[cand_count++] = "q8+aBtFHles";
         } else if (obs_strcmp(bare_nid, "TywrFKCoLGY") == 0) {
+            cand[cand_count++] = "TywrFKCoLGY#j#U";
             cand[cand_count++] = "TywrFKCoLGY#j#i";
             cand[cand_count++] = "TywrFKCoLGY#J#A";
             cand[cand_count++] = "TywrFKCoLGY#A#B";
@@ -3417,21 +3418,30 @@ static obs_result check_json2_init_layout(void) {
 }
 /* clang-format on */
 
-static void *font_render_malloc_cb(void *ctx, size_t size) {
-    (void)ctx;
+static void *s_layout_msp_malloc = NULL;
+static void *s_layout_msp_free = NULL;
+
+static void *font_render_alloc_cb(void *msp, size_t size) {
+    if (s_layout_msp_malloc && msp &&
+        obs_address_is_callable((const void *)s_layout_msp_malloc)) {
+        void *p = ((void *(*)(void *, size_t))s_layout_msp_malloc)(msp, size);
+        if (p)
+            return p;
+    }
     return malloc(size);
 }
-static void font_render_free_cb(void *ctx, void *ptr) {
-    (void)ctx;
-    free(ptr);
+
+static void font_render_free_cb(void *msp, void *ptr) {
+    if (s_layout_msp_free && msp &&
+        obs_address_is_callable((const void *)s_layout_msp_free)) {
+        ((void (*)(void *, void *))s_layout_msp_free)(msp, ptr);
+    } else {
+        free(ptr);
+    }
 }
-static void *font_render_realloc_cb(void *ctx, void *ptr, size_t size) {
-    (void)ctx;
-    return realloc(ptr, size);
-}
-static void *font_render_calloc_cb(void *ctx, size_t num, size_t size) {
-    (void)ctx;
-    return calloc(num, size);
+
+static void font_render_destroy_cb(void *arg) {
+    (void)arg;
 }
 
 static obs_result check_font_render_glyph(void) {
@@ -3649,25 +3659,59 @@ static obs_result check_font_render_glyph(void) {
             (fn_destroy_lib_t)layout_resolve_sym("libSceFont", "$FXP359ygujs");
     }
 
-    /* PPSA21564 setup sequence */
+    /* PPSA21564 setup sequence & REQ-20261013T1730Z-fr03 / REQ-20261013T1545Z-fr02 */
     void *lib = NULL;
-    void *rend = NULL;
+    void *renderer = (void *)0xccccccccccccccccULL;
     void *font = NULL;
-    uint8_t *arena = (uint8_t *)malloc(0x800000);
-    if (arena) {
-        memset(arena, 0, 0x800000);
+
+    void *(*fn_msp_create)(const char *, void *, size_t, uint64_t) = NULL;
+    fn_msp_create =
+        (void *(*)(const char *, void *, size_t, uint64_t))layout_resolve_sym(
+            "libSceLibcInternal", "$2nK1LwKkLyk");
+    if (!fn_msp_create) {
+        fn_msp_create =
+            (void *(*)(const char *, void *, size_t, uint64_t))layout_resolve_sym(
+                "libSceLibcInternal", "sceLibcMspaceCreate");
     }
-    void *iface[4] = {(void *)&font_render_malloc_cb, (void *)&font_render_free_cb,
-                      (void *)&font_render_realloc_cb, (void *)&font_render_calloc_cb};
+    s_layout_msp_malloc =
+        (void *)layout_resolve_sym("libSceLibcInternal", "$OJjm-QOIHlI");
+    if (!s_layout_msp_malloc) {
+        s_layout_msp_malloc =
+            (void *)layout_resolve_sym("libSceLibcInternal", "sceLibcMspaceMalloc");
+    }
+    s_layout_msp_free =
+        (void *)layout_resolve_sym("libSceLibcInternal", "$Vla-Z+eXlxo");
+    if (!s_layout_msp_free) {
+        s_layout_msp_free =
+            (void *)layout_resolve_sym("libSceLibcInternal", "sceLibcMspaceFree");
+    }
+
+    static _Alignas(4096) uint8_t s_font_arena[0x80000];
+    void *msp = NULL;
+    if (fn_msp_create && obs_address_is_callable((const void *)fn_msp_create)) {
+        msp = fn_msp_create("font_render_msp", s_font_arena, sizeof(s_font_arena), 0);
+    }
+
+    void *memIf[8];
+    memIf[0] = (void *)&font_render_alloc_cb;
+    memIf[1] = (void *)&font_render_free_cb;
+    memIf[2] = (void *)&font_render_alloc_cb;
+    memIf[3] = (void *)&font_render_alloc_cb;
+    memIf[4] = (void *)&font_render_alloc_cb;
+    memIf[5] = NULL;
+    memIf[6] = NULL;
+    memIf[7] = NULL;
+
     uint8_t mem_obj[0x80];
     memset(mem_obj, 0, sizeof(mem_obj));
 
     int rc_mem = -1;
-    if (fn_mem_init && arena && obs_address_is_callable((const void *)fn_mem_init)) {
+    if (fn_mem_init && obs_address_is_callable((const void *)fn_mem_init)) {
         obs_jmp_buf guard;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_mem = fn_mem_init(mem_obj, arena, 0x800000, iface, NULL, NULL, 0);
+            rc_mem = fn_mem_init(mem_obj, s_font_arena, sizeof(s_font_arena), memIf,
+                                 msp, (void *)&font_render_destroy_cb, 0);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -3675,6 +3719,101 @@ static obs_result check_font_render_glyph(void) {
     }
     obs_report_measure(id, "setup", "mem-init-rc", (uint64_t)(uint32_t)rc_mem, "code");
 
+    /* REQ-20261013T1730Z-fr03:
+     * 1. sceFontSelectRendererFt(0) and (1) */
+    typedef void *(*fn_select_rend_ft_t)(uint64_t);
+    fn_select_rend_ft_t fn_select_rend_ft = NULL;
+    if (obs_address_is_callable((const void *)&sceFontSelectRendererFt_alt)) {
+        fn_select_rend_ft = (fn_select_rend_ft_t)&sceFontSelectRendererFt_alt;
+    } else if (obs_address_is_callable((const void *)&sceFontSelectRendererFt_static)) {
+        fn_select_rend_ft = (fn_select_rend_ft_t)&sceFontSelectRendererFt_static;
+    } else if (obs_address_is_callable((const void *)&sceFontSelectRendererFt)) {
+        fn_select_rend_ft = (fn_select_rend_ft_t)&sceFontSelectRendererFt;
+    }
+    if (!fn_select_rend_ft) {
+        fn_select_rend_ft =
+            (fn_select_rend_ft_t)layout_resolve_sym("libSceFontFt", "$Xx974EW+QFY");
+    }
+    if (!fn_select_rend_ft) {
+        fn_select_rend_ft =
+            (fn_select_rend_ft_t)layout_resolve_sym("libSceFontFt", "$Xx974EW-QFY");
+    }
+    if (!fn_select_rend_ft) {
+        fn_select_rend_ft = (fn_select_rend_ft_t)layout_resolve_sym(
+            "libSceFontFt", "sceFontSelectRendererFt");
+    }
+
+    void *sel_rend0 =
+        (fn_select_rend_ft && obs_address_is_callable((const void *)fn_select_rend_ft))
+            ? fn_select_rend_ft(0)
+            : NULL;
+    void *sel_rend1 =
+        (fn_select_rend_ft && obs_address_is_callable((const void *)fn_select_rend_ft))
+            ? fn_select_rend_ft(1)
+            : NULL;
+    obs_report_measure(id, "sceFontSelectRendererFt", "arg0",
+                       (uint64_t)(uintptr_t)sel_rend0, "ptr");
+    obs_report_measure(id, "sceFontSelectRendererFt", "arg1",
+                       (uint64_t)(uintptr_t)sel_rend1, "ptr");
+
+    /* 2. sceFontCreateRendererWithEdition(memory, selection, 0x0700100000000000,
+     * &renderer) */
+    int rc_rend = -1;
+    if (fn_create_rend && obs_address_is_callable((const void *)fn_create_rend)) {
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_rend =
+                fn_create_rend(mem_obj, sel_rend0, 0x0700100000000000ULL, &renderer);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "sceFontCreateRendererWithEdition", "rc",
+                       (uint64_t)(uint32_t)rc_rend, "code");
+    obs_report_bytes(id, "sceFontCreateRendererWithEdition", "renderer-slot-8b", 0,
+                     (const unsigned char *)&renderer, 8);
+    if (renderer && renderer != (void *)0xccccccccccccccccULL) {
+        for (unsigned int off = 0; off < 0x100; off += 64) {
+            obs_report_bytes(id, "sceFontCreateRendererWithEdition",
+                             "renderer-obj-100h", off,
+                             (const unsigned char *)renderer + off, 64);
+        }
+    }
+
+    void *rend_null_mem = (void *)0xccccccccccccccccULL;
+    int rc_null_mem = -1;
+    if (fn_create_rend && obs_address_is_callable((const void *)fn_create_rend)) {
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_null_mem =
+                fn_create_rend(NULL, sel_rend0, 0x0700100000000000ULL, &rend_null_mem);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "create-renderer-null-memory", "rc",
+                       (uint64_t)(uint32_t)rc_null_mem, "code");
+
+    int rc_null_out = -1;
+    if (fn_create_rend && obs_address_is_callable((const void *)fn_create_rend)) {
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_null_out =
+                fn_create_rend(mem_obj, sel_rend0, 0x0700100000000000ULL, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "create-renderer-null-out", "rc",
+                       (uint64_t)(uint32_t)rc_null_out, "code");
+
+    /* Create library for REQ-20261013T1545Z-fr02 */
     void *sel_ft = (fn_select_ft && obs_address_is_callable((const void *)fn_select_ft))
                        ? fn_select_ft(0)
                        : NULL;
@@ -3684,7 +3823,7 @@ static obs_result check_font_render_glyph(void) {
         obs_jmp_buf guard;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_lib = fn_create_lib(mem_obj, sel_ft, 0x700100000000000ULL, &lib);
+            rc_lib = fn_create_lib(mem_obj, sel_ft, 0x0700100000000000ULL, &lib);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -3708,37 +3847,23 @@ static obs_result check_font_render_glyph(void) {
     obs_report_measure(id, "setup", "support-sys-rc", (uint64_t)(uint32_t)rc_sys,
                        "code");
 
-    int rc_rend = -1;
-    if (fn_create_rend && lib &&
-        obs_address_is_callable((const void *)fn_create_rend)) {
-        obs_jmp_buf guard;
-        int sig = OBS_FAULT_ARM(&guard);
-        if (sig == 0) {
-            rc_rend = fn_create_rend(lib, sel_ft, 0x700100000000000ULL, &rend);
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
-        }
-    }
-    obs_report_measure(id, "setup", "create-renderer-rc", (uint64_t)(uint32_t)rc_rend,
-                       "code");
-
     int rc_open = -1;
     if (fn_open_font_set && lib &&
         obs_address_is_callable((const void *)fn_open_font_set)) {
-        obs_jmp_buf guard;
-        int sig = OBS_FAULT_ARM(&guard);
-        if (sig == 0) {
-            rc_open = fn_open_font_set(lib, 0, 0, NULL, &font);
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
-        }
-        if (rc_open != 0) {
-            sig = OBS_FAULT_ARM(&guard);
+        for (uint32_t sidx = 0; sidx < 16 && font == NULL; sidx++) {
+            void *tmp_font = NULL;
+            obs_jmp_buf guard;
+            int sig = OBS_FAULT_ARM(&guard);
             if (sig == 0) {
-                rc_open = fn_open_font_set(lib, 1, 0, NULL, &font);
+                int ro = fn_open_font_set(lib, sidx, 0, NULL, &tmp_font);
                 obs_fault_unregister();
+                if (ro == 0 && tmp_font != NULL) {
+                    font = tmp_font;
+                    rc_open = ro;
+                    break;
+                } else if (rc_open < 0) {
+                    rc_open = ro;
+                }
             } else {
                 obs_fault_unregister();
             }
@@ -3762,12 +3887,14 @@ static obs_result check_font_render_glyph(void) {
                        "code");
 
     int rc_bind = -1;
-    if (fn_bind_rend && font && rend &&
+    void *active_rend =
+        (renderer && renderer != (void *)0xccccccccccccccccULL) ? renderer : NULL;
+    if (fn_bind_rend && font && active_rend &&
         obs_address_is_callable((const void *)fn_bind_rend)) {
         obs_jmp_buf guard;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_bind = fn_bind_rend(font, rend);
+            rc_bind = fn_bind_rend(font, active_rend);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -3775,6 +3902,29 @@ static obs_result check_font_render_glyph(void) {
     }
     obs_report_measure(id, "setup", "bind-renderer-rc", (uint64_t)(uint32_t)rc_bind,
                        "code");
+
+    /* sceFontSetupRenderScalePixel ($6vGCkkQJOcI) */
+    typedef int (*fn_setup_scale_t)(void *, float, float);
+    fn_setup_scale_t fn_setup_scale =
+        (fn_setup_scale_t)layout_resolve_sym("libSceFont", "$6vGCkkQJOcI");
+    if (!fn_setup_scale) {
+        fn_setup_scale = (fn_setup_scale_t)layout_resolve_sym(
+            "libSceFont", "sceFontSetupRenderScalePixel");
+    }
+    int rc_setup_scale = -1;
+    if (fn_setup_scale && active_rend &&
+        obs_address_is_callable((const void *)fn_setup_scale)) {
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_setup_scale = fn_setup_scale(active_rend, 48.0f, 48.0f);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "setup", "setup-render-scale-pixel-rc",
+                       (uint64_t)(uint32_t)rc_setup_scale, "code");
 
     uint8_t surf_desc[128];
     memset(surf_desc, 0, sizeof(surf_desc));
@@ -3887,16 +4037,26 @@ static obs_result check_font_render_glyph(void) {
     if (font && fn_close_font && obs_address_is_callable((const void *)fn_close_font)) {
         (void)fn_close_font(font);
     }
-    if (rend && fn_destroy_rend &&
+    int rc_destroy_rend = -1;
+    if (renderer && renderer != (void *)0xccccccccccccccccULL && fn_destroy_rend &&
         obs_address_is_callable((const void *)fn_destroy_rend)) {
-        (void)fn_destroy_rend(rend);
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_destroy_rend = fn_destroy_rend(&renderer);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
     }
+    obs_report_measure(id, "sceFontDestroyRenderer", "rc",
+                       (uint64_t)(uint32_t)rc_destroy_rend, "code");
+    obs_report_bytes(id, "sceFontDestroyRenderer", "renderer-slot-after", 0,
+                     (const unsigned char *)&renderer, 8);
+
     if (lib && fn_destroy_lib &&
         obs_address_is_callable((const void *)fn_destroy_lib)) {
         (void)fn_destroy_lib(&lib);
-    }
-    if (arena) {
-        free(arena);
     }
 
     return obs_pass();

@@ -4717,10 +4717,42 @@ static obs_result check_agc_update_prim_state(void) {
                        "rc-create", (uint64_t)(uint32_t)rc_create, "code");
     obs_report_measure("166-agc/update-prim-state", "sceAgcUpdatePrimState",
                        "rc-update", (uint64_t)(uint32_t)rc_update, "code");
-    obs_report_measure("166-agc/update-prim-state", "sceAgcUpdatePrimState",
-                       "topo-orig", (uint64_t)topo_orig, "hex");
-    obs_report_measure("166-agc/update-prim-state", "sceAgcUpdatePrimState",
-                       "topo-updated", (uint64_t)topo_updated, "hex");
+    /* REQ-20261013T1900Z-ps04:
+     * Create with topology 4, then for each of topologies 1, 2, 5, 7, 17 and 4,
+     * call sceAgcUpdatePrimState and dump prim_state 0x10 bytes and sec_state 0x18 bytes.
+     * Pass 1: shader_gs = NULL, shader_vs = vs_hdr.
+     * Pass 2: shader_gs = vs_hdr, shader_vs = vs_hdr (geometry stage set). */
+    static const uint32_t req_topos[] = {1, 2, 5, 7, 17, 4};
+    for (int pass = 0; pass < 2; pass++) {
+        const void *gs_arg = (pass == 1) ? (const void *)vs_hdr : NULL;
+        const char *pass_str = (pass == 1) ? "geom" : "vs";
+
+        memset(prim_state, 0, sizeof(prim_state));
+        memset(sec_state, 0, sizeof(sec_state));
+        int rc_c = sceAgcCreatePrimState(prim_state, sec_state, gs_arg, vs_hdr, 4u /* TRILIST */);
+        char ctag[64];
+        snprintf(ctag, sizeof(ctag), "create-%s", pass_str);
+        obs_report_measure("166-agc/update-prim-state", ctag, "rc", (uint64_t)(uint32_t)rc_c, "code");
+        obs_report_bytes("166-agc/update-prim-state", ctag, "prim-state-10h", 0, prim_state, 0x10);
+        obs_report_bytes("166-agc/update-prim-state", ctag, "sec-state-18h", 0, sec_state, 0x18);
+
+        for (size_t t = 0; t < sizeof(req_topos) / sizeof(req_topos[0]); t++) {
+            uint32_t topo = req_topos[t];
+            int rc_up = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_up = sceAgcUpdatePrimState(prim_state, sec_state, topo);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            char utag[64];
+            snprintf(utag, sizeof(utag), "update-%s-topo%u", pass_str, topo);
+            obs_report_measure("166-agc/update-prim-state", utag, "rc", (uint64_t)(uint32_t)rc_up, "code");
+            obs_report_bytes("166-agc/update-prim-state", utag, "prim-state-10h", 0, prim_state, 0x10);
+            obs_report_bytes("166-agc/update-prim-state", utag, "sec-state-18h", 0, sec_state, 0x18);
+        }
+    }
 
     if (rc_create == 0 && rc_update == 0 && topo_orig == 4u && topo_updated == 1u) {
         return obs_pass();
