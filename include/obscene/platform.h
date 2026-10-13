@@ -886,6 +886,7 @@ OBS_WEAK int sceUserServiceTerminate(void);
 OBS_WEAK int sceVideoOutOpen(int user_id, int type, int index, const void *param);
 OBS_WEAK int sceVideoOutClose(int handle);
 OBS_WEAK int sceVideoOutSetFlipRate(int handle, int rate);
+OBS_WEAK int sceVideoOutIsOutputSupported(int port, int bus);
 
 /* ---- libSceVideoOut: putting pixels on the screen ---------------------------
  *
@@ -988,6 +989,7 @@ OBS_WEAK int sceAudioOutSetVolume(int handle, int flag, int *vol);
 OBS_WEAK int scePadInit(void);
 OBS_WEAK int scePadOpen(int user_id, int type, int index, const void *param);
 OBS_WEAK int scePadClose(int handle);
+OBS_WEAK int scePadResetOrientation(int handle);
 /* Reads the controller's current state into a caller-provided buffer.
  *
  * The buffer is `void *`, not a struct, on purpose: this program reads one field from
@@ -1222,14 +1224,29 @@ OBS_WEAK int sceNetTerm(void);
  * `sceNetCtlInit` is idempotent: calling it when it is already initialised returns an
  * already-done code, which this ignores. */
 OBS_WEAK int sceNetCtlInit(void);
+OBS_WEAK int sceNetCtlTerm(void);
 OBS_WEAK int sceNetCtlGetInfo(int code, void *info);
+OBS_WEAK int sceNetCtlGetState(int *state);
+OBS_WEAK int sceNetCtlGetResult(int eventType, int *errorCode);
+OBS_WEAK int sceNetCtlGetNatInfo(void *natInfo);
+OBS_WEAK int sceNetCtlRegisterCallback(void (*handler)(int eventType, void *arg),
+                                       void *arg, int *cid);
+OBS_WEAK int sceNetCtlUnregisterCallback(int cid);
+OBS_WEAK int sceNetCtlCheckCallback(void);
 OBS_WEAK int sceNetSocket(const char *name, int family, int type, int protocol);
 OBS_WEAK int sceNetBind(int s, const void *addr, uint32_t addrlen);
 OBS_WEAK int sceNetListen(int s, int backlog);
 OBS_WEAK int sceNetAccept(int s, void *addr, uint32_t *paddrlen);
 OBS_WEAK int sceNetRecv(int s, void *buf, uint64_t len, int flags);
 OBS_WEAK int sceNetSend(int s, const void *buf, uint64_t len, int flags);
+OBS_WEAK int sceNetSendto(int s, const void *msg, size_t len, int flags, const void *to,
+                          uint32_t tolen);
+OBS_WEAK int sceNetRecvfrom(int s, void *buf, size_t len, int flags, void *from,
+                            uint32_t *fromlen);
+OBS_WEAK int sceNetGetsockname(int s, void *name, uint32_t *namelen);
 OBS_WEAK int sceNetSocketClose(int s);
+OBS_WEAK int sceHttpUriParse(void *out, const char *uri, void *pool, uint64_t *required,
+                             uint64_t poolSize);
 /* The socket-option and connect calls Porthole's accept loop depends on, called rather
  * than censused so the probe can settle what two public sources disagree on: the
  * non-blocking option value (0x1200 in the OpenOrbis/CTurt headers, 0x1100 in vitasdk)
@@ -1413,6 +1430,129 @@ OBS_WEAK int sceKeyboardOpen_static(int32_t user, int32_t mode, int32_t index,
 OBS_WEAK int sceKeyboardClose_static(int32_t handle) __asm__("$0LWei+c7RNc");
 OBS_WEAK int sceKeyboardReadState_static(int32_t handle,
                                          void *state) __asm__("$6HpE68bzX6M");
+OBS_WEAK int
+sceKeyboardSetProcessPrivilege_static(int privilege) __asm__("$h8V5miA7UCs");
+OBS_WEAK int sceKeyboardSetProcessPrivilege_alt(int privilege) __asm__("$K1A7IJp5xYc");
+OBS_WEAK int sceKeyboardSetProcessFocus_static(int focus) __asm__("$4S5m1jZcpI4");
+OBS_WEAK int sceKeyboardSetProcessFocus_alt(int focus) __asm__("$jqRcNtZmLuE");
+OBS_WEAK int sceAudioOut2Initialize_static(void) __asm__("$g2tViFIohHE");
+OBS_WEAK int sceAudioOut2UserCreate_static(int32_t user,
+                                           void **handle_out) __asm__("$xywYcRB7nbQ");
+OBS_WEAK int sceAudioOut2UserDestroy_static(void *handle) __asm__("$IaZXJ9M79uo");
+OBS_WEAK int sceAudioOut2UserDestroy_alt(void *handle) __asm__("$6vY70ydXpiE");
+OBS_WEAK int sceAudioOut2ContextResetParam_static(void *param) __asm__("$t5YrizufpQc");
+OBS_WEAK int
+sceAudioOut2ContextQueryMemory_static(void *param,
+                                      uint64_t *size) __asm__("$pDmme7Bgm6E");
+OBS_WEAK int sceAudioOut2ContextCreate_static(void *param, void *mem, uint64_t size,
+                                              void **context) __asm__("$0x6o1VVAYSY");
+OBS_WEAK int sceAudioOut2PortCreate_static(void *context, const void *param,
+                                           void **handle) __asm__("$A89PZmqwrSQ");
+OBS_WEAK int sceAudioOut2PortCreate_alt(void *context, const void *param,
+                                        void **handle) __asm__("$JK2wamZPzwM");
+OBS_WEAK int sceAudioOut2PortDestroy_static(void *handle) __asm__("$cd+Rtw+D1x8");
+OBS_WEAK int sceAudioOut2PortDestroy_alt(void *handle) __asm__("$H9eDD7eR33E");
+OBS_WEAK int sceAudioOut2PortGetState_static(void *handle,
+                                             void *state) __asm__("$gatEUKG+Ea4");
+OBS_WEAK int sceAudioOut2PortGetState_alt(void *handle,
+                                          void *state) __asm__("$rhG+oVBEq4E");
+OBS_WEAK int sceAudioOut2PortSetAttributes_static(void *handle, const void *attr,
+                                                  uint32_t n) __asm__("$8XTArSPyWHk");
+OBS_WEAK int sceAudioOut2PortSetAttributes_alt(void *handle, const void *attr,
+                                               uint32_t n) __asm__("$eVjyI63AdPE");
+OBS_WEAK int
+sceAudioOut2ContextGetQueueLevel_static(void *context,
+                                        uint32_t *level) __asm__("$R7d0F1g2qsU");
+OBS_WEAK int
+sceAudioOut2ContextGetQueueLevel_alt(void *context,
+                                     uint32_t *level) __asm__("$xao2WBd0t0c");
+OBS_WEAK int sceAudioOut2ContextPush_static(void *context, const void *buf,
+                                            uint32_t n) __asm__("$aII9h5nli9U");
+OBS_WEAK int sceAudioOut2ContextPush_alt(void *context, const void *buf,
+                                         uint32_t n) __asm__("$1YvlmYc9gmg");
+OBS_WEAK int sceAudioOut2ContextAdvance_static(void *context) __asm__("$PE2zHMqLSHs");
+OBS_WEAK int sceAudioOut2ContextAdvance_alt(void *context) __asm__("$e0iLyhyzTTw");
+OBS_WEAK int sceAudioOut2ContextDestroy_static(void *context) __asm__("$on6ZH7Abo10");
+OBS_WEAK int sceAudioOut2ContextDestroy_alt(void *context) __asm__("$XaMbsB+ZfqI");
+OBS_WEAK uint64_t sceAudioOut2GetSpeakerArrayMemorySize_static(
+    uint32_t a, uint32_t b, uint32_t c) __asm__("$G1YOKDJYX2Y");
+OBS_WEAK int sceAudioOut2SpeakerArrayCreate_static(void *a, void *b,
+                                                   void *c) __asm__("$+k91hoTuoA8");
+OBS_WEAK int sceAudioOut2SpeakerArrayDestroy_static(void *a) __asm__("$erCWQR5eKiQ");
+OBS_WEAK int
+sceAudioOut2GetSpeakerArrayCoefficients_static(void *a,
+                                               void *b) __asm__("$4BlZurolOAo");
+OBS_WEAK int sceAudioOut2GetSpeakerArrayAmbisonicsCoefficients_static(
+    void *a, void *b) __asm__("$28QqMnuuJ9Y");
+OBS_WEAK int sceAudioOut2GetSpeakerInfo_static(void *a,
+                                               uint32_t b) __asm__("$DImz2Ft9E2g");
+OBS_WEAK int sceCommonDialogInitialize_static(void) __asm__("$uoUpLGNkygk");
+OBS_WEAK int sceMsgDialogInitialize_static(void) __asm__("$lDqxaY1UbEo");
+OBS_WEAK int sceMsgDialogOpen_static(const void *param) __asm__("$b06Hh0DPEaE");
+OBS_WEAK int sceMsgDialogUpdateStatus_static(void) __asm__("$6fIC3XKt2k0");
+OBS_WEAK int sceMsgDialogGetStatus_static(void) __asm__("$CWVW78Qc3fI");
+OBS_WEAK int sceMsgDialogGetResult_static(void *result) __asm__("$Lr8ovHH9l6A");
+OBS_WEAK int sceMsgDialogClose_static(void) __asm__("$HTrcDKlFKuM");
+OBS_WEAK int sceMsgDialogTerminate_static(void) __asm__("$ePw-kqZmelo");
+OBS_WEAK int
+sceVideoOutUnknown_86721036bde0bf79_static(uint32_t handle, void *arg1, uint32_t arg2,
+                                           uint32_t arg3, void *arg4,
+                                           uint32_t arg5) __asm__("$eb-gvTYQcoY");
+OBS_WEAK int sceJson2ValueC1_static(void *obj) __asm__("$9yDWMxEFdJU");
+OBS_WEAK int sceJson2ValueD1_static(void *obj) __asm__("$WkkeywLJcgU");
+OBS_WEAK int sceJson2ArrayC1_static(void *obj) __asm__("$-kU6bB4M-+k");
+OBS_WEAK int sceJson2ArrayD1_static(void *obj) __asm__("$fLcU5G6Qrjs");
+OBS_WEAK int sceJson2ObjectC1_static(void *obj) __asm__("$q0F6yS-rCms");
+OBS_WEAK int sceJson2ObjectD1_static(void *obj) __asm__("$5OqszGpy7Mg");
+OBS_WEAK int sceJson2StringC1_static(void *obj) __asm__("$oVkZ8W8-Q8A");
+OBS_WEAK int sceJson2StringD1_static(void *obj) __asm__("$rHRr+131ATY");
+OBS_WEAK int sceShareInitialize_static(uint64_t size, uint64_t prio,
+                                       uint64_t cpumask) __asm__("$nBDD66kiFW8");
+OBS_WEAK int sceShareInitialize_alt(uint64_t size, uint64_t prio,
+                                    uint64_t cpumask) __asm__("$bxUiqevDEJw");
+OBS_WEAK int sceShareTerminate_static(void) __asm__("$0IL1keINExQ");
+OBS_WEAK int sceShareTerminate_alt(void) __asm__("$FBMN4pH1gtA");
+OBS_WEAK int sceNpCheckCallback_static(void) __asm__("$1ofT4wV8md0");
+OBS_WEAK int sceNpCheckCallback_alt(void) __asm__("$3Zl8BePTh9Y");
+OBS_WEAK int sceSaveDataMount3_static(void *param,
+                                      void *result) __asm__("$ZP4e7rlzOUk");
+OBS_WEAK int sceSaveDataMount3_alt(void *param, void *result) __asm__("$STlzue4e-mQ");
+OBS_WEAK int sceSaveDataUmount2_static(const void *mountPoint) __asm__("$uW4vfTwMQVo");
+OBS_WEAK int sceSaveDataUmount2_alt(const void *mountPoint) __asm__("$WkEMPH0vbrk");
+OBS_WEAK uint64_t sceAgcWriteDataPatchSetAddressOrOffset_static(
+    void *packet, uint64_t address) __asm__("$fPSCdQxgpSw");
+OBS_WEAK uint64_t sceAgcWriteDataPatchSetAddressOrOffset_alt(
+    void *packet, uint64_t address) __asm__("$LKVgDHWC9Hw");
+OBS_WEAK int sceSystemServiceParamGetInt_static(int32_t id,
+                                                int32_t *out) __asm__("$fZo48un7LK4");
+OBS_WEAK int sceSystemServiceParamGetInt_le(int32_t id,
+                                            int32_t *out) __asm__("$riz76fI4mn0");
+OBS_WEAK int sceNpEntitlementAccessInitialize_static(const void *param,
+                                                     void *out) __asm__("$CnoyyjMD74w");
+OBS_WEAK int sceNpEntitlementAccessInitialize_be(const void *param,
+                                                 void *out) __asm__("$jO8DM8oyego");
+OBS_WEAK int
+sceNpGameIntentInitialize_static(const void *param) __asm__("$rR9-Gx-Bzps");
+OBS_WEAK int sceNpGameIntentInitialize_be(const void *param) __asm__("$m87BHxt-H60");
+OBS_WEAK int
+sceNpSessionSignalingInitialize_static(const void *param, const void *arg1, uint64_t a2,
+                                       uint64_t a3) __asm__("$CfDPn-iwyco");
+OBS_WEAK int sceNpSessionSignalingInitialize_be(const void *param, const void *arg1,
+                                                uint64_t a2,
+                                                uint64_t a3) __asm__("$ysmw6J-P8Ak");
+OBS_WEAK int
+sceNpUniversalDataSystemInitialize_static(const void *param, const void *arg1,
+                                          uint64_t a2,
+                                          uint64_t a3) __asm__("$HngqGGyoNrI");
+OBS_WEAK int sceNpUniversalDataSystemInitialize_be(const void *param, const void *arg1,
+                                                   uint64_t a2,
+                                                   uint64_t a3) __asm__("$sjaobBgqeB4");
+OBS_WEAK int
+sceNpTrophy2RegisterUnlockCallback_static(uint64_t ctx, uint64_t zero, void *cb,
+                                          void *userdata) __asm__("$ipQa03zGRbE");
+OBS_WEAK int
+sceNpTrophy2RegisterUnlockCallback_be(uint64_t ctx, uint64_t zero, void *cb,
+                                      void *userdata) __asm__("$sUXGfNMalIo");
 OBS_WEAK int sceVideoRecordingInit_static(void) __asm__("$RXXBl6-iimo");
 OBS_WEAK int sceVideoRecordingOpen_static(uint64_t arg0, uint64_t arg1,
                                           uint64_t arg2) __asm__("$7QoTYzVuzto");
@@ -1458,6 +1598,27 @@ OBS_WEAK int
 sceAmprAprCommandBufferReadFile_static(void *cb, uint32_t file_id, void *dest,
                                        uint64_t size,
                                        uint64_t offset) __asm__("$mQ16-QdKv7k");
+OBS_WEAK int
+sceAmprCommandBufferWriteAddress_04_00_static(void *cb, void *addr, uint32_t val,
+                                              uint32_t a3) __asm__("$j0+3uJMxYJY");
+OBS_WEAK int
+sceAmprCommandBufferWriteAddress_04_00_url(void *cb, void *addr, uint32_t val,
+                                           uint32_t a3) __asm__("$j0-3uJMxYJY");
+OBS_WEAK int
+sceAmprCommandBufferWriteAddress_04_00_le(void *cb, void *addr, uint32_t val,
+                                          uint32_t a3) __asm__("$lmAxk7i3T48");
+OBS_WEAK int sceAmprCommandBufferWriteAddress_04_00_named(
+    void *cb, void *addr, uint32_t val,
+    uint32_t a3) __asm__("sceAmprCommandBufferWriteAddress_04_00");
+OBS_WEAK int
+sceAmprMeasureCommandSizeWriteAddress_04_00_static(void *addr, uint32_t val,
+                                                   uint32_t a3) __asm__("$4fgtGfXDrFc");
+OBS_WEAK int
+sceAmprMeasureCommandSizeWriteAddress_04_00_le(void *addr, uint32_t val,
+                                               uint32_t a3) __asm__("$V6zD9Rkt+OE");
+OBS_WEAK int sceAmprMeasureCommandSizeWriteAddress_04_00_named(
+    void *addr, uint32_t val,
+    uint32_t a3) __asm__("sceAmprMeasureCommandSizeWriteAddress_04_00");
 OBS_WEAK int sceSaveDataInitialize3_static(void *param) __asm__("$TywrFKCoLGY");
 OBS_WEAK int
 sceSaveDataInitialize3_named(void *param) __asm__("sceSaveDataInitialize3");
@@ -1773,5 +1934,447 @@ OBS_WEAK int sceAgcDriverRegisterResource(void *arg0, void *arg1, const void *co
                                           const char *name) __asm__("$W5z4eZrjEas");
 OBS_WEAK int sceAgcDriverRegisterDefaultOwner(void *owner_desc) __asm__("$U9ueyEhSkF4");
 OBS_WEAK int sceAgcDriverGetDefaultOwner(void *out_owner) __asm__("$F0ZXt5q0ZTA");
+OBS_WEAK int sceAgcDriverSetTFRing(uint64_t arg0, uint64_t arg1, uint64_t arg2,
+                                   uint64_t arg3, void *h1,
+                                   void *h2) __asm__("$XlNp7jzGiPo");
+
+/* REQ-20261011T1430Z-sh02: Share content event callbacks */
+OBS_WEAK int
+sceShareRegisterContentEventCallback_static(const void *block) __asm__("$Sygnk9dr5WQ");
+OBS_WEAK int
+sceShareUnregisterContentEventCallback_static(void) __asm__("$KnsfHKmZqFA");
+
+/* REQ-20261011T1530Z-ve01: VideoOut event id / event data / vblank events */
+OBS_WEAK int sceVideoOutGetEventId_static(const void *event) __asm__("$U2JJtSqNKZI");
+OBS_WEAK int sceVideoOutGetEventData_static(const void *event,
+                                            void *data) __asm__("$rWUTcKdkUzQ");
+OBS_WEAK int sceVideoOutAddVblankEvent_static(uint64_t eq, int handle,
+                                              void *udata) __asm__("$Ek+VR4lcJQI");
+OBS_WEAK int sceVideoOutAddVblankEvent_alt(uint64_t eq, int handle,
+                                           void *udata) __asm__("$Xru92wHJRmg");
+OBS_WEAK int sceVideoOutDeleteVblankEvent_static(uint64_t eq,
+                                                 int handle) __asm__("$oNOQn3knW6s");
+OBS_WEAK int sceVideoOutAddFlipEvent_static(uint64_t eq, int handle,
+                                            void *udata) __asm__("$HXzjK9yI30k");
+OBS_WEAK int sceVideoOutAddFlipEvent_alt(uint64_t eq, int handle,
+                                         void *udata) __asm__("$Sd+I3CvjfB0");
+OBS_WEAK int sceVideoOutDeleteFlipEvent_static(uint64_t eq,
+                                               int handle) __asm__("$-Ozn0F1AFRg");
+OBS_WEAK int sceVideoOutDeleteFlipEvent_alt(uint64_t eq,
+                                            int handle) __asm__("$GBVAXdDn7Pw");
+
+/* REQ-20261011T1640Z-us01: Unity User Service getters */
+OBS_WEAK int
+sceUserServiceInitialize_static(const void *params) __asm__("$j3YMu1MVNNo");
+OBS_WEAK int
+sceUserServiceGetInitialUser_static(int32_t *user_id_out) __asm__("$CdWp0oHWGr0");
+OBS_WEAK int sceUserServiceGetUserName_static(int32_t user_id, char *name_out,
+                                              size_t size) __asm__("$1xxcMiGu2fo");
+OBS_WEAK int
+sceUserServiceGetAgeLevel_static(int32_t user_id,
+                                 int32_t *age_level_out) __asm__("$woNpu+45RLk");
+OBS_WEAK int sceUserServiceGetAccessibilityChatTranscription_static(
+    int32_t user_id, void *out) __asm__("$rnEhHqG-4xo");
+OBS_WEAK int sceUserServiceGetAccessibilityPressAndHoldDelay_static(
+    int32_t user_id, void *out) __asm__("$ZKJtxdgvzwg");
+OBS_WEAK int
+sceUserServiceGetAccessibilityTriggerEffect_static(int32_t user_id,
+                                                   void *out) __asm__("$-3Y5GO+-i78");
+OBS_WEAK int
+sceUserServiceGetAccessibilityVibration_static(int32_t user_id,
+                                               void *out) __asm__("$qWYHOFwqCxY");
+
+/* REQ-20261011T1745Z-np03: Np / AppContent / Json startup calls */
+OBS_WEAK int sceNpTrophy2CreateContext_static(uint64_t *ctx, int32_t user, uint64_t a2,
+                                              uint64_t a3) __asm__("$Bagshr7OQ6Q");
+OBS_WEAK int
+sceNpUniversalDataSystemCreateContext_static(uint64_t *ctx, int32_t user, uint64_t a2,
+                                             uint64_t a3) __asm__("$5zBnau1uIEo");
+OBS_WEAK int sceNpGetAccountIdA_static(int32_t user, void *out) __asm__("$rbknaUjpqWo");
+OBS_WEAK int sceAppContentInitialize_static(void *param) __asm__("$R9lA82OraNs");
+OBS_WEAK int
+sceAppContentDownloadDataGetAvailableSpaceKb_static(const char *mount,
+                                                    void *kb) __asm__("$Gl6w5i0JokY");
+OBS_WEAK void
+sceJsonInitParameter2SetFileBufferSize_static(void *param,
+                                              size_t size) __asm__("$Eu95jmqn5Rw");
+OBS_WEAK void sceJsonInitParameter2SetFileBufferSize_named(
+    void *param,
+    size_t size) __asm__("_ZN3sce4Json14InitParameter217setFileBufferSizeEm");
+
+/* REQ-20261012T0020Z-ce01: ContentExport init2 & term */
+OBS_WEAK int sceContentExportInit2_static(void *param) __asm__("$0GnN4QCgIfs");
+OBS_WEAK int sceContentExportTerm_static(void) __asm__("$+KDWny9Y-6k");
+
+/* REQ-20261012T0445Z-av01: AvPlayer symbols */
+OBS_WEAK int sceAvPlayerInitEx_static(const void *init,
+                                      void *handle) __asm__("$o9eWRkSL+M4");
+OBS_WEAK int sceAvPlayerPostInit_static(void *handle,
+                                        const void *post) __asm__("$HD1YKVU26-M");
+OBS_WEAK int sceAvPlayerIsActive_static(void *handle) __asm__("$UbQoYawOsfY");
+OBS_WEAK int sceAvPlayerStreamCount_static(void *handle) __asm__("$hdTyRzCXQeQ");
+OBS_WEAK int sceAvPlayerAddSourceEx_static(void *handle, int type,
+                                           const char *src) __asm__("$x8uvuFOPZhU");
+OBS_WEAK int sceAvPlayerClose_static(void *handle) __asm__("$NkJwDzKmIlw");
+OBS_WEAK int sceAvPlayerSetLogCallback_static(void *fn,
+                                              void *obj) __asm__("$eBTreZ84JFY");
+
+/* REQ-20261012T0537Z-so01: Remoteplay */
+OBS_WEAK int sceRemoteplayInitialize_static(void *heap,
+                                            size_t size) __asm__("$k1SwgkMSOM8");
+OBS_WEAK int
+sceRemoteplayGetConnectionStatus_static(int32_t user,
+                                        void *status) __asm__("$g3PNjYKWqnQ");
+OBS_WEAK int sceRemoteplayTerminate_static(void) __asm__("$BOwybKVa3Do");
+
+/* REQ-20261012T0635Z-ag01: AgcDriver NID 0xbc95ee5351ee0e67 and aux calls */
+OBS_WEAK uint64_t
+sceAgcDriverNidBc95ee5351ee0e67_static(const void *ev) __asm__("$Zw7uUVPulbw");
+OBS_WEAK int
+sceUserServiceGetAccessibilityZoomEnabled_static(int32_t user,
+                                                 void *out) __asm__("$hD-H81EN9Vg");
+OBS_WEAK int sceVideoOutIsOutputSupported_static(int port,
+                                                 int bus) __asm__("$Nv8c-Kb+DUM");
+OBS_WEAK int
+sceSaveDataSetSaveDataMemory2_static(const void *param) __asm__("$cduy9v4YmT4");
+OBS_WEAK int
+sceSaveDataSyncSaveDataMemory_static(const void *param) __asm__("$wiT9jeC7xPw");
+
+/* REQ-20261012T0710Z-gu01: GameUpdate */
+OBS_WEAK uint64_t sceGameUpdateInitialize_static(uint64_t a1,
+                                                 uint64_t a2) __asm__("$YJtKLttI9fM");
+OBS_WEAK int sceGameUpdateTerminate_static(void) __asm__("$NSH-C-OmoNI");
+OBS_WEAK int sceGameUpdateAbortRequest_static(void *req) __asm__("$d1CNGEOaK28");
+OBS_WEAK int sceGameUpdateCheck_static(void *param) __asm__("$LYVV9z8+owM");
+OBS_WEAK int sceGameUpdateCreateRequest_static(void *req) __asm__("$UvcvKaFvupA");
+OBS_WEAK int sceGameUpdateDeleteRequest_static(void *req) __asm__("$bcCyjHN5sn0");
+
+/* REQ-20261012T0728Z-pu01: Pad, Ime, UDS */
+OBS_WEAK int scePadGetControllerInformation_static(int handle,
+                                                   void *info) __asm__("$gjP9-KQzoUk");
+OBS_WEAK int scePadResetOrientation_static(int handle) __asm__("$rIZnR6eSpvk");
+OBS_WEAK int sceImeKeyboardGetResourceId_static(uint32_t id,
+                                                void *out) __asm__("$dKadqZFgKKQ");
+OBS_WEAK int
+sceNpUniversalDataSystemCreateHandle_static(uint64_t *handle) __asm__("$hT0IAEvN+M0");
+
+/* REQ-20261012T1232Z-ux01: pad extended info, UDS NID 0x0996125e66b8a5b3 */
+OBS_WEAK int
+scePadDeviceClassGetExtendedInformation_static(int handle,
+                                               void *out) __asm__("$AcslpN1jHR8");
+OBS_WEAK int
+scePadDeviceClassGetExtendedInformation_be(int handle,
+                                           void *out) __asm__("$Hx1j3aQlywE");
+OBS_WEAK uint64_t sceNpUniversalDataSystem_0996125e66b8a5b3_static(
+    void *a0, void *a1, void *a2, void *a3, void *a4, void *a5) __asm__("$s6W4Zl4Slgk");
+OBS_WEAK uint64_t sceNpUniversalDataSystem_0996125e66b8a5b3_be(
+    void *a0, void *a1, void *a2, void *a3, void *a4, void *a5) __asm__("$CZYSXma4pbM");
+
+OBS_WEAK int
+sceAppContentDownloadDataGetAvailableSpaceKb_be(const char *mount,
+                                                void *kb) __asm__("$RqIJLeawXho");
+
+/* REQ-20261012T1251Z-pg01: PlayGo startup */
+OBS_WEAK int scePlayGoInitialize_static(const void *param) __asm__("$sUaKk5WGzrY");
+OBS_WEAK int scePlayGoInitialize_be(const void *param) __asm__("$ts6GlZOKRrE");
+OBS_WEAK int scePlayGoOpen_static(int32_t *handle,
+                                  uint32_t flags) __asm__("$YawcWmumUTM");
+OBS_WEAK int scePlayGoOpen_be(int32_t *handle, uint32_t flags) __asm__("$M1Gma1ocrGE");
+OBS_WEAK int scePlayGoSetInstallSpeed_static(int32_t handle,
+                                             uint32_t speed) __asm__("$c91RT00cAOA");
+OBS_WEAK int scePlayGoSetInstallSpeed_be(int32_t handle,
+                                         uint32_t speed) __asm__("$4AAcTU9R3XM");
+OBS_WEAK int scePlayGoGetChunkId_static(int32_t handle, void *ids, uint32_t max_ids,
+                                        uint32_t *count) __asm__("$EPJUwdTFd+8");
+OBS_WEAK int scePlayGoGetChunkId_be(int32_t handle, void *ids, uint32_t max_ids,
+                                    uint32_t *count) __asm__("$73fF1MFU8hA");
+OBS_WEAK int scePlayGoGetToDoList_static(int32_t handle, void *list, uint32_t count,
+                                         uint32_t *entries) __asm__("$rebACSvzfjY");
+OBS_WEAK int scePlayGoGetToDoList_be(int32_t handle, void *list, uint32_t count,
+                                     uint32_t *entries) __asm__("$Nn7zKwnA5q0");
+OBS_WEAK int scePlayGoClose_static(int32_t handle) __asm__("$Lw5lRyM1ylE");
+OBS_WEAK int scePlayGoClose_be(int32_t handle) __asm__("$Uco1I0dlDi8");
+OBS_WEAK int scePlayGoTerminate_static(void) __asm__("$8TNG4BG09zA");
+OBS_WEAK int scePlayGoTerminate_be(void) __asm__("$MPe0EeBGM-E");
+
+/* REQ-20261012T1827Z-1a71: hardware queries and sched priority */
+OBS_WEAK uint64_t sceKernelGetCpuFrequency(void);
+OBS_WEAK int sceKernelGetCpuTemperature(int *temp);
+OBS_WEAK int sceKernelGetSocSensorTemperature(int sensor, int *temp);
+OBS_WEAK int sceKernelGetCurrentFanDuty(int *duty);
+OBS_WEAK int sceKernelGetHwModelName(char *name);
+OBS_WEAK int sceKernelGetHwSerialNumber(char *serial);
+OBS_WEAK int sched_get_priority_max(int policy);
+OBS_WEAK int sched_get_priority_min(int policy);
+
+/* REQ-20261012T1822Z-8b13: Zoom follow focus */
+OBS_WEAK int
+sceUserServiceGetAccessibilityZoomFollowFocus(int32_t user,
+                                              void *out) __asm__("$O6IW1-Dwm-w");
+
+/* REQ-20261012T1816Z-7af9: Net InetPton and ErrnoLoc */
+OBS_WEAK int sceNetInetPton(int af, const char *src, void *dst);
+OBS_WEAK int *sceNetErrnoLoc(void);
+
+/* REQ-20261012T1816Z-ffa8: Http URI parse */
+OBS_WEAK int sceHttpUriParse(void *out, const char *uri, void *pool, uint64_t *required,
+                             size_t pool_size);
+
+/* REQ-20261012T1822Z-0028: CesCs */
+OBS_WEAK const void *sceCesRefersUcsProfileCp1252(void);
+OBS_WEAK const void *sceCesRefersUcsProfileCp1252_static(void) __asm__("$LPzYZ+FR0BI");
+OBS_WEAK int sceCesSbcToUtf8(const void *profile, uint32_t sbc, void *out, size_t max,
+                             size_t *len);
+OBS_WEAK int sceCesSbcToUtf8_static(const void *profile, uint32_t sbc, void *out,
+                                    size_t max, size_t *len) __asm__("$xTd54EEL1Ao");
+OBS_WEAK int sceCesUtf8ToSbc(const void *src, size_t max, size_t *used,
+                             const void *profile, uint32_t *sbc);
+OBS_WEAK int sceCesUtf8ToSbc_static(const void *src, size_t max, size_t *used,
+                                    const void *profile,
+                                    uint32_t *sbc) __asm__("$3Q1gOWWarcw");
+
+/* REQ-20261012T1822Z-b15b: AudioOut2 mastering, system state, port register */
+OBS_WEAK int sceAudioOut2MasteringInit_static(void) __asm__("$XHl38ZNknbs");
+OBS_WEAK int
+sceAudioOut2MasteringSetParam_static(const void *param) __asm__("$v8iOE+j8a5o");
+OBS_WEAK int sceAudioOut2MasteringGetState_static(void *state) __asm__("$VZidxi2cYh0");
+OBS_WEAK int sceAudioOut2MasteringTerm_static(void) __asm__("$2bbBBOkH4CY");
+OBS_WEAK int sceAudioOut2GetSystemState_static(void *state) __asm__("$bkBN+CMLwRc");
+OBS_WEAK int sceAudioOut2PortRegister_static(void *ctx,
+                                             void *port) __asm__("$Bph+nEAV4WY");
+OBS_WEAK int sceAudioOut2PortUnregister_static(void *ctx,
+                                               void *port) __asm__("$16Ob5ACgOYk");
+
+/* REQ-20261012T1822Z-3100: libSceRtc */
+OBS_WEAK int sceRtcGetCurrentClockLocalTime_static(void *dt) __asm__("$ZPD1YOKI+Kw");
+OBS_WEAK int sceRtcGetCurrentClock_static(void *dt, int tz) __asm__("$8lfvnRMqwEM");
+OBS_WEAK int sceRtcGetCurrentClockUtc_static(void *dt) __asm__("$qZ8tGzZ-LnQ");
+OBS_WEAK int sceRtcGetCurrentNetworkTick_static(void *tick) __asm__("$zO9UL3qIINQ");
+OBS_WEAK uint32_t sceRtcGetTickResolution_static(void) __asm__("$jMNwqYr4R-k");
+OBS_WEAK int sceRtcGetTick_static(const void *dt, void *tick) __asm__("$8w-H19ip48I");
+OBS_WEAK int sceRtcSetTick_static(void *dt, const void *tick) __asm__("$ueega6v3GUw");
+OBS_WEAK int sceRtcCheckValid_static(const void *dt) __asm__("$lPEBYdVX0XQ");
+OBS_WEAK int sceRtcIsLeapYear_static(int year) __asm__("$Ug8pCwQvh0c");
+OBS_WEAK int sceRtcGetDaysInMonth_static(int year, int month) __asm__("$3O7Ln8AqJ1o");
+OBS_WEAK int sceRtcGetDayOfWeek_static(int year, int month,
+                                       int day) __asm__("$CyIK-i4XdgQ");
+OBS_WEAK int sceRtcGetTime_t_static(const void *dt, void *t) __asm__("$BtqmpTRXHgk");
+OBS_WEAK int sceRtcSetTime_t_static(void *dt, int64_t t) __asm__("$bDEVVP4bTjQ");
+OBS_WEAK int sceRtcGetWin32FileTime_static(const void *dt,
+                                           void *ft) __asm__("$jfRO0uTjtzA");
+OBS_WEAK int sceRtcCompareTick_static(const void *t1,
+                                      const void *t2) __asm__("$fNaZ4DbzHAE");
+OBS_WEAK int sceRtcConvertUtcToLocalTime_static(const void *u,
+                                                void *l) __asm__("$M1TvFst-jrM");
+OBS_WEAK int sceRtcConvertLocalTimeToUtc_static(const void *l,
+                                                void *u) __asm__("$8Yr143yEnRo");
+OBS_WEAK int sceRtcTickAddMonths_static(void *out, const void *in,
+                                        int m) __asm__("$CL6y9q-XbuQ");
+OBS_WEAK int sceRtcTickAddYears_static(void *out, const void *in,
+                                       int y) __asm__("$-5y2uJ62qS8");
+OBS_WEAK int sceRtcFormatRFC3339_static(char *b, const void *t,
+                                        int tz) __asm__("$WJ3rqFwymew");
+OBS_WEAK int sceRtcParseRFC3339_static(void *t, const char *s) __asm__("$99bMGglFW3I");
+
+/* Wave 1: PngDec, PngEnc, SaveDataDialog, System Dialogs, Ult */
+/* libScePngDec */
+OBS_WEAK int scePngDecCreate_static(const void *param, void *memory, size_t size,
+                                    uint32_t *handle) __asm__("$m0uW+8pFyaw");
+OBS_WEAK int scePngDecDecode_static(uint32_t handle, const void *param,
+                                    void *info) __asm__("$WC216DD3El4");
+OBS_WEAK int scePngDecDelete_static(uint32_t handle) __asm__("$QbD+eENEwo8");
+OBS_WEAK int scePngDecParseHeader_static(const void *param,
+                                         void *info) __asm__("$U6h4e5JRPaQ");
+OBS_WEAK int scePngDecQueryMemorySize_static(const void *param,
+                                             size_t *size) __asm__("$-6srIGbLTIU");
+
+/* libScePngEnc */
+OBS_WEAK int scePngEncCreate_static(const void *param, void *memory, size_t size,
+                                    uint32_t *handle) __asm__("$7aGTPfrqT9s");
+OBS_WEAK int scePngEncDelete_static(uint32_t handle) __asm__("$RUrWdwTWZy8");
+OBS_WEAK int scePngEncEncode_static(uint32_t handle, const void *param,
+                                    void *output) __asm__("$xgDjJKpcyHo");
+OBS_WEAK int scePngEncQueryMemorySize_static(const void *param,
+                                             size_t *size) __asm__("$9030RnBDoh4");
+
+/* libSceSaveDataDialog */
+OBS_WEAK int sceSaveDataDialogClose_static(void) __asm__("$fH46Lag88XY");
+OBS_WEAK int sceSaveDataDialogGetResult_static(void *result) __asm__("$yEiJ-qqr6Cg");
+OBS_WEAK int sceSaveDataDialogGetStatus_static(void) __asm__("$ERKzksauAJA");
+OBS_WEAK int sceSaveDataDialogInitialize_static(void *param) __asm__("$s9e3+YpRnzw");
+OBS_WEAK int sceSaveDataDialogIsReadyToDisplay_static(void) __asm__("$en7gNVnh878");
+OBS_WEAK int sceSaveDataDialogOpen_static(const void *param) __asm__("$4tPhsP6FpDI");
+OBS_WEAK int
+sceSaveDataDialogProgressBarInc_static(uint32_t val) __asm__("$V-uEeFKARJU");
+OBS_WEAK int
+sceSaveDataDialogProgressBarSetValue_static(uint32_t val,
+                                            uint32_t total) __asm__("$hay1CfTmLyA");
+OBS_WEAK int sceSaveDataDialogTerminate_static(void) __asm__("$YuH2FA7azqQ");
+OBS_WEAK int sceSaveDataDialogUpdateStatus_static(void) __asm__("$KK3Bdg1RWK0");
+
+/* libSceCommonDialog */
+OBS_WEAK int sceCommonDialogInitialize_static(void) __asm__("$uoUpLGNkygk");
+OBS_WEAK int sceCommonDialogIsUsed_static(void) __asm__("$BQ3tey0JmQM");
+
+/* libSceImeDialog */
+OBS_WEAK int sceImeDialogAbort_static(void) __asm__("$oBmw4xrmfKs");
+OBS_WEAK int
+sceImeDialogGetPanelSizeExtended_static(uint32_t type,
+                                        void *size) __asm__("$CRD+jSErEJQ");
+OBS_WEAK int sceImeDialogGetResult_static(void *result) __asm__("$x01jxu+vxlc");
+OBS_WEAK int sceImeDialogGetStatus_static(void) __asm__("$IADmD4tScBY");
+OBS_WEAK int sceImeDialogInit_static(const void *param,
+                                     void *work) __asm__("$NUeBrN7hzf0");
+OBS_WEAK int sceImeDialogTerm_static(void) __asm__("$gyTyVn+bXMw");
+
+/* libSceMsgDialog */
+OBS_WEAK int sceMsgDialogClose_static(void) __asm__("$HTrcDKlFKuM");
+OBS_WEAK int sceMsgDialogGetResult_static(void *result) __asm__("$Lr8ovHH9l6A");
+OBS_WEAK int sceMsgDialogGetStatus_static(void) __asm__("$CWVW78Qc3fI");
+OBS_WEAK int sceMsgDialogInitialize_static(void) __asm__("$lDqxaY1UbEo");
+OBS_WEAK int sceMsgDialogOpen_static(const void *param) __asm__("$b06Hh0DPEaE");
+OBS_WEAK int sceMsgDialogProgressBarInc_static(uint32_t val) __asm__("$Gc5k1qcK4fs");
+OBS_WEAK int
+sceMsgDialogProgressBarSetValue_static(uint32_t val,
+                                       uint32_t total) __asm__("$wTpfglkmv34");
+OBS_WEAK int
+sceMsgDialogProgressBarSetMsg_static(uint32_t val,
+                                     const char *msg) __asm__("$6H-71OdrpXM");
+OBS_WEAK int sceMsgDialogTerminate_static(void) __asm__("$ePw-kqZmelo");
+OBS_WEAK int sceMsgDialogUpdateStatus_static(void) __asm__("$6fIC3XKt2k0");
+
+/* libSceSystemService */
+OBS_WEAK int sceSystemServiceGetStatus(void *status);
+OBS_WEAK int
+sceSystemServiceGetStatus_static(void *status) __asm__("sceSystemServiceGetStatus");
+
+/* libSceAppContent additional */
+OBS_WEAK int
+sceAppContentTemporaryDataFormat_static(const char *mount) __asm__("$a5N7lAG0y2Q");
+OBS_WEAK int
+sceAppContentTemporaryDataGetAvailableSpaceKb_static(const char *mount,
+                                                     void *kb) __asm__("$SaKib2Ug0yI");
+OBS_WEAK int
+sceAppContentTemporaryDataMount2_static(int type, void *mount) __asm__("$buYbeLOGWmA");
+OBS_WEAK int sceAppContentAddcontMount_static(uint32_t serviceLabel, const char *label,
+                                              void *mount) __asm__("$VANhIWcqYak");
+OBS_WEAK int
+sceAppContentAddcontUnmount_static(const char *mount) __asm__("$3rHWaV-1KC4");
+
+/* libScePad additional */
+OBS_WEAK int scePadResetLightBar_static(int handle) __asm__("$DscD1i9HX1w");
+OBS_WEAK int scePadSetTriggerEffect_static(int handle,
+                                           const void *param) __asm__("$2JgFB2n9oUM");
+
+/* libSceErrorDialog */
+OBS_WEAK int sceErrorDialogClose_static(void) __asm__("$ekXHb1kDBl0");
+OBS_WEAK int sceErrorDialogGetStatus_static(void) __asm__("$t2FvHRXzgqk");
+OBS_WEAK int sceErrorDialogInitialize_static(void) __asm__("$I88KChlynSs");
+OBS_WEAK int sceErrorDialogOpen_static(const void *param) __asm__("$M2ZF-ClLhgY");
+OBS_WEAK int sceErrorDialogOpenDetail_static(const void *param) __asm__("$jrpnVQfJYgQ");
+OBS_WEAK int sceErrorDialogTerminate_static(void) __asm__("$9XAxK2PMwk8");
+OBS_WEAK int sceErrorDialogUpdateStatus_static(void) __asm__("$WWiGuh9XfgQ");
+
+/* libSceWebBrowserDialog */
+OBS_WEAK int sceWebBrowserDialogClose_static(void) __asm__("$PSK+Eik919Q");
+OBS_WEAK int sceWebBrowserDialogGetResult_static(void *result) __asm__("$vCaW0fgVQmc");
+OBS_WEAK int sceWebBrowserDialogGetStatus_static(void) __asm__("$CFTG6a8TjOU");
+OBS_WEAK int sceWebBrowserDialogInitialize_static(void) __asm__("$jqb7HntFQFc");
+OBS_WEAK int sceWebBrowserDialogOpen_static(const void *param) __asm__("$FraP7debcdg");
+OBS_WEAK int sceWebBrowserDialogTerminate_static(void) __asm__("$ocHtyBwHfys");
+OBS_WEAK int sceWebBrowserDialogUpdateStatus_static(void) __asm__("$h1dR-t5ISgg");
+
+/* libSceUlt */
+OBS_WEAK int _sceUltUlthreadCreate_static(void *thread, const char *name,
+                                          void (*entry)(uint64_t), uint64_t arg,
+                                          void *stack, size_t stack_size, void *rt,
+                                          const void *opt) __asm__("$znI3q8S7KQ4");
+OBS_WEAK int
+_sceUltUlthreadRuntimeCreate_static(void *rt, const char *name, uint32_t max_threads,
+                                    uint32_t workers, void *work, const void *opt,
+                                    size_t work_sz) __asm__("$jw9FkZBXo-g");
+OBS_WEAK int _sceUltUlthreadRuntimeOptParamInitialize_static(
+    void *opt, uint32_t version) __asm__("$V2u3WLrwh64");
+OBS_WEAK size_t sceUltUlthreadRuntimeGetWorkAreaSize_static(
+    uint32_t max_threads, uint32_t workers) __asm__("$grs2pbc2awM");
+OBS_WEAK int sceUltUlthreadRuntimeDestroy_static(void *rt) __asm__("$-gxcs521SvA");
+OBS_WEAK int _sceUltWaitingQueueResourcePoolCreate_static(
+    void *pool, const char *name, uint32_t max_resources, uint32_t num_pools,
+    void *work, const void *opt) __asm__("$YiHujOG9vXY");
+OBS_WEAK size_t sceUltWaitingQueueResourcePoolGetWorkAreaSize_static(
+    uint32_t max_resources, const void *opt) __asm__("$WIWV1Qd7PFU");
+OBS_WEAK int
+sceUltWaitingQueueResourcePoolDestroy_static(void *pool) __asm__("$or55417wcDk");
+OBS_WEAK void sceUltUlthreadExit_static(int status) __asm__("$kF--s3xZjco");
+OBS_WEAK int sceUltUlthreadJoin_static(void *thread,
+                                       int *status) __asm__("$gCeAI57LGgI");
+OBS_WEAK void sceUltUlthreadYield_static(void) __asm__("$HFd-lpjGxJA");
+OBS_WEAK int _sceUltMutexCreate_static(void *mutex, const char *name, void *pool,
+                                       const void *opt) __asm__("$mmt8Sa6tL6c");
+OBS_WEAK int sceUltMutexLock_static(void *mutex) __asm__("$8hEGkR1pfr8");
+OBS_WEAK int sceUltMutexTryLock_static(void *mutex) __asm__("$jOsUG0BJI-Y");
+OBS_WEAK int sceUltMutexUnlock_static(void *mutex) __asm__("$h0XebKiMBtk");
+OBS_WEAK int sceUltMutexDestroy_static(void *mutex) __asm__("$jW+HnafeS3Y");
+
+OBS_WEAK int sceNetResolverCreate_static(const char *name, int pool,
+                                         int flags) __asm__("$3L3PcQwghQs");
+OBS_WEAK int sceNetResolverStartNtoa_static(int rid, const char *hostname, void *addr,
+                                            int timeout, int retry,
+                                            int flags) __asm__("$bBumpVl13zU");
+OBS_WEAK int sceNetResolverDestroy_static(int rid) __asm__("$YgGMmx9YmZA");
+
+OBS_WEAK int
+sceNpGameIntentInitialize_static(const void *param) __asm__("$rR9-Gx-Bzps");
+OBS_WEAK int sceNpGameIntentTerminate_static(void) __asm__("$-ZkjgMVYcNA");
+OBS_WEAK int
+sceNpGameIntentReceiveIntent_static(void *buf, size_t buf_size) __asm__("$T1z9ClAXQow");
+OBS_WEAK int
+sceNpGameIntentGetPropertyValueString_static(const void *intent, const char *prop,
+                                             char *val,
+                                             size_t *val_len) __asm__("$z-xc0yB0+aw");
+
+OBS_WEAK int sceHttpUriParse_static(void *out, const char *uri, void *pool,
+                                    uint64_t *required,
+                                    uint64_t opt) __asm__("$W7jgfwKlZiE");
+OBS_WEAK int sceKernelStopUnloadModule_static(int modid, size_t args, const void *argp,
+                                              int flags, const void *pOpt,
+                                              int *pRes) __asm__("$60F8zqh0p0A");
+
+OBS_WEAK int sceAmprCommandBufferClearBuffer_static(void *obj) __asm__("$ULvXMDz56po");
+OBS_WEAK uint32_t
+sceAmprCommandBufferGetCurrentOffset_static(void *obj) __asm__("$GnxKOHEawhk");
+OBS_WEAK uint32_t
+sceAmprCommandBufferGetNumCommands_static(void *obj) __asm__("$gzndltBEzWc");
+OBS_WEAK uint32_t sceAmprCommandBufferGetSize_static(void *obj) __asm__("$tZDDEo2tE5k");
+OBS_WEAK int sceAmprCommandBufferReset_alt(void *obj) __asm__("$voD27PUOpG0");
+OBS_WEAK int sceAmprCommandBufferWriteKernelEventQueue_04_00_static(
+    void *obj, uint64_t a1, uint64_t a2, uint64_t a3) __asm__("$H896Pt-yB4I");
+
+OBS_WEAK int sceSaveDataMount2_static(void *param) __asm__("$0kj-gTw5PtM");
+OBS_WEAK int sceSaveDataGetMountInfo_static(const void *param,
+                                            void *info) __asm__("$q8-aBtFHles");
+
+OBS_WEAK int scePadResetLightBar_alt(int handle) __asm__("$XF9HL9YDxw4");
+OBS_WEAK int scePadSetTriggerEffect_alt(int handle,
+                                        const void *param) __asm__("$Q6H9aQcFmNg");
+OBS_WEAK int sceNpUniversalDataSystemNid0996125e66b8a5b3_static(
+    void *, void *, void *, void *, void *, void *) __asm__("$s6W4Zl4Slgk");
+
+OBS_WEAK int sceFontOpenFontSet_static(void *lib, uint32_t set_type, uint32_t weight,
+                                       const void *opt,
+                                       void **font) __asm__("$cKYtVmeSTcw");
+OBS_WEAK int sceFontOpenFontMemory_static(void *lib, const void *data, size_t size,
+                                          void **font) __asm__("$KXUpebrFk1U");
+OBS_WEAK int sceFontCloseFont_static(void *font) __asm__("$vzHs3C8lWJk");
+OBS_WEAK int
+sceFontCreateRendererWithEdition_static(void *lib, void *sel, uint64_t ed,
+                                        void **rend) __asm__("$WaSFJoRWXaI");
+OBS_WEAK int sceFontDestroyRenderer_static(void *rend) __asm__("$exAxkyVLt0s");
+OBS_WEAK int sceFontBindRenderer_static(void *font, void *rend) __asm__("$iHLOKJFR59w");
+OBS_WEAK int sceFontSetScalePixel_static(void *font, float sx,
+                                         float sy) __asm__("$N1EBMeGhf7E");
+OBS_WEAK int sceFontRenderSurfaceInit_static(void *surf, void *buf, uint32_t stride,
+                                             uint32_t format, uint32_t w,
+                                             uint32_t h) __asm__("$gdUCnU0gHdI");
 
 #endif /* OBSCENE_PLATFORM_H */

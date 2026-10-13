@@ -75,7 +75,14 @@ static void (*obs_write_tee)(void *ctx, const char *bytes, size_t len);
 static void *obs_write_tee_ctx;
 
 unsigned long obs_libkernel_base(void) {
-    return obs_libkernel_base_value;
+    if (obs_libkernel_base_value != 0) {
+        return obs_libkernel_base_value;
+    }
+#if OOPS_TARGET_IS_PROSPERO || (defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5))
+    return 0x800000000UL;
+#else
+    return 0;
+#endif
 }
 
 static obs_loader_weak_entry_t s_loader_weak_entries[OBS_LOADER_WEAK_COUNT] = {
@@ -146,6 +153,9 @@ int obs_has_syscall_route(void) {
     if (s_libkernel_syscall_gadget != 0) {
         return 1;
     }
+#if OOPS_TARGET_IS_PROSPERO || (defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5))
+    return 1;
+#endif
     if (obs_get_payload_args() != NULL) {
         return 1;
     }
@@ -153,7 +163,14 @@ int obs_has_syscall_route(void) {
 }
 
 uintptr_t obs_syscall_gadget_address(void) {
-    return (uintptr_t)s_libkernel_syscall_gadget;
+    if (s_libkernel_syscall_gadget != 0) {
+        return (uintptr_t)s_libkernel_syscall_gadget;
+    }
+#if OOPS_TARGET_IS_PROSPERO || (defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5))
+    return (uintptr_t)(0x800000000ULL + 0x4eaULL);
+#else
+    return 0;
+#endif
 }
 
 long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
@@ -162,6 +179,12 @@ long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5,
     register long r10_arg __asm__("r10") = a4;
     register long r8_arg __asm__("r8") = a5;
     register long r9_arg __asm__("r9") = a6;
+
+    if (s_libkernel_syscall_gadget == 0) {
+#if OOPS_TARGET_IS_PROSPERO || (defined(OBSCENE_GEN) && (OBSCENE_GEN >= 5))
+        s_libkernel_syscall_gadget = (long)(0x800000000ULL + 0x4eaULL);
+#endif
+    }
 
     /* clang-format off */
     if (s_libkernel_syscall_gadget != 0) {
@@ -1012,6 +1035,31 @@ static int obs_ctx_contains(const char *hay, const char *needle) {
     return 0;
 }
 
+struct obs_find_mod_ctx {
+    const char *pattern;
+    unsigned long base;
+};
+
+static int obs_find_mod_cb(const char *name, unsigned long base, void *user) {
+    struct obs_find_mod_ctx *ctx = (struct obs_find_mod_ctx *)user;
+    if (name != NULL && ctx->pattern != NULL) {
+        if (obs_ctx_contains(name, ctx->pattern)) {
+            ctx->base = base;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+uintptr_t obs_find_loaded_module_base(const char *pattern) {
+    struct obs_find_mod_ctx ctx;
+    ctx.pattern = pattern;
+    ctx.base = 0;
+    const char *reason = NULL;
+    obs_linkmap_walk(obs_find_mod_cb, &ctx, &reason);
+    return (uintptr_t)ctx.base;
+}
+
 struct obs_ctx_gpu {
     unsigned int walked;
     int agc;
@@ -1299,7 +1347,9 @@ static void obs_relocate_payload_got(void) {
 }
 
 void obs_bind_dynamic_symbols(void) {
+    obs_boot_note("obscene: relocating payload got\n");
     obs_relocate_payload_got();
+    obs_boot_note("obscene: binding section symbols\n");
     for (unsigned int s = 0; s < obs_section_count; s++) {
         const obs_section *section = obs_sections[s];
         if (section == NULL)
@@ -1318,6 +1368,7 @@ void obs_bind_dynamic_symbols(void) {
             }
         }
     }
+    obs_boot_note("obscene: symbols bound\n");
 }
 
 #if !defined(OBSCENE_TARGET_MODULE)
@@ -1425,3 +1476,31 @@ sce_ssize_t sceKernelGetdents(int fd, char *buf, int nbytes) {
 }
 #endif /* !defined(OBSCENE_TARGET_MODULE) */
 #endif
+
+int *obs_get_errno_location(void) {
+#if !defined(OBSCENE_HOST_BUILD)
+    int k_mod = obs_module_open("libkernel");
+    if (k_mod >= 0) {
+        int *(*fn_err)(void) =
+            (int *(*)(void))(uintptr_t)obs_module_symbol(k_mod, "__error");
+        if (fn_err && obs_address_is_callable((const void *)fn_err)) {
+            return fn_err();
+        }
+    }
+    const void *sym = obs_module_symbol(OBS_HANDLE_SELF, "__error");
+    if (sym && obs_address_is_callable(sym)) {
+        return ((int *(*)(void))sym)();
+    }
+#endif
+    return NULL;
+}
+
+static void *s_created_font_lib = NULL;
+
+void *obs_get_created_font_library(void) {
+    return s_created_font_lib;
+}
+
+void obs_set_created_font_library(void *lib) {
+    s_created_font_lib = lib;
+}

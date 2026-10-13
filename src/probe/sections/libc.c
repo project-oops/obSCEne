@@ -23,6 +23,7 @@
 #include "obscene/report.h"
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
+#include "oops/freestd.h"
 
 /*
  * Declared here rather than in platform.h because these names are in the mined corpus,
@@ -34,6 +35,16 @@ OBS_WEAK const void *_Getptoupper(void);
 OBS_WEAK const void *_Getwctype(void);
 OBS_WEAK const void *_Getwctolower(void);
 OBS_WEAK const void *_Getwctoupper(void);
+OBS_WEAK const void *sceKernelGetProcParam(void) __asm__("$959qrazPIrg");
+OBS_WEAK const void *
+sceKernelGetSanitizerMallocReplaceExternal(void) __asm__("$py6L8jiVAN8");
+OBS_WEAK const void *
+sceKernelGetSanitizerNewReplaceExternal(void) __asm__("$bnZxYgAFeA0");
+OBS_WEAK int _sceKernelRtldSetApplicationHeapAPI(const void *) __asm__("$p5EcQeEeJAE");
+OBS_WEAK int malloc_stats_fast(void *) __asm__("$KuOuD58hqn4");
+OBS_WEAK int sceLibcHeapGetTraceInfo(void *) __asm__("$NWtTN10cJzE");
+
+const void *obs_get_proc_param_addr(void);
 
 /* The x86-64 ABI requires allocations to suit any scalar type. */
 #define OBS_MALLOC_ALIGN 16
@@ -1368,7 +1379,380 @@ static obs_result check_reallocalign_and_usable_size(void) {
     return obs_pass();
 }
 
+static volatile uint32_t s_heap_dummy_calls_a[8];
+static void dummy_heap_fn_a0(void) {
+    s_heap_dummy_calls_a[0]++;
+}
+static void dummy_heap_fn_a1(void) {
+    s_heap_dummy_calls_a[1]++;
+}
+static void dummy_heap_fn_a2(void) {
+    s_heap_dummy_calls_a[2]++;
+}
+static void dummy_heap_fn_a3(void) {
+    s_heap_dummy_calls_a[3]++;
+}
+static void dummy_heap_fn_a4(void) {
+    s_heap_dummy_calls_a[4]++;
+}
+static void dummy_heap_fn_a5(void) {
+    s_heap_dummy_calls_a[5]++;
+}
+static void dummy_heap_fn_a6(void) {
+    s_heap_dummy_calls_a[6]++;
+}
+static void dummy_heap_fn_a7(void) {
+    s_heap_dummy_calls_a[7]++;
+}
+
+static volatile uint32_t s_heap_dummy_calls_b[8];
+static void dummy_heap_fn_b0(void) {
+    s_heap_dummy_calls_b[0]++;
+}
+static void dummy_heap_fn_b1(void) {
+    s_heap_dummy_calls_b[1]++;
+}
+static void dummy_heap_fn_b2(void) {
+    s_heap_dummy_calls_b[2]++;
+}
+static void dummy_heap_fn_b3(void) {
+    s_heap_dummy_calls_b[3]++;
+}
+static void dummy_heap_fn_b4(void) {
+    s_heap_dummy_calls_b[4]++;
+}
+static void dummy_heap_fn_b5(void) {
+    s_heap_dummy_calls_b[5]++;
+}
+static void dummy_heap_fn_b6(void) {
+    s_heap_dummy_calls_b[6]++;
+}
+static void dummy_heap_fn_b7(void) {
+    s_heap_dummy_calls_b[7]++;
+}
+
+#if defined(__x86_64__)
+static uint64_t obs_call_with_rax(const void *fn, void *arg, uint64_t init_rax) {
+    uint64_t ret_rax;
+    __asm__ volatile("movq %2, %%rax\n\t"
+                     "movq %3, %%rdi\n\t"
+                     "callq *%1\n\t"
+                     "movq %%rax, %0\n\t"
+                     : "=r"(ret_rax)
+                     : "r"(fn), "r"(init_rax), "r"(arg)
+                     : "rax", "rdi", "rsi", "rdx", "rcx", "r8", "r9", "r10", "r11",
+                       "memory");
+    return ret_rax;
+}
+#else
+static uint64_t obs_call_with_rax(const void *fn, void *arg, uint64_t init_rax) {
+    (void)init_rax;
+    return (uint64_t)((int (*)(void *))fn)(arg);
+}
+#endif
+
+static obs_result check_retail_start_libkernel(void) {
+    const char *id = "035-libc/retail-start-libkernel";
+    obs_jmp_buf guard;
+
+    /* (1) sceKernelGetProcParam */
+    const void *fn_proc_param =
+        census_resolve_symbol("libkernel", "$959qrazPIrg", "sceKernelGetProcParam",
+                              (const void *)&sceKernelGetProcParam, NULL);
+    obs_report_measure(id, "proc-param", "resolved", (uint64_t)(fn_proc_param != NULL),
+                       "bool");
+    if (fn_proc_param && obs_address_is_callable(fn_proc_param)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        const void *pp = NULL;
+        if (sig == 0) {
+            pp = ((const void *(*)(void))fn_proc_param)();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "proc-param", "call-fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "proc-param", "ptr", (uint64_t)(uintptr_t)pp, "addr");
+
+        const void *sym_pp = obs_get_proc_param_addr();
+        obs_report_measure(id, "proc-param", "symbol-addr", (uint64_t)(uintptr_t)sym_pp,
+                           "addr");
+
+        /* PT_SCE_PROCPARAM is located at 0x37a488 in native_eboot.ld */
+        uint64_t pt_procparam_vaddr = 0x37a488u;
+        uint64_t load_base = 0;
+        if (sym_pp != NULL && (uintptr_t)sym_pp >= pt_procparam_vaddr) {
+            load_base = (uint64_t)((uintptr_t)sym_pp - pt_procparam_vaddr);
+        }
+        obs_report_measure(id, "proc-param", "load-base", load_base, "addr");
+        obs_report_measure(id, "proc-param", "pt-procparam-vaddr", pt_procparam_vaddr,
+                           "addr");
+        obs_report_measure(id, "proc-param", "pt-procparam-loaded",
+                           (uint64_t)(uintptr_t)sym_pp, "addr");
+
+        if (pp != NULL) {
+            uint8_t pp_bytes[0x60];
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                memcpy(pp_bytes, pp, sizeof(pp_bytes));
+                obs_fault_unregister();
+                obs_report_bytes(id, "proc-param", "bytes-60h", 0, pp_bytes,
+                                 sizeof(pp_bytes));
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "proc-param", "read-fault", (uint64_t)sig,
+                                   "signal");
+            }
+        }
+    }
+
+    /* (2) sceKernelGetSanitizerMallocReplaceExternal / NewReplaceExternal */
+    const void *fn_san_mal = census_resolve_symbol(
+        "libkernel", "$py6L8jiVAN8", "sceKernelGetSanitizerMallocReplaceExternal",
+        (const void *)&sceKernelGetSanitizerMallocReplaceExternal, NULL);
+    const void *fn_san_new = census_resolve_symbol(
+        "libkernel", "$bnZxYgAFeA0", "sceKernelGetSanitizerNewReplaceExternal",
+        (const void *)&sceKernelGetSanitizerNewReplaceExternal, NULL);
+    obs_report_measure(id, "sanitizer-malloc", "resolved",
+                       (uint64_t)(fn_san_mal != NULL), "bool");
+    obs_report_measure(id, "sanitizer-new", "resolved", (uint64_t)(fn_san_new != NULL),
+                       "bool");
+    if (fn_san_mal && obs_address_is_callable(fn_san_mal)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        const void *p_mal = NULL;
+        if (sig == 0) {
+            p_mal = ((const void *(*)(void))fn_san_mal)();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "sanitizer-malloc", "ptr", (uint64_t)(uintptr_t)p_mal,
+                           "addr");
+        if (p_mal != NULL) {
+            uint8_t mal_buf[0xc0];
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                memcpy(mal_buf, p_mal, sizeof(mal_buf));
+                obs_fault_unregister();
+                obs_report_bytes(id, "sanitizer-malloc", "bytes-c0h", 0, mal_buf,
+                                 sizeof(mal_buf));
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+    if (fn_san_new && obs_address_is_callable(fn_san_new)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        const void *p_new = NULL;
+        if (sig == 0) {
+            p_new = ((const void *(*)(void))fn_san_new)();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "sanitizer-new", "ptr", (uint64_t)(uintptr_t)p_new,
+                           "addr");
+        if (p_new != NULL) {
+            uint8_t new_buf[0xc0];
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                memcpy(new_buf, p_new, sizeof(new_buf));
+                obs_fault_unregister();
+                obs_report_bytes(id, "sanitizer-new", "bytes-c0h", 0, new_buf,
+                                 sizeof(new_buf));
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    /* (3) REQ-20261009T1610Z-sp02: _sceKernelRtldSetApplicationHeapAPI */
+    const void *fn_set_heap = census_resolve_symbol(
+        "libkernel", "$p5EcQeEeJAE", "_sceKernelRtldSetApplicationHeapAPI",
+        (const void *)&_sceKernelRtldSetApplicationHeapAPI, NULL);
+    obs_report_measure(id, "set-app-heap-api", "resolved",
+                       (uint64_t)(fn_set_heap != NULL), "bool");
+    /* (3.1) Report how it resolved: static import vs dlsym */
+    obs_report_measure(id, "set-app-heap-api", "resolved-by-link-import",
+                       (uint64_t)(obs_address_is_callable(
+                           (const void *)&_sceKernelRtldSetApplicationHeapAPI)),
+                       "bool");
+    void *dlsym_ptr_name = NULL;
+    int dlsym_name_rc = -1;
+    void *dlsym_ptr_nid = NULL;
+    int dlsym_nid_rc = -1;
+    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        dlsym_name_rc =
+            sceKernelDlsym(1, "_sceKernelRtldSetApplicationHeapAPI", &dlsym_ptr_name);
+        dlsym_nid_rc = sceKernelDlsym(1, "p5EcQeEeJAE", &dlsym_ptr_nid);
+    }
+    obs_report_measure(id, "set-app-heap-api", "dlsym-handle1-name-rc",
+                       (uint64_t)(uint32_t)dlsym_name_rc, "code");
+    obs_report_measure(id, "set-app-heap-api", "dlsym-handle1-nid-rc",
+                       (uint64_t)(uint32_t)dlsym_nid_rc, "code");
+
+    if (fn_set_heap && obs_address_is_callable(fn_set_heap)) {
+        /* (3.2) Two calls with different tables, rax set to 0x1111 then 0x2222 */
+        void *table_a[8] = {(void *)&dummy_heap_fn_a0, (void *)&dummy_heap_fn_a1,
+                            (void *)&dummy_heap_fn_a2, (void *)&dummy_heap_fn_a3,
+                            (void *)&dummy_heap_fn_a4, (void *)&dummy_heap_fn_a5,
+                            (void *)&dummy_heap_fn_a6, (void *)&dummy_heap_fn_a7};
+        void *table_b[8] = {(void *)&dummy_heap_fn_b0, (void *)&dummy_heap_fn_b1,
+                            (void *)&dummy_heap_fn_b2, (void *)&dummy_heap_fn_b3,
+                            (void *)&dummy_heap_fn_b4, (void *)&dummy_heap_fn_b5,
+                            (void *)&dummy_heap_fn_b6, (void *)&dummy_heap_fn_b7};
+
+        int sig1 = OBS_FAULT_ARM(&guard);
+        uint64_t rax_after1 = 0;
+        if (sig1 == 0) {
+            rax_after1 = obs_call_with_rax(fn_set_heap, table_a, 0x1111ULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "set-app-heap-api", "call1-fault", (uint64_t)sig1,
+                               "signal");
+        }
+        obs_report_measure(id, "set-app-heap-api", "call1-rax-before", 0x1111ULL,
+                           "hex");
+        obs_report_measure(id, "set-app-heap-api", "call1-rax-after", rax_after1,
+                           "hex");
+        obs_report_measure(id, "set-app-heap-api", "rc", (uint64_t)(uint32_t)rax_after1,
+                           "code");
+
+        int sig2 = OBS_FAULT_ARM(&guard);
+        uint64_t rax_after2 = 0;
+        if (sig2 == 0) {
+            rax_after2 = obs_call_with_rax(fn_set_heap, table_b, 0x2222ULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "set-app-heap-api", "call2-fault", (uint64_t)sig2,
+                               "signal");
+        }
+        obs_report_measure(id, "set-app-heap-api", "call2-rax-before", 0x2222ULL,
+                           "hex");
+        obs_report_measure(id, "set-app-heap-api", "call2-rax-after", rax_after2,
+                           "hex");
+
+        /* (3.3) malloc(0x40) after call: pointer and whether dummy table entry was
+         * called */
+        for (int i = 0; i < 8; i++) {
+            s_heap_dummy_calls_b[i] = 0;
+        }
+        void *p_test = malloc(0x40);
+        obs_report_measure(id, "post-heap-api-malloc", "ptr",
+                           (uint64_t)(uintptr_t)p_test, "hex");
+        uint32_t total_dummy_calls = 0;
+        for (int i = 0; i < 8; i++) {
+            total_dummy_calls += s_heap_dummy_calls_b[i];
+            char key_calls[32];
+            oops_snprintf(key_calls, sizeof(key_calls), "dummy-fn-%d-calls", i);
+            obs_report_measure(id, "post-heap-api-malloc", key_calls,
+                               (uint64_t)s_heap_dummy_calls_b[i], "count");
+        }
+        obs_report_measure(id, "post-heap-api-malloc", "total-dummy-calls",
+                           (uint64_t)total_dummy_calls, "count");
+        if (p_test) {
+            free(p_test);
+        }
+    }
+
+    /* (4) malloc_stats_fast */
+    const void *fn_msf =
+        census_resolve_symbol("libSceLibcInternal", "$KuOuD58hqn4", "malloc_stats_fast",
+                              (const void *)&malloc_stats_fast, NULL);
+    obs_report_measure(id, "malloc-stats-fast", "resolved", (uint64_t)(fn_msf != NULL),
+                       "bool");
+    if (fn_msf && obs_address_is_callable(fn_msf)) {
+        uint8_t msf_out[0x40];
+        memset(msf_out, 0xcc, sizeof(msf_out));
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc_msf = -1;
+        if (sig == 0) {
+            rc_msf = ((int (*)(void *))fn_msf)(msf_out);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "malloc-stats-fast", "fault", (uint64_t)sig,
+                               "signal");
+        }
+        obs_report_measure(id, "malloc-stats-fast", "rc", (uint64_t)(uint32_t)rc_msf,
+                           "code");
+        obs_report_bytes(id, "malloc-stats-fast", "bytes-40h", 0, msf_out,
+                         sizeof(msf_out));
+    }
+
+    /* (5) sceLibcHeapGetTraceInfo */
+    const void *fn_trace = census_resolve_symbol(
+        "libSceLibcInternalExt", "$NWtTN10cJzE", "sceLibcHeapGetTraceInfo",
+        (const void *)&sceLibcHeapGetTraceInfo, NULL);
+    if (!fn_trace) {
+        fn_trace = census_resolve_symbol("libSceLibcInternal", "$NWtTN10cJzE",
+                                         "sceLibcHeapGetTraceInfo",
+                                         (const void *)&sceLibcHeapGetTraceInfo, NULL);
+    }
+    obs_report_measure(id, "heap-get-trace-info", "resolved",
+                       (uint64_t)(fn_trace != NULL), "bool");
+    if (fn_trace && obs_address_is_callable(fn_trace)) {
+        uint8_t trace_info[32];
+        memset(trace_info, 0xcc, sizeof(trace_info));
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc_trace = -1;
+        if (sig == 0) {
+            rc_trace = ((int (*)(void *))fn_trace)(trace_info);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "heap-get-trace-info", "fault", (uint64_t)sig,
+                               "signal");
+        }
+        obs_report_measure(id, "heap-get-trace-info", "rc",
+                           (uint64_t)(uint32_t)rc_trace, "code");
+        obs_report_bytes(id, "heap-get-trace-info", "bytes-32", 0, trace_info,
+                         sizeof(trace_info));
+
+        const void *p10 = *(const void **)(trace_info + 0x10);
+        const void *p18 = *(const void **)(trace_info + 0x18);
+        obs_report_measure(id, "heap-get-trace-info", "ptr-10",
+                           (uint64_t)(uintptr_t)p10, "addr");
+        obs_report_measure(id, "heap-get-trace-info", "ptr-18",
+                           (uint64_t)(uintptr_t)p18, "addr");
+        if (p10 != NULL) {
+            uint8_t at10[16];
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                memcpy(at10, p10, sizeof(at10));
+                obs_fault_unregister();
+                obs_report_bytes(id, "heap-get-trace-info", "at-ptr-10", 0, at10,
+                                 sizeof(at10));
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "heap-get-trace-info", "at-ptr-10-fault",
+                                   (uint64_t)sig, "signal");
+            }
+        }
+        if (p18 != NULL) {
+            uint8_t at18[16];
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                memcpy(at18, p18, sizeof(at18));
+                obs_fault_unregister();
+                obs_report_bytes(id, "heap-get-trace-info", "at-ptr-18", 0, at18,
+                                 sizeof(at18));
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "heap-get-trace-info", "at-ptr-18-fault",
+                                   (uint64_t)sig, "signal");
+            }
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check libc_checks[] = {
+    {"035-libc/retail-start-libkernel", "libkernel", "sceKernelGetProcParam",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_retail_start_libkernel,
+     OBS_FROM_ASSUMED},
     {"035-libc/strlen", "libSceLibcInternal", "strlen", OBS_CAP_NONE, OBS_CAP_LIBC,
      (const void *)&strlen, check_strlen, OBS_FROM_SPEC},
     {"035-libc/strcmp", "libSceLibcInternal", "strcmp", OBS_CAP_NONE, OBS_CAP_NONE,

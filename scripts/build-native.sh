@@ -89,6 +89,20 @@ selfish --input "$elf_abs" \
     "${deeplink_arg[@]}" \
     --content-id "$CONTENT_ID"
 
+if [ -f "$out/$TITLE_ID/sce_sys/param.json" ]; then
+    python3 -c "
+import json, os
+path = '$out/$TITLE_ID/sce_sys/param.json'
+with open(path, 'r') as f:
+    d = json.load(f)
+flex = int(os.environ.get('FLEXIBLE_MEMORY_SIZE', '343932928'))
+d['kernel'] = {'flexibleMemorySize': flex}
+d['downloadDataSize'] = 0
+with open(path, 'w') as f:
+    json.dump(d, f, indent=2)
+"
+fi
+
 if [ -f "$BUILD/eboot.bin" ]; then
     cp "$BUILD/eboot.bin" "$out/$TITLE_ID/eboot.bin"
 fi

@@ -36,6 +36,8 @@
 #ifndef OBSCENE_FAULT_H
 #define OBSCENE_FAULT_H
 
+#include <stdint.h>
+
 /* A landing pad. Sized well past a FreeBSD or a host sigjmp_buf (~200 bytes) so the
  * same byte buffer holds either without this header knowing which, and 16-aligned
  * because the saved register/FPU state a sigjmp_buf holds is accessed at that
@@ -65,6 +67,9 @@ void obs_fault_register(obs_jmp_buf *buf);
 /* Clear the calling thread's landing pad. Call on both the normal and the faulted path.
  */
 void obs_fault_unregister(void);
+
+/* The address recorded at the last signal, or 0. */
+uintptr_t obs_fault_last_address(void);
 
 #if defined(OBSCENE_HOST_BUILD)
 #include <setjmp.h>

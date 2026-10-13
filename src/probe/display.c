@@ -263,6 +263,15 @@ void obs_display_close(void) {
     obs_state = OBS_DISPLAY_UNTRIED;
 }
 
+int obs_display_is_ready(void) {
+    return obs_state == OBS_DISPLAY_READY;
+}
+
+obs_display_state obs_display_reopen(void) {
+    obs_display_close();
+    return obs_display_open();
+}
+
 static obs_display_state obs_give_up(obs_display_state state, const char *why) {
     obs_release_output();
     obs_state = state;
@@ -545,21 +554,27 @@ obs_display_state obs_display_open(void) {
     }
 
     sce_off_t physical = 0;
-    int rc = sceKernelAllocateDirectMemory(0, (sce_off_t)sceKernelGetDirectMemorySize(),
+    void *mapped = 0;
+    int rc = 0;
+    if (obs_fb_base != 0 && obs_fb_physical != 0) {
+        physical = obs_fb_physical;
+        mapped = (void *)obs_fb_base;
+    } else {
+        rc = sceKernelAllocateDirectMemory(0, (sce_off_t)sceKernelGetDirectMemorySize(),
                                            OBS_FB_BYTES * OBS_FB_COUNT, OBS_FB_ALIGN,
                                            OBS_DISPLAY_MEM, &physical);
-    if (rc != 0) {
-        return obs_give_up_code(OBS_DISPLAY_FAILED,
-                                "no direct memory for a framebuffer", rc);
-    }
-    obs_fb_physical = physical;
+        if (rc != 0) {
+            return obs_give_up_code(OBS_DISPLAY_FAILED,
+                                    "no direct memory for a framebuffer", rc);
+        }
+        obs_fb_physical = physical;
 
-    void *mapped = 0;
-    rc = sceKernelMapDirectMemory(&mapped, OBS_FB_BYTES * OBS_FB_COUNT, OBS_PROT_RW, 0,
-                                  physical, OBS_FB_ALIGN);
-    if (rc != 0 || mapped == 0) {
-        return obs_give_up_code(OBS_DISPLAY_FAILED, "the framebuffer would not map",
-                                rc);
+        rc = sceKernelMapDirectMemory(&mapped, OBS_FB_BYTES * OBS_FB_COUNT, OBS_PROT_RW,
+                                      0, physical, OBS_FB_ALIGN);
+        if (rc != 0 || mapped == 0) {
+            return obs_give_up_code(OBS_DISPLAY_FAILED, "the framebuffer would not map",
+                                    rc);
+        }
     }
     obs_fb_base = (uint32_t *)mapped;
     obs_fb_index = 0;
@@ -788,6 +803,9 @@ void obs_display_flip(void) {
     if (s_oops_disp) {
         int rc = oops_display_flip(s_oops_disp);
         if (rc != 0) {
+            if (obs_display_reopen() == OBS_DISPLAY_READY) {
+                return;
+            }
             (void)obs_give_up(OBS_DISPLAY_FAILED,
                               "a flip was refused; the screen is frozen");
             return;
@@ -819,14 +837,9 @@ void obs_display_flip(void) {
     int rc = sceVideoOutSubmitFlip(obs_video_handle, (int)shown, 1, 0);
     obs_wait_for_flip(before);
     if (rc != 0) {
-        /* Stop, and stay stopped.
-         *
-         * A flip that is refused usually means the registration is gone, and repeating
-         * it is not harmless: one emulator answered the second refused flip by faulting
-         * inside its own presenter thread. Refusing to keep asking turns a lost screen
-         * into a lost screen, rather than into a lost run.
-         *
-         * What is already drawn stays on the display. */
+        if (obs_display_reopen() == OBS_DISPLAY_READY) {
+            return;
+        }
         (void)obs_give_up(OBS_DISPLAY_FAILED,
                           "a flip was refused; the screen is frozen");
         return;

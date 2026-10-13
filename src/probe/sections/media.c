@@ -487,189 +487,453 @@ static obs_result check_video_visual_flip(void) {
     int vo_mod = obs_module_open("libSceVideoOut");
     int k_mod = obs_module_open("libkernel");
     int (*fn_create_eq)(sce_equeue_t *, const char *) =
-        (int (*)(sce_equeue_t *, const char *))obs_module_symbol(
-            k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelCreateEqueue");
-    if (fn_create_eq == NULL) {
-        fn_create_eq = (int (*)(sce_equeue_t *, const char *))obs_module_symbol(
-            OBS_HANDLE_SELF, "sceKernelCreateEqueue");
-    }
-    int (*fn_delete_eq)(sce_equeue_t) = (int (*)(sce_equeue_t))obs_module_symbol(
-        k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelDeleteEqueue");
-    if (fn_delete_eq == NULL) {
-        fn_delete_eq = (int (*)(sce_equeue_t))obs_module_symbol(
-            OBS_HANDLE_SELF, "sceKernelDeleteEqueue");
-    }
+        obs_address_is_callable((const void *)&sceKernelCreateEqueue)
+            ? (int (*)(sce_equeue_t *, const char *))&sceKernelCreateEqueue
+            : (int (*)(sce_equeue_t *, const char *))obs_module_symbol(
+                  k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelCreateEqueue");
+    int (*fn_delete_eq)(sce_equeue_t) =
+        obs_address_is_callable((const void *)&sceKernelDeleteEqueue)
+            ? (int (*)(sce_equeue_t))&sceKernelDeleteEqueue
+            : (int (*)(sce_equeue_t))obs_module_symbol(
+                  k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelDeleteEqueue");
     int (*fn_wait_eq)(sce_equeue_t, void *, int, int *, void *) =
-        (int (*)(sce_equeue_t, void *, int, int *, void *))obs_module_symbol(
-            k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelWaitEqueue");
-    if (fn_wait_eq == NULL) {
-        fn_wait_eq =
-            (int (*)(sce_equeue_t, void *, int, int *, void *))obs_module_symbol(
-                OBS_HANDLE_SELF, "sceKernelWaitEqueue");
+        obs_address_is_callable((const void *)&sceKernelWaitEqueue)
+            ? (int (*)(sce_equeue_t, void *, int, int *, void *))&sceKernelWaitEqueue
+            : (int (*)(sce_equeue_t, void *, int, int *, void *))obs_module_symbol(
+                  k_mod > 0 ? k_mod : OBS_HANDLE_SELF, "sceKernelWaitEqueue");
+
+    int is_link_add_flip = 0;
+    int (*fn_add_flip_ev)(sce_equeue_t, int, void *) = NULL;
+    if (obs_address_is_callable((const void *)&sceVideoOutAddFlipEvent_static)) {
+        fn_add_flip_ev =
+            (int (*)(sce_equeue_t, int, void *))&sceVideoOutAddFlipEvent_static;
+        is_link_add_flip = 1;
+    } else if (obs_address_is_callable((const void *)&sceVideoOutAddFlipEvent_alt)) {
+        fn_add_flip_ev =
+            (int (*)(sce_equeue_t, int, void *))&sceVideoOutAddFlipEvent_alt;
+        is_link_add_flip = 1;
+    } else if (vo_mod > 0) {
+        const void *sym = obs_module_symbol(vo_mod, "sceVideoOutAddFlipEvent");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$HXzjK9yI30k");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$Sd+I3CvjfB0");
+        if (sym && obs_address_is_callable(sym)) {
+            fn_add_flip_ev = (int (*)(sce_equeue_t, int, void *))sym;
+        }
     }
-    int (*fn_add_flip_ev)(sce_equeue_t, int, void *) =
-        (int (*)(sce_equeue_t, int, void *))obs_module_symbol(
-            vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutAddFlipEvent");
-    if (fn_add_flip_ev == NULL) {
-        fn_add_flip_ev = (int (*)(sce_equeue_t, int, void *))obs_module_symbol(
-            OBS_HANDLE_SELF, "sceVideoOutAddFlipEvent");
+
+    int is_link_del_flip = 0;
+    int (*fn_del_flip_ev)(sce_equeue_t, int) = NULL;
+    if (obs_address_is_callable((const void *)&sceVideoOutDeleteFlipEvent_static)) {
+        fn_del_flip_ev = (int (*)(sce_equeue_t, int))&sceVideoOutDeleteFlipEvent_static;
+        is_link_del_flip = 1;
+    } else if (obs_address_is_callable((const void *)&sceVideoOutDeleteFlipEvent_alt)) {
+        fn_del_flip_ev = (int (*)(sce_equeue_t, int))&sceVideoOutDeleteFlipEvent_alt;
+        is_link_del_flip = 1;
+    } else if (vo_mod > 0) {
+        const void *sym = obs_module_symbol(vo_mod, "sceVideoOutDeleteFlipEvent");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$-Ozn0F1AFRg");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$GBVAXdDn7Pw");
+        if (sym && obs_address_is_callable(sym)) {
+            fn_del_flip_ev = (int (*)(sce_equeue_t, int))sym;
+        }
     }
-    int (*fn_del_flip_ev)(sce_equeue_t, int) =
-        (int (*)(sce_equeue_t, int))obs_module_symbol(
-            vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutDeleteFlipEvent");
-    if (fn_del_flip_ev == NULL) {
-        fn_del_flip_ev = (int (*)(sce_equeue_t, int))obs_module_symbol(
-            OBS_HANDLE_SELF, "sceVideoOutDeleteFlipEvent");
+
+    typedef int (*fn_get_ev_id_t)(const void *);
+    typedef int (*fn_get_ev_data_t)(const void *, void *);
+    typedef int (*fn_add_vblank_ev_t)(uint64_t, int, void *);
+    typedef int (*fn_del_vblank_ev_t)(uint64_t, int);
+
+    fn_get_ev_id_t fn_get_ev_id = NULL;
+    int is_link_ev_id = 0;
+    if (obs_address_is_callable((const void *)&sceVideoOutGetEventId_static)) {
+        fn_get_ev_id = (fn_get_ev_id_t)&sceVideoOutGetEventId_static;
+        is_link_ev_id = 1;
+    } else if (vo_mod > 0) {
+        const void *sym = obs_module_symbol(vo_mod, "sceVideoOutGetEventId");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$U2JJtSqNKZI");
+        if (sym && obs_address_is_callable(sym)) {
+            fn_get_ev_id = (fn_get_ev_id_t)sym;
+        }
     }
 
-    if (fn_create_eq != NULL && fn_add_flip_ev != NULL && fn_wait_eq != NULL) {
-        sce_equeue_t eq = 0;
-        int eq_rc = fn_create_eq(&eq, "visual_flip_eq");
-        if (eq_rc == 0 && eq != 0) {
-            (void)fn_add_flip_ev(eq, handle, (void *)0xabcd);
-            int out_events = 0;
-            uint8_t ev_buf[256];
-            for (size_t j = 0; j < sizeof(ev_buf); j++)
-                ev_buf[j] = 0xC7;
+    fn_get_ev_data_t fn_get_ev_data = NULL;
+    int is_link_ev_data = 0;
+    if (obs_address_is_callable((const void *)&sceVideoOutGetEventData_static)) {
+        fn_get_ev_data = (fn_get_ev_data_t)&sceVideoOutGetEventData_static;
+        is_link_ev_data = 1;
+    } else if (vo_mod > 0) {
+        const void *sym = obs_module_symbol(vo_mod, "sceVideoOutGetEventData");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$rWUTcKdkUzQ");
+        if (sym && obs_address_is_callable(sym)) {
+            fn_get_ev_data = (fn_get_ev_data_t)sym;
+        }
+    }
 
-            /* 32-bit timeout = 50000 us */
-            uint32_t to32 = 50000;
-            uint64_t t0 =
-                obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                    ? (uint64_t)sceKernelGetProcessTime()
-                    : 0;
-            int w_rc32 = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to32);
-            uint64_t t1 =
-                obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                    ? (uint64_t)sceKernelGetProcessTime()
-                    : 0;
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
-                               "timeout-32", (uint64_t)(uint32_t)w_rc32, "rc");
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
-                               "elapsed-32", t1 >= t0 ? (t1 - t0) : 0, "us");
+    fn_add_vblank_ev_t fn_add_vblank_ev = NULL;
+    int is_link_add_vb = 0;
+    if (obs_address_is_callable((const void *)&sceVideoOutAddVblankEvent_static)) {
+        fn_add_vblank_ev = (fn_add_vblank_ev_t)&sceVideoOutAddVblankEvent_static;
+        is_link_add_vb = 1;
+    } else if (obs_address_is_callable((const void *)&sceVideoOutAddVblankEvent_alt)) {
+        fn_add_vblank_ev = (fn_add_vblank_ev_t)&sceVideoOutAddVblankEvent_alt;
+        is_link_add_vb = 1;
+    } else if (vo_mod > 0) {
+        const void *sym = obs_module_symbol(vo_mod, "sceVideoOutAddVblankEvent");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$Ek+VR4lcJQI");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$Xru92wHJRmg");
+        if (sym && obs_address_is_callable(sym)) {
+            fn_add_vblank_ev = (fn_add_vblank_ev_t)sym;
+        }
+    }
 
-            /* 64-bit timeout = 50000 us */
-            uint64_t to64 = 50000;
-            t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                     ? (uint64_t)sceKernelGetProcessTime()
-                     : 0;
-            int w_rc64 = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to64);
-            t1 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
-                     ? (uint64_t)sceKernelGetProcessTime()
-                     : 0;
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
-                               "timeout-64", (uint64_t)(uint32_t)w_rc64, "rc");
-            obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue",
-                               "elapsed-64", t1 >= t0 ? (t1 - t0) : 0, "us");
+    fn_del_vblank_ev_t fn_del_vblank_ev = NULL;
+    int is_link_del_vb = 0;
+    if (obs_address_is_callable((const void *)&sceVideoOutDeleteVblankEvent_static)) {
+        fn_del_vblank_ev = (fn_del_vblank_ev_t)&sceVideoOutDeleteVblankEvent_static;
+        is_link_del_vb = 1;
+    } else if (vo_mod > 0) {
+        const void *sym = obs_module_symbol(vo_mod, "sceVideoOutDeleteVblankEvent");
+        if (!sym)
+            sym = obs_module_symbol(vo_mod, "$oNOQn3knW6s");
+        if (sym && obs_address_is_callable(sym)) {
+            fn_del_vblank_ev = (fn_del_vblank_ev_t)sym;
+        }
+    }
 
-            /* REQ-20260926T1927Z-4e20: Dump flip completion kevent */
-            static const int64_t flip_args[3] = {(int64_t)0x123456789aULL, -1LL,
-                                                 (int64_t)0x00007fffffffffffULL};
-            static const char *arm_names[3] = {"flip-arg-normal", "flip-arg-minus1",
-                                               "flip-arg-48bit"};
+    /* Report bound / how or not-possible for all REQ-20261011T1530Z-ve01 symbols */
+    int bound_ev_id =
+        (fn_get_ev_id != NULL && obs_address_is_callable((const void *)fn_get_ev_id));
+    obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventId", "bound",
+                       (uint64_t)bound_ev_id, "bool");
+    if (bound_ev_id) {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventId", "how",
+                           (uint64_t)(is_link_ev_id ? 1 : 2),
+                           is_link_ev_id ? "link" : "dlsym");
+    } else {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventId", "status",
+                           0, "not-possible");
+    }
 
-            int (*fn_get_ev_id)(const void *) =
-                (int (*)(const void *))obs_module_symbol(
-                    vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutGetEventId");
-            int64_t (*fn_get_ev_data)(const void *) =
-                (int64_t (*)(const void *))obs_module_symbol(
-                    vo_mod > 0 ? vo_mod : OBS_HANDLE_SELF, "sceVideoOutGetEventData");
+    int bound_ev_data = (fn_get_ev_data != NULL &&
+                         obs_address_is_callable((const void *)fn_get_ev_data));
+    obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventData", "bound",
+                       (uint64_t)bound_ev_data, "bool");
+    if (bound_ev_data) {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventData", "how",
+                           (uint64_t)(is_link_ev_data ? 1 : 2),
+                           is_link_ev_data ? "link" : "dlsym");
+    } else {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventData", "status",
+                           0, "not-possible");
+    }
 
-            obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventId",
-                               "resolved", fn_get_ev_id != NULL ? 1 : 0, "bool");
-            obs_report_measure("080-video/visual-flip", "sceVideoOutGetEventData",
-                               "resolved", fn_get_ev_data != NULL ? 1 : 0, "bool");
+    int bound_add_vb = (fn_add_vblank_ev != NULL &&
+                        obs_address_is_callable((const void *)fn_add_vblank_ev));
+    obs_report_measure("080-video/visual-flip", "sceVideoOutAddVblankEvent", "bound",
+                       (uint64_t)bound_add_vb, "bool");
+    if (bound_add_vb) {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutAddVblankEvent", "how",
+                           (uint64_t)(is_link_add_vb ? 1 : 2),
+                           is_link_add_vb ? "link" : "dlsym");
+    } else {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutAddVblankEvent",
+                           "status", 0, "not-possible");
+    }
 
-            uint8_t before_c7[256];
-            memset(before_c7, 0xC7, sizeof(before_c7));
+    int bound_del_vb = (fn_del_vblank_ev != NULL &&
+                        obs_address_is_callable((const void *)fn_del_vblank_ev));
+    obs_report_measure("080-video/visual-flip", "sceVideoOutDeleteVblankEvent", "bound",
+                       (uint64_t)bound_del_vb, "bool");
+    if (bound_del_vb) {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutDeleteVblankEvent",
+                           "how", (uint64_t)(is_link_del_vb ? 1 : 2),
+                           is_link_del_vb ? "link" : "dlsym");
+    } else {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutDeleteVblankEvent",
+                           "status", 0, "not-possible");
+    }
 
-            for (int a = 0; a < 3; a++) {
-                int64_t f_arg = flip_args[a];
-                const char *arm = arm_names[a];
-                memset(ev_buf, 0xC7, sizeof(ev_buf));
-                out_events = 0;
-                int flip_rc = sceVideoOutSubmitFlip(handle, a % 2, 1, f_arg);
-                obs_report_measure("080-video/visual-flip", arm, "flip-rc",
-                                   (uint64_t)(uint32_t)flip_rc, "rc");
+    int bound_add_flip = (fn_add_flip_ev != NULL &&
+                          obs_address_is_callable((const void *)fn_add_flip_ev));
+    obs_report_measure("080-video/visual-flip", "sceVideoOutAddFlipEvent", "bound",
+                       (uint64_t)bound_add_flip, "bool");
+    if (bound_add_flip) {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutAddFlipEvent", "how",
+                           (uint64_t)(is_link_add_flip ? 1 : 2),
+                           is_link_add_flip ? "link" : "dlsym");
+    } else {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutAddFlipEvent", "status",
+                           0, "not-possible");
+    }
 
-                uint64_t to_wait = 200000; /* 200ms wait for flip to complete */
-                int w_rc = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to_wait);
-                obs_report_measure("080-video/visual-flip", arm, "wait-rc",
-                                   (uint64_t)(uint32_t)w_rc, "rc");
-                obs_report_measure("080-video/visual-flip", arm, "out-events",
-                                   (uint64_t)(uint32_t)out_events, "events");
+    int bound_del_flip = (fn_del_flip_ev != NULL &&
+                          obs_address_is_callable((const void *)fn_del_flip_ev));
+    obs_report_measure("080-video/visual-flip", "sceVideoOutDeleteFlipEvent", "bound",
+                       (uint64_t)bound_del_flip, "bool");
+    if (bound_del_flip) {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutDeleteFlipEvent", "how",
+                           (uint64_t)(is_link_del_flip ? 1 : 2),
+                           is_link_del_flip ? "link" : "dlsym");
+    } else {
+        obs_report_measure("080-video/visual-flip", "sceVideoOutDeleteFlipEvent",
+                           "status", 0, "not-possible");
+    }
 
-                if (w_rc == 0 && out_events > 0) {
-                    obs_report_written("080-video/visual-flip", arm, "kevent",
-                                       before_c7, ev_buf, 40);
-                    uint64_t ev_ident = *(const uint64_t *)(ev_buf + 0);
-                    int16_t ev_filter = *(const int16_t *)(ev_buf + 8);
-                    uint16_t ev_flags = *(const uint16_t *)(ev_buf + 10);
-                    uint32_t ev_fflags = *(const uint32_t *)(ev_buf + 12);
-                    int64_t ev_data = *(const int64_t *)(ev_buf + 16);
-                    uint64_t ev_udata = *(const uint64_t *)(ev_buf + 24);
+    uint8_t before_c7[256];
+    memset(before_c7, 0xC7, sizeof(before_c7));
 
-                    obs_report_measure("080-video/visual-flip", arm, "ident", ev_ident,
-                                       "ident");
-                    obs_report_measure("080-video/visual-flip", arm, "filter",
-                                       (uint64_t)(int64_t)ev_filter, "filter");
-                    obs_report_measure("080-video/visual-flip", arm, "flags",
-                                       (uint64_t)ev_flags, "flags");
-                    obs_report_measure("080-video/visual-flip", arm, "fflags",
-                                       (uint64_t)ev_fflags, "fflags");
-                    obs_report_measure("080-video/visual-flip", arm, "data",
-                                       (uint64_t)ev_data, "data");
-                    obs_report_measure("080-video/visual-flip", arm, "udata", ev_udata,
-                                       "udata");
-                    obs_report_measure("080-video/visual-flip", arm, "data-bits-0-15",
-                                       (uint64_t)(ev_data & 0xffff), "bits");
-                    obs_report_measure("080-video/visual-flip", arm, "data-bits-58-63",
-                                       (uint64_t)((ev_data >> 58) & 0x3f), "bits");
+    sce_equeue_t eq = 0;
+    if (fn_create_eq != NULL && fn_wait_eq != NULL) {
+        (void)fn_create_eq(&eq, "visual_flip_eq");
+    }
 
-                    if (fn_get_ev_id != NULL) {
-                        obs_jmp_buf g;
-                        if (OBS_FAULT_ARM(&g) == 0) {
-                            int ev_id = fn_get_ev_id(ev_buf);
-                            obs_fault_unregister();
-                            obs_report_measure("080-video/visual-flip", arm,
-                                               "get-event-id",
-                                               (uint64_t)(uint32_t)ev_id, "id");
-                        } else {
-                            obs_fault_unregister();
-                        }
+    uint8_t ev_buf[256];
+    int out_events = 0;
+    memset(ev_buf, 0xC7, sizeof(ev_buf));
+
+    if (eq != 0 && fn_add_flip_ev != NULL) {
+        (void)fn_add_flip_ev(eq, handle, (void *)0xabcd);
+
+        /* 32-bit timeout = 50000 us */
+        uint32_t to32 = 50000;
+        uint64_t t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                          ? (uint64_t)sceKernelGetProcessTime()
+                          : 0;
+        int w_rc32 = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to32);
+        uint64_t t1 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                          ? (uint64_t)sceKernelGetProcessTime()
+                          : 0;
+        obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "timeout-32",
+                           (uint64_t)(uint32_t)w_rc32, "rc");
+        obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "elapsed-32",
+                           t1 >= t0 ? (t1 - t0) : 0, "us");
+
+        /* 64-bit timeout = 50000 us */
+        uint64_t to64 = 50000;
+        t0 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                 ? (uint64_t)sceKernelGetProcessTime()
+                 : 0;
+        int w_rc64 = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to64);
+        t1 = obs_address_is_callable((const void *)&sceKernelGetProcessTime)
+                 ? (uint64_t)sceKernelGetProcessTime()
+                 : 0;
+        obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "timeout-64",
+                           (uint64_t)(uint32_t)w_rc64, "rc");
+        obs_report_measure("080-video/visual-flip", "sceKernelWaitEqueue", "elapsed-64",
+                           t1 >= t0 ? (t1 - t0) : 0, "us");
+    }
+
+    /* REQ-20260926T1927Z-4e20: Dump flip completion kevent & REQ-20261012T1320Z-fs01 */
+    static const int64_t flip_args[3] = {(int64_t)0x123456789aULL, -1LL,
+                                         (int64_t)0x00007fffffffffffULL};
+    static const char *arm_names[3] = {"flip-arg-normal", "flip-arg-minus1",
+                                       "flip-arg-48bit"};
+
+    for (int a = 0; a < 3; a++) {
+        int64_t f_arg = flip_args[a];
+        const char *arm = arm_names[a];
+        memset(ev_buf, 0xC7, sizeof(ev_buf));
+        out_events = 0;
+        int flip_rc = sceVideoOutSubmitFlip(handle, a % 2, 1, f_arg);
+        obs_report_measure("080-video/visual-flip", arm, "flip-rc",
+                           (uint64_t)(uint32_t)flip_rc, "rc");
+
+        if (eq != 0 && fn_wait_eq != NULL && fn_add_flip_ev != NULL) {
+            uint64_t to_wait = 200000; /* 200ms wait for flip to complete */
+            int w_rc = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to_wait);
+            obs_report_measure("080-video/visual-flip", arm, "wait-rc",
+                               (uint64_t)(uint32_t)w_rc, "rc");
+            obs_report_measure("080-video/visual-flip", arm, "out-events",
+                               (uint64_t)(uint32_t)out_events, "events");
+
+            if (w_rc == 0 && out_events > 0) {
+                obs_report_written("080-video/visual-flip", arm, "kevent", before_c7,
+                                   ev_buf, 40);
+                obs_report_bytes("080-video/visual-flip", arm, "event-bytes-32b", 0,
+                                 ev_buf, 32);
+                uint64_t ev_ident = *(const uint64_t *)(ev_buf + 0);
+                int16_t ev_filter = *(const int16_t *)(ev_buf + 8);
+                uint16_t ev_flags = *(const uint16_t *)(ev_buf + 10);
+                uint32_t ev_fflags = *(const uint32_t *)(ev_buf + 12);
+                int64_t ev_data = *(const int64_t *)(ev_buf + 16);
+                uint64_t ev_udata = *(const uint64_t *)(ev_buf + 24);
+
+                obs_report_measure("080-video/visual-flip", arm, "ident", ev_ident,
+                                   "ident");
+                obs_report_measure("080-video/visual-flip", arm, "filter",
+                                   (uint64_t)(int64_t)ev_filter, "filter");
+                obs_report_measure("080-video/visual-flip", arm, "flags",
+                                   (uint64_t)ev_flags, "flags");
+                obs_report_measure("080-video/visual-flip", arm, "fflags",
+                                   (uint64_t)ev_fflags, "fflags");
+                obs_report_measure("080-video/visual-flip", arm, "data",
+                                   (uint64_t)ev_data, "data");
+                obs_report_measure("080-video/visual-flip", arm, "udata", ev_udata,
+                                   "udata");
+                obs_report_measure("080-video/visual-flip", arm, "data-bits-0-15",
+                                   (uint64_t)(ev_data & 0xffff), "bits");
+                obs_report_measure("080-video/visual-flip", arm, "data-bits-58-63",
+                                   (uint64_t)((ev_data >> 58) & 0x3f), "bits");
+
+                if (bound_ev_id) {
+                    obs_jmp_buf g;
+                    if (OBS_FAULT_ARM(&g) == 0) {
+                        int ev_id = fn_get_ev_id(ev_buf);
+                        obs_fault_unregister();
+                        obs_report_measure("080-video/visual-flip", arm, "get-event-id",
+                                           (uint64_t)(uint32_t)ev_id, "id");
+                    } else {
+                        obs_fault_unregister();
                     }
-                    if (fn_get_ev_data != NULL) {
-                        obs_jmp_buf g;
-                        if (OBS_FAULT_ARM(&g) == 0) {
-                            int64_t ev_data_ret = fn_get_ev_data(ev_buf);
-                            obs_fault_unregister();
-                            obs_report_measure("080-video/visual-flip", arm,
-                                               "get-event-data", (uint64_t)ev_data_ret,
-                                               "data");
-                        } else {
-                            obs_fault_unregister();
-                        }
+                }
+                if (bound_ev_data) {
+                    obs_jmp_buf g;
+                    if (OBS_FAULT_ARM(&g) == 0) {
+                        uint8_t data_buf[64];
+                        memset(data_buf, 0xa5, sizeof(data_buf));
+                        int rc_data = fn_get_ev_data(ev_buf, data_buf);
+                        obs_fault_unregister();
+                        obs_report_measure("080-video/visual-flip", arm,
+                                           "get-event-data-rc",
+                                           (uint64_t)(uint32_t)rc_data, "code");
+                        obs_report_bytes("080-video/visual-flip", arm,
+                                         "get-event-data-after", 0, data_buf,
+                                         sizeof(data_buf));
+                    } else {
+                        obs_fault_unregister();
                     }
                 }
             }
+        } else {
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(50000);
+            }
+        }
 
-            if (fn_del_flip_ev != NULL) {
-                obs_jmp_buf g;
-                if (OBS_FAULT_ARM(&g) == 0) {
-                    fn_del_flip_ev(eq, handle);
-                    obs_fault_unregister();
-                } else {
-                    obs_fault_unregister();
+        /* REQ-20261012T1320Z-fs01: Flip status after flip */
+        if (obs_address_is_callable((const void *)&sceVideoOutGetFlipStatus)) {
+            _Alignas(64) uint8_t stat_buf[256];
+            _Alignas(64) uint8_t before_cc[256];
+            memset(stat_buf, 0xcc, sizeof(stat_buf));
+            memset(before_cc, 0xcc, sizeof(before_cc));
+            int stat_rc = -1;
+            obs_jmp_buf g;
+            if (OBS_FAULT_ARM(&g) == 0) {
+                stat_rc = sceVideoOutGetFlipStatus(handle, stat_buf);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure("080-video/visual-flip", arm, "flip-status-rc",
+                               (uint64_t)(uint32_t)stat_rc, "rc");
+            obs_report_written("080-video/visual-flip", arm, "flip-status-changed",
+                               before_cc, stat_buf, 0x40);
+            obs_report_bytes("080-video/visual-flip", arm, "flip-status-40b", 0,
+                             stat_buf, 0x40);
+        }
+    }
+
+    /* REQ-20261012T1320Z-fs01: Flip status with no flip since last call */
+    if (obs_address_is_callable((const void *)&sceVideoOutGetFlipStatus)) {
+        const char *arm = "flip-status-no-flip";
+        _Alignas(64) uint8_t stat_buf[256];
+        _Alignas(64) uint8_t before_cc[256];
+        memset(stat_buf, 0xcc, sizeof(stat_buf));
+        memset(before_cc, 0xcc, sizeof(before_cc));
+        int stat_rc = -1;
+        obs_jmp_buf g;
+        if (OBS_FAULT_ARM(&g) == 0) {
+            stat_rc = sceVideoOutGetFlipStatus(handle, stat_buf);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure("080-video/visual-flip", arm, "rc",
+                           (uint64_t)(uint32_t)stat_rc, "rc");
+        obs_report_written("080-video/visual-flip", arm, "changed", before_cc, stat_buf,
+                           0x40);
+        obs_report_bytes("080-video/visual-flip", arm, "status-40b", 0, stat_buf, 0x40);
+    }
+
+    /* Vblank event test (REQ-20261011T1530Z-ve01) */
+    if (eq != 0 && fn_add_vblank_ev != NULL) {
+        const char *varm = "vblank-event";
+        int vb_add_rc = fn_add_vblank_ev(eq, handle, (void *)0xbeef);
+        obs_report_measure("080-video/visual-flip", varm, "add-rc",
+                           (uint64_t)(uint32_t)vb_add_rc, "rc");
+        if (vb_add_rc == 0) {
+            memset(ev_buf, 0xC7, sizeof(ev_buf));
+            out_events = 0;
+            uint64_t to_wait_vb = 200000; /* 200ms wait */
+            int w_rc_vb = fn_wait_eq(eq, ev_buf, 1, &out_events, (void *)&to_wait_vb);
+            obs_report_measure("080-video/visual-flip", varm, "wait-rc",
+                               (uint64_t)(uint32_t)w_rc_vb, "rc");
+            obs_report_measure("080-video/visual-flip", varm, "out-events",
+                               (uint64_t)(uint32_t)out_events, "events");
+            if (w_rc_vb == 0 && out_events > 0) {
+                obs_report_bytes("080-video/visual-flip", varm, "event-bytes-32b", 0,
+                                 ev_buf, 32);
+                if (bound_ev_id) {
+                    obs_jmp_buf g;
+                    if (OBS_FAULT_ARM(&g) == 0) {
+                        int ev_id = fn_get_ev_id(ev_buf);
+                        obs_fault_unregister();
+                        obs_report_measure("080-video/visual-flip", varm,
+                                           "get-event-id", (uint64_t)(uint32_t)ev_id,
+                                           "id");
+                    } else {
+                        obs_fault_unregister();
+                    }
+                }
+                if (bound_ev_data) {
+                    obs_jmp_buf g;
+                    if (OBS_FAULT_ARM(&g) == 0) {
+                        uint8_t data_buf[64];
+                        memset(data_buf, 0xa5, sizeof(data_buf));
+                        int rc_data = fn_get_ev_data(ev_buf, data_buf);
+                        obs_fault_unregister();
+                        obs_report_measure("080-video/visual-flip", varm,
+                                           "get-event-data-rc",
+                                           (uint64_t)(uint32_t)rc_data, "code");
+                        obs_report_bytes("080-video/visual-flip", varm,
+                                         "get-event-data-after", 0, data_buf,
+                                         sizeof(data_buf));
+                    } else {
+                        obs_fault_unregister();
+                    }
                 }
             }
-            if (fn_delete_eq != NULL) {
-                obs_jmp_buf g;
-                if (OBS_FAULT_ARM(&g) == 0) {
-                    fn_delete_eq(eq);
-                    obs_fault_unregister();
-                } else {
-                    obs_fault_unregister();
-                }
+            if (fn_del_vblank_ev != NULL) {
+                fn_del_vblank_ev(eq, handle);
+            }
+        }
+    }
+
+    if (eq != 0) {
+        if (fn_del_flip_ev != NULL) {
+            obs_jmp_buf g;
+            if (OBS_FAULT_ARM(&g) == 0) {
+                fn_del_flip_ev(eq, handle);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (fn_delete_eq != NULL) {
+            obs_jmp_buf g;
+            if (OBS_FAULT_ARM(&g) == 0) {
+                fn_delete_eq(eq);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
             }
         }
     }
@@ -1366,17 +1630,71 @@ static obs_result check_audio_sysmodules(void) {
 }
 
 static obs_result check_audio_audioout2_ports(void) {
-    static const char *const syms[] = {
-        "sceAudioOut2Initialize",        "sceAudioOut2PortCreate",
-        "sceAudioOut2PortDestroy",       "sceAudioOut2PortGetState",
-        "sceAudioOut2PortSetAttributes",
+    (void)obs_sysmodule_load_id(0x8000001c);
+    (void)obs_sysmodule_load_id(0x001c);
+    (void)obs_sysmodule_load_id(0x00a8);
+    (void)obs_sysmodule_load_id(0x0096);
+    (void)obs_sysmodule_load_id(0x0095);
+
+    static const struct {
+        const char *name;
+        const char *nid_be;
+        const char *nid_le;
+        const void *static_fn;
+        const void *alt_fn;
+    } syms[] = {
+        {"sceAudioOut2Initialize", "$g2tViFIohHE", "g2tViFIohHE",
+         (const void *)&sceAudioOut2Initialize_static, NULL},
+        {"sceAudioOut2PortCreate", "$JK2wamZPzwM", "A89PZmqwrSQ",
+         (const void *)&sceAudioOut2PortCreate_static,
+         (const void *)&sceAudioOut2PortCreate_alt},
+        {"sceAudioOut2PortDestroy", "$cd+Rtw+D1x8", "H9eDD7eR33E",
+         (const void *)&sceAudioOut2PortDestroy_static,
+         (const void *)&sceAudioOut2PortDestroy_alt},
+        {"sceAudioOut2PortGetState", "$gatEUKG+Ea4", "rhG+oVBEq4E",
+         (const void *)&sceAudioOut2PortGetState_static,
+         (const void *)&sceAudioOut2PortGetState_alt},
+        {"sceAudioOut2PortSetAttributes", "$8XTArSPyWHk", "eVjyI63AdPE",
+         (const void *)&sceAudioOut2PortSetAttributes_static,
+         (const void *)&sceAudioOut2PortSetAttributes_alt},
+        {"sceAudioOut2ContextGetQueueLevel", "$R7d0F1g2qsU", "xao2WBd0t0c",
+         (const void *)&sceAudioOut2ContextGetQueueLevel_static,
+         (const void *)&sceAudioOut2ContextGetQueueLevel_alt},
+        {"sceAudioOut2ContextPush", "$aII9h5nli9U", "1YvlmYc9gmg",
+         (const void *)&sceAudioOut2ContextPush_static,
+         (const void *)&sceAudioOut2ContextPush_alt},
+        {"sceAudioOut2ContextAdvance", "$PE2zHMqLSHs", "e0iLyhyzTTw",
+         (const void *)&sceAudioOut2ContextAdvance_static,
+         (const void *)&sceAudioOut2ContextAdvance_alt},
+        {"sceAudioOut2ContextDestroy", "$on6ZH7Abo10", "XaMbsB+ZfqI",
+         (const void *)&sceAudioOut2ContextDestroy_static,
+         (const void *)&sceAudioOut2ContextDestroy_alt},
     };
 
-    int handle = obs_module_open("libSceAudioOut2");
-    if (handle < 0) {
+    int handle = -1;
+    (void)obs_sysmodule_get_handle_id(0x8000001c, &handle);
+    if (handle <= 1) {
+        (void)obs_sysmodule_get_handle_id(0x001c, &handle);
+    }
+    if (handle <= 1) {
+        (void)obs_sysmodule_get_handle_id(0x00a8, &handle);
+    }
+    if (handle <= 1) {
+        (void)obs_sysmodule_get_handle_id(0x0096, &handle);
+    }
+    if (handle <= 1) {
+        handle = obs_find_module_handle_by_library("libSceAudioOut2");
+    }
+    if (handle <= 1) {
+        handle = obs_find_module_handle_by_library("libSceAudioOut");
+    }
+    if (handle <= 1) {
+        handle = obs_module_open("libSceAudioOut2");
+    }
+    if (handle <= 1) {
         handle = obs_module_open("libSceAudioOut");
     }
-    if (handle < 0) {
+    if (handle <= 1) {
         handle = obs_module_open("libSceAudioOut.sprx");
     }
 
@@ -1388,31 +1706,59 @@ static obs_result check_audio_audioout2_ports(void) {
         }
     }
 
+    int (*fn_dlsym)(int, const char *, void **) =
+        obs_address_is_callable((const void *)&sceKernelDlsym)
+            ? (int (*)(int, const char *, void **))&sceKernelDlsym
+            : NULL;
+
     unsigned int resolved = 0;
     const void *fn_init = NULL;
     const void *fn_destroy = NULL;
 
     for (size_t i = 0; i < OBS_COUNT(syms); i++) {
-        const char *name = syms[i];
+        const char *name = syms[i].name;
+        const char *nid_be = syms[i].nid_be;
+        const char *nid_le = syms[i].nid_le;
         const void *addr = NULL;
-        if (handle >= 0) {
-            addr = obs_module_symbol(handle, name);
+        if (syms[i].static_fn != NULL && obs_address_is_callable(syms[i].static_fn)) {
+            addr = syms[i].static_fn;
+        } else if (syms[i].alt_fn != NULL && obs_address_is_callable(syms[i].alt_fn)) {
+            addr = syms[i].alt_fn;
         }
-        if (addr == NULL) {
-            addr = obs_module_symbol(1, name);
-        }
-        if (addr == NULL) {
-            addr = obs_module_symbol(OBS_HANDLE_SELF, name);
-        }
-        if (addr == NULL && obs_address_is_callable((const void *)&sceKernelDlsym)) {
-            for (size_t m = 0; m < mod_count; m++) {
-                void *d = NULL;
-                if (sceKernelDlsym(mod_handles[m], name, &d) == 0 &&
-                    obs_address_is_callable(d)) {
-                    addr = d;
-                    break;
+        if (addr == NULL && fn_dlsym != NULL) {
+            if (handle > 1) {
+                addr = obs_dlsym_probe_handle(fn_dlsym, handle, nid_be, nid_le, name);
+            }
+            if (addr == NULL) {
+                for (size_t m = 0; m < mod_count; m++) {
+                    if (mod_handles[m] <= 1)
+                        continue;
+                    addr = obs_dlsym_probe_handle(fn_dlsym, mod_handles[m], nid_be,
+                                                  nid_le, name);
+                    if (addr != NULL)
+                        break;
                 }
             }
+            if (addr == NULL) {
+                addr = obs_dlsym_probe_handle(fn_dlsym, 0x2001, nid_be, nid_le, name);
+            }
+            if (addr == NULL) {
+                addr = obs_dlsym_probe_handle(fn_dlsym, 1, nid_be, nid_le, name);
+            }
+        }
+        if (addr == NULL && handle > 1) {
+            addr = obs_module_symbol(handle, nid_be);
+            if (!addr)
+                addr = obs_module_symbol(handle, nid_le);
+            if (!addr)
+                addr = obs_module_symbol(handle, name);
+        }
+        if (addr == NULL) {
+            addr = obs_module_symbol(OBS_HANDLE_SELF, nid_be);
+            if (!addr)
+                addr = obs_module_symbol(OBS_HANDLE_SELF, nid_le);
+            if (!addr)
+                addr = obs_module_symbol(OBS_HANDLE_SELF, name);
         }
 
         obs_report_measure("090-audio/audioout2-ports", name, "vaddr",
@@ -1454,8 +1800,15 @@ static obs_result check_audio_audioout2_ports(void) {
 
     /* REQ-20260928T0730Z-7b14: sceAudioOut2UserDestroy on handle from create and on 0
      */
-    const void *fn_user_destroy =
-        (handle >= 0) ? obs_module_symbol(handle, "sceAudioOut2UserDestroy") : NULL;
+    const void *fn_user_destroy = NULL;
+    if (obs_address_is_callable((const void *)&sceAudioOut2UserDestroy_static)) {
+        fn_user_destroy = (const void *)&sceAudioOut2UserDestroy_static;
+    } else if (obs_address_is_callable((const void *)&sceAudioOut2UserDestroy_alt)) {
+        fn_user_destroy = (const void *)&sceAudioOut2UserDestroy_alt;
+    }
+    if (fn_user_destroy == NULL && handle >= 0) {
+        fn_user_destroy = obs_module_symbol(handle, "sceAudioOut2UserDestroy");
+    }
     if (fn_user_destroy == NULL && handle >= 0) {
         fn_user_destroy = obs_module_symbol(handle, "$6vY70ydXpiE");
     }
@@ -1472,8 +1825,13 @@ static obs_result check_audio_audioout2_ports(void) {
         fn_user_destroy = obs_module_symbol(1, "$6vY70ydXpiE");
     }
 
-    const void *fn_user_create =
-        (handle >= 0) ? obs_module_symbol(handle, "sceAudioOut2UserCreate") : NULL;
+    const void *fn_user_create = NULL;
+    if (obs_address_is_callable((const void *)&sceAudioOut2UserCreate_static)) {
+        fn_user_create = (const void *)&sceAudioOut2UserCreate_static;
+    }
+    if (fn_user_create == NULL && handle >= 0) {
+        fn_user_create = obs_module_symbol(handle, "sceAudioOut2UserCreate");
+    }
     if (fn_user_create == NULL && handle >= 0) {
         fn_user_create = obs_module_symbol(handle, "$tJ17EHEYLMc");
     }
@@ -2662,6 +3020,214 @@ static obs_result check_keyboard_and_media_gates(void) {
     return obs_pass();
 }
 
+/* REQ-20261010T0010Z-kb02: sceKeyboardSetProcessPrivilege and
+ * sceKeyboardSetProcessFocus */
+static obs_result check_keyboard_process_privilege_focus(void) {
+    const char *id = "100-input/keyboard-privilege-focus";
+    obs_jmp_buf guard;
+
+    int load_rc_106 = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        load_rc_106 = sceSysmoduleLoadModule(0x0106u);
+    }
+    obs_report_measure(id, "sysmodule-load-0106", "rc", (uint64_t)(uint32_t)load_rc_106,
+                       "code");
+
+    const void *fn_init = (const void *)&sceKeyboardInit_static;
+    if (!obs_address_is_callable(fn_init))
+        fn_init = (const void *)&sceKeyboardInit;
+    if (!obs_address_is_callable(fn_init))
+        fn_init = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardInit");
+    if (!fn_init)
+        fn_init = obs_module_symbol(1, "sceKeyboardInit");
+
+    const void *fn_priv = (const void *)&sceKeyboardSetProcessPrivilege_static;
+    if (!obs_address_is_callable(fn_priv))
+        fn_priv = (const void *)&sceKeyboardSetProcessPrivilege_alt;
+    if (!obs_address_is_callable(fn_priv))
+        fn_priv = (const void *)&sceKeyboardSetProcessPrivilege;
+    if (!obs_address_is_callable(fn_priv))
+        fn_priv = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardSetProcessPrivilege");
+    if (!fn_priv)
+        fn_priv = obs_module_symbol(1, "sceKeyboardSetProcessPrivilege");
+
+    const void *fn_focus = (const void *)&sceKeyboardSetProcessFocus_static;
+    if (!obs_address_is_callable(fn_focus))
+        fn_focus = (const void *)&sceKeyboardSetProcessFocus_alt;
+    if (!obs_address_is_callable(fn_focus))
+        fn_focus = (const void *)&sceKeyboardSetProcessFocus;
+    if (!obs_address_is_callable(fn_focus))
+        fn_focus = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardSetProcessFocus");
+    if (!fn_focus)
+        fn_focus = obs_module_symbol(1, "sceKeyboardSetProcessFocus");
+
+    const void *fn_open = (const void *)&sceKeyboardOpen_static;
+    if (!obs_address_is_callable(fn_open))
+        fn_open = (const void *)&sceKeyboardOpen;
+    if (!obs_address_is_callable(fn_open))
+        fn_open = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardOpen");
+    if (!fn_open)
+        fn_open = obs_module_symbol(1, "sceKeyboardOpen");
+
+    const void *fn_read = (const void *)&sceKeyboardReadState_static;
+    if (!obs_address_is_callable(fn_read))
+        fn_read = (const void *)&sceKeyboardReadState;
+    if (!obs_address_is_callable(fn_read))
+        fn_read = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardReadState");
+    if (!fn_read)
+        fn_read = obs_module_symbol(1, "sceKeyboardReadState");
+
+    const void *fn_close = (const void *)&sceKeyboardClose_static;
+    if (!obs_address_is_callable(fn_close))
+        fn_close = (const void *)&sceKeyboardClose;
+    if (!obs_address_is_callable(fn_close))
+        fn_close = obs_module_symbol(OBS_HANDLE_SELF, "sceKeyboardClose");
+    if (!fn_close)
+        fn_close = obs_module_symbol(1, "sceKeyboardClose");
+
+    obs_report_measure(id, "resolve", "init-callable",
+                       (uint64_t)(fn_init && obs_address_is_callable(fn_init)), "bool");
+    obs_report_measure(id, "resolve", "priv-callable",
+                       (uint64_t)(fn_priv && obs_address_is_callable(fn_priv)), "bool");
+    obs_report_measure(id, "resolve", "focus-callable",
+                       (uint64_t)(fn_focus && obs_address_is_callable(fn_focus)),
+                       "bool");
+    obs_report_measure(id, "resolve", "open-callable",
+                       (uint64_t)(fn_open && obs_address_is_callable(fn_open)), "bool");
+    obs_report_measure(id, "resolve", "read-callable",
+                       (uint64_t)(fn_read && obs_address_is_callable(fn_read)), "bool");
+
+    /* 1. sceKeyboardInit() */
+    int rc_init = -1;
+    if (fn_init && obs_address_is_callable(fn_init)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_init = ((int (*)(void))fn_init)();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "init", "rc", (uint64_t)(uint32_t)rc_init, "code");
+
+    /* 2. In oops-sdk's keyboard.c order:
+     * sceKeyboardSetProcessPrivilege(1), then sceKeyboardSetProcessFocus(1) */
+    int rc_priv1 = -1, rc_focus1 = -1;
+    if (fn_priv && obs_address_is_callable(fn_priv)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_priv1 = ((int (*)(int))fn_priv)(1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "privilege", "val-1-first-rc", (uint64_t)(uint32_t)rc_priv1,
+                       "code");
+
+    if (fn_focus && obs_address_is_callable(fn_focus)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_focus1 = ((int (*)(int))fn_focus)(1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "focus", "val-1-first-rc", (uint64_t)(uint32_t)rc_focus1,
+                       "code");
+
+    /* 3. Then each with 0 */
+    int rc_priv0 = -1, rc_focus0 = -1;
+    if (fn_priv && obs_address_is_callable(fn_priv)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_priv0 = ((int (*)(int))fn_priv)(0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "privilege", "val-0-rc", (uint64_t)(uint32_t)rc_priv0,
+                       "code");
+
+    if (fn_focus && obs_address_is_callable(fn_focus)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_focus0 = ((int (*)(int))fn_focus)(0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "focus", "val-0-rc", (uint64_t)(uint32_t)rc_focus0, "code");
+
+    /* 4. And each again with 1 */
+    int rc_priv1_again = -1, rc_focus1_again = -1;
+    if (fn_priv && obs_address_is_callable(fn_priv)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_priv1_again = ((int (*)(int))fn_priv)(1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "privilege", "val-1-again-rc",
+                       (uint64_t)(uint32_t)rc_priv1_again, "code");
+
+    if (fn_focus && obs_address_is_callable(fn_focus)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_focus1_again = ((int (*)(int))fn_focus)(1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "focus", "val-1-again-rc",
+                       (uint64_t)(uint32_t)rc_focus1_again, "code");
+
+    /* 5. sceKeyboardOpen(initial user, 0, 0, NULL) and sceKeyboardReadState */
+    int32_t user = initial_user();
+    if (user < 0)
+        user = 0x1ea2f4d9;
+    int h = -1;
+    if (fn_open && obs_address_is_callable(fn_open)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            h = ((int (*)(int32_t, int32_t, int32_t, const void *))fn_open)(user, 0, 0,
+                                                                            NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "open", "handle", (uint64_t)(uint32_t)h, "id");
+
+    uint8_t state_record[96];
+    memset(state_record, 0xa5, sizeof(state_record));
+    int rc_read = -1;
+    if (h >= 0 && fn_read && obs_address_is_callable(fn_read)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_read = ((int (*)(int32_t, void *))fn_read)(h, state_record);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "read-state", "rc", (uint64_t)(uint32_t)rc_read, "code");
+    obs_report_bytes(id, "read-state", "record-96b", 0, state_record, 64);
+    obs_report_bytes(id, "read-state", "record-96b", 64, state_record + 64, 32);
+
+    if (h >= 0 && fn_close && obs_address_is_callable(fn_close)) {
+        (void)((int (*)(int32_t))fn_close)(h);
+    }
+
+    return obs_pass();
+}
+
 static const obs_check input_checks[] = {
     {"100-input/initialise", "libScePad", "scePadInit", OBS_CAP_NONE, OBS_CAP_INPUT,
      (const void *)&scePadInit, check_pad_init, OBS_FROM_ASSUMED},
@@ -2703,9 +3269,13 @@ static const obs_check input_checks[] = {
     {"100-input/is-remote-controller", "libScePad", "scePadIsRemoteController",
      OBS_CAP_INPUT, OBS_CAP_NONE, (const void *)check_pad_is_remote_controller,
      check_pad_is_remote_controller, OBS_FROM_ASSUMED},
+
     {"100-input/keyboard-and-media-gates", "libSceKeyboard", "sceKeyboardInit",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_keyboard_and_media_gates,
      check_keyboard_and_media_gates, OBS_FROM_ASSUMED},
+    {"100-input/keyboard-privilege-focus", "libSceKeyboard", "$h8V5miA7UCs",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_keyboard_process_privilege_focus,
+     OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_input = {

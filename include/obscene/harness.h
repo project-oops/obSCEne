@@ -221,6 +221,9 @@ typedef struct obs_check {
     obs_provenance from;
 } obs_check;
 
+/* Returns the currently running check, or NULL if not inside check->run(). */
+const obs_check *obs_get_current_check(void);
+
 typedef struct obs_section {
     /* Two-digit ordering prefix plus a name, e.g. "010-kernel". Sections run in
      * array order, base layers first, so a failure high up is read against a
@@ -304,7 +307,14 @@ int obs_module_open_tier(const char *library, obs_module_tier *tier_out);
 /* Cache a sysmodule handle when loaded externally (e.g. by 090-audio or direct load).
  */
 void obs_sysmodule_cache_handle(const char *name, int handle);
-void obs_sysmodule_cache_handle_by_id(uint16_t id, int handle);
+void obs_sysmodule_cache_handle_by_id(uint32_t id, int handle);
+int obs_sysmodule_load_id(uint32_t id);
+int obs_sysmodule_get_handle_id(uint32_t id, int *h_out);
+int obs_find_module_handle_by_library(const char *library);
+const char *obs_prospero_name_to_nid(const char *name);
+const void *obs_dlsym_probe_handle(int (*fn_dlsym)(int, const char *, void **), int h,
+                                   const char *full_nid, const char *bare_nid,
+                                   const char *ascii_name);
 
 /* Resolve one name through a handle from [`obs_module_open`], or null.
  *
@@ -397,5 +407,9 @@ extern const unsigned int obs_section_count;
             }                                                                          \
         }                                                                              \
     } while (0)
+
+const void *census_resolve_symbol(const char *library, const char *sym_or_nid,
+                                  const char *name, const void *static_fn,
+                                  const void *named_fn);
 
 #endif /* OBSCENE_HARNESS_H */

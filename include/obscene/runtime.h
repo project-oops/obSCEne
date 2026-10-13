@@ -38,6 +38,7 @@ void obs_bootstrap_title_output(void);
 unsigned long obs_libkernel_base(void);
 long obs_invoke_syscall(long num, long a1, long a2, long a3, long a4, long a5, long a6);
 void obs_boot_note(const char *text);
+const void *obs_get_proc_param_addr(void);
 
 /* Point every subsequent record at an extra destination, or clear it with NULL.
  *
@@ -77,6 +78,8 @@ void obs_compute_nid(const char *name, char out_nid[12]);
 struct payload_args;
 const struct payload_args *obs_get_payload_args(void);
 void obs_set_payload_kexport_table(void *table);
+void obs_refresh_kexport_table(void);
+void obs_sysmodules_preload_and_cache(void);
 
 /* Exists solely so the symbol census has something that must resolve. */
 extern const char obs_census_control_present;
@@ -89,6 +92,9 @@ extern const char obs_census_control_present;
 unsigned int obs_linkmap_walk(int (*cb)(const char *name, unsigned long base,
                                         void *user),
                               void *user, const char **reason);
+
+/* Find base address of a loaded module whose link_map name matches pattern. */
+uintptr_t obs_find_loaded_module_base(const char *pattern);
 
 /* Whether an address can be *read* - distinct from obs_address_is_callable, which asks
  * whether it can be *called*. On the console a library's text is execute-only (xotext):
@@ -126,5 +132,12 @@ typedef struct {
 
 #define OBS_LOADER_WEAK_COUNT 10
 const obs_loader_weak_entry_t *obs_get_loader_weak_entries(size_t *count);
+
+/* Location of thread-local errno (FreeBSD __error). */
+int *obs_get_errno_location(void);
+
+/* Cross-section created font library object pointer. */
+void *obs_get_created_font_library(void);
+void obs_set_created_font_library(void *lib);
 
 #endif /* OBSCENE_RUNTIME_H */

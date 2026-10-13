@@ -175,12 +175,25 @@ impl Imports {
         // zero. The loader indexes that table densely from zero and refused the file in
         // `allocate_per_file_info_compact` without ever naming the id. (D217)
         let first_library = u16::from(exports_a_library);
+        let mut module_ids = BTreeMap::new();
+        let mut next_module_id: u16 = 1;
         for (index, name) in order.into_iter().enumerate() {
-            let index = u16::try_from(index).map_err(|_| ImportsError::TooManyLibraries(index))?;
+            let lib_id = u16::try_from(index)
+                .map_err(|_| ImportsError::TooManyLibraries(index))?
+                .saturating_add(first_library);
+            let mod_name = selfish_elf::dynlib::module_name_for(&name);
+            let module_id = if let Some(&id) = module_ids.get(mod_name) {
+                id
+            } else {
+                let id = next_module_id;
+                next_module_id = next_module_id.saturating_add(1);
+                module_ids.insert(mod_name.to_owned(), id);
+                id
+            };
             out.libraries.push(Library {
                 name,
-                id: index.saturating_add(first_library),
-                module_id: index.saturating_add(1),
+                id: lib_id,
+                module_id,
             });
         }
         Ok(out)

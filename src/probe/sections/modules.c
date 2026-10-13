@@ -539,13 +539,25 @@ static obs_result check_runtime_load_lifecycle(void) {
     typedef int (*fn_sceKernelStopUnloadModule_t)(int handle, size_t argc,
                                                   const void *argv, uint32_t flags,
                                                   const void *opt, int *res);
-    fn_sceKernelStopUnloadModule_t fn_stop_unload = NULL;
-    if (h_kernel >= 0) {
+    fn_sceKernelStopUnloadModule_t fn_stop_unload =
+        obs_address_is_callable((const void *)&sceKernelStopUnloadModule_static)
+            ? (fn_sceKernelStopUnloadModule_t)&sceKernelStopUnloadModule_static
+            : NULL;
+    int how_stop_unload = fn_stop_unload ? 1 : 0;
+    if (!fn_stop_unload && h_kernel >= 0) {
         fn_stop_unload = (fn_sceKernelStopUnloadModule_t)obs_module_symbol(
             h_kernel, "sceKernelStopUnloadModule");
+        if (!fn_stop_unload) {
+            fn_stop_unload = (fn_sceKernelStopUnloadModule_t)obs_module_symbol(
+                h_kernel, "$60F8zqh0p0A");
+        }
     }
     obs_report_measure(id, "sceKernelStopUnloadModule", "resolved",
                        (uint64_t)(fn_stop_unload != NULL), "bool");
+    obs_report_measure(id, "sceKernelStopUnloadModule", "how",
+                       (uint64_t)(how_stop_unload ? 1 : (fn_stop_unload ? 2 : 0)),
+                       how_stop_unload ? "import"
+                                       : (fn_stop_unload ? "dlsym" : "not-possible"));
 
     /* 1. First Load */
     const char *prx_path = "/app0/sce_module/libc.prx";
@@ -579,28 +591,74 @@ static obs_result check_runtime_load_lifecycle(void) {
                        (uint64_t)(h1 >= 0 && h1 == h2), "bool");
 
     /* StopUnload calls */
-    if (fn_stop_unload != NULL && h1 >= 0) {
-        for (int step = 1; step <= 3; step++) {
-            char tag[32];
-            tag[0] = 's';
-            tag[1] = 't';
-            tag[2] = 'o';
-            tag[3] = 'p';
-            tag[4] = '-';
-            tag[5] = (char)('0' + step);
-            tag[6] = '\0';
-            int res_stop = 0x5a5a5a5a;
-            int rc_stop =
-                fn_stop_unload(h1, sizeof(start_args), &start_args, 0, NULL, &res_stop);
-            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc_stop, "code");
-            obs_report_measure(id, tag, "res", (uint64_t)(uint32_t)res_stop, "code");
+    if (fn_stop_unload != NULL) {
+        if (h1 >= 0) {
+            for (int step = 1; step <= 3; step++) {
+                char tag[32];
+                tag[0] = 's';
+                tag[1] = 't';
+                tag[2] = 'o';
+                tag[3] = 'p';
+                tag[4] = '-';
+                tag[5] = (char)('0' + step);
+                tag[6] = '\0';
+                int res_stop = 0x5a5a5a5a;
+                int rc_stop = fn_stop_unload(h1, sizeof(start_args), &start_args, 0,
+                                             NULL, &res_stop);
+                obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc_stop, "code");
+                obs_report_measure(id, tag, "res", (uint64_t)(uint32_t)res_stop,
+                                   "code");
 
-            void *sym_post = NULL;
-            if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
-                (void)sceKernelDlsym(h1, "module_start", &sym_post);
+                void *sym_post = NULL;
+                if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+                    (void)sceKernelDlsym(h1, "module_start", &sym_post);
+                }
+                obs_report_measure(id, tag, "dlsym-post", (uint64_t)(sym_post != NULL),
+                                   "bool");
             }
-            obs_report_measure(id, tag, "dlsym-post", (uint64_t)(sym_post != NULL),
-                               "bool");
+        }
+
+        /* REQ-20261012T1821Z-8bc3: Negative arms */
+        int res_unk = 0x5a5a5a5a;
+        int rc_unk =
+            fn_stop_unload(0x7fff, sizeof(start_args), &start_args, 0, NULL, &res_unk);
+        obs_report_measure(id, "stop-unknown-handle", "rc", (uint64_t)(uint32_t)rc_unk,
+                           "code");
+        obs_report_measure(id, "stop-unknown-handle", "res",
+                           (uint64_t)(uint32_t)res_unk, "code");
+
+        int res_zero = 0x5a5a5a5a;
+        int rc_zero =
+            fn_stop_unload(0, sizeof(start_args), &start_args, 0, NULL, &res_zero);
+        obs_report_measure(id, "stop-handle-zero", "rc", (uint64_t)(uint32_t)rc_zero,
+                           "code");
+        obs_report_measure(id, "stop-handle-zero", "res", (uint64_t)(uint32_t)res_zero,
+                           "code");
+
+        /* Pointer arm: first call with res NULL, then following call */
+        int res3 = 0x5a5a5a5a;
+        int h3 = sceKernelLoadStartModule(prx_path, sizeof(start_args), &start_args, 0,
+                                          NULL, &res3);
+        if (h3 >= 0) {
+            int rc_null =
+                fn_stop_unload(h3, sizeof(start_args), &start_args, 0, NULL, NULL);
+            obs_report_measure(id, "stop-null-res", "rc", (uint64_t)(uint32_t)rc_null,
+                               "code");
+
+            int res_foll = 0x5a5a5a5a;
+            int rc_foll =
+                fn_stop_unload(h3, sizeof(start_args), &start_args, 0, NULL, &res_foll);
+            obs_report_measure(id, "stop-after-null-res", "rc",
+                               (uint64_t)(uint32_t)rc_foll, "code");
+            obs_report_measure(id, "stop-after-null-res", "res",
+                               (uint64_t)(uint32_t)res_foll, "code");
+
+            void *sym_foll = NULL;
+            if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+                (void)sceKernelDlsym(h3, "module_start", &sym_foll);
+            }
+            obs_report_measure(id, "stop-after-null-res", "dlsym-post",
+                               (uint64_t)(sym_foll != NULL), "bool");
         }
     }
 

@@ -20,6 +20,10 @@
 #include "obscene/runtime.h"
 #include "obscene/sections.h"
 
+OBS_WEAK int sceImeKeyboardOpen(uint32_t, void *) __asm__("$eaFXjfJv3xs");
+OBS_WEAK int sceImeKeyboardClose(uint32_t) __asm__("$PMVehSlfZ94");
+OBS_WEAK int sceImeUpdate(void *) __asm__("$-4GCfYdNF1s");
+
 static int32_t inputext_initial_user(void) {
     int32_t user = -1;
     const void *fn_get = (const void *)&sceUserServiceGetInitialUser;
@@ -910,7 +914,126 @@ static obs_result check_keyboard_lifecycle(void) {
     return obs_pass();
 }
 
+static volatile uint64_t s_ime_cb_calls = 0;
+static volatile uint64_t s_ime_cb_arg0 = 0;
+static volatile uint64_t s_ime_cb_arg1 = 0;
+static volatile uint64_t s_ime_cb_arg2 = 0;
+static volatile uint64_t s_ime_cb_arg3 = 0;
+
+static void ime_keyboard_probe_cb(uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3) {
+    s_ime_cb_calls++;
+    s_ime_cb_arg0 = a0;
+    s_ime_cb_arg1 = a1;
+    s_ime_cb_arg2 = a2;
+    s_ime_cb_arg3 = a3;
+}
+
+static obs_result check_ime_keyboard_lifecycle(void) {
+    const char *id = "101-input-ext/ime-keyboard-lifecycle";
+
+    const void *fn_open =
+        census_resolve_symbol("libSceIme", "$eaFXjfJv3xs", "sceImeKeyboardOpen",
+                              (const void *)&sceImeKeyboardOpen, NULL);
+    const void *fn_close =
+        census_resolve_symbol("libSceIme", "$PMVehSlfZ94", "sceImeKeyboardClose",
+                              (const void *)&sceImeKeyboardClose, NULL);
+    const void *fn_update = census_resolve_symbol(
+        "libSceIme", "$-4GCfYdNF1s", "sceImeUpdate", (const void *)&sceImeUpdate, NULL);
+
+    obs_report_measure(id, "resolve", "open-resolved", (uint64_t)(fn_open != NULL),
+                       "bool");
+    obs_report_measure(id, "resolve", "close-resolved", (uint64_t)(fn_close != NULL),
+                       "bool");
+    obs_report_measure(id, "resolve", "update-resolved", (uint64_t)(fn_update != NULL),
+                       "bool");
+
+    if (!fn_open || !obs_address_is_callable(fn_open)) {
+        return obs_skip("sceImeKeyboardOpen not callable");
+    }
+
+    int32_t init_user = inputext_initial_user();
+    int32_t users[2] = {(int32_t)0xffffffff, init_user};
+    const char *user_tags[2] = {"user-ffffffff", "user-initial"};
+
+    for (int u = 0; u < 2; u++) {
+        int32_t user = users[u];
+        const char *utag = user_tags[u];
+
+        uint8_t param[0x40];
+        memset(param, 0, sizeof(param));
+        *(uint32_t *)(param + 0x0) = 3;
+        *(uint64_t *)(param + 0x10) = (uint64_t)(uintptr_t)&ime_keyboard_probe_cb;
+
+        s_ime_cb_calls = 0;
+        s_ime_cb_arg0 = s_ime_cb_arg1 = s_ime_cb_arg2 = s_ime_cb_arg3 = 0;
+
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = ((int (*)(int32_t, void *))fn_open)(user, param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, utag, "open-fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, utag, "open-rc", (uint64_t)(uint32_t)rc, "code");
+        obs_report_bytes(id, utag, "param-after-open", 0, param, 0x40);
+        obs_report_measure(id, utag, "handler-called", s_ime_cb_calls, "count");
+        if (s_ime_cb_calls > 0) {
+            obs_report_measure(id, utag, "cb-arg0", s_ime_cb_arg0, "arg");
+            obs_report_measure(id, utag, "cb-arg1", s_ime_cb_arg1, "arg");
+        }
+
+        /* sceImeUpdate(handler) once and rc */
+        if (fn_update && obs_address_is_callable(fn_update)) {
+            sig = OBS_FAULT_ARM(&guard);
+            int rc_upd = -1;
+            if (sig == 0) {
+                rc_upd = ((int (*)(void *))fn_update)(
+                    (void *)(uintptr_t)&ime_keyboard_probe_cb);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, utag, "update-rc", (uint64_t)(uint32_t)rc_upd,
+                               "code");
+            obs_report_measure(id, utag, "handler-called-after-update", s_ime_cb_calls,
+                               "count");
+        }
+
+        /* Second sceImeKeyboardOpen with same arguments */
+        sig = OBS_FAULT_ARM(&guard);
+        int rc2 = -1;
+        if (sig == 0) {
+            rc2 = ((int (*)(int32_t, void *))fn_open)(user, param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, utag, "open2-rc", (uint64_t)(uint32_t)rc2, "code");
+
+        /* sceImeKeyboardClose(user) if resolved */
+        if (fn_close && obs_address_is_callable(fn_close)) {
+            sig = OBS_FAULT_ARM(&guard);
+            int rc_close = -1;
+            if (sig == 0) {
+                rc_close = ((int (*)(int32_t))fn_close)(user);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, utag, "close-rc", (uint64_t)(uint32_t)rc_close,
+                               "code");
+        }
+    }
+    return obs_pass();
+}
+
 static const obs_check input_ext_checks[] = {
+    {"101-input-ext/ime-keyboard-lifecycle", "libSceIme", "sceImeKeyboardOpen",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ime_keyboard_lifecycle,
+     OBS_FROM_ASSUMED},
     {"101-input-ext/keyboard-presence", "libSceKeyboard", "sceKeyboardReadState",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_keyboard_presence,
      check_keyboard_presence, OBS_FROM_ASSUMED},

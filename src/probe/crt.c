@@ -38,6 +38,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "obscene/runtime.h"
+
 /* Bytes reserved for the structure.
  *
  * Chosen to be comfortably larger than the fields a loader is likely to read, so that
@@ -176,6 +178,10 @@ __attribute__((used, section(".sce_process_param"))) static const struct {
     .third_param = &obs_third_param,
     .trailing = {0},
 };
+
+const void *obs_get_proc_param_addr(void) {
+    return (const void *)&obs_process_param;
+}
 
 /*
  * The dynamic interpreter path.

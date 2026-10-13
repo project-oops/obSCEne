@@ -12,6 +12,7 @@ to pass.
 
 ## Probe principles
 
+- **Never grep.** Cross-mount directory scanning is pathologically slow. Read files directly or run targeted single-file extraction scripts.
 - **Announce before attempting.** Every check writes its identity, unbuffered, before making
   the call. A `try` record with no matching `res` means that call did not return. Never buffer
   output, batch records, or announce a check that will not run; a skipped check emits no `try`.
@@ -102,6 +103,10 @@ scripts. `./bin/obscene help` lists the verbs; `scripts/README.md` maps each to 
 ./bin/obscene report --seconds 120
 # After a crash, before any relaunch: what the console recorded, read-only.
 ./bin/obscene recover
+# Direct deployment via Prosperous CLI (default title: PPSA90000):
+# 1. Build: make native BUILD=/root/obs
+# 2. Deploy/run: pros probe PPSA90000 /root/obs/prospero/PPSA90000
+#    (or restore manually: pros restore /root/obs/prospero/PPSA90000 /data/homebrew/PPSA90000)
 ```
 
 The report lands in `reports/hardware/console-klog.txt` (gitignored). It is captured from the

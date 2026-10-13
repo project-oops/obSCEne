@@ -8,6 +8,7 @@
  * would only say that it did.
  */
 
+#include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"
 #include "obscene/report.h"
@@ -701,7 +702,65 @@ static obs_result check_gpu_va_window(void) {
     return obs_pass_value(lowest_success);
 }
 
+static obs_result check_direct_pool_exhaustion(void) {
+    if (!obs_address_is_callable((const void *)&sceKernelAllocateDirectMemory) ||
+        !obs_address_is_callable((const void *)&sceKernelGetDirectMemorySize)) {
+        return obs_skip("direct memory allocation symbols not callable");
+    }
+    const char *id = "020-memory/direct-pool-exhaustion";
+    sce_off_t size = (sce_off_t)sceKernelGetDirectMemorySize();
+    size_t chunk_len = 0x10000000UL; /* 256 MiB */
+    size_t align = 0x10000UL;        /* 64 KiB */
+
+    /* Keep track of allocated chunks so we can release them cleanly */
+#define OBS_MAX_EXHAUST_CHUNKS 128
+    sce_off_t allocated_phys[OBS_MAX_EXHAUST_CHUNKS];
+    size_t chunk_count = 0;
+    uint64_t total_allocated = 0;
+    int fail_rc = 0;
+
+    obs_jmp_buf guard;
+    while (chunk_count < OBS_MAX_EXHAUST_CHUNKS) {
+        sce_off_t phys = 0;
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = sceKernelAllocateDirectMemory(0, size, chunk_len, align, 0, &phys);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            fail_rc = -sig;
+            break;
+        }
+        if (rc != 0) {
+            fail_rc = rc;
+            break;
+        }
+        allocated_phys[chunk_count++] = phys;
+        total_allocated += chunk_len;
+    }
+
+    obs_report_measure(id, "exhaustion-loop", "fail-rc", (uint64_t)(uint32_t)fail_rc,
+                       "code");
+    obs_report_measure(id, "exhaustion-loop", "total-allocated", total_allocated,
+                       "bytes");
+    obs_report_measure(id, "exhaustion-loop", "chunk-count", (uint64_t)chunk_count,
+                       "count");
+
+    /* Cleanup all allocated chunks */
+    if (obs_address_is_callable((const void *)&sceKernelReleaseDirectMemory)) {
+        for (size_t i = 0; i < chunk_count; i++) {
+            (void)sceKernelReleaseDirectMemory(allocated_phys[i], chunk_len);
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check memory_checks[] = {
+    {"020-memory/direct-pool-exhaustion", "libkernel", "sceKernelAllocateDirectMemory",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelAllocateDirectMemory,
+     check_direct_pool_exhaustion, OBS_FROM_ASSUMED},
     {"020-memory/gpu-va-window", "libkernel", "sceKernelBatchMap", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelBatchMap, check_gpu_va_window,
      OBS_FROM_ASSUMED},

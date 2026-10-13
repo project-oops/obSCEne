@@ -34,6 +34,7 @@
 #define _DEFAULT_SOURCE 1
 
 #include "obscene/platform.h"
+#include "obscene/runtime.h"
 #include "oops/time.h"
 
 #include <fcntl.h>
@@ -1575,4 +1576,12 @@ int sceVideoOutUnregisterBuffers(int handle, int set_index) {
     (void)handle;
     (void)set_index;
     return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+void obs_boot_note(const char *text) {
+    (void)text;
+}
+
+const void *obs_get_proc_param_addr(void) {
+    return NULL;
 }

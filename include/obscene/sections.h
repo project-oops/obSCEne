@@ -142,4 +142,8 @@ extern const obs_section obs_section_bulk;
  * a second copy would go stale without anything noticing. */
 void obs_surface_each_symbol(void (*fn)(const char *library, const char *symbol));
 
+/* Shared AGC shader helpers for authentic retail containers and payload. */
+void obs_agc_init_stage_hdr_retail(uint8_t *hdr, uint8_t stage, uint32_t reg);
+const void *obs_agc_get_retail_payload(void);
+
 #endif /* OBSCENE_SECTIONS_H */

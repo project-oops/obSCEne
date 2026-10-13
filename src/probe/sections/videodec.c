@@ -382,10 +382,15 @@ static obs_result check_videodec2_decode_present(void) {
     return obs_pass();
 }
 
+#include "videodec_oracle.inc"
+
 static const obs_check videodec_checks[] = {
     {"107-videodec/sysmodule-sweep", "libSceSysmodule", "sceSysmoduleLoadModule",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_videodec_sysmodule_sweep,
      check_videodec_sysmodule_sweep, OBS_FROM_DERIVED},
+    {"107-videodec/oracle-census", "libSceVideodec2", "sceVideodec2CreateDecoder",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_videodec2_oracle_census,
+     check_videodec2_oracle_census, OBS_FROM_SPEC},
     {"107-videodec/library", "libSceVideodec2", "sceVideodec2CreateDecoder",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_videodec2_library,
      check_videodec2_library, OBS_FROM_ASSUMED},

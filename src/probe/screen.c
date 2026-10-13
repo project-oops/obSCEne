@@ -326,6 +326,9 @@ void obs_screen_section(const char *id, obs_tally tally) {
         obs_row_count++;
     }
     if (obs_live) {
+        if (!obs_display_is_ready()) {
+            (void)obs_display_reopen();
+        }
         obs_screen_redraw(0);
     }
 }
@@ -941,6 +944,12 @@ void obs_screen_present(void) {
     if (!obs_live) {
         /* No display, so nothing to present and nothing to wait for. Returning lets a
          * headless run finish, which is what CI needs. */
+        return;
+    }
+    if (!obs_display_is_ready()) {
+        (void)obs_display_reopen();
+    }
+    if (!obs_display_is_ready()) {
         return;
     }
     if (&sceKernelUsleep == 0) {

@@ -28,7 +28,6 @@
 900-surface/corpus_0209_libSceOpusDec
 900-surface/corpus_0210_libSceOpusSilkEnc
 900-surface/corpus_0258_libSceSrcUtl
-900-surface/corpus_0295_libSceUlt
 900-surface/corpus_0311_libSceVideoCoreServerInterface
 900-surface/corpus_0319_libSceVideoOutSecondary
-900-surface/corpus_0320_libSceVideoRecording
+

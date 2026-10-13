@@ -141,9 +141,19 @@ static void obs_fault_set_detail(const char *s) {
     s_detail[i] = '\0';
 }
 
+static uintptr_t s_last_fault_addr = 0;
+
+uintptr_t obs_fault_last_address(void) {
+    return s_last_fault_addr;
+}
+
 #if defined(OBSCENE_HOST_BUILD)
 
-static void obs_fault_handler(int sig) {
+static void obs_fault_handler(int sig, siginfo_t *info, void *ucontext) {
+    (void)ucontext;
+    if (info != NULL) {
+        s_last_fault_addr = (uintptr_t)info->si_addr;
+    }
     obs_jmp_buf *b = obs_fault_current();
     if (b != 0) {
         obs_fault_unregister();
@@ -161,9 +171,9 @@ void obs_fault_init(void) {
     s_inited = 1;
     struct sigaction act;
     memset(&act, 0, sizeof act);
-    act.sa_handler = obs_fault_handler;
+    act.sa_sigaction = obs_fault_handler;
     sigemptyset(&act.sa_mask);
-    act.sa_flags = 0;
+    act.sa_flags = SA_SIGINFO;
     int ok = 1;
     ok &= (sigaction(OBS_SIGSEGV, &act, 0) == 0);
     ok &= (sigaction(OBS_SIGBUS, &act, 0) == 0);
@@ -187,7 +197,11 @@ void obs_fault_init(void) {
 
 #else /* target */
 
-static void obs_fault_handler(int sig) {
+static void obs_fault_handler(int sig, void *info, void *ucontext) {
+    (void)ucontext;
+    if (info != NULL) {
+        s_last_fault_addr = (uintptr_t)((void **)info)[2];
+    }
     obs_jmp_buf *b = obs_fault_current();
     if (b != 0) {
         obs_fault_unregister();
@@ -427,6 +441,7 @@ void obs_fault_init(void) {
         act[i] = 0;
     }
     *(void **)(void *)(act + 0) = (void *)(uintptr_t)&obs_fault_handler;
+    *(int *)(void *)(act + 8) = 0x0040; /* SA_SIGINFO */
 
     int ok = 1;
     ok &= (s_sigaction_fn(OBS_SIGSEGV, act, 0) == 0);

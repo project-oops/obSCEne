@@ -133,4 +133,10 @@ struct oops_display *obs_display_get_oops_display(void);
 /* Closes the display and releases video output back to the system compositor. */
 void obs_display_close(void);
 
+/* Whether the display is currently open and ready for drawing/flipping. */
+int obs_display_is_ready(void);
+
+/* Reopens the display, re-establishing video output if dropped or closed. */
+obs_display_state obs_display_reopen(void);
+
 #endif /* OBSCENE_DISPLAY_H */

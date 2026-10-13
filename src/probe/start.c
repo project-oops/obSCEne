@@ -197,6 +197,8 @@ void obscene_start(void) {
         if (krw_init(pargs_init) == 0) {
             if (pargs_init->kexport_table == NULL) {
                 pid_t pid = (pid_t)obs_invoke_syscall(20, 0, 0, 0, 0, 0, 0);
+                s_payload_kexport_table.count = 0;
+                s_payload_kexport_table.capacity = OBS_KEXPORT_MAX;
                 if (krw_dump_all_exports(pid, &s_payload_kexport_table) == 0 &&
                     s_payload_kexport_table.count > 0) {
                     obs_set_payload_kexport_table(&s_payload_kexport_table);

@@ -14,6 +14,7 @@
 
 #include "obscene/harness.h"
 #include "obscene/platform.h"
+#include "obscene/runtime.h"
 #include "obscene/sink.h"
 #include "oops/syscall.h"
 #include "oops/system.h"
@@ -57,7 +58,7 @@ static void obs_sink_target_init_privilege(void) {
     if (!s_done) {
         s_done = 1;
 #if !defined(OBSCENE_HOST_BUILD)
-        sys_call_init(NULL);
+        sys_call_init((const payload_args_t *)obs_get_payload_args());
 #if defined(OBSCENE_TARGET_EBOOT)
         /* On native title eboot, escape sandbox via resident daemon (D004) */
         (void)oops_system_escape_sandbox();
@@ -74,11 +75,8 @@ int obs_sink_backend_open(const char *path) {
      * the text channel that was about to work. */
     if (obs_address_is_callable((const void *)&sceKernelOpen) &&
         obs_address_is_callable((const void *)&sceKernelWrite)) {
-        int fd = sceKernelOpen(path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC,
-                               OBS_SINK_MODE);
-        if (fd >= 0) {
-            return fd;
-        }
+        return sceKernelOpen(path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC,
+                             OBS_SINK_MODE);
     }
 #if !defined(OBSCENE_HOST_BUILD)
     long fd = sys_call(SYS_open, (long)path, OBS_O_WRONLY | OBS_O_CREAT | OBS_O_TRUNC,
@@ -92,10 +90,7 @@ int obs_sink_backend_open(const char *path) {
 
 long obs_sink_backend_write(int fd, const void *bytes, size_t len) {
     if (obs_address_is_callable((const void *)&sceKernelWrite)) {
-        long n = (long)sceKernelWrite(fd, bytes, len);
-        if (n >= 0) {
-            return n;
-        }
+        return (long)sceKernelWrite(fd, bytes, len);
     }
 #if !defined(OBSCENE_HOST_BUILD)
     return sys_call(SYS_write, fd, (long)bytes, (long)len, 0, 0, 0);
@@ -121,10 +116,7 @@ int obs_sink_backend_open_read(const char *path) {
      * previous report would end a run that had nothing wrong with it. */
     if (obs_address_is_callable((const void *)&sceKernelOpen) &&
         obs_address_is_callable((const void *)&sceKernelRead)) {
-        int fd = sceKernelOpen(path, OBS_O_RDONLY, 0);
-        if (fd >= 0) {
-            return fd;
-        }
+        return sceKernelOpen(path, OBS_O_RDONLY, 0);
     }
 #if !defined(OBSCENE_HOST_BUILD)
     long fd = sys_call(SYS_open, (long)path, OBS_O_RDONLY, 0, 0, 0, 0);
@@ -137,10 +129,7 @@ int obs_sink_backend_open_read(const char *path) {
 
 long obs_sink_backend_read(int fd, void *bytes, size_t len) {
     if (obs_address_is_callable((const void *)&sceKernelRead)) {
-        long n = (long)sceKernelRead(fd, bytes, len);
-        if (n >= 0) {
-            return n;
-        }
+        return (long)sceKernelRead(fd, bytes, len);
     }
 #if !defined(OBSCENE_HOST_BUILD)
     return sys_call(SYS_read, fd, (long)bytes, (long)len, 0, 0, 0);
@@ -152,10 +141,7 @@ long obs_sink_backend_read(int fd, void *bytes, size_t len) {
 int obs_sink_backend_mkdir(const char *path) {
     obs_sink_target_init_privilege();
     if (obs_address_is_callable((const void *)&sceKernelMkdir)) {
-        int rc = sceKernelMkdir(path, OBS_SINK_MODE);
-        if (rc == 0) {
-            return 0;
-        }
+        return sceKernelMkdir(path, OBS_SINK_MODE);
     }
 #if !defined(OBSCENE_HOST_BUILD)
     long rc = sys_call(SYS_mkdir, (long)path, OBS_SINK_MODE, 0, 0, 0, 0);
