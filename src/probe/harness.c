@@ -1318,6 +1318,140 @@ static const struct {
     {"+o9816YQhqQ", "+o9816YQhqQ"},
     {"sceNpWebApi2PushEventRegisterCallback", "fY3QqeNkF8k"},
     {"fY3QqeNkF8k", "fY3QqeNkF8k"},
+    /* Ajm */
+    {"sceAjmInitialize", "7lKzdHi4X3Y"},
+    {"7lKzdHi4X3Y", "7lKzdHi4X3Y"},
+    {"sceAjmFinalize", "61KsoOqrezA"},
+    {"61KsoOqrezA", "61KsoOqrezA"},
+    {"sceAjmModuleRegister", "rp8G7BZyd0M"},
+    {"rp8G7BZyd0M", "rp8G7BZyd0M"},
+    {"sceAjmModuleUnregister", "ovjVUrbDLlo"},
+    {"ovjVUrbDLlo", "ovjVUrbDLlo"},
+    {"sceAjmInstanceCreate", "n+Bpg6wDGgM"},
+    {"n+Bpg6wDGgM", "n+Bpg6wDGgM"},
+    {"sceAjmInstanceDestroy", "Gs78q7jbskU"},
+    {"Gs78q7jbskU", "Gs78q7jbskU"},
+    {"sceAjmBatchInitialize", "fIgQe9VFajI"},
+    {"fIgQe9VFajI", "fIgQe9VFajI"},
+    {"sceAjmBatchJobInitialize", "yc1xEzo2M3s"},
+    {"yc1xEzo2M3s", "yc1xEzo2M3s"},
+    {"sceAjmBatchJobDecode", "7D3eH4Wx1d8"},
+    {"7D3eH4Wx1d8", "7D3eH4Wx1d8"},
+    {"sceAjmBatchJobSetGaplessDecode", "mLW3K6YwQUo"},
+    {"mLW3K6YwQUo", "mLW3K6YwQUo"},
+    {"sceAjmBatchStart", "o3KloJ2f0+Y"},
+    {"o3KloJ2f0+Y", "o3KloJ2f0+Y"},
+    {"sceAjmBatchWait", "hsAyMHzsov4"},
+    {"hsAyMHzsov4", "hsAyMHzsov4"},
+    {"sceAjmBatchCancel", "sEmsR4nXUDU"},
+    {"sEmsR4nXUDU", "sEmsR4nXUDU"},
+    {"sceAjmBatchErrorDump", "6XEWbwUi8Fk"},
+    {"6XEWbwUi8Fk", "6XEWbwUi8Fk"},
+    {"sceAjmDecAt9ParseConfigData", "1t3ixYNXyuc"},
+    {"1t3ixYNXyuc", "1t3ixYNXyuc"},
+    /* Audiodec */
+    {"sceAudiodecInitLibrary", "MntcGptsOFY"},
+    {"MntcGptsOFY", "MntcGptsOFY"},
+    {"sceAudiodecTermLibrary", "XQ0IZAfSmIc"},
+    {"XQ0IZAfSmIc", "XQ0IZAfSmIc"},
+    {"sceAudiodecCreateDecoder", "+0YWs7D1dzs"},
+    {"+0YWs7D1dzs", "+0YWs7D1dzs"},
+    {"sceAudiodecDeleteDecoder", "uZi9LhOZn04"},
+    {"uZi9LhOZn04", "uZi9LhOZn04"},
+    {"sceAudiodecClearContext", "y6LDMln9V+k"},
+    {"y6LDMln9V+k", "y6LDMln9V+k"},
+    {"sceAudiodecDecode", "vCDkMjDHdSg"},
+    {"vCDkMjDHdSg", "vCDkMjDHdSg"},
+    /* AudioIn */
+    {"sceAudioInOpen", "L1Q7N0o80eQ"},
+    {"L1Q7N0o80eQ", "L1Q7N0o80eQ"},
+    {"sceAudioInInput", "c2o+TznEjC4"},
+    {"c2o+TznEjC4", "c2o+TznEjC4"},
+    {"sceAudioInClose", "ryNneGyWHiY"},
+    {"ryNneGyWHiY", "ryNneGyWHiY"},
+    /* Audio3d */
+    {"sceAudio3dInitialize", "jGSuKY2vYFI"},
+    {"jGSuKY2vYFI", "jGSuKY2vYFI"},
+    {"sceAudio3dTerminate", "J+ezaEtTbVk"},
+    {"J+ezaEtTbVk", "J+ezaEtTbVk"},
+    {"sceAudio3dGetDefaultOpenParameters", "Ali5hjqjbyI"},
+    {"Ali5hjqjbyI", "Ali5hjqjbyI"},
+    {"sceAudio3dPortOpen", "AFlJTCvD4F0"},
+    {"AFlJTCvD4F0", "AFlJTCvD4F0"},
+    {"sceAudio3dPortClose", "KbVN5TlqJTs"},
+    {"KbVN5TlqJTs", "KbVN5TlqJTs"},
+    {"sceAudio3dPortFlush", "MUPgYsWr4WQ"},
+    {"MUPgYsWr4WQ", "MUPgYsWr4WQ"},
+    {"sceAudio3dObjectReserve", "Yycdznmt7Yw"},
+    {"Yycdznmt7Yw", "Yycdznmt7Yw"},
+    {"sceAudio3dObjectSetAttributes", "5WW42jeH7OI"},
+    {"5WW42jeH7OI", "5WW42jeH7OI"},
+    {"sceAudio3dPortAdvance", "lw0qrdSjZt8"},
+    {"lw0qrdSjZt8", "lw0qrdSjZt8"},
+    {"sceAudio3dPortGetQueueLevel", "YaaDbDwKpFM"},
+    {"YaaDbDwKpFM", "YaaDbDwKpFM"},
+    {"sceAudio3dPortPush", "VEVhZ9qd4ZY"},
+    {"VEVhZ9qd4ZY", "VEVhZ9qd4ZY"},
+    {"sceAudio3dPortSetAttribute", "Yq9bfUQ0uJg"},
+    {"Yq9bfUQ0uJg", "Yq9bfUQ0uJg"},
+    /* Ngs2 */
+    {"sceNgs2SystemCreate", "bCnOywhbgJI"},
+    {"bCnOywhbgJI", "bCnOywhbgJI"},
+    {"sceNgs2SystemDestroy", "eQOJNmCr9bs"},
+    {"eQOJNmCr9bs", "eQOJNmCr9bs"},
+    {"sceNgs2SystemQueryBufferSize", "Pql5tIhAAaY"},
+    {"Pql5tIhAAaY", "Pql5tIhAAaY"},
+    {"sceNgs2RackCreate", "kCb9JGp4tXA"},
+    {"kCb9JGp4tXA", "kCb9JGp4tXA"},
+    {"sceNgs2RackDestroy", "g5icjO6DKpQ"},
+    {"g5icjO6DKpQ", "g5icjO6DKpQ"},
+    {"sceNgs2CalcWaveformBlock", "3pCNbVM11UA"},
+    {"3pCNbVM11UA", "3pCNbVM11UA"},
+    {"sceNgs2ParseWaveformData", "hyVLT2VlOYk"},
+    {"hyVLT2VlOYk", "hyVLT2VlOYk"},
+    {"sceNgs2RackGetVoiceHandle", "MwmHz8pAdAo"},
+    {"MwmHz8pAdAo", "MwmHz8pAdAo"},
+    {"sceNgs2RackQueryBufferSize", "0eFLVCfWVds"},
+    {"0eFLVCfWVds", "0eFLVCfWVds"},
+    {"sceNgs2SystemRender", "i0VnXM/C9fc"},
+    {"i0VnXM/C9fc", "i0VnXM/C9fc"},
+    {"sceNgs2SystemResetOption", "AQkj7C0f3PY"},
+    {"AQkj7C0f3PY", "AQkj7C0f3PY"},
+    {"sceNgs2VoiceControl", "uu94irFOGpA"},
+    {"uu94irFOGpA", "uu94irFOGpA"},
+    {"sceNgs2VoiceGetState", "/TOuuAQ/buE"},
+    {"/TOuuAQ/buE", "/TOuuAQ/buE"},
+    {"sceNgs2VoiceGetStateFlags", "rEh728kXk3w"},
+    {"rEh728kXk3w", "rEh728kXk3w"},
+    /* Acm */
+    {"sceAcmContextCreate", "yVy3Yp-lhWQ"},
+    {"yVy3Yp-lhWQ", "yVy3Yp-lhWQ"},
+    {"sceAcmContextDestroy", "H9n0CIwBGIw"},
+    {"H9n0CIwBGIw", "H9n0CIwBGIw"},
+    {"sceAcmBatchInitialize", "YvE+byJO5lk"},
+    {"YvE+byJO5lk", "YvE+byJO5lk"},
+    {"sceAcmBatchStart", "9xm5cglXkwM"},
+    {"9xm5cglXkwM", "9xm5cglXkwM"},
+    {"sceAcmBatchWait", "sSRXGYF3s0Q"},
+    {"sSRXGYF3s0Q", "sSRXGYF3s0Q"},
+    /* VideoRecording */
+    {"sceVideoRecordingGetStatus", "fZJQzFK4Gv4"},
+    {"fZJQzFK4Gv4", "fZJQzFK4Gv4"},
+    {"sceVideoRecordingQueryMemSize", "ZvWzS2wTIMc"},
+    {"ZvWzS2wTIMc", "ZvWzS2wTIMc"},
+    {"sceVideoRecordingSetInfo", "Fc8qxlKINYQ"},
+    {"Fc8qxlKINYQ", "Fc8qxlKINYQ"},
+    {"sceVideoRecordingStart", "tWoe9IlGAhs"},
+    {"tWoe9IlGAhs", "tWoe9IlGAhs"},
+    {"sceVideoRecordingStop", "OOFxrMY+mfI"},
+    {"OOFxrMY+mfI", "OOFxrMY+mfI"},
+    /* AvPlayer */
+    {"sceAvPlayerAddSourceEx", "x8uvuFOPZhU"},
+    {"x8uvuFOPZhU", "x8uvuFOPZhU"},
+    {"sceAvPlayerPostInit", "HD1YKVU26/M"},
+    {"HD1YKVU26/M", "HD1YKVU26/M"},
+    {"sceAvPlayerSetLogCallback", "eBTreZ84JFY"},
+    {"eBTreZ84JFY", "eBTreZ84JFY"},
 };
 
 const char *obs_prospero_name_to_nid(const char *name) {
@@ -1869,9 +2003,9 @@ const void *obs_dlsym_probe_handle(int (*fn_dlsym)(int, const char *, void **), 
             suffixed[b] = bare_nid[b];
         }
         static const char *const s_common_tags[] = {
-            "#j#i", "#H#A", "#a#H", "#T#U", "#J#A", "#A#B", "#C#A",
-            "#b#c", "#G#H", "#F#A", "#R#A", "#D#A", "#I#A", "#B#C",
-            "#G#A", "#H#B", "#I#B", "#J#B", "#K#A"};
+            "#j#i", "#H#A", "#a#H", "#T#U", "#J#A", "#A#B", "#C#A", "#b#c",
+            "#G#H", "#F#A", "#R#A", "#D#A", "#I#A", "#B#C", "#G#A", "#H#B",
+            "#I#B", "#J#B", "#K#A", "#d#d", "#b#b", "#c#c", "#e#e"};
         for (size_t t = 0; t < sizeof(s_common_tags) / sizeof(s_common_tags[0]); t++) {
             for (size_t k = 0; k < 5; k++) {
                 suffixed[11 + k] = s_common_tags[t][k];
@@ -1898,6 +2032,25 @@ const void *obs_dlsym_probe_handle(int (*fn_dlsym)(int, const char *, void **), 
              p++) {
             suffixed[12] = s_consec_pairs[p].l1;
             suffixed[14] = s_consec_pairs[p].l2;
+            suffixed[15] = '\0';
+            address = obs_dlsym_try(fn_dlsym, h, suffixed);
+            if (address != NULL) {
+                return address;
+            }
+        }
+
+        for (char l = 'a'; l <= 'z'; l++) {
+            suffixed[12] = l;
+            suffixed[14] = l;
+            suffixed[15] = '\0';
+            address = obs_dlsym_try(fn_dlsym, h, suffixed);
+            if (address != NULL) {
+                return address;
+            }
+        }
+        for (char l = 'A'; l <= 'Z'; l++) {
+            suffixed[12] = l;
+            suffixed[14] = l;
             suffixed[15] = '\0';
             address = obs_dlsym_try(fn_dlsym, h, suffixed);
             if (address != NULL) {

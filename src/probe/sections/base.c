@@ -3319,6 +3319,92 @@ static obs_result check_avplayer_lifecycle(void) {
                            (uint64_t)(s_av_log_count - before_cnt), "count");
     }
 
+    /* REQ-20261012T2011Z-625e: Follow-up arms */
+    /* 7. InitEx with block size 0x100 */
+    uint8_t small_block[0x230];
+    memcpy(small_block, av_init_block, sizeof(small_block));
+    *(uint64_t *)(void *)(small_block + 0x00) = 0x100ULL;
+    uint64_t handle_small = 0;
+    int rc_small = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_small = fn_init_ex(small_block, &handle_small);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(id, "InitEx-size-0x100", "rc", (uint64_t)(uint32_t)rc_small,
+                       "code");
+    if (rc_small == 0 && fn_close) {
+        fn_close((void *)(uintptr_t)handle_small);
+    }
+
+    /* 8. InitEx with NULL callback slots */
+    uint8_t null_cb_block[0x230];
+    memcpy(null_cb_block, av_init_block, sizeof(null_cb_block));
+    *(void **)(void *)(null_cb_block + 0x10) = NULL; /* null alloc */
+    uint64_t handle_nullcb = 0;
+    int rc_nullcb = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_nullcb = fn_init_ex(null_cb_block, &handle_nullcb);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(id, "InitEx-null-alloc-cb", "rc", (uint64_t)(uint32_t)rc_nullcb,
+                       "code");
+    if (rc_nullcb == 0 && fn_close) {
+        fn_close((void *)(uintptr_t)handle_nullcb);
+    }
+
+    /* 9. PostInit with all-zero block */
+    uint64_t handle3 = 0;
+    int rc_init3 = fn_init_ex(av_init_block, &handle3);
+    if (rc_init3 == 0) {
+        if (s_av_log_count > 0) {
+            uint64_t alloc_ret = s_av_logs[s_av_log_count - 1].ret;
+            obs_report_measure(id, "InitEx-handle", "equals-alloc-ptr",
+                               (uint64_t)(handle3 == alloc_ret), "bool");
+            obs_report_measure(id, "InitEx-handle", "offset-from-alloc",
+                               handle3 - alloc_ret, "delta");
+        }
+
+        uint8_t zero_post[0x80];
+        memset(zero_post, 0, sizeof(zero_post));
+        int rc_post_zero = -1;
+        if (fn_post_init) {
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_post_zero = fn_post_init((void *)(uintptr_t)handle3, zero_post);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "PostInit-all-zeros", "rc",
+                               (uint64_t)(uint32_t)rc_post_zero, "code");
+        }
+
+        /* 10. AddSourceEx on real file (param.json) */
+        if (fn_add_src_ex) {
+            int rc_add_real = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_add_real = fn_add_src_ex((void *)(uintptr_t)handle3, 0,
+                                            "/app0/sce_sys/param.json");
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "AddSourceEx-param-json", "rc",
+                               (uint64_t)(uint32_t)rc_add_real, "code");
+        }
+
+        if (fn_close) {
+            fn_close((void *)(uintptr_t)handle3);
+        }
+    }
+
     return obs_pass();
 }
 

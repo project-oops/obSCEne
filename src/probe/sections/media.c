@@ -1245,6 +1245,166 @@ static obs_result check_video_pixel_format_codes(void) {
     return obs_pass();
 }
 
+/* REQ-20261012T1825Z-6dd7: libSceVideoRecording link-bound census and calls */
+static obs_result check_videorecording_lifecycle(void) {
+    const char *id = "080-video/videorecording-census";
+
+    int rc_sysmod = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        obs_jmp_buf g;
+        if (OBS_FAULT_ARM(&g) == 0) {
+            rc_sysmod = sceSysmoduleLoadModule(0x00c8);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "sysmodule-load-0x00c8", "rc", (uint64_t)(uint32_t)rc_sysmod,
+                       "code");
+
+    int h = obs_module_open("libSceVideoRecording");
+    if (h < 0) {
+        h = obs_module_open("libSceVideoRecording.sprx");
+    }
+    obs_report_measure(id, "libSceVideoRecording", "handle", (uint64_t)(uint32_t)h,
+                       "handle");
+
+    static const struct {
+        const char *name;
+        const char *nid;
+    } syms[] = {
+        {"sceVideoRecordingQueryMemSize", "$ZvWzS2wTIMc"},
+        {"sceVideoRecordingOpen", "$7QoTYzVuzto"},
+        {"sceVideoRecordingStart", "$tWoe9IlGAhs"},
+        {"sceVideoRecordingStop", "$OOFxrMY+mfI"},
+        {"sceVideoRecordingClose", "$KHvkPQJDMLk"},
+        {"sceVideoRecordingGetStatus", "$fZJQzFK4Gv4"},
+        {"sceVideoRecordingSetInfo", "$Fc8qxlKINYQ"},
+    };
+
+    const void *fn_query = NULL;
+    const void *fn_open = NULL;
+    const void *fn_stop = NULL;
+    const void *fn_close = NULL;
+    const void *fn_status = NULL;
+
+    for (size_t i = 0; i < sizeof(syms) / sizeof(syms[0]); i++) {
+        const void *addr = NULL;
+        if (h >= 0) {
+            addr = obs_module_symbol(h, syms[i].nid);
+            if (!addr)
+                addr = obs_module_symbol(h, syms[i].name);
+        }
+        if (!addr)
+            addr = obs_module_symbol(OBS_HANDLE_SELF, syms[i].nid);
+        if (!addr)
+            addr = obs_module_symbol(OBS_HANDLE_SELF, syms[i].name);
+
+        int bound = (addr != NULL && obs_address_is_callable(addr));
+        obs_report_measure(id, syms[i].name, "bound", (uint64_t)bound, "bool");
+        if (bound) {
+            obs_report_measure(id, syms[i].name, "vaddr", (uint64_t)(uintptr_t)addr,
+                               "offset");
+        } else {
+            obs_report_measure(id, syms[i].name, "status", 0, "not-possible");
+        }
+
+        if (i == 0)
+            fn_query = addr;
+        else if (i == 1)
+            fn_open = addr;
+        else if (i == 3)
+            fn_stop = addr;
+        else if (i == 4)
+            fn_close = addr;
+        else if (i == 5)
+            fn_status = addr;
+    }
+
+    obs_jmp_buf guard;
+
+    if (fn_query != NULL) {
+        typedef uint64_t (*fn_qmem_t)(void *);
+        fn_qmem_t p_qmem = (fn_qmem_t)fn_query;
+        uint8_t param[0x40];
+        memset(param, 0, sizeof(param));
+
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            uint64_t rax = p_qmem(param);
+            obs_fault_unregister();
+            obs_report_measure(id, "QueryMemSize-param", "rax", rax, "val");
+        } else {
+            obs_fault_unregister();
+        }
+
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            uint64_t rax = p_qmem(NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "QueryMemSize-null", "rax", rax, "val");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (fn_open != NULL) {
+        typedef int (*fn_open_t)(void);
+        fn_open_t p_open = (fn_open_t)fn_open;
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_open();
+            obs_fault_unregister();
+            obs_report_measure(id, "Open", "rc", (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (fn_status != NULL) {
+        typedef uint64_t (*fn_st_t)(void);
+        fn_st_t p_st = (fn_st_t)fn_status;
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            uint64_t rax = p_st();
+            obs_fault_unregister();
+            obs_report_measure(id, "GetStatus-before-open", "rax", rax, "val");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (fn_stop != NULL) {
+        typedef int (*fn_void_rc_t)(void);
+        fn_void_rc_t p_stop = (fn_void_rc_t)fn_stop;
+        for (int i = 0; i < 2; i++) {
+            char tag[32];
+            snprintf(tag, sizeof(tag), "Stop-noopen-try%d", i);
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_stop();
+                obs_fault_unregister();
+                obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    if (fn_close != NULL) {
+        typedef int (*fn_void_rc_t)(void);
+        fn_void_rc_t p_close = (fn_void_rc_t)fn_close;
+        for (int i = 0; i < 2; i++) {
+            char tag[32];
+            snprintf(tag, sizeof(tag), "Close-noopen-try%d", i);
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_close();
+                obs_fault_unregister();
+                obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check video_checks[] = {
     {"080-video/close-rejects-bad-handle", "libSceVideoOut", "sceVideoOutClose",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceVideoOutClose,
@@ -1277,6 +1437,9 @@ static const obs_check video_checks[] = {
     {"080-video/pixel-format-codes", "libSceVideoOut", "sceVideoOutSetBufferAttribute2",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_video_pixel_format_codes,
      check_video_pixel_format_codes, OBS_FROM_ASSUMED},
+    {"080-video/videorecording-census", "libSceVideoRecording",
+     "sceVideoRecordingQueryMemSize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_videorecording_lifecycle, OBS_FROM_ASSUMED},
 };
 
 const obs_section obs_section_video = {
@@ -1947,6 +2110,859 @@ static obs_result check_audio_audioout2_ports(void) {
     return obs_pass_value((uint64_t)resolved);
 }
 
+/* REQ-20261012T1814Z-af10 & REQ-20261012T1822Z-05a9: libSceAudio3d lifecycle and
+ * calls */
+static obs_result check_audio3d_lifecycle(void) {
+    const char *id = "090-audio/audio3d-lifecycle";
+    (void)obs_sysmodule_load_id(0x00a7);
+
+    int h = obs_module_open("libSceAudio3d");
+    if (h < 0) {
+        h = obs_module_open("libSceAudio3d.sprx");
+    }
+
+    typedef int (*fn_init_t)(uint32_t);
+    typedef int (*fn_term_t)(void);
+    typedef int (*fn_get_def_t)(void *);
+    typedef int (*fn_port_open_t)(uint32_t, const void *, uint64_t *);
+    typedef int (*fn_port_close_t)(uint64_t);
+    typedef int (*fn_port_flush_t)(uint64_t);
+    typedef int (*fn_obj_res_t)(uint64_t, uint64_t *);
+    typedef int (*fn_obj_set_attr_t)(uint64_t, uint64_t, uint32_t, const void *);
+    typedef int (*fn_port_adv_t)(uint64_t);
+    typedef int (*fn_port_push_t)(uint64_t, uint32_t);
+    typedef int (*fn_port_qlevel_t)(uint64_t, uint32_t *, uint32_t *);
+    typedef int (*fn_port_set_attr_t)(uint64_t, uint32_t, const void *, uint32_t);
+
+    fn_init_t p_init = (fn_init_t)obs_module_symbol(h, "sceAudio3dInitialize");
+    fn_term_t p_term = (fn_term_t)obs_module_symbol(h, "sceAudio3dTerminate");
+    fn_get_def_t p_get_def =
+        (fn_get_def_t)obs_module_symbol(h, "sceAudio3dGetDefaultOpenParameters");
+    fn_port_open_t p_open = (fn_port_open_t)obs_module_symbol(h, "sceAudio3dPortOpen");
+    fn_port_close_t p_close =
+        (fn_port_close_t)obs_module_symbol(h, "sceAudio3dPortClose");
+    fn_port_flush_t p_flush =
+        (fn_port_flush_t)obs_module_symbol(h, "sceAudio3dPortFlush");
+    fn_obj_res_t p_obj_res =
+        (fn_obj_res_t)obs_module_symbol(h, "sceAudio3dObjectReserve");
+    fn_obj_set_attr_t p_obj_set =
+        (fn_obj_set_attr_t)obs_module_symbol(h, "sceAudio3dObjectSetAttributes");
+    fn_port_adv_t p_adv = (fn_port_adv_t)obs_module_symbol(h, "sceAudio3dPortAdvance");
+    fn_port_push_t p_push = (fn_port_push_t)obs_module_symbol(h, "sceAudio3dPortPush");
+    fn_port_qlevel_t p_qlevel =
+        (fn_port_qlevel_t)obs_module_symbol(h, "sceAudio3dPortGetQueueLevel");
+    fn_port_set_attr_t p_set_attr =
+        (fn_port_set_attr_t)obs_module_symbol(h, "sceAudio3dPortSetAttribute");
+
+    obs_report_measure(id, "sceAudio3dInitialize", "bound", p_init != NULL, "bool");
+    obs_report_measure(id, "sceAudio3dGetDefaultOpenParameters", "bound",
+                       p_get_def != NULL, "bool");
+    obs_report_measure(id, "sceAudio3dPortOpen", "bound", p_open != NULL, "bool");
+
+    if (!p_init) {
+        return obs_skip("sceAudio3d symbols unexported in native PS5 userland");
+    }
+
+    obs_jmp_buf guard;
+
+    /* 1. Terminate before any Init */
+    if (p_term != NULL) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_term();
+            obs_fault_unregister();
+            obs_report_measure(id, "term-before-init", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* 2. Initialize with 0, 1, then 0 */
+    static const uint32_t init_args[] = {0, 1, 0};
+    for (int i = 0; i < 3; i++) {
+        char tag[32];
+        snprintf(tag, sizeof(tag), "init-arg%d", (int)init_args[i]);
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_init(init_args[i]);
+            obs_fault_unregister();
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* 3. GetDefaultOpenParameters */
+    uint8_t def_params[0x30];
+    memset(def_params, 0xcc, sizeof(def_params));
+    if (p_get_def != NULL) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_get_def(def_params);
+            obs_fault_unregister();
+            obs_report_measure(id, "get-default-params", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+            obs_report_bytes(id, "get-default-params", "bytes", 0, def_params,
+                             sizeof(def_params));
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* 4. PortOpen arms */
+    uint64_t port = 0xffffffffffffffffULL;
+    if (p_open != NULL) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_open(0xff, def_params, &port);
+            obs_fault_unregister();
+            obs_report_measure(id, "port-open-def", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+            obs_report_measure(id, "port-open-def", "port", port, "handle");
+        } else {
+            obs_fault_unregister();
+        }
+
+        uint64_t port2 = 0xffffffffffffffffULL;
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc2 = p_open(0xff, def_params, &port2);
+            obs_fault_unregister();
+            obs_report_measure(id, "port-open-second", "rc", (uint64_t)(uint32_t)rc2,
+                               "code");
+            if (rc2 == 0 && p_close)
+                p_close(port2);
+        } else {
+            obs_fault_unregister();
+        }
+
+        static const uint32_t szs[] = {0x10, 0x18, 0x20, 0x28, 0x30};
+        for (size_t s = 0; s < sizeof(szs) / sizeof(szs[0]); s++) {
+            uint8_t pblock[0x30];
+            memcpy(pblock, def_params, sizeof(pblock));
+            *(uint32_t *)(pblock + 0) = szs[s];
+            uint64_t pt = 0;
+            char tag[32];
+            snprintf(tag, sizeof(tag), "port-open-sz0x%x", (unsigned int)szs[s]);
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_open(0xff, pblock, &pt);
+                obs_fault_unregister();
+                obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+                if (rc == 0 && p_close)
+                    p_close(pt);
+            } else {
+                obs_fault_unregister();
+            }
+        }
+
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_open(0xff, NULL, &port2);
+            obs_fault_unregister();
+            obs_report_measure(id, "port-open-null-param", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_open(0xff, def_params, NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "port-open-null-out", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    /* 5. ObjectReserve up to failure or 16 */
+    if (p_obj_res != NULL && port != 0xffffffffffffffffULL) {
+        uint64_t objs[16];
+        int res_count = 0;
+        for (int i = 0; i < 16; i++) {
+            uint64_t o = 0;
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_obj_res(port, &o);
+                obs_fault_unregister();
+                if (rc == 0) {
+                    objs[res_count++] = o;
+                } else {
+                    obs_report_measure(id, "obj-reserve-limit", "rc",
+                                       (uint64_t)(uint32_t)rc, "code");
+                    obs_report_measure(id, "obj-reserve-limit", "count",
+                                       (uint64_t)res_count, "count");
+                    break;
+                }
+            } else {
+                obs_fault_unregister();
+                break;
+            }
+        }
+        obs_report_measure(id, "obj-reserve-total", "count", (uint64_t)res_count,
+                           "count");
+
+        if (p_obj_set != NULL && res_count > 0) {
+            struct {
+                uint32_t id;
+                uint32_t pad;
+                uint64_t val;
+                uint64_t sz;
+            } attr = {1, 0, 0, 0};
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_obj_set(port, objs[0], 1, &attr);
+                obs_fault_unregister();
+                obs_report_measure(id, "obj-set-attr", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    /* 6. Port queue, advance, push, flush, close */
+    if (port != 0xffffffffffffffffULL) {
+        if (p_push != NULL) {
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_push(port, 0);
+                obs_fault_unregister();
+                obs_report_measure(id, "port-push", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (p_adv != NULL) {
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_adv(port);
+                obs_fault_unregister();
+                obs_report_measure(id, "port-adv", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (p_qlevel != NULL) {
+            uint32_t l = 0, a = 0;
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_qlevel(port, &l, &a);
+                obs_fault_unregister();
+                obs_report_measure(id, "port-qlevel", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+                obs_report_measure(id, "port-qlevel", "level", (uint64_t)l, "val");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (p_set_attr != NULL) {
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_set_attr(port, 0x10001, NULL, 4);
+                obs_fault_unregister();
+                obs_report_measure(id, "port-set-attr", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (p_flush != NULL) {
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_flush(port);
+                obs_fault_unregister();
+                obs_report_measure(id, "port-flush", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (p_close != NULL) {
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_close(port);
+                obs_fault_unregister();
+                obs_report_measure(id, "port-close", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    if (p_term != NULL) {
+        p_term();
+    }
+
+    return obs_pass();
+}
+
+/* REQ-20261012T1814Z-623a: libSceAudioIn Open, Input, Close */
+static obs_result check_audio_in_lifecycle(void) {
+    const char *id = "090-audio/audioin-lifecycle";
+    (void)obs_sysmodule_load_id(0x00a8);
+
+    int h = obs_module_open("libSceAudioIn");
+    if (h < 0) {
+        h = obs_module_open("libSceAudioIn.sprx");
+    }
+
+    typedef int (*fn_ain_open_t)(uint32_t user, uint32_t type, uint32_t index,
+                                 uint32_t len, uint32_t freq, uint32_t param);
+    typedef int (*fn_ain_input_t)(int handle, void *dst);
+    typedef int (*fn_ain_close_t)(int handle);
+
+    fn_ain_open_t p_open = (fn_ain_open_t)obs_module_symbol(h, "sceAudioInOpen");
+    fn_ain_input_t p_input = (fn_ain_input_t)obs_module_symbol(h, "sceAudioInInput");
+    fn_ain_close_t p_close = (fn_ain_close_t)obs_module_symbol(h, "sceAudioInClose");
+
+    obs_report_measure(id, "sceAudioInOpen", "bound", p_open != NULL, "bool");
+    obs_report_measure(id, "sceAudioInInput", "bound", p_input != NULL, "bool");
+    obs_report_measure(id, "sceAudioInClose", "bound", p_close != NULL, "bool");
+
+    if (!p_open) {
+        return obs_skip("sceAudioInOpen not available");
+    }
+
+    obs_jmp_buf guard;
+
+    int h_in = -1;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        h_in = p_open(0xff, 0, 0, 256, 48000, 2);
+        obs_fault_unregister();
+        obs_report_measure(id, "open-std", "rc", (uint64_t)(uint32_t)h_in, "handle");
+    } else {
+        obs_fault_unregister();
+    }
+
+    static const struct {
+        const char *tag;
+        uint32_t u, t, idx, len, freq, param;
+    } open_arms[] = {
+        {"open-u0", 0, 0, 0, 256, 48000, 2},
+        {"open-type1", 0xff, 1, 0, 256, 48000, 2},
+        {"open-type2", 0xff, 2, 0, 256, 48000, 2},
+        {"open-type3", 0xff, 3, 0, 256, 48000, 2},
+        {"open-type0x10", 0xff, 0x10, 0, 256, 48000, 2},
+        {"open-len0", 0xff, 0, 0, 0, 48000, 2},
+        {"open-len1", 0xff, 0, 0, 1, 48000, 2},
+        {"open-len2048", 0xff, 0, 0, 2048, 48000, 2},
+        {"open-len2049", 0xff, 0, 0, 2049, 48000, 2},
+        {"open-freq16k", 0xff, 0, 0, 256, 16000, 2},
+        {"open-freq44k", 0xff, 0, 0, 256, 44100, 2},
+        {"open-param0", 0xff, 0, 0, 256, 48000, 0},
+        {"open-param1", 0xff, 0, 0, 256, 48000, 1},
+        {"open-param3", 0xff, 0, 0, 256, 48000, 3},
+    };
+
+    for (size_t a = 0; a < sizeof(open_arms) / sizeof(open_arms[0]); a++) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_open(open_arms[a].u, open_arms[a].t, open_arms[a].idx,
+                            open_arms[a].len, open_arms[a].freq, open_arms[a].param);
+            obs_fault_unregister();
+            obs_report_measure(id, open_arms[a].tag, "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+            if (rc > 0 && p_close) {
+                p_close(rc);
+            }
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (p_input != NULL && h_in > 0) {
+        uint8_t dst[256 * 2 * 2 + 0x40];
+        memset(dst, 0xcc, sizeof(dst));
+
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_in = p_input(h_in, dst);
+            obs_fault_unregister();
+            obs_report_measure(id, "input", "rc", (uint64_t)(uint32_t)rc_in, "code");
+
+            unsigned int changed = 0;
+            for (size_t i = 0; i < sizeof(dst); i++) {
+                if (dst[i] != 0xcc)
+                    changed++;
+            }
+            obs_report_measure(id, "input", "bytes-changed", (uint64_t)changed,
+                               "bytes");
+            obs_report_measure(id, "input", "content-changed", (uint64_t)(changed > 0),
+                               "bool");
+        } else {
+            obs_fault_unregister();
+        }
+
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_null = p_input(h_in, NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "input-null", "rc", (uint64_t)(uint32_t)rc_null,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_h0 = p_input(0, dst);
+            obs_fault_unregister();
+            obs_report_measure(id, "input-handle0", "rc", (uint64_t)(uint32_t)rc_h0,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (p_close != NULL) {
+        if (h_in > 0) {
+            for (int c = 0; c < 2; c++) {
+                char tag[32];
+                snprintf(tag, sizeof(tag), "close-valid-try%d", c);
+                if (OBS_FAULT_ARM(&guard) == 0) {
+                    int rc = p_close(h_in);
+                    obs_fault_unregister();
+                    obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+                } else {
+                    obs_fault_unregister();
+                }
+            }
+        }
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc0 = p_close(0);
+            obs_fault_unregister();
+            obs_report_measure(id, "close-handle0", "rc", (uint64_t)(uint32_t)rc0,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_neg = p_close(-1);
+            obs_fault_unregister();
+            obs_report_measure(id, "close-handle-neg1", "rc",
+                               (uint64_t)(uint32_t)rc_neg, "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    return obs_pass();
+}
+
+/* REQ-20261012T1818Z-23b6 & REQ-20261012T1822Z-348f: libSceNgs2 system and rack */
+static obs_result check_ngs2_lifecycle(void) {
+    const char *id = "090-audio/ngs2-lifecycle";
+    (void)obs_sysmodule_load_id(0x00aa);
+
+    int h = obs_module_open("libSceNgs2");
+    if (h < 0) {
+        h = obs_module_open("libSceNgs2.sprx");
+    }
+
+    typedef int (*fn_ngs_reset_opt_t)(void *opt);
+    typedef int (*fn_ngs_qbuf_t)(const void *opt, void *info);
+    typedef int (*fn_ngs_sys_cr_t)(const void *opt, const void *buf_info,
+                                   uint64_t *sys_out);
+    typedef int (*fn_ngs_sys_dst_t)(uint64_t sys);
+    typedef int (*fn_ngs_rack_qbuf_t)(uint32_t rack_id, const void *opt, void *info);
+    typedef int (*fn_ngs_rack_cr_t)(uint64_t sys, uint32_t rack_id, const void *opt,
+                                    const void *buf_info, uint64_t *rack_out);
+    typedef int (*fn_ngs_rack_dst_t)(uint64_t rack);
+    typedef int (*fn_ngs_rack_voice_t)(uint64_t rack, uint32_t idx,
+                                       uint64_t *voice_out);
+    typedef int (*fn_ngs_voice_st_t)(uint64_t voice, void *st, uint32_t sz);
+    typedef int (*fn_ngs_voice_flags_t)(uint64_t voice, uint32_t *flags_out);
+    typedef int (*fn_ngs_voice_ctrl_t)(uint64_t voice, const void *ctrl);
+    typedef int (*fn_ngs_render_t)(uint64_t sys, void *bufs, uint32_t count);
+    typedef int (*fn_ngs_parse_wf_t)(const void *data, size_t sz, void *info);
+    typedef int (*fn_ngs_calc_wf_t)(const void *fmt, uint32_t offset, uint32_t len,
+                                    void *block);
+
+    fn_ngs_reset_opt_t p_reset_opt =
+        (fn_ngs_reset_opt_t)obs_module_symbol(h, "sceNgs2SystemResetOption");
+    fn_ngs_qbuf_t p_qbuf =
+        (fn_ngs_qbuf_t)obs_module_symbol(h, "sceNgs2SystemQueryBufferSize");
+    fn_ngs_sys_cr_t p_sys_cr =
+        (fn_ngs_sys_cr_t)obs_module_symbol(h, "sceNgs2SystemCreate");
+    fn_ngs_sys_dst_t p_sys_dst =
+        (fn_ngs_sys_dst_t)obs_module_symbol(h, "sceNgs2SystemDestroy");
+    fn_ngs_rack_qbuf_t p_rack_qbuf =
+        (fn_ngs_rack_qbuf_t)obs_module_symbol(h, "sceNgs2RackQueryBufferSize");
+    fn_ngs_rack_cr_t p_rack_cr =
+        (fn_ngs_rack_cr_t)obs_module_symbol(h, "sceNgs2RackCreate");
+    fn_ngs_rack_dst_t p_rack_dst =
+        (fn_ngs_rack_dst_t)obs_module_symbol(h, "sceNgs2RackDestroy");
+    fn_ngs_rack_voice_t p_voice =
+        (fn_ngs_rack_voice_t)obs_module_symbol(h, "sceNgs2RackGetVoiceHandle");
+    fn_ngs_voice_st_t p_vst =
+        (fn_ngs_voice_st_t)obs_module_symbol(h, "sceNgs2VoiceGetState");
+    fn_ngs_voice_flags_t p_vflg =
+        (fn_ngs_voice_flags_t)obs_module_symbol(h, "sceNgs2VoiceGetStateFlags");
+    fn_ngs_voice_ctrl_t p_vctrl =
+        (fn_ngs_voice_ctrl_t)obs_module_symbol(h, "sceNgs2VoiceControl");
+    fn_ngs_render_t p_render =
+        (fn_ngs_render_t)obs_module_symbol(h, "sceNgs2SystemRender");
+    fn_ngs_parse_wf_t p_parse_wf =
+        (fn_ngs_parse_wf_t)obs_module_symbol(h, "sceNgs2ParseWaveformData");
+    fn_ngs_calc_wf_t p_calc_wf =
+        (fn_ngs_calc_wf_t)obs_module_symbol(h, "sceNgs2CalcWaveformBlock");
+
+    obs_report_measure(id, "sceNgs2SystemCreate", "bound", p_sys_cr != NULL, "bool");
+    obs_report_measure(id, "sceNgs2SystemQueryBufferSize", "bound", p_qbuf != NULL,
+                       "bool");
+
+    if (!p_qbuf) {
+        return obs_skip("sceNgs2 symbols unexported in native PS5 userland");
+    }
+
+    obs_jmp_buf guard;
+
+    /* 1. ResetOption & QueryBufferSize */
+    uint8_t opt[0x90];
+    memset(opt, 0xcc, sizeof(opt));
+    if (p_reset_opt != NULL) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_reset_opt(opt);
+            obs_fault_unregister();
+            obs_report_measure(id, "reset-option", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+            obs_report_bytes(id, "reset-option", "bytes", 0, opt, sizeof(opt));
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    uint8_t info[0x40];
+    memset(info, 0xcc, sizeof(info));
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        int rc_null = p_qbuf(NULL, info);
+        obs_fault_unregister();
+        obs_report_measure(id, "qbuf-null-opt", "rc", (uint64_t)(uint32_t)rc_null,
+                           "code");
+        obs_report_bytes(id, "qbuf-null-opt", "info", 0, info, sizeof(info));
+    } else {
+        obs_fault_unregister();
+    }
+
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        int rc_opt = p_qbuf(opt, info);
+        obs_fault_unregister();
+        obs_report_measure(id, "qbuf-opt", "rc", (uint64_t)(uint32_t)rc_opt, "code");
+        obs_report_bytes(id, "qbuf-opt", "info", 0, info, sizeof(info));
+    } else {
+        obs_fault_unregister();
+    }
+
+    /* 2. SystemCreate limit */
+    uint64_t systems[6];
+    int sys_count = 0;
+    uint8_t sys_buf[0x10000];
+    memset(sys_buf, 0, sizeof(sys_buf));
+    uint8_t buf_info[0x20];
+    memset(buf_info, 0, sizeof(buf_info));
+    *(void **)(buf_info + 0) = sys_buf;
+    *(uint64_t *)(buf_info + 8) = sizeof(sys_buf);
+
+    if (p_sys_cr != NULL) {
+        for (int i = 0; i < 6; i++) {
+            uint64_t s = 0;
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_sys_cr(opt, buf_info, &s);
+                obs_fault_unregister();
+                if (rc == 0) {
+                    systems[sys_count++] = s;
+                } else {
+                    obs_report_measure(id, "sys-limit-hit", "rc",
+                                       (uint64_t)(uint32_t)rc, "code");
+                    obs_report_measure(id, "sys-limit-hit", "count",
+                                       (uint64_t)sys_count, "count");
+                    break;
+                }
+            } else {
+                obs_fault_unregister();
+                break;
+            }
+        }
+        obs_report_measure(id, "sys-create-total", "count", (uint64_t)sys_count,
+                           "count");
+    }
+
+    /* 3. RackQueryBufferSize per id */
+    if (p_rack_qbuf != NULL) {
+        static const uint32_t rids[] = {0x1000, 0x2000, 0x2001, 0x3000,
+                                        0x4001, 0x4004, 0x5000};
+        for (size_t r = 0; r < sizeof(rids) / sizeof(rids[0]); r++) {
+            uint8_t rinfo[0x40];
+            memset(rinfo, 0xcc, sizeof(rinfo));
+            char tag[32];
+            snprintf(tag, sizeof(tag), "rack-qbuf-0x%x", (unsigned int)rids[r]);
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_rack_qbuf(rids[r], NULL, rinfo);
+                obs_fault_unregister();
+                obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+                obs_report_measure(id, tag, "size", *(uint64_t *)rinfo, "bytes");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    /* 4. RackCreate, Voice, Render, Waveform */
+    uint64_t rack = 0;
+    if (p_rack_cr != NULL && sys_count > 0) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_rack_cr(systems[0], 0x1000, NULL, buf_info, &rack);
+            obs_fault_unregister();
+            obs_report_measure(id, "rack-create-0x1000", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+            obs_report_measure(id, "rack-create-0x1000", "rack", rack, "handle");
+        } else {
+            obs_fault_unregister();
+        }
+
+        if (p_voice != NULL && rack != 0) {
+            static const uint32_t v_indices[] = {0, 64, 256};
+            for (size_t vi = 0; vi < sizeof(v_indices) / sizeof(v_indices[0]); vi++) {
+                uint64_t v = 0;
+                char tag[32];
+                snprintf(tag, sizeof(tag), "rack-get-voice-%u",
+                         (unsigned int)v_indices[vi]);
+                if (OBS_FAULT_ARM(&guard) == 0) {
+                    int rc = p_voice(rack, v_indices[vi], &v);
+                    obs_fault_unregister();
+                    obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+                    if (vi == 0 && rc == 0) {
+                        if (p_vst != NULL) {
+                            uint8_t vst_buf[0x30];
+                            memset(vst_buf, 0xcc, sizeof(vst_buf));
+                            if (OBS_FAULT_ARM(&guard) == 0) {
+                                int r_vst = p_vst(v, vst_buf, sizeof(vst_buf));
+                                obs_fault_unregister();
+                                obs_report_measure(id, "voice-get-state", "rc",
+                                                   (uint64_t)(uint32_t)r_vst, "code");
+                            } else {
+                                obs_fault_unregister();
+                            }
+                        }
+                        if (p_vflg != NULL) {
+                            uint32_t flgs = 0;
+                            if (OBS_FAULT_ARM(&guard) == 0) {
+                                int r_flg = p_vflg(v, &flgs);
+                                obs_fault_unregister();
+                                obs_report_measure(id, "voice-get-flags", "rc",
+                                                   (uint64_t)(uint32_t)r_flg, "code");
+                            } else {
+                                obs_fault_unregister();
+                            }
+                        }
+                        if (p_vctrl != NULL) {
+                            if (OBS_FAULT_ARM(&guard) == 0) {
+                                int r_ctrl = p_vctrl(v, NULL);
+                                obs_fault_unregister();
+                                obs_report_measure(id, "voice-control-null", "rc",
+                                                   (uint64_t)(uint32_t)r_ctrl, "code");
+                            } else {
+                                obs_fault_unregister();
+                            }
+                        }
+                    }
+                } else {
+                    obs_fault_unregister();
+                }
+            }
+        }
+
+        if (p_render != NULL) {
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc = p_render(systems[0], NULL, 0);
+                obs_fault_unregister();
+                obs_report_measure(id, "sys-render-null", "rc", (uint64_t)(uint32_t)rc,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+
+        if (p_rack_dst != NULL && rack != 0) {
+            for (int rd = 0; rd < 2; rd++) {
+                char tag[32];
+                snprintf(tag, sizeof(tag), "rack-destroy-try%d", rd);
+                if (OBS_FAULT_ARM(&guard) == 0) {
+                    int rc = p_rack_dst(rack);
+                    obs_fault_unregister();
+                    obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+                } else {
+                    obs_fault_unregister();
+                }
+            }
+        }
+    }
+
+    if (p_parse_wf != NULL) {
+        uint8_t wf_info[0x100];
+        memset(wf_info, 0xcc, sizeof(wf_info));
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_parse_wf(NULL, 0, wf_info);
+            obs_fault_unregister();
+            obs_report_measure(id, "parse-wf-null", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (p_calc_wf != NULL) {
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_calc_wf(NULL, 0, 1024, NULL);
+            obs_fault_unregister();
+            obs_report_measure(id, "calc-wf-null", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+    }
+
+    if (p_sys_dst != NULL) {
+        for (int i = 0; i < sys_count; i++) {
+            p_sys_dst(systems[i]);
+        }
+    }
+
+    return obs_pass();
+}
+
+/* REQ-20261012T1822Z-7140: libSceAcm ContextCreate, Destroy, Batch */
+static obs_result check_acm_lifecycle(void) {
+    const char *id = "090-audio/acm-lifecycle";
+    (void)obs_sysmodule_load_id(0x00ab);
+
+    int h = obs_module_open("libSceAcm");
+    if (h < 0) {
+        h = obs_module_open("libSceAcm.sprx");
+    }
+
+    typedef int (*fn_acm_cr_t)(uint32_t *ctx_out);
+    typedef int (*fn_acm_dst_t)(uint32_t ctx);
+    typedef int (*fn_acm_start_buf_t)(uint32_t ctx, const void *buf, size_t sz,
+                                      uint64_t *batch_id);
+    typedef int (*fn_acm_wait_t)(uint32_t ctx, uint64_t batch_id, uint32_t timeout);
+
+    fn_acm_cr_t p_create = (fn_acm_cr_t)obs_module_symbol(h, "sceAcmContextCreate");
+    fn_acm_dst_t p_dst = (fn_acm_dst_t)obs_module_symbol(h, "sceAcmContextDestroy");
+    fn_acm_start_buf_t p_start =
+        (fn_acm_start_buf_t)obs_module_symbol(h, "sceAcmBatchStartBuffer");
+    fn_acm_wait_t p_wait = (fn_acm_wait_t)obs_module_symbol(h, "sceAcmBatchWait");
+
+    obs_report_measure(id, "sceAcmContextCreate", "bound", p_create != NULL, "bool");
+    obs_report_measure(id, "sceAcmContextDestroy", "bound", p_dst != NULL, "bool");
+
+    if (!p_create) {
+        return obs_skip("sceAcmContextCreate unexported in native PS5 userland");
+    }
+
+    obs_jmp_buf guard;
+
+    /* 1. ContextCreate 9 times to find 8-context limit */
+    uint32_t ctxs[9];
+    memset(ctxs, 0xcc, sizeof(ctxs));
+    int created = 0;
+    for (int i = 0; i < 9; i++) {
+        char tag[32];
+        snprintf(tag, sizeof(tag), "create-try%d", i);
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_create(&ctxs[i]);
+            obs_fault_unregister();
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+            obs_report_measure(id, tag, "ctx", (uint64_t)ctxs[i], "id");
+            if (rc == 0)
+                created++;
+        } else {
+            obs_fault_unregister();
+            break;
+        }
+    }
+    obs_report_measure(id, "create-total-limit", "count", (uint64_t)created, "count");
+
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        int rc_null = p_create(NULL);
+        obs_fault_unregister();
+        obs_report_measure(id, "create-null", "rc", (uint64_t)(uint32_t)rc_null,
+                           "code");
+    } else {
+        obs_fault_unregister();
+    }
+
+    /* Batch calls on live context */
+    if (p_start != NULL && created > 0) {
+        uint64_t b_id = 0xccccccccccccccccULL;
+        uint8_t bbuf[0x100];
+        memset(bbuf, 0, sizeof(bbuf));
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc_st = p_start(ctxs[0], bbuf, sizeof(bbuf), &b_id);
+            obs_fault_unregister();
+            obs_report_measure(id, "batch-start-buf", "rc", (uint64_t)(uint32_t)rc_st,
+                               "code");
+            obs_report_measure(id, "batch-start-buf", "batch-id", b_id, "id");
+        } else {
+            obs_fault_unregister();
+        }
+
+        if (p_wait != NULL) {
+            if (OBS_FAULT_ARM(&guard) == 0) {
+                int rc_wt = p_wait(ctxs[0], b_id, 0);
+                obs_fault_unregister();
+                obs_report_measure(id, "batch-wait", "rc", (uint64_t)(uint32_t)rc_wt,
+                                   "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    /* 2. ContextDestroy on live id, repeat, 0, -1 */
+    if (p_dst != NULL && created > 0) {
+        uint32_t live_id = ctxs[0];
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_dst(live_id);
+            obs_fault_unregister();
+            obs_report_measure(id, "destroy-live", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_dst(live_id);
+            obs_fault_unregister();
+            obs_report_measure(id, "destroy-repeat", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_dst(0);
+            obs_fault_unregister();
+            obs_report_measure(id, "destroy-zero", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_dst((uint32_t)-1);
+            obs_fault_unregister();
+            obs_report_measure(id, "destroy-neg1", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+        } else {
+            obs_fault_unregister();
+        }
+
+        uint32_t new_id = 0xcccccccc;
+        if (OBS_FAULT_ARM(&guard) == 0) {
+            int rc = p_create(&new_id);
+            obs_fault_unregister();
+            obs_report_measure(id, "create-after-destroy", "rc", (uint64_t)(uint32_t)rc,
+                               "code");
+            obs_report_measure(id, "create-after-destroy", "reused",
+                               (uint64_t)(new_id == live_id), "bool");
+            if (rc == 0)
+                p_dst(new_id);
+        } else {
+            obs_fault_unregister();
+        }
+
+        for (int i = 1; i < created; i++) {
+            p_dst(ctxs[i]);
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check audio_checks[] = {
     {"090-audio/initialise", "libSceAudioOut", "sceAudioOutInit", OBS_CAP_NONE,
      OBS_CAP_AUDIO, (const void *)&sceAudioOutInit, check_audio_init, OBS_FROM_ASSUMED},
@@ -1956,6 +2972,15 @@ static const obs_check audio_checks[] = {
     {"090-audio/audioout2-ports", "libSceAudioOut2", "sceAudioOut2PortCreate",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)check_audio_audioout2_ports,
      check_audio_audioout2_ports, OBS_FROM_ASSUMED},
+    {"090-audio/audio3d-lifecycle", "libSceAudio3d", "sceAudio3dInitialize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_audio3d_lifecycle,
+     OBS_FROM_ASSUMED},
+    {"090-audio/audioin-lifecycle", "libSceAudioIn", "sceAudioInOpen", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_audio_in_lifecycle, OBS_FROM_ASSUMED},
+    {"090-audio/ngs2-lifecycle", "libSceNgs2", "sceNgs2SystemCreate", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_ngs2_lifecycle, OBS_FROM_ASSUMED},
+    {"090-audio/acm-lifecycle", "libSceAcm", "sceAcmContextCreate", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_acm_lifecycle, OBS_FROM_ASSUMED},
     {"090-audio/drain", "libSceAudioOut", "sceAudioOutOutput", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceAudioOutOutput, check_audio_drain,
      OBS_FROM_ASSUMED},
