@@ -1804,6 +1804,26 @@ static const obs_import obs_platform_imports[] = {
     {"libSceJson2", "_ZN3sce4Json6StringD1Ev"},
     {"libSceJson2", "$OcAgPxcq5Vk"},
     {"libSceJson2", "_ZN3sce4Json12MemAllocatorD2Ev"},
+    /* REQ-20261014T0430Z-ue01 & np05 */
+    {"libSceNpUniversalDataSystem", "$p+GcLqwpL9M"},
+    {"libSceNpUniversalDataSystem", "sceNpUniversalDataSystemCreateEvent"},
+    {"libSceNpUniversalDataSystem", "$CzkKf7ahIyU"},
+    {"libSceNpUniversalDataSystem", "sceNpUniversalDataSystemPostEvent"},
+    {"libSceNpUniversalDataSystem", "$wG+84pnNIuo"},
+    {"libSceNpUniversalDataSystem", "sceNpUniversalDataSystemDestroyEvent"},
+    {"libSceNpUniversalDataSystem", "$kKUH0Viib3c"},
+    {"libSceNpUniversalDataSystem",
+     "sceNpUniversalDataSystemDestroyEventPropertyObject"},
+    {"libSceNpUniversalDataSystem", "$tpFJ8LIKvPw"},
+    {"libSceNpUniversalDataSystem", "sceNpUniversalDataSystemRegisterContext"},
+    {"libSceNpTrophy2", "$wVqxM58sIKs"},
+    {"libSceNpTrophy2", "sceNpTrophy2UnregisterUnlockCallback"},
+    {"libSceNpManager", "$eQH7nWPcAgc"},
+    {"libSceNpManager", "sceNpGetState"},
+    {"libSceNpManager", "$Ec63y59l9tw"},
+    {"libSceNpManager", "sceNpSetNpTitleId"},
+    {"libSceNpWebApi2", "$+o9816YQhqQ"},
+    {"libSceNpWebApi2", "sceNpWebApi2Initialize"},
 };
 
 /* Calls `fn` once per import declared outside the census. */

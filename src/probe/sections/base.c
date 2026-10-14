@@ -9546,6 +9546,7 @@ static obs_result check_rtc_datetime(void) {
 }
 
 #include "wave1_checks.inc"
+#include "wave2_checks.inc"
 
 /* REQ-20261014T0300Z-rf04 Arm 2: UniversalDataSystem lifecycle & s6W4Zl4Slgk */
 static obs_result check_rf04_uds(void) {
@@ -9736,6 +9737,14 @@ static const obs_check boot_checks[] = {
      OBS_FROM_SPEC},
     {"000-boot/uds-s6W4Zl4Slgk", "libSceNpUniversalDataSystem", "$s6W4Zl4Slgk",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_rf04_uds, OBS_FROM_SPEC},
+    {"000-boot/uds-create-event", "libSceNpUniversalDataSystem", "$p+GcLqwpL9M",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ue01_uds_events, OBS_FROM_SPEC},
+    {"000-boot/np05-routes-calls", "libSceNpManager", "$eQH7nWPcAgc", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_np05_routes_and_calls, OBS_FROM_SPEC},
+    {"000-boot/sd02-savedata-avplayer", "libSceSaveData", "$T98d0hFw90k", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_sd02_savedata_avplayer, OBS_FROM_SPEC},
+    {"000-boot/ge-indx-offset", "libSceAgc", "sceAgcDcbDrawIndexOffset", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_ix01_ge_indx_offset, OBS_FROM_SPEC},
     {"000-boot/audioout2-port-set-attributes", "libSceAudioOut2", "$0x6o1VVAYSY",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap03_audioout2_attributes,
      OBS_FROM_SPEC},

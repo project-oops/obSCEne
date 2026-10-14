@@ -2086,6 +2086,27 @@ OBS_WEAK uint64_t sceNpUniversalDataSystem_0996125e66b8a5b3_static(
 OBS_WEAK uint64_t sceNpUniversalDataSystem_0996125e66b8a5b3_be(
     void *a0, void *a1, void *a2, void *a3, void *a4, void *a5) __asm__("$CZYSXma4pbM");
 
+/* REQ-20261014T0430Z-ue01 & np05: UDS Event Lifecycle & NP Calls */
+OBS_WEAK int
+sceNpUniversalDataSystemCreateEvent_static(const char *name, void *prop, void *out,
+                                           uint32_t flags) __asm__("$p+GcLqwpL9M");
+OBS_WEAK int
+sceNpUniversalDataSystemPostEvent_static(uint64_t ctx, uint64_t handle, void *event,
+                                         uint32_t flags) __asm__("$CzkKf7ahIyU");
+OBS_WEAK int
+sceNpUniversalDataSystemDestroyEvent_static(void *event) __asm__("$wG+84pnNIuo");
+OBS_WEAK int sceNpUniversalDataSystemDestroyEventPropertyObject_static(
+    void *prop) __asm__("$kKUH0Viib3c");
+OBS_WEAK int
+sceNpUniversalDataSystemRegisterContext_static(uint64_t ctx, uint64_t handle,
+                                               uint32_t flags) __asm__("$tpFJ8LIKvPw");
+OBS_WEAK int
+sceNpTrophy2UnregisterUnlockCallback_static(uint32_t ctx) __asm__("$wVqxM58sIKs");
+OBS_WEAK int sceNpGetState_static(int32_t user, int32_t *state) __asm__("$eQH7nWPcAgc");
+OBS_WEAK int sceNpSetNpTitleId_static(const void *id,
+                                      const void *secret) __asm__("$Ec63y59l9tw");
+OBS_WEAK int sceNpWebApi2Initialize_static(const void *param) __asm__("$+o9816YQhqQ");
+
 OBS_WEAK int
 sceAppContentDownloadDataGetAvailableSpaceKb_be(const char *mount,
                                                 void *kb) __asm__("$RqIJLeawXho");
