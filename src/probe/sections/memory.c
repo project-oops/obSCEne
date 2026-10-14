@@ -757,7 +757,470 @@ static obs_result check_direct_pool_exhaustion(void) {
     return obs_pass();
 }
 
+/* REQ-20261012T1822Z-7389: libkernel memory pools and PRT apertures:
+ * MemoryPoolExpand/Reserve/Commit/Decommit, Set/GetPrtAperture */
+static obs_result check_7389_memory_pool_prt_aperture(void) {
+    const char *id = "020-memory/memory-pool-prt-aperture";
+
+    typedef int (*fn_mp_expand_t)(sce_off_t, sce_off_t, size_t, size_t, sce_off_t *);
+    typedef int (*fn_mp_reserve_t)(void *, size_t, size_t, uint32_t, void **);
+    typedef int (*fn_mp_commit_t)(void *, size_t, uint32_t, int, uint32_t);
+    typedef int (*fn_mp_decommit_t)(void *, size_t, uint32_t);
+    typedef int (*fn_set_prt_t)(int, void *, size_t);
+    typedef int (*fn_get_prt_t)(int, void **, size_t *);
+    typedef int (*fn_query_prot_t)(const void *, uint64_t *, uint64_t *, uint32_t *);
+
+    int h_kernel = obs_module_open("libkernel");
+
+    fn_mp_expand_t fn_expand = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelMemoryPoolExpand)) {
+        fn_expand = (fn_mp_expand_t)&sceKernelMemoryPoolExpand;
+    }
+    if (!fn_expand && h_kernel > 0) {
+        fn_expand = (fn_mp_expand_t)obs_module_symbol(h_kernel, "$qCSfqDILlns");
+        if (!fn_expand) {
+            fn_expand = (fn_mp_expand_t)obs_module_symbol(h_kernel,
+                                                          "sceKernelMemoryPoolExpand");
+        }
+    }
+
+    fn_mp_reserve_t fn_reserve = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelMemoryPoolReserve)) {
+        fn_reserve = (fn_mp_reserve_t)&sceKernelMemoryPoolReserve;
+    }
+    if (!fn_reserve && h_kernel > 0) {
+        fn_reserve = (fn_mp_reserve_t)obs_module_symbol(h_kernel, "$pU-QydtGcGY");
+        if (!fn_reserve) {
+            fn_reserve = (fn_mp_reserve_t)obs_module_symbol(h_kernel, "$pU/QydtGcGY");
+        }
+        if (!fn_reserve) {
+            fn_reserve = (fn_mp_reserve_t)obs_module_symbol(
+                h_kernel, "sceKernelMemoryPoolReserve");
+        }
+    }
+
+    fn_mp_commit_t fn_commit = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelMemoryPoolCommit)) {
+        fn_commit = (fn_mp_commit_t)&sceKernelMemoryPoolCommit;
+    }
+    if (!fn_commit && h_kernel > 0) {
+        fn_commit = (fn_mp_commit_t)obs_module_symbol(h_kernel, "$Vzl66WmfLvk");
+        if (!fn_commit) {
+            fn_commit = (fn_mp_commit_t)obs_module_symbol(h_kernel,
+                                                          "sceKernelMemoryPoolCommit");
+        }
+    }
+
+    fn_mp_decommit_t fn_decommit = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelMemoryPoolDecommit)) {
+        fn_decommit = (fn_mp_decommit_t)&sceKernelMemoryPoolDecommit;
+    }
+    if (!fn_decommit && h_kernel > 0) {
+        fn_decommit = (fn_mp_decommit_t)obs_module_symbol(h_kernel, "$LXo1tpFqJGs");
+        if (!fn_decommit) {
+            fn_decommit = (fn_mp_decommit_t)obs_module_symbol(
+                h_kernel, "sceKernelMemoryPoolDecommit");
+        }
+    }
+
+    fn_set_prt_t fn_set_prt = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelSetPrtAperture)) {
+        fn_set_prt = (fn_set_prt_t)&sceKernelSetPrtAperture;
+    }
+    if (!fn_set_prt && h_kernel > 0) {
+        fn_set_prt = (fn_set_prt_t)obs_module_symbol(h_kernel, "$BohYr-F7-is");
+        if (!fn_set_prt) {
+            fn_set_prt = (fn_set_prt_t)obs_module_symbol(h_kernel, "$BohYr/F7/is");
+        }
+        if (!fn_set_prt) {
+            fn_set_prt =
+                (fn_set_prt_t)obs_module_symbol(h_kernel, "sceKernelSetPrtAperture");
+        }
+    }
+
+    fn_get_prt_t fn_get_prt = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelGetPrtAperture)) {
+        fn_get_prt = (fn_get_prt_t)&sceKernelGetPrtAperture;
+    }
+    if (!fn_get_prt && h_kernel > 0) {
+        fn_get_prt = (fn_get_prt_t)obs_module_symbol(h_kernel, "$L0v2Go5jOuM");
+        if (!fn_get_prt) {
+            fn_get_prt =
+                (fn_get_prt_t)obs_module_symbol(h_kernel, "sceKernelGetPrtAperture");
+        }
+    }
+
+    fn_query_prot_t fn_query_prot = NULL;
+    if (obs_address_is_callable((const void *)&sceKernelQueryMemoryProtection)) {
+        fn_query_prot = (fn_query_prot_t)&sceKernelQueryMemoryProtection;
+    }
+    if (!fn_query_prot && h_kernel > 0) {
+        fn_query_prot = (fn_query_prot_t)obs_module_symbol(h_kernel, "$WFcfL2lzido");
+        if (!fn_query_prot) {
+            fn_query_prot = (fn_query_prot_t)obs_module_symbol(
+                h_kernel, "sceKernelQueryMemoryProtection");
+        }
+    }
+
+    obs_report_measure(id, "symbols", "has-expand", (uint64_t)(fn_expand != NULL),
+                       "bool");
+    obs_report_measure(id, "symbols", "has-reserve", (uint64_t)(fn_reserve != NULL),
+                       "bool");
+    obs_report_measure(id, "symbols", "has-commit", (uint64_t)(fn_commit != NULL),
+                       "bool");
+    obs_report_measure(id, "symbols", "has-decommit", (uint64_t)(fn_decommit != NULL),
+                       "bool");
+    obs_report_measure(id, "symbols", "has-set-prt", (uint64_t)(fn_set_prt != NULL),
+                       "bool");
+    obs_report_measure(id, "symbols", "has-get-prt", (uint64_t)(fn_get_prt != NULL),
+                       "bool");
+
+    obs_jmp_buf guard;
+
+    /* 1. sceKernelMemoryPoolExpand */
+    if (fn_expand) {
+        sce_off_t phys = (sce_off_t)0xccccccccccccccccULL;
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = fn_expand(0, (sce_off_t)0x400000000ULL, 0x400000, 0x10000, &phys);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "expand", "rc", (uint64_t)(uint32_t)rc, "code");
+        obs_report_bytes(id, "expand", "phys", 0, (const unsigned char *)&phys, 8);
+
+        /* len 0 */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_expand(0, (sce_off_t)0x400000000ULL, 0, 0x10000, &phys);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "expand-len0", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* len 0x1000 */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_expand(0, (sce_off_t)0x400000000ULL, 0x1000, 0x10000, &phys);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "expand-len1000", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* align 0x3000 */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_expand(0, (sce_off_t)0x400000000ULL, 0x400000, 0x3000, &phys);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "expand-align3000", "rc", (uint64_t)(uint32_t)rc,
+                           "code");
+
+        /* align 0 */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_expand(0, (sce_off_t)0x400000000ULL, 0x400000, 0, &phys);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "expand-align0", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* phys null */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_expand(0, (sce_off_t)0x400000000ULL, 0x400000, 0x10000, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "expand-null", "rc", (uint64_t)(uint32_t)rc, "code");
+    }
+
+    /* 2. sceKernelMemoryPoolReserve */
+    void *res_addr = NULL;
+    if (fn_reserve) {
+        void *out_addr = (void *)(uintptr_t)0xccccccccccccccccULL;
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = fn_reserve(0, 0x400000, 0x400000, 0, &out_addr);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "reserve", "rc", (uint64_t)(uint32_t)rc, "code");
+        obs_report_measure(id, "reserve", "addr", (uint64_t)(uintptr_t)out_addr,
+                           "addr");
+        if (rc == 0) {
+            res_addr = out_addr;
+        }
+
+        /* fixed hint (flags 0x10) at that addr again */
+        void *hint_out = NULL;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_reserve(out_addr, 0x400000, 0x400000, 0x10, &hint_out);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "reserve-fixed-hint", "rc", (uint64_t)(uint32_t)rc,
+                           "code");
+
+        /* len 0 */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_reserve(0, 0, 0x400000, 0, &hint_out);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "reserve-len0", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* null out */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_reserve(0, 0x400000, 0x400000, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "reserve-null", "rc", (uint64_t)(uint32_t)rc, "code");
+    }
+
+    /* 3. sceKernelMemoryPoolCommit */
+    if (fn_commit && res_addr) {
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = fn_commit(res_addr, 0x10000, 0, 0x33, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "commit", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* write and read a byte at res_addr */
+        uint64_t read_byte = 0;
+        int rw_ok = 0;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            volatile unsigned char *p = (volatile unsigned char *)res_addr;
+            *p = 0x5a;
+            read_byte = *p;
+            rw_ok = 1;
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "commit-rw", "byte", read_byte, "val");
+        obs_report_measure(id, "commit-rw", "ok", (uint64_t)rw_ok, "bool");
+
+        /* commit past the reservation */
+        void *past_addr = (void *)((uintptr_t)res_addr + 0x400000);
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_commit(past_addr, 0x10000, 0, 0x33, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "commit-past", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* sceKernelQueryMemoryProtection(res_addr, ...) after commit */
+        if (fn_query_prot) {
+            uint64_t q_start = 0, q_end = 0;
+            uint32_t q_prot = 0;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc = fn_query_prot(res_addr, &q_start, &q_end, &q_prot);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc = -sig;
+            }
+            obs_report_measure(id, "query-prot", "rc", (uint64_t)(uint32_t)rc, "code");
+            obs_report_measure(id, "query-prot", "start", q_start, "addr");
+            obs_report_measure(id, "query-prot", "end", q_end, "addr");
+            obs_report_measure(id, "query-prot", "prot", (uint64_t)q_prot, "val");
+        }
+    }
+
+    /* 4. sceKernelMemoryPoolDecommit */
+    if (fn_decommit && res_addr) {
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = fn_decommit(res_addr, 0x10000, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "decommit", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* decommit 0x1000 (less than a granule) */
+        void *sub_addr = (void *)((uintptr_t)res_addr + 0x20000);
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_decommit(sub_addr, 0x1000, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "decommit-subgranule", "rc", (uint64_t)(uint32_t)rc,
+                           "code");
+
+        /* decommit twice */
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_decommit(res_addr, 0x10000, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "decommit-twice", "rc", (uint64_t)(uint32_t)rc, "code");
+
+        /* whether a read at res_addr then faults (catch it) */
+        int read_faulted = 0;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            volatile unsigned char *p = (volatile unsigned char *)res_addr;
+            volatile unsigned char dummy = *p;
+            (void)dummy;
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            read_faulted = 1;
+        }
+        obs_report_measure(id, "decommit-fault", "read-faulted", (uint64_t)read_faulted,
+                           "bool");
+        obs_report_measure(id, "decommit-fault", "fault-sig", (uint64_t)sig, "signal");
+    }
+
+    /* 5. sceKernelSetPrtAperture and sceKernelGetPrtAperture */
+    if (fn_get_prt) {
+        /* get before set */
+        for (int i = 0; i <= 3; i++) {
+            void *out_base = (void *)(uintptr_t)0xccccccccccccccccULL;
+            size_t out_len = (size_t)0xccccccccccccccccULL;
+            int sig = OBS_FAULT_ARM(&guard);
+            int rc = -1;
+            if (sig == 0) {
+                rc = fn_get_prt(i, &out_base, &out_len);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc = -sig;
+            }
+            char tag[32];
+            oops_snprintf(tag, sizeof(tag), "get-prt-before-slot%d", i);
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+            obs_report_bytes(id, tag, "base", 0, (const unsigned char *)&out_base, 8);
+            obs_report_bytes(id, tag, "len", 0, (const unsigned char *)&out_len, 8);
+        }
+
+        /* null outs */
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc = -1;
+        if (sig == 0) {
+            rc = fn_get_prt(0, NULL, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+        }
+        obs_report_measure(id, "get-prt-null", "rc", (uint64_t)(uint32_t)rc, "code");
+    }
+
+    if (fn_set_prt) {
+        static const int slots[] = {0, 1, 2, 3, -1};
+        void *aligned_base = (void *)(uintptr_t)0x100000000ULL;
+        void *unaligned_base = (void *)(uintptr_t)0x100001000ULL;
+        size_t prt_len = 0x10000;
+
+        for (size_t s = 0; s < OBS_COUNT(slots); s++) {
+            int slot = slots[s];
+            char tag[32];
+
+            /* aligned base */
+            int sig = OBS_FAULT_ARM(&guard);
+            int rc = -1;
+            if (sig == 0) {
+                rc = fn_set_prt(slot, aligned_base, prt_len);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc = -sig;
+            }
+            oops_snprintf(tag, sizeof(tag), "set-prt-aligned-slot%d", slot);
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+
+            /* unaligned base */
+            sig = OBS_FAULT_ARM(&guard);
+            rc = -1;
+            if (sig == 0) {
+                rc = fn_set_prt(slot, unaligned_base, prt_len);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc = -sig;
+            }
+            oops_snprintf(tag, sizeof(tag), "set-prt-unaligned-slot%d", slot);
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+        }
+    }
+
+    /* get after set */
+    if (fn_get_prt) {
+        for (int i = 0; i <= 3; i++) {
+            void *out_base = (void *)(uintptr_t)0xccccccccccccccccULL;
+            size_t out_len = (size_t)0xccccccccccccccccULL;
+            int sig = OBS_FAULT_ARM(&guard);
+            int rc = -1;
+            if (sig == 0) {
+                rc = fn_get_prt(i, &out_base, &out_len);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc = -sig;
+            }
+            char tag[32];
+            oops_snprintf(tag, sizeof(tag), "get-prt-after-slot%d", i);
+            obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc, "code");
+            obs_report_bytes(id, tag, "base", 0, (const unsigned char *)&out_base, 8);
+            obs_report_bytes(id, tag, "len", 0, (const unsigned char *)&out_len, 8);
+        }
+    }
+
+    return obs_pass();
+}
+
 static const obs_check memory_checks[] = {
+    {"020-memory/memory-pool-prt-aperture", "libkernel", "sceKernelMemoryPoolExpand",
+     OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelMemoryPoolExpand,
+     check_7389_memory_pool_prt_aperture, OBS_FROM_ASSUMED},
     {"020-memory/direct-pool-exhaustion", "libkernel", "sceKernelAllocateDirectMemory",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelAllocateDirectMemory,
      check_direct_pool_exhaustion, OBS_FROM_ASSUMED},

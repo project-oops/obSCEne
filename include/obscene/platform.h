@@ -362,6 +362,17 @@ OBS_WEAK int sceKernelProtectDirectMemory(sce_off_t paddr, size_t len,
 OBS_WEAK int sceKernelProtectDirectMemoryForPID(sce_off_t paddr, size_t len, int prot,
                                                 int pid);
 OBS_WEAK int sceKernelBatchMap(const void *entries, int count, int *completed);
+OBS_WEAK int sceKernelMemoryPoolExpand(sce_off_t searchStart, sce_off_t searchEnd,
+                                       size_t len, size_t align, sce_off_t *physOut);
+OBS_WEAK int sceKernelMemoryPoolReserve(void *addrIn, size_t len, size_t align,
+                                        uint32_t flags, void **addrOut);
+OBS_WEAK int sceKernelMemoryPoolCommit(void *addr, size_t len, uint32_t type, int prot,
+                                       uint32_t flags);
+OBS_WEAK int sceKernelMemoryPoolDecommit(void *addr, size_t len, uint32_t flags);
+OBS_WEAK int sceKernelSetPrtAperture(int slot, void *base, size_t len);
+OBS_WEAK int sceKernelGetPrtAperture(int slot, void **baseOut, size_t *lenOut);
+OBS_WEAK int sceKernelQueryMemoryProtection(const void *addr, uint64_t *start,
+                                            uint64_t *end, uint32_t *prot);
 
 /* ---- libkernel: scheduling ------------------------------------------------- */
 

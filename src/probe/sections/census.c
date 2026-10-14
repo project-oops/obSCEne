@@ -1429,43 +1429,44 @@ static obs_result check_sp01_shader_pair(void) {
         obs_report_measure(id, "0xe486-BA-arg5-1", "rc", rc2_swap1, "code");
     }
 
-    /* REQ-20261013T2000Z-sp03 arm 1: edited shader pair */
+    /* REQ-20261014T0026Z-sp04: edited shader pair with proper SH-list copy & pointer */
     static __attribute__((aligned(64))) uint8_t s_obj_A_edit[0x180];
     static __attribute__((aligned(64))) uint8_t s_obj_B_edit[0x180];
+    static __attribute__((aligned(64))) uint64_t s_sh_list_A_edit[16];
+    static __attribute__((aligned(64))) uint64_t s_sh_list_B_edit[16];
+
     memcpy(s_obj_A_edit, s_obj_A, sizeof(s_obj_A));
     memcpy(s_obj_B_edit, s_obj_B, sizeof(s_obj_B));
 
-    uint64_t *qw_Ae = (uint64_t *)(void *)s_obj_A_edit;
-    /* A's RSRC1 VGPR field (0x10a value bits 5:0) set below B's (0x00433a00 | 0x08 =
-     * 0x00433a08) */
-    qw_Ae[0xa8 / 8] = 0x00433a080000010aULL;
-    /* A's RSRC2 user-SGPR field (0x10b bits 5:1) below B's (0x74 to 0x04) */
-    qw_Ae[0xb0 / 8] = 0x000000040000010bULL;
-    /* A count byte at +0x5c is 6 */
-    qw_Ae[0x58 / 8] = 0x0000000600050030ULL;
-    /* A given a third 0x100 entry (0x33333333) */
-    qw_Ae[0xd0 / 8] = 0x3333333300000100ULL;
-    /* Shift subsequent fields of A */
-    qw_Ae[0x08 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0xd8);
-    qw_Ae[0xd8 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x110);
-    qw_Ae[0xe0 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
-    qw_Ae[0xe8 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
-    qw_Ae[0xf0 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
-    qw_Ae[0xf8 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
-    qw_Ae[0x100 / 8] = 0x0000000b00000000ULL;
-    qw_Ae[0x108 / 8] = 0x0000000000000000ULL;
-    qw_Ae[0x110 / 8] = 0xffffffffffffffffULL;
-    qw_Ae[0x118 / 8] = 0xffffffffffffffffULL;
-    qw_Ae[0x120 / 8] = 0x00000002ffff0000ULL;
+    const uint64_t *orig_sh_A =
+        *(const uint64_t *const *)(const void *)(s_obj_A + 0x20);
+    memcpy(s_sh_list_A_edit, orig_sh_A, 5 * sizeof(uint64_t));
+    /* A's 0x10a VGPR field (bits 5:0) set to 8 */
+    s_sh_list_A_edit[0] = 0x00433a080000010aULL;
+    /* A's 0x10b user-SGPR field (bits 5:1) to 2 (0x74 -> 0x04) */
+    s_sh_list_A_edit[1] = 0x000000040000010bULL;
+    /* A's third 0x100 entry appended with 0x33333333 */
+    s_sh_list_A_edit[5] = 0x3333333300000100ULL;
 
-    uint64_t *qw_Be = (uint64_t *)(void *)s_obj_B_edit;
-    /* B's first two 0x100 values nonzero (0x11111111, 0x22222222) */
-    qw_Be[0xa0 / 8] = 0x1111111100000100ULL;
-    qw_Be[0xa8 / 8] = 0x2222222200000100ULL;
+    *(uint64_t *)(void *)(s_obj_A_edit + 0x20) = (uint64_t)(uintptr_t)s_sh_list_A_edit;
+    s_obj_A_edit[0x5c] = 6;
 
-    /* Dumps of edited objects */
+    const uint64_t *orig_sh_B =
+        *(const uint64_t *const *)(const void *)(s_obj_B + 0x20);
+    memcpy(s_sh_list_B_edit, orig_sh_B, 10 * sizeof(uint64_t));
+    /* B's first two 0x100 values to 0x11111111, 0x22222222 */
+    s_sh_list_B_edit[2] = 0x1111111100000100ULL;
+    s_sh_list_B_edit[3] = 0x2222222200000100ULL;
+
+    *(uint64_t *)(void *)(s_obj_B_edit + 0x20) = (uint64_t)(uintptr_t)s_sh_list_B_edit;
+
+    /* Dumps of edited objects and lists before calls */
     obs_report_bytes(id, "shader-A-edit", "obj-60h", 0, s_obj_A_edit, 0x60);
     obs_report_bytes(id, "shader-B-edit", "obj-60h", 0, s_obj_B_edit, 0x60);
+    obs_report_bytes(id, "shader-A-edit", "sh-list", 0,
+                     (const unsigned char *)s_sh_list_A_edit, 6 * 8);
+    obs_report_bytes(id, "shader-B-edit", "sh-list", 0,
+                     (const unsigned char *)s_sh_list_B_edit, 10 * 8);
 
     /* 0x0a4e on edited pair */
     if (call_0a4e && obs_address_is_callable((const void *)call_0a4e)) {

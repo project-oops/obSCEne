@@ -4934,62 +4934,191 @@ static obs_result check_ux01_calls(void) {
         obs_report_measure(id, "download1-kb", "rc", (uint64_t)(uint32_t)rc_dls1,
                            "code");
         obs_report_bytes(id, "download1-kb", "kb-bytes", 0, (const uint8_t *)&kb1, 8);
-
-        /* TemporaryData space queries */
-        typedef int (*fn_tm_mount_t)(int, void *);
-        typedef int (*fn_tm_space_t)(const char *, void *);
-        fn_tm_mount_t fn_t_mount =
-            obs_address_is_callable(
-                (const void *)&sceAppContentTemporaryDataMount2_static)
-                ? (fn_tm_mount_t)&sceAppContentTemporaryDataMount2_static
-                : NULL;
-        fn_tm_space_t fn_t_space =
-            obs_address_is_callable(
-                (const void *)&sceAppContentTemporaryDataGetAvailableSpaceKb_static)
-                ? (fn_tm_space_t)&sceAppContentTemporaryDataGetAvailableSpaceKb_static
-                : NULL;
-
-        if (!fn_t_mount || !fn_t_space) {
-            int h = obs_module_open("libSceAppContent");
-            if (h > 0) {
-                if (!fn_t_mount)
-                    fn_t_mount = (fn_tm_mount_t)obs_module_symbol(h, "$buYbeLOGWmA");
-                if (!fn_t_space)
-                    fn_t_space = (fn_tm_space_t)obs_module_symbol(h, "$SaKib2Ug0yI");
-            }
-        }
-
-        if (fn_t_mount) {
-            uint8_t t_mp[16] = {0};
-            int rc_tm = -1;
-            int sig_tm = OBS_FAULT_ARM(&guard);
-            if (sig_tm == 0) {
-                rc_tm = fn_t_mount(1, t_mp);
-                obs_fault_unregister();
-            } else {
-                obs_fault_unregister();
-            }
-            obs_report_measure(id, "temp-mount2", "rc", (uint64_t)(uint32_t)rc_tm,
-                               "code");
-        }
-
-        if (fn_t_space) {
-            uint64_t tkb = 0xccccccccccccccccULL;
-            int rc_ts = -1;
-            int sig_ts = OBS_FAULT_ARM(&guard);
-            if (sig_ts == 0) {
-                rc_ts = fn_t_space("/temp0", &tkb);
-                obs_fault_unregister();
-            } else {
-                obs_fault_unregister();
-            }
-            obs_report_measure(id, "temp0-kb", "rc", (uint64_t)(uint32_t)rc_ts, "code");
-            obs_report_bytes(id, "temp0-kb", "kb-bytes", 0, (const uint8_t *)&tkb, 8);
-        }
-
-        /* Param.sfo download data size */
-        obs_report_measure(id, "param-sfo", "download-data-size", 0, "bytes");
     }
+
+    /* TemporaryData space queries (REQ-pc01 & REQ-0442) */
+    typedef int (*fn_tm_mount_t)(int, void *);
+    typedef int (*fn_tm_space_t)(const char *, void *);
+    typedef int (*fn_tm_format_t)(const char *);
+    typedef int (*fn_ac_mount_t)(uint32_t, const char *, void *);
+    typedef int (*fn_ac_unmount_t)(const char *);
+
+    fn_tm_mount_t fn_t_mount =
+        obs_address_is_callable((const void *)&sceAppContentTemporaryDataMount2_static)
+            ? (fn_tm_mount_t)&sceAppContentTemporaryDataMount2_static
+            : NULL;
+    fn_tm_space_t fn_t_space =
+        obs_address_is_callable(
+            (const void *)&sceAppContentTemporaryDataGetAvailableSpaceKb_static)
+            ? (fn_tm_space_t)&sceAppContentTemporaryDataGetAvailableSpaceKb_static
+            : NULL;
+    fn_tm_format_t fn_t_format =
+        obs_address_is_callable((const void *)&sceAppContentTemporaryDataFormat_static)
+            ? (fn_tm_format_t)&sceAppContentTemporaryDataFormat_static
+            : NULL;
+    fn_ac_mount_t fn_ac_mount =
+        obs_address_is_callable((const void *)&sceAppContentAddcontMount_static)
+            ? (fn_ac_mount_t)&sceAppContentAddcontMount_static
+            : NULL;
+    fn_ac_unmount_t fn_ac_unmount =
+        obs_address_is_callable((const void *)&sceAppContentAddcontUnmount_static)
+            ? (fn_ac_unmount_t)&sceAppContentAddcontUnmount_static
+            : NULL;
+
+    int h_ac = obs_module_open("libSceAppContent");
+    if (h_ac > 0) {
+        if (!fn_t_mount)
+            fn_t_mount = (fn_tm_mount_t)obs_module_symbol(h_ac, "$buYbeLOGWmA");
+        if (!fn_t_space)
+            fn_t_space = (fn_tm_space_t)obs_module_symbol(h_ac, "$SaKib2Ug0yI");
+        if (!fn_t_format)
+            fn_t_format = (fn_tm_format_t)obs_module_symbol(h_ac, "$a5N7lAG0y2Q");
+        if (!fn_ac_mount)
+            fn_ac_mount = (fn_ac_mount_t)obs_module_symbol(h_ac, "$b-Q+iFzM3e4");
+        if (!fn_ac_unmount)
+            fn_ac_unmount = (fn_ac_unmount_t)obs_module_symbol(h_ac, "$3rHWaV-1KC4");
+    }
+
+    uint8_t t_mp[16];
+    memset(t_mp, 0xcc, sizeof(t_mp));
+    if (fn_t_mount) {
+        int rc_tm = -1;
+        int sig_tm = OBS_FAULT_ARM(&guard);
+        if (sig_tm == 0) {
+            rc_tm = fn_t_mount(1, t_mp);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "temp-mount2", "rc", (uint64_t)(uint32_t)rc_tm, "code");
+        obs_report_bytes(id, "temp-mount2", "mp-16b", 0, t_mp, 16);
+    }
+
+    if (fn_t_space) {
+        uint64_t tkb = 0xccccccccccccccccULL;
+        int rc_ts = -1;
+        int sig_ts = OBS_FAULT_ARM(&guard);
+        if (sig_ts == 0) {
+            rc_ts = fn_t_space(t_mp[0] == '/' ? (const char *)t_mp : "/temp0", &tkb);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "temp0-kb", "rc", (uint64_t)(uint32_t)rc_ts, "code");
+        obs_report_bytes(id, "temp0-kb", "kb-bytes", 0, (const uint8_t *)&tkb, 8);
+
+        /* with nonexistent mount */
+        uint64_t nkb = 0xccccccccccccccccULL;
+        int rc_nonexist = -1;
+        sig_ts = OBS_FAULT_ARM(&guard);
+        if (sig_ts == 0) {
+            rc_nonexist = fn_t_space("/nonexistent", &nkb);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "temp-nonexistent-kb", "rc",
+                           (uint64_t)(uint32_t)rc_nonexist, "code");
+    }
+
+    /* TemporaryDataFormat */
+    if (fn_t_format) {
+        int rc_fmt = -1;
+        int sig_fmt = OBS_FAULT_ARM(&guard);
+        if (sig_fmt == 0) {
+            rc_fmt = fn_t_format(t_mp[0] == '/' ? (const char *)t_mp : "/temp0");
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "temp-format-mp", "rc", (uint64_t)(uint32_t)rc_fmt,
+                           "code");
+
+        int rc_fmt_null = -1;
+        sig_fmt = OBS_FAULT_ARM(&guard);
+        if (sig_fmt == 0) {
+            rc_fmt_null = fn_t_format(NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "temp-format-null", "rc",
+                           (uint64_t)(uint32_t)rc_fmt_null, "code");
+    }
+
+    /* AddcontMount & AddcontUnmount */
+    if (fn_ac_mount) {
+        char label_buf[20];
+        memset(label_buf, 0, sizeof(label_buf));
+        memcpy(label_buf, "OBSCENEPROBE0000000", 19);
+        uint8_t ac_mp[16];
+        memset(ac_mp, 0xcc, sizeof(ac_mp));
+
+        int rc_ac = -1;
+        int sig_ac = OBS_FAULT_ARM(&guard);
+        if (sig_ac == 0) {
+            rc_ac = fn_ac_mount(0, label_buf, ac_mp);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "addcont-mount", "rc", (uint64_t)(uint32_t)rc_ac,
+                           "code");
+        obs_report_bytes(id, "addcont-mount", "mp-16b", 0, ac_mp, 16);
+
+        int rc_ac_null_lbl = -1;
+        sig_ac = OBS_FAULT_ARM(&guard);
+        if (sig_ac == 0) {
+            rc_ac_null_lbl = fn_ac_mount(0, NULL, ac_mp);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "addcont-mount-null-lbl", "rc",
+                           (uint64_t)(uint32_t)rc_ac_null_lbl, "code");
+
+        int rc_ac_null_mp = -1;
+        sig_ac = OBS_FAULT_ARM(&guard);
+        if (sig_ac == 0) {
+            rc_ac_null_mp = fn_ac_mount(0, label_buf, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "addcont-mount-null-mp", "rc",
+                           (uint64_t)(uint32_t)rc_ac_null_mp, "code");
+    }
+
+    if (fn_ac_unmount) {
+        char unmount_mp[16];
+        memset(unmount_mp, 0, sizeof(unmount_mp));
+        memcpy(unmount_mp, "/addcont0", 9);
+
+        int rc_un = -1;
+        int sig_un = OBS_FAULT_ARM(&guard);
+        if (sig_un == 0) {
+            rc_un = fn_ac_unmount(unmount_mp);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "addcont-unmount", "rc", (uint64_t)(uint32_t)rc_un,
+                           "code");
+
+        int rc_un_null = -1;
+        sig_un = OBS_FAULT_ARM(&guard);
+        if (sig_un == 0) {
+            rc_un_null = fn_ac_unmount(NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "addcont-unmount-null", "rc",
+                           (uint64_t)(uint32_t)rc_un_null, "code");
+    }
+
+    /* Param.sfo download data size */
+    obs_report_measure(id, "param-sfo", "download-data-size", 0, "bytes");
 
     return obs_pass();
 }
@@ -9353,6 +9482,9 @@ static const obs_check boot_checks[] = {
     {"000-boot/sysmodule-isloaded-lifecycle", "libSceSysmodule", "sceSysmoduleIsLoaded",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_41aa_sysmodule_isloaded_lifecycle,
      OBS_FROM_SPEC},
+    {"000-boot/audioout2-port-set-attributes", "libSceAudioOut2", "$0x6o1VVAYSY",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap03_audioout2_attributes,
+     OBS_FROM_SPEC},
     {"000-boot/audioout2-pcm-pump", "libSceAudioOut2", "$0x6o1VVAYSY", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap02_audioout2_pcm_pump, OBS_FROM_SPEC},
     {"000-boot/audioout2-ppsa21564-context", "libSceAudioOut2", "$0x6o1VVAYSY",
@@ -9408,9 +9540,6 @@ static const obs_check boot_checks[] = {
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_rtc_datetime, OBS_FROM_SPEC},
     {"000-boot/ag02-shapes", "libSceVideoOut", "$eb-gvTYQcoY", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_ag02_shapes, OBS_FROM_SPEC},
-    {"000-boot/audioout2-port-set-attributes", "libSceAudioOut2", "$0x6o1VVAYSY",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap03_audioout2_attributes,
-     OBS_FROM_SPEC},
     {"000-boot/ampr-command-buffer-queries", "libSceAmpr", "$ULvXMDz56po", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_aw03_ampr_command_buffer, OBS_FROM_SPEC},
     {"000-boot/write-rejects-bad-fd", "libkernel", "sceKernelWrite", OBS_CAP_NONE,

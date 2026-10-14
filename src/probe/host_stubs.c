@@ -524,6 +524,57 @@ int sceKernelMunmap(void *addr, size_t len) {
     return OBS_HOST_NOT_IMPLEMENTED;
 }
 
+int sceKernelMemoryPoolExpand(sce_off_t searchStart, sce_off_t searchEnd, size_t len,
+                              size_t align, sce_off_t *physOut) {
+    (void)searchStart;
+    (void)searchEnd;
+    (void)len;
+    (void)align;
+    (void)physOut;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelMemoryPoolReserve(void *addrIn, size_t len, size_t align, uint32_t flags,
+                               void **addrOut) {
+    (void)addrIn;
+    (void)len;
+    (void)align;
+    (void)flags;
+    (void)addrOut;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelMemoryPoolCommit(void *addr, size_t len, uint32_t type, int prot,
+                              uint32_t flags) {
+    (void)addr;
+    (void)len;
+    (void)type;
+    (void)prot;
+    (void)flags;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelMemoryPoolDecommit(void *addr, size_t len, uint32_t flags) {
+    (void)addr;
+    (void)len;
+    (void)flags;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelSetPrtAperture(int slot, void *base, size_t len) {
+    (void)slot;
+    (void)base;
+    (void)len;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
+int sceKernelGetPrtAperture(int slot, void **baseOut, size_t *lenOut) {
+    (void)slot;
+    (void)baseOut;
+    (void)lenOut;
+    return OBS_HOST_NOT_IMPLEMENTED;
+}
+
 /* A real sleep, for the same reason as the clocks: a measurement of a sleep that did
  * not happen measures nothing, and the checks that watch the clock across one would
  * never have run. */

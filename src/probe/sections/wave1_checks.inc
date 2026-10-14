@@ -807,6 +807,21 @@ static obs_result check_savedata_dialog(void) {
         int rc_close_before = fn_close();
         obs_report_measure(id, "before-init", "close-rc", (uint64_t)(uint32_t)rc_close_before, "code");
     }
+    if (obs_address_is_callable((const void *)fn_open)) {
+        uint8_t pre_param[0x98];
+        memset(pre_param, 0, sizeof(pre_param));
+        *(uint32_t *)(pre_param + 0x30) = 0x98;
+        *(uint32_t *)(pre_param + 0x34) = 1;
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc_open_before = -1;
+        if (sig == 0) {
+            rc_open_before = fn_open(pre_param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "before-init", "open-rc", (uint64_t)(uint32_t)rc_open_before, "code");
+    }
     if (obs_address_is_callable((const void *)fn_inc)) {
         int rc_inc_before = fn_inc(0);
         obs_report_measure(id, "before-init", "progress-inc-rc", (uint64_t)(uint32_t)rc_inc_before, "code");

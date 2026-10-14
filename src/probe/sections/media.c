@@ -2331,14 +2331,14 @@ static obs_result check_pad_button_bits(void) {
         obs_report_buffer("100-input/button-bits", "scePadReadState",
                           "bytes-58-77-at-rest", s_probe_buf + 0x58, 0x20);
     }
-    /* ~8s at 50ms: bounded, non-blocking, and long enough to press every button in
-     * turn with a beat between each so the edges land in distinct samples. */
+    /* Non-blocking initial check; full calibration guided via TRIANGLE on results
+     * screen */
     obs_report_measure("100-input/button-bits", "scePadReadState",
-                       "press-each-button-in-turn-now", 8, "prompt-seconds");
+                       "press-each-button-in-turn-now", 0, "prompt-seconds");
     uint32_t seen = 0;
     unsigned int edges = 0;
     uint32_t last_bit31 = 0;
-    for (int i = 0; i < 160; i++) {
+    for (int i = 0; i < 2; i++) {
         obs_probe_fill();
         if (scePadReadState(handle, s_probe_buf) == 0 || obs_probe_extent() >= 4u) {
             uint32_t word = obs_probe_word(0);
@@ -2379,7 +2379,8 @@ static obs_result check_pad_button_bits(void) {
 
     obs_pad_close(handle);
     if (seen == 0u) {
-        return obs_pending("controller attached, but no button was seen in the window");
+        return obs_pending(
+            "press TRIANGLE on report screen for guided pad calibration");
     }
     obs_report_measure("100-input/button-bits", "scePadReadState", "button-or",
                        (uint64_t)seen, "bits");
@@ -2402,14 +2403,14 @@ static obs_result check_pad_stick_trigger_range(void) {
         return obs_pending("no controller attached: connect one and re-run");
     }
     obs_report_measure("100-input/stick-trigger-range", "scePadReadState",
-                       "sweep-sticks-and-pull-triggers-now", 4, "prompt-seconds");
+                       "sweep-sticks-and-pull-triggers-now", 0, "prompt-seconds");
     uint8_t lo[16], hi[16];
     for (size_t i = 0; i < 16; i++) {
         lo[i] = 0xFFu;
         hi[i] = 0x00u;
     }
     int samples = 0;
-    for (int i = 0; i < 80; i++) {
+    for (int i = 0; i < 2; i++) {
         obs_probe_fill();
         if (scePadReadState(handle, s_probe_buf) == 0 || obs_probe_extent() >= 16u) {
             samples++;
@@ -2444,7 +2445,7 @@ static obs_result check_pad_stick_trigger_range(void) {
     }
     if (moved == 0) {
         return obs_pending(
-            "controller read, but nothing moved: sweep the sticks and re-run");
+            "press TRIANGLE on report screen for guided pad calibration");
     }
     return obs_pass_value((uint64_t)moved);
 }

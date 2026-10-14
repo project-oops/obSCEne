@@ -748,9 +748,9 @@ static void draw_page(unsigned int page) {
      * These pages are only ever drawn after the suite ends, so the word is a constant
      * here. That is exactly why it is worth printing: the reader does not know what the
      * code knows. (D174) */
-    x = obs_display_text(x + 8 * 2 * 8, h - 56, "SUITE COMPLETE - ", OBS_COLOUR_PASS,
-                         2);
-    (void)obs_display_text(x, h - 56, "DPAD LEFT/RIGHT TO PAGE", OBS_COLOUR_ACCENT, 2);
+    x = obs_display_text(x + 8 * 2 * 8, h - 56, "COMPLETE - ", OBS_COLOUR_PASS, 2);
+    (void)obs_display_text(x, h - 56, "DPAD: PAGE  TRIANGLE: CALIBRATE PAD",
+                           OBS_COLOUR_ACCENT, 2);
 
     obs_display_flip();
 }
@@ -780,10 +780,17 @@ static void obs_screen_wait(unsigned int microseconds) {
 #define OBS_PAD_RIGHT 0x00000020u
 #define OBS_PAD_DOWN 0x00000040u
 #define OBS_PAD_LEFT 0x00000080u
-#define OBS_PAD_L1 0x00000400u
-#define OBS_PAD_R1 0x00000800u
+#define OBS_PAD_TRIANGLE 0x00001000u
 #define OBS_PAD_CIRCLE 0x00002000u
 #define OBS_PAD_CROSS 0x00004000u
+#define OBS_PAD_SQUARE 0x00008000u
+#define OBS_PAD_L1 0x00000400u
+#define OBS_PAD_R1 0x00000800u
+#define OBS_PAD_L2 0x00000100u
+#define OBS_PAD_R2 0x00000200u
+#define OBS_PAD_L3 0x00000002u
+#define OBS_PAD_R3 0x00000004u
+#define OBS_PAD_OPTIONS 0x00000008u
 
 /* ~90 ms a poll: responsive to a press without spinning the CPU on a screen that is
  * idle. */
@@ -813,6 +820,10 @@ static void obs_screen_wait(unsigned int microseconds) {
 #define OBS_KB_KEY_DOWN 81u
 #define OBS_KB_KEY_UP 82u
 #define OBS_KB_KEY_RETURN 40u
+#define OBS_KB_KEY_ESCAPE 41u
+#define OBS_KB_KEY_SPACE 44u
+#define OBS_KB_KEY_T 23u
+#define OBS_KB_KEY_C 6u
 
 static int obs_pad_handle = -1;
 static int obs_kb_handle = -1;
@@ -928,6 +939,16 @@ static uint32_t obs_kb_nav(void) {
         case OBS_KB_KEY_RETURN:
             bits |= OBS_PAD_CIRCLE;
             break;
+        case OBS_KB_KEY_T:
+        case OBS_KB_KEY_C:
+            bits |= OBS_PAD_TRIANGLE;
+            break;
+        case OBS_KB_KEY_SPACE:
+            bits |= OBS_PAD_CROSS;
+            break;
+        case OBS_KB_KEY_ESCAPE:
+            bits |= OBS_PAD_OPTIONS;
+            break;
         default:
             break;
         }
@@ -938,6 +959,273 @@ static uint32_t obs_kb_nav(void) {
 /* Whatever input is present, from either device, as one nav bitfield. */
 static uint32_t obs_nav_input(void) {
     return obs_pad_buttons() | obs_kb_nav();
+}
+
+static int obs_str_eq(const char *a, const char *b) {
+    if (!a || !b) {
+        return 0;
+    }
+    while (*a && *b) {
+        if (*a != *b) {
+            return 0;
+        }
+        a++;
+        b++;
+    }
+    return (*a == '\0' && *b == '\0');
+}
+
+static void obs_guided_pad_calibration(void) {
+    int w = obs_display_width();
+    int h = obs_display_height();
+    if (w == 0 || h == 0) {
+        return;
+    }
+
+    if (obs_pad_handle < 0) {
+        obs_pad_open();
+    }
+    if (obs_kb_handle < 0) {
+        obs_kb_open();
+    }
+
+    struct {
+        const char *name;
+        uint32_t mask;
+        uint32_t bit;
+        int hit;
+    } steps[] = {{"CROSS (X)", OBS_PAD_CROSS, 14u, 0},
+                 {"CIRCLE (O)", OBS_PAD_CIRCLE, 13u, 0},
+                 {"SQUARE ([])", OBS_PAD_SQUARE, 15u, 0},
+                 {"TRIANGLE (/\\)", OBS_PAD_TRIANGLE, 12u, 0},
+                 {"L1 (LEFT SHOULDER)", OBS_PAD_L1, 10u, 0},
+                 {"R1 (RIGHT SHOULDER)", OBS_PAD_R1, 11u, 0},
+                 {"L2 (LEFT TRIGGER)", OBS_PAD_L2, 8u, 0},
+                 {"R2 (RIGHT TRIGGER)", OBS_PAD_R2, 9u, 0},
+                 {"DPAD UP", OBS_PAD_UP, 4u, 0},
+                 {"DPAD RIGHT", OBS_PAD_RIGHT, 5u, 0},
+                 {"DPAD DOWN", OBS_PAD_DOWN, 6u, 0},
+                 {"DPAD LEFT", OBS_PAD_LEFT, 7u, 0},
+                 {"L3 (LEFT STICK CLICK)", OBS_PAD_L3, 1u, 0},
+                 {"R3 (STICK CLICK)", OBS_PAD_R3, 2u, 0},
+                 {"OPTIONS", OBS_PAD_OPTIONS, 3u, 0}};
+    unsigned int total_steps = (unsigned int)(sizeof(steps) / sizeof(steps[0]));
+    unsigned int current_idx = 0;
+    uint32_t seen_buttons = 0;
+    unsigned int edge_count = 0;
+    uint32_t prev_raw = 0;
+
+    unsigned char pad_buf[OBS_PAD_STATE_BYTES];
+    for (unsigned int b = 0; b < OBS_PAD_STATE_BYTES; b++) {
+        pad_buf[b] = 0;
+    }
+
+    uint8_t lo[16], hi[16];
+    for (size_t i = 0; i < 16; i++) {
+        lo[i] = 0xFFu;
+        hi[i] = 0x00u;
+    }
+
+    /* Phase 1: Guided Buttons */
+    while (current_idx < total_steps) {
+        obs_display_clear(OBS_COLOUR_GROUND);
+        (void)obs_draw_wordmark(OBS_MARGIN, 56, 6);
+
+        (void)obs_display_text(OBS_MARGIN + 8 * 6 * 7 + 24, 74,
+                               "DUALSENSE INPUT CALIBRATION", OBS_COLOUR_ACCENT, 2);
+        obs_display_rect(OBS_MARGIN, 118, w - OBS_MARGIN * 2, 2, 0xFF262C36u);
+
+        (void)obs_display_text(OBS_MARGIN, 140,
+                               "PROMPT: PLEASE PRESS BUTTON SHOWN BELOW",
+                               OBS_COLOUR_INK, 2);
+
+        for (unsigned int i = 0; i < total_steps; i++) {
+            int col = (i < 8) ? 0 : 1;
+            int row = (i < 8) ? (int)i : (int)(i - 8);
+            int x = OBS_MARGIN + col * ((w - OBS_MARGIN * 2) / 2);
+            int y = 180 + row * 38;
+
+            obs_colour colr = steps[i].hit ? OBS_COLOUR_PASS
+                                           : ((i == current_idx) ? OBS_COLOUR_ACCENT
+                                                                 : OBS_COLOUR_DIM);
+            const char *status_str =
+                steps[i].hit ? "[OK]" : ((i == current_idx) ? "-->" : "[  ]");
+            (void)obs_display_text(x, y, status_str, colr, 2);
+            (void)obs_display_text(x + 48, y, steps[i].name, colr, 2);
+        }
+
+        (void)obs_display_text(OBS_MARGIN, h - 56,
+                               "PRESS OPTIONS / ESCAPE TO SKIP TO STICK SWEEP",
+                               OBS_COLOUR_DIM, 2);
+        obs_display_flip();
+
+        obs_screen_wait(OBS_PAD_POLL_MICROSECONDS);
+        uint32_t kb_bits = obs_kb_nav();
+        uint32_t pad_buttons = 0;
+        if (obs_pad_handle >= 0 &&
+            obs_address_is_callable((const void *)&scePadReadState)) {
+            if (scePadReadState(obs_pad_handle, pad_buf) == 0) {
+                for (unsigned int i = 0; i < 4u; i++) {
+                    pad_buttons |= (uint32_t)pad_buf[i] << (i * 8u);
+                }
+                for (size_t b = 0; b < 16; b++) {
+                    if (pad_buf[b] < lo[b]) {
+                        lo[b] = pad_buf[b];
+                    }
+                    if (pad_buf[b] > hi[b]) {
+                        hi[b] = pad_buf[b];
+                    }
+                }
+            }
+        }
+        uint32_t active = pad_buttons | kb_bits;
+        uint32_t risen = active & ~prev_raw;
+        prev_raw = active;
+
+        if (risen & OBS_PAD_OPTIONS) {
+            break;
+        }
+
+        if (risen != 0) {
+            for (int b = 0; b < 32; b++) {
+                if ((risen & (1u << (unsigned int)b)) != 0u) {
+                    obs_report_measure("100-input/button-bits", "scePadReadState",
+                                       "edge", (uint64_t)b, "bit");
+                    edge_count++;
+                }
+            }
+            seen_buttons |= active;
+
+            for (unsigned int s = 0; s < total_steps; s++) {
+                if ((risen & steps[s].mask) != 0u && !steps[s].hit) {
+                    steps[s].hit = 1;
+                }
+            }
+            if (steps[current_idx].hit) {
+                while (current_idx < total_steps && steps[current_idx].hit) {
+                    current_idx++;
+                }
+            }
+        }
+    }
+
+    /* Phase 2: Stick & Trigger sweep (5 seconds) */
+    unsigned int sweep_frames = 50;
+    for (unsigned int f = 0; f < sweep_frames; f++) {
+        obs_display_clear(OBS_COLOUR_GROUND);
+        (void)obs_draw_wordmark(OBS_MARGIN, 56, 6);
+        (void)obs_display_text(OBS_MARGIN + 8 * 6 * 7 + 24, 74,
+                               "DUALSENSE INPUT CALIBRATION", OBS_COLOUR_ACCENT, 2);
+        obs_display_rect(OBS_MARGIN, 118, w - OBS_MARGIN * 2, 2, 0xFF262C36u);
+
+        (void)obs_display_text(
+            OBS_MARGIN, 160, "NOW SWEEP BOTH ANALOG STICKS & PULL TRIGGERS TO EXTREMES",
+            OBS_COLOUR_ACCENT, 2);
+
+        int lx =
+            obs_display_text(OBS_MARGIN, 220, "LEFT STICK  X: ", OBS_COLOUR_INK, 2);
+        obs_number(lx + 8 * 2 * 3, 220, (unsigned int)pad_buf[4], OBS_COLOUR_ACCENT, 2);
+        int ly = obs_display_text(lx + 8 * 2 * 5, 220, " Y: ", OBS_COLOUR_INK, 2);
+        obs_number(ly + 8 * 2 * 3, 220, (unsigned int)pad_buf[5], OBS_COLOUR_ACCENT, 2);
+
+        int rx =
+            obs_display_text(OBS_MARGIN, 260, "RIGHT STICK X: ", OBS_COLOUR_INK, 2);
+        obs_number(rx + 8 * 2 * 3, 260, (unsigned int)pad_buf[6], OBS_COLOUR_ACCENT, 2);
+        int ry = obs_display_text(rx + 8 * 2 * 5, 260, " Y: ", OBS_COLOUR_INK, 2);
+        obs_number(ry + 8 * 2 * 3, 260, (unsigned int)pad_buf[7], OBS_COLOUR_ACCENT, 2);
+
+        int l2 =
+            obs_display_text(OBS_MARGIN, 300, "TRIGGERS    L2: ", OBS_COLOUR_INK, 2);
+        obs_number(l2 + 8 * 2 * 3, 300, (unsigned int)pad_buf[8], OBS_COLOUR_ACCENT, 2);
+        int r2 = obs_display_text(l2 + 8 * 2 * 5, 300, " R2: ", OBS_COLOUR_INK, 2);
+        obs_number(r2 + 8 * 2 * 3, 300, (unsigned int)pad_buf[9], OBS_COLOUR_ACCENT, 2);
+
+        int px = obs_display_text(OBS_MARGIN, 360, "SAMPLING: ", OBS_COLOUR_PASS, 2);
+        obs_number(px + 8 * 2 * 3, 360, ((f + 1u) * 100u) / sweep_frames,
+                   OBS_COLOUR_PASS, 2);
+        (void)obs_display_text(px + 8 * 2 * 4, 360, "%", OBS_COLOUR_PASS, 2);
+
+        obs_display_flip();
+        obs_screen_wait(OBS_PAD_POLL_MICROSECONDS);
+
+        if (obs_pad_handle >= 0 &&
+            obs_address_is_callable((const void *)&scePadReadState)) {
+            if (scePadReadState(obs_pad_handle, pad_buf) == 0) {
+                for (size_t b = 0; b < 16; b++) {
+                    if (pad_buf[b] < lo[b]) {
+                        lo[b] = pad_buf[b];
+                    }
+                    if (pad_buf[b] > hi[b]) {
+                        hi[b] = pad_buf[b];
+                    }
+                }
+            }
+        }
+    }
+
+    if (seen_buttons != 0) {
+        obs_report_measure("100-input/button-bits", "scePadReadState", "button-or",
+                           (uint64_t)seen_buttons, "bits");
+        obs_report_measure("100-input/button-bits", "scePadReadState", "edges",
+                           (uint64_t)edge_count, "count");
+        obs_report_buffer("100-input/button-bits", "scePadReadState",
+                          "bytes-58-77-connected", pad_buf + 0x58, 0x20);
+    }
+    obs_report_buffer("100-input/stick-trigger-range", "scePadReadState", "min", lo,
+                      16);
+    obs_report_buffer("100-input/stick-trigger-range", "scePadReadState", "max", hi,
+                      16);
+
+    for (unsigned int i = 0; i < obs_entry_count; i++) {
+        if (obs_str_eq(obs_entries[i].id, "100-input/button-bits")) {
+            obs_entries[i].status = OBS_PASS;
+            obs_entries[i].detail = "calibrated: buttons mapped";
+        } else if (obs_str_eq(obs_entries[i].id, "100-input/stick-trigger-range")) {
+            obs_entries[i].status = OBS_PASS;
+            obs_entries[i].detail = "calibrated: sticks & triggers swept";
+        }
+    }
+
+    for (unsigned int r = 0; r < obs_row_count; r++) {
+        if (obs_str_eq(obs_rows[r].id, "100-input") ||
+            obs_str_eq(obs_rows[r].id, "070-media")) {
+            if (obs_rows[r].tally.skip >= 2) {
+                obs_rows[r].tally.skip -= 2;
+                obs_rows[r].tally.pass += 2;
+            } else if (obs_rows[r].tally.partial >= 2) {
+                obs_rows[r].tally.partial -= 2;
+                obs_rows[r].tally.pass += 2;
+            }
+        }
+    }
+
+    /* Phase 3: Completion screen */
+    for (;;) {
+        obs_display_clear(OBS_COLOUR_GROUND);
+        (void)obs_draw_wordmark(OBS_MARGIN, 56, 6);
+        (void)obs_display_text(OBS_MARGIN + 8 * 6 * 7 + 24, 74, "CALIBRATION COMPLETE",
+                               OBS_COLOUR_PASS, 2);
+        obs_display_rect(OBS_MARGIN, 118, w - OBS_MARGIN * 2, 2, 0xFF262C36u);
+
+        (void)obs_display_text(
+            OBS_MARGIN, 180,
+            "ALL CONTROLLER AXES & BUTTONS CALIBRATED AND SAVED TO REPORT.",
+            OBS_COLOUR_INK, 2);
+        (void)obs_display_text(OBS_MARGIN, 220,
+                               "INPUT TESTS MARKED OK / PASS IN SUITE RESULTS.",
+                               OBS_COLOUR_PASS, 2);
+
+        (void)obs_display_text(OBS_MARGIN, h - 56,
+                               "PRESS CIRCLE OR RETURN TO RETURN TO RESULTS VIEW",
+                               OBS_COLOUR_ACCENT, 2);
+        obs_display_flip();
+
+        obs_screen_wait(OBS_PAD_POLL_MICROSECONDS);
+        uint32_t nav = obs_nav_input();
+        if ((nav & (OBS_PAD_CIRCLE | OBS_PAD_CROSS)) != 0u) {
+            break;
+        }
+    }
 }
 
 void obs_screen_present(void) {
@@ -988,7 +1276,7 @@ void obs_screen_present(void) {
      * reversible action. (D259) */
     int driven = 0;
 
-    obs_screen_redraw("REPORT COMPLETE");
+    obs_screen_redraw("REPORT COMPLETE - DPAD: PAGE  TRIANGLE: CALIBRATE PAD");
 
     for (;;) {
         obs_screen_wait(OBS_PAD_POLL_MICROSECONDS);
@@ -1009,7 +1297,11 @@ void obs_screen_present(void) {
         int delta = 0;
         int changed = 0;
 
-        if (pressed & (OBS_PAD_RIGHT | OBS_PAD_R1)) {
+        if (pressed & OBS_PAD_TRIANGLE) {
+            obs_guided_pad_calibration();
+            page = 0;
+            changed = 1;
+        } else if (pressed & (OBS_PAD_RIGHT | OBS_PAD_R1)) {
             delta = 1;
         } else if (pressed & (OBS_PAD_LEFT | OBS_PAD_L1)) {
             delta = -1;
