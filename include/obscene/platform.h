@@ -2382,4 +2382,39 @@ OBS_WEAK int sceFontRenderSurfaceInit_static(void *surf, void *buf, uint32_t str
                                              uint32_t format, uint32_t w,
                                              uint32_t h) __asm__("$gdUCnU0gHdI");
 
+/* REQ-20261013T2030Z-pt01: Pad tilt correction & trigger effect state */
+OBS_WEAK int scePadSetTiltCorrectionState_static(int handle,
+                                                 int state) __asm__("$vDLMoJLde8I");
+OBS_WEAK int scePadGetTriggerEffectState_static(int handle, void *state,
+                                                size_t size) __asm__("$znaWI0gpuo8");
+
+/* REQ-20261013T1716Z-td01: Thread destructor runner hook */
+OBS_WEAK int
+_sceKernelSetThreadDtors_static(void (*runner)(void *)) __asm__("$rNhWz+lvOMU");
+
+/* REQ-20261013T1735Z-js03: WebApi2 PushEvent, SaveData Transaction, Json2 */
+OBS_WEAK int sceNpWebApi2PushEventCreateHandle_static(void *a0, void *a1, void *a2,
+                                                      void *a3, void *a4,
+                                                      void *a5) __asm__("$WV1GwM32NgY");
+OBS_WEAK int
+sceSaveDataCreateTransactionResource_static(void *a0, void *a1, void *a2, void *a3,
+                                            void *a4, void *a5) __asm__("$gjRZNnw0JPE");
+
+/* libSceJson2 Value, String, MemAllocator */
+OBS_WEAK void *sceJson2ValueCtor_static(void *val) __asm__("$qBMjqyBn3OM");
+OBS_WEAK void sceJson2ValueDtor_static(void *val) __asm__("$WTtYf+cNnXI");
+OBS_WEAK void *sceJson2ValueSetType_static(void *val, int type) __asm__("$IKQimvG9Wqs");
+OBS_WEAK void *sceJson2ValueSetBool_static(void *val, int b) __asm__("$5yHuiWXo2gg");
+OBS_WEAK void *sceJson2ValueSetDouble_static(void *val,
+                                             double d) __asm__("$BSmWDIkV4w4");
+OBS_WEAK void *sceJson2ValueSetLong_static(void *val, long l) __asm__("$QxVVYhP-mvg");
+OBS_WEAK void *sceJson2ValueSetUlong_static(void *val,
+                                            unsigned long ul) __asm__("$SIe1ZmW7e7s");
+OBS_WEAK void *sceJson2ValueSetString_static(void *val,
+                                             const void *str) __asm__("$6l3Bv2gysNc");
+OBS_WEAK void *sceJson2StringCtor_static(void *str,
+                                         const char *s) __asm__("$9KUZFjI1IxA");
+OBS_WEAK void sceJson2StringDtor_static(void *str) __asm__("$cG1VE2HMl6c");
+OBS_WEAK void sceJson2MemAllocatorDtor2_static(void *alloc) __asm__("$OcAgPxcq5Vk");
+
 #endif /* OBSCENE_PLATFORM_H */

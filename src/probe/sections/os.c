@@ -572,6 +572,34 @@ static void dummy_thread_dtor(void *arg) {
     s_thread_dtor_ran = 1;
 }
 
+static volatile uint32_t s_td01_dtor_calls = 0;
+static volatile uint64_t s_td01_last_tid = 0;
+static volatile uint64_t s_td01_last_seq = 0;
+static volatile uint64_t s_td01_global_seq = 0;
+static volatile void *s_td01_last_arg = NULL;
+
+static void td01_thread_dtor_runner(void *arg) {
+    s_td01_dtor_calls++;
+    s_td01_last_arg = arg;
+    s_td01_last_seq = ++s_td01_global_seq;
+    if (obs_address_is_callable((const void *)&scePthreadSelf)) {
+        s_td01_last_tid = (uint64_t)(uintptr_t)scePthreadSelf();
+    }
+}
+
+static void *td01_thread_return_func(void *arg) {
+    (void)arg;
+    return (void *)(uintptr_t)0x55;
+}
+
+static void *td01_thread_exit_func(void *arg) {
+    (void)arg;
+    if (obs_address_is_callable((const void *)&scePthreadExit)) {
+        scePthreadExit((void *)(uintptr_t)0x66);
+    }
+    return NULL;
+}
+
 static obs_result check_libc_startup_hooks(void) {
     const char *id = "060-module/libc-startup-hooks";
     int h_kernel = obs_module_open("libkernel");
@@ -584,14 +612,41 @@ static obs_result check_libc_startup_hooks(void) {
     typedef int (*fn_set_atexit_report_t)(void (*)(void));
     typedef int (*fn_set_heap_api_t)(void *);
 
-    fn_set_dtors_t fn_dtors =
-        (fn_set_dtors_t)obs_module_symbol(h_kernel, "_sceKernelSetThreadDtors");
-    fn_set_atexit_count_t fn_count = (fn_set_atexit_count_t)obs_module_symbol(
-        h_kernel, "_sceKernelSetThreadAtexitCount");
-    fn_set_atexit_report_t fn_report = (fn_set_atexit_report_t)obs_module_symbol(
-        h_kernel, "_sceKernelSetThreadAtexitReport");
-    fn_set_heap_api_t fn_heap = (fn_set_heap_api_t)obs_module_symbol(
-        h_kernel, "_sceKernelRtldSetApplicationHeapAPI");
+    fn_set_dtors_t fn_dtors = NULL;
+    if (obs_address_is_callable((const void *)&_sceKernelSetThreadDtors_static)) {
+        fn_dtors = (fn_set_dtors_t)&_sceKernelSetThreadDtors_static;
+    }
+    if (!fn_dtors) {
+        fn_dtors = (fn_set_dtors_t)obs_module_symbol(h_kernel, "$rNhWz+lvOMU");
+    }
+    if (!fn_dtors) {
+        fn_dtors =
+            (fn_set_dtors_t)obs_module_symbol(h_kernel, "_sceKernelSetThreadDtors");
+    }
+
+    fn_set_atexit_count_t fn_count =
+        (fn_set_atexit_count_t)obs_module_symbol(h_kernel, "$pB-yGZ2nQ9o");
+    if (!fn_count) {
+        fn_count = (fn_set_atexit_count_t)obs_module_symbol(h_kernel, "$pB+yGZ2nQ9o");
+    }
+    if (!fn_count) {
+        fn_count = (fn_set_atexit_count_t)obs_module_symbol(
+            h_kernel, "_sceKernelSetThreadAtexitCount");
+    }
+
+    fn_set_atexit_report_t fn_report =
+        (fn_set_atexit_report_t)obs_module_symbol(h_kernel, "$WhCc1w3EhSI");
+    if (!fn_report) {
+        fn_report = (fn_set_atexit_report_t)obs_module_symbol(
+            h_kernel, "_sceKernelSetThreadAtexitReport");
+    }
+
+    fn_set_heap_api_t fn_heap =
+        (fn_set_heap_api_t)obs_module_symbol(h_kernel, "$p5EcQeEeJAE");
+    if (!fn_heap) {
+        fn_heap = (fn_set_heap_api_t)obs_module_symbol(
+            h_kernel, "_sceKernelRtldSetApplicationHeapAPI");
+    }
 
     obs_report_measure(id, "_sceKernelSetThreadDtors", "resolved",
                        (uint64_t)(fn_dtors != NULL), "bool");
@@ -673,6 +728,81 @@ static obs_result check_libc_startup_hooks(void) {
             obs_report_measure(id, "_sceKernelSetThreadDtors", "rc-valid",
                                (uint64_t)(uint32_t)sig, "fault");
         }
+    }
+
+    /* 3. REQ-20261013T1716Z-td01: Thread lifecycle vs thread dtor runner */
+    if (fn_dtors != NULL) {
+        fn_dtors(td01_thread_dtor_runner);
+    }
+
+    if (obs_address_is_callable((const void *)&scePthreadCreate) &&
+        obs_address_is_callable((const void *)&scePthreadJoin)) {
+        /* Arm 1: Thread returning 0x55 */
+        s_td01_dtor_calls = 0;
+        s_td01_last_tid = 0;
+        s_td01_last_seq = 0;
+        s_td01_last_arg = NULL;
+
+        ScePthread th1 = 0;
+        int rc_c1 =
+            scePthreadCreate(&th1, NULL, td01_thread_return_func, NULL, "td01_ret");
+        obs_report_measure(id, "arm1-return", "create-rc", (uint64_t)(uint32_t)rc_c1,
+                           "code");
+        obs_report_measure(id, "arm1-return", "th-tid", (uint64_t)(uintptr_t)th1,
+                           "tid");
+
+        void *join_val1 = NULL;
+        int rc_j1 = scePthreadJoin(th1, &join_val1);
+        uint64_t join_seq1 = ++s_td01_global_seq;
+
+        obs_report_measure(id, "arm1-return", "join-rc", (uint64_t)(uint32_t)rc_j1,
+                           "code");
+        obs_report_measure(id, "arm1-return", "join-val",
+                           (uint64_t)(uintptr_t)join_val1, "val");
+        obs_report_measure(id, "arm1-return", "dtor-ran",
+                           (uint64_t)(s_td01_dtor_calls > 0), "bool");
+        obs_report_measure(id, "arm1-return", "dtor-calls", (uint64_t)s_td01_dtor_calls,
+                           "count");
+        obs_report_measure(id, "arm1-return", "dtor-tid", s_td01_last_tid, "tid");
+        obs_report_measure(id, "arm1-return", "dtor-ran-on-target-thread",
+                           (uint64_t)(s_td01_last_tid == (uint64_t)(uintptr_t)th1),
+                           "bool");
+        obs_report_measure(
+            id, "arm1-return", "dtor-seq-before-join",
+            (uint64_t)(s_td01_last_seq < join_seq1 && s_td01_last_seq > 0), "bool");
+
+        /* Arm 2: Thread exiting with scePthreadExit(0x66) */
+        s_td01_dtor_calls = 0;
+        s_td01_last_tid = 0;
+        s_td01_last_seq = 0;
+        s_td01_last_arg = NULL;
+
+        ScePthread th2 = 0;
+        int rc_c2 =
+            scePthreadCreate(&th2, NULL, td01_thread_exit_func, NULL, "td01_exit");
+        obs_report_measure(id, "arm2-exit", "create-rc", (uint64_t)(uint32_t)rc_c2,
+                           "code");
+        obs_report_measure(id, "arm2-exit", "th-tid", (uint64_t)(uintptr_t)th2, "tid");
+
+        void *join_val2 = NULL;
+        int rc_j2 = scePthreadJoin(th2, &join_val2);
+        uint64_t join_seq2 = ++s_td01_global_seq;
+
+        obs_report_measure(id, "arm2-exit", "join-rc", (uint64_t)(uint32_t)rc_j2,
+                           "code");
+        obs_report_measure(id, "arm2-exit", "join-val", (uint64_t)(uintptr_t)join_val2,
+                           "val");
+        obs_report_measure(id, "arm2-exit", "dtor-ran",
+                           (uint64_t)(s_td01_dtor_calls > 0), "bool");
+        obs_report_measure(id, "arm2-exit", "dtor-calls", (uint64_t)s_td01_dtor_calls,
+                           "count");
+        obs_report_measure(id, "arm2-exit", "dtor-tid", s_td01_last_tid, "tid");
+        obs_report_measure(id, "arm2-exit", "dtor-ran-on-target-thread",
+                           (uint64_t)(s_td01_last_tid == (uint64_t)(uintptr_t)th2),
+                           "bool");
+        obs_report_measure(
+            id, "arm2-exit", "dtor-seq-before-join",
+            (uint64_t)(s_td01_last_seq < join_seq2 && s_td01_last_seq > 0), "bool");
     }
 
     return obs_pass();
@@ -3039,12 +3169,16 @@ static obs_result check_msg_dialog_cycle(void) {
     }
     if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
         (void)sceSysmoduleLoadModule(0x0096);
-        (void)sceSysmoduleLoadModule(0x00a9);
+        (void)sceSysmoduleLoadModule(0x00a4);
+        (void)sceSysmoduleLoadModule(0x00ac);
     }
     (void)obs_sysmodule_load_id(0x0096);
-    (void)obs_sysmodule_load_id(0x00a9);
+    (void)obs_sysmodule_load_id(0x00a4);
+    (void)obs_sysmodule_load_id(0x00ac);
     if (h_cmn <= 0)
         h_cmn = obs_find_module_handle_by_library("libSceCommonDialog");
+    if (h_msg <= 0)
+        h_msg = obs_module_open("libSceMsgDialog");
     if (h_msg <= 0)
         h_msg = obs_find_module_handle_by_library("libSceMsgDialog.native");
     if (h_msg <= 0)
@@ -3172,6 +3306,92 @@ static obs_result check_msg_dialog_cycle(void) {
             if (!fn_msg_term && fn_dlsym(h_msg, "sceMsgDialogTerminate", &p) == 0 &&
                 obs_address_is_callable(p))
                 fn_msg_term = (fn_msg_term_t)p;
+        }
+    }
+
+    if (!fn_msg_init)
+        fn_msg_init = (fn_msg_init_t)obs_module_symbol(h_msg, "sceMsgDialogInitialize");
+    if (!fn_msg_open)
+        fn_msg_open = (fn_msg_open_t)obs_module_symbol(h_msg, "sceMsgDialogOpen");
+    if (!fn_msg_update)
+        fn_msg_update =
+            (fn_msg_update_t)obs_module_symbol(h_msg, "sceMsgDialogUpdateStatus");
+    if (!fn_msg_get_status)
+        fn_msg_get_status =
+            (fn_msg_get_status_t)obs_module_symbol(h_msg, "sceMsgDialogGetStatus");
+    if (!fn_msg_get_result)
+        fn_msg_get_result =
+            (fn_msg_get_result_t)obs_module_symbol(h_msg, "sceMsgDialogGetResult");
+    if (!fn_msg_close)
+        fn_msg_close = (fn_msg_close_t)obs_module_symbol(h_msg, "sceMsgDialogClose");
+    if (!fn_msg_term)
+        fn_msg_term = (fn_msg_term_t)obs_module_symbol(h_msg, "sceMsgDialogTerminate");
+
+    uintptr_t base_msg = obs_find_loaded_module_base("libSceMsgDialog.native");
+    int msg_is_native = 1;
+    if (base_msg == 0) {
+        base_msg = obs_find_loaded_module_base("libSceMsgDialog");
+        msg_is_native = 0;
+    }
+    if (base_msg != 0) {
+        if (msg_is_native) {
+            if (!fn_msg_init) {
+                fn_msg_init = (fn_msg_init_t)(base_msg + 0x0380);
+                is_link_minit = 1;
+            }
+            if (!fn_msg_open) {
+                fn_msg_open = (fn_msg_open_t)(base_msg + 0x0480);
+                is_link_mopen = 1;
+            }
+            if (!fn_msg_update) {
+                fn_msg_update = (fn_msg_update_t)(base_msg + 0x08a0);
+                is_link_mupdate = 1;
+            }
+            if (!fn_msg_get_status) {
+                fn_msg_get_status = (fn_msg_get_status_t)(base_msg + 0x0920);
+                is_link_mstatus = 1;
+            }
+            if (!fn_msg_get_result) {
+                fn_msg_get_result = (fn_msg_get_result_t)(base_msg + 0x0980);
+                is_link_mresult = 1;
+            }
+            if (!fn_msg_close) {
+                fn_msg_close = (fn_msg_close_t)(base_msg + 0x0c00);
+                is_link_mclose = 1;
+            }
+            if (!fn_msg_term) {
+                fn_msg_term = (fn_msg_term_t)(base_msg + 0x0cb0);
+                is_link_mterm = 1;
+            }
+        } else {
+            if (!fn_msg_init) {
+                fn_msg_init = (fn_msg_init_t)(base_msg + 0x0360);
+                is_link_minit = 1;
+            }
+            if (!fn_msg_open) {
+                fn_msg_open = (fn_msg_open_t)(base_msg + 0x0410);
+                is_link_mopen = 1;
+            }
+            if (!fn_msg_update) {
+                fn_msg_update = (fn_msg_update_t)(base_msg + 0x07a0);
+                is_link_mupdate = 1;
+            }
+            if (!fn_msg_get_status) {
+                fn_msg_get_status = (fn_msg_get_status_t)(base_msg + 0x0820);
+                is_link_mstatus = 1;
+            }
+            if (!fn_msg_get_result) {
+                fn_msg_get_result = (fn_msg_get_result_t)(base_msg + 0x0880);
+                is_link_mresult = 1;
+            }
+            if (!fn_msg_close) {
+                fn_msg_close = (fn_msg_close_t)(base_msg + 0x09e0);
+                is_link_mclose = 1;
+            }
+            if (!fn_msg_term) {
+                fn_msg_term = (fn_msg_term_t)(base_msg + 0x0a90);
+                is_link_mterm = 1;
+            }
         }
     }
 

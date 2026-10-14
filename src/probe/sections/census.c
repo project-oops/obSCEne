@@ -1429,6 +1429,89 @@ static obs_result check_sp01_shader_pair(void) {
         obs_report_measure(id, "0xe486-BA-arg5-1", "rc", rc2_swap1, "code");
     }
 
+    /* REQ-20261013T2000Z-sp03 arm 1: edited shader pair */
+    static __attribute__((aligned(64))) uint8_t s_obj_A_edit[0x180];
+    static __attribute__((aligned(64))) uint8_t s_obj_B_edit[0x180];
+    memcpy(s_obj_A_edit, s_obj_A, sizeof(s_obj_A));
+    memcpy(s_obj_B_edit, s_obj_B, sizeof(s_obj_B));
+
+    uint64_t *qw_Ae = (uint64_t *)(void *)s_obj_A_edit;
+    /* A's RSRC1 VGPR field (0x10a value bits 5:0) set below B's (0x00433a00 | 0x08 =
+     * 0x00433a08) */
+    qw_Ae[0xa8 / 8] = 0x00433a080000010aULL;
+    /* A's RSRC2 user-SGPR field (0x10b bits 5:1) below B's (0x74 to 0x04) */
+    qw_Ae[0xb0 / 8] = 0x000000040000010bULL;
+    /* A count byte at +0x5c is 6 */
+    qw_Ae[0x58 / 8] = 0x0000000600050030ULL;
+    /* A given a third 0x100 entry (0x33333333) */
+    qw_Ae[0xd0 / 8] = 0x3333333300000100ULL;
+    /* Shift subsequent fields of A */
+    qw_Ae[0x08 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0xd8);
+    qw_Ae[0xd8 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x110);
+    qw_Ae[0xe0 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
+    qw_Ae[0xe8 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
+    qw_Ae[0xf0 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
+    qw_Ae[0xf8 / 8] = (uint64_t)(uintptr_t)(s_obj_A_edit + 0x128);
+    qw_Ae[0x100 / 8] = 0x0000000b00000000ULL;
+    qw_Ae[0x108 / 8] = 0x0000000000000000ULL;
+    qw_Ae[0x110 / 8] = 0xffffffffffffffffULL;
+    qw_Ae[0x118 / 8] = 0xffffffffffffffffULL;
+    qw_Ae[0x120 / 8] = 0x00000002ffff0000ULL;
+
+    uint64_t *qw_Be = (uint64_t *)(void *)s_obj_B_edit;
+    /* B's first two 0x100 values nonzero (0x11111111, 0x22222222) */
+    qw_Be[0xa0 / 8] = 0x1111111100000100ULL;
+    qw_Be[0xa8 / 8] = 0x2222222200000100ULL;
+
+    /* Dumps of edited objects */
+    obs_report_bytes(id, "shader-A-edit", "obj-60h", 0, s_obj_A_edit, 0x60);
+    obs_report_bytes(id, "shader-B-edit", "obj-60h", 0, s_obj_B_edit, 0x60);
+
+    /* 0x0a4e on edited pair */
+    if (call_0a4e && obs_address_is_callable((const void *)call_0a4e)) {
+        obs_jmp_buf guard_e;
+        memset(out, 0xcc, sizeof(out));
+        memset(aux, 0xcc, sizeof(aux));
+        int sig = OBS_FAULT_ARM(&guard_e);
+        uint64_t rc_e1 = 0xffffffffffffffffULL;
+        if (sig == 0) {
+            rc_e1 = call_0a4e(out, s_obj_A_edit, s_obj_B_edit, aux, 4, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "edit-0x0a4e-AB-arg5-4", "rc", rc_e1, "code");
+        for (unsigned int off = 0; off < 0x200; off += 64) {
+            obs_report_bytes(id, "edit-0x0a4e-AB-arg5-4", "out-200h", off, out + off,
+                             64);
+            obs_report_bytes(id, "edit-0x0a4e-AB-arg5-4", "aux-200h", off, aux + off,
+                             64);
+        }
+    }
+
+    /* 0xe486 on edited pair */
+    if (call_e486 && obs_address_is_callable((const void *)call_e486)) {
+        obs_jmp_buf guard_e;
+        memset(out, 0xcc, sizeof(out));
+        memset(state, 0xcc, sizeof(state));
+        int sig = OBS_FAULT_ARM(&guard_e);
+        uint64_t rc_e2 = 0xffffffffffffffffULL;
+        if (sig == 0) {
+            rc_e2 = call_e486(out, s_obj_A_edit, s_obj_B_edit, state, 4, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "edit-0xe486-AB-arg5-4", "rc", rc_e2, "code");
+        obs_report_bytes(id, "edit-0xe486-AB-arg5-4", "out-16b", 0, out, 16);
+        for (unsigned int off = 0; off < 0x200; off += 64) {
+            obs_report_bytes(id, "edit-0xe486-AB-arg5-4", "out-200h", off, out + off,
+                             64);
+            obs_report_bytes(id, "edit-0xe486-AB-arg5-4", "state-200h", off,
+                             state + off, 64);
+        }
+    }
+
     return obs_pass();
 }
 
@@ -2177,6 +2260,73 @@ static obs_result check_census_38(void) {
     } else {
         obs_fault_unregister();
         obs_report_measure(id, "call-frame-arg1", "fault", (uint64_t)sig, "signal");
+    }
+
+    /* REQ-20261013T1930Z-rf02: VideoOut calls on open handle */
+    int h_vo_mod = obs_module_open("libSceVideoOut");
+    if (h_vo_mod < 0)
+        h_vo_mod = obs_module_open("libSceVideoOut.sprx");
+    typedef int (*fn_eb_gv_t)(int, void *, int);
+    fn_eb_gv_t fn_eb_gv = NULL;
+    if (h_vo_mod > 0) {
+        fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(h_vo_mod, "$eb-gvTYQcoY");
+        if (!fn_eb_gv)
+            fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(h_vo_mod, "$eb+gvTYQcoY");
+        if (!fn_eb_gv)
+            fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(h_vo_mod, "0x86721036bde0bf79");
+    }
+    if (!fn_eb_gv) {
+        fn_eb_gv = (fn_eb_gv_t)obs_module_symbol(OBS_HANDLE_SELF, "$eb-gvTYQcoY");
+    }
+    if (!fn_eb_gv && obs_address_is_callable(
+                         (const void *)&sceVideoOutUnknown_86721036bde0bf79_static)) {
+        fn_eb_gv = (fn_eb_gv_t)(void *)&sceVideoOutUnknown_86721036bde0bf79_static;
+    }
+
+    if (hvo > 0) {
+        if (fn_eb_gv && obs_address_is_callable((const void *)fn_eb_gv)) {
+            uint8_t buf0[0x20];
+            memset(buf0, 0, sizeof(buf0));
+            sig = OBS_FAULT_ARM(&guard);
+            int rc0 = -1;
+            if (sig == 0) {
+                rc0 = fn_eb_gv(hvo, buf0, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "eb-gvTYQcoY-zeroed", "rc", (uint64_t)(uint32_t)rc0,
+                               "code");
+            obs_report_bytes(id, "eb-gvTYQcoY-zeroed", "buf-20h", 0, buf0, 0x20);
+
+            uint8_t bufcc[0x20];
+            memset(bufcc, 0xcc, sizeof(bufcc));
+            sig = OBS_FAULT_ARM(&guard);
+            int rccc = -1;
+            if (sig == 0) {
+                rccc = fn_eb_gv(hvo, bufcc, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "eb-gvTYQcoY-0xcc", "rc", (uint64_t)(uint32_t)rccc,
+                               "code");
+            obs_report_bytes(id, "eb-gvTYQcoY-0xcc", "buf-20h", 0, bufcc, 0x20);
+        }
+
+        if (obs_address_is_callable((const void *)&sceVideoOutIsOutputSupported)) {
+            int rc_d0a = sceVideoOutIsOutputSupported(hvo, (int)0xd000000a);
+            obs_report_measure(id, "video-out", "supported-0xd000000a-rc",
+                               (uint64_t)(uint32_t)rc_d0a, "code");
+
+            int rc_0 = sceVideoOutIsOutputSupported(hvo, 0);
+            obs_report_measure(id, "video-out", "supported-0-rc",
+                               (uint64_t)(uint32_t)rc_0, "code");
+
+            int rc_d00 = sceVideoOutIsOutputSupported(hvo, (int)0xd0000000);
+            obs_report_measure(id, "video-out", "supported-0xd0000000-rc",
+                               (uint64_t)(uint32_t)rc_d00, "code");
+        }
     }
 
     if (owns_hvo && hvo >= 0 &&

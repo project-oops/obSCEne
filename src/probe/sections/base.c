@@ -4477,6 +4477,9 @@ static obs_result check_ux01_calls(void) {
     }
 
     /* 3. sceAppContentDownloadDataGetAvailableSpaceKb */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x00B4); /* OOPS_SYSMODULE_APP_CONTENT */
+    }
     typedef int (*fn_dl_space_t)(const char *, void *);
     fn_dl_space_t fn_dl_space = NULL;
     int is_link_dls = 0;
@@ -4485,6 +4488,7 @@ static obs_result check_ux01_calls(void) {
         fn_dl_space =
             (fn_dl_space_t)&sceAppContentDownloadDataGetAvailableSpaceKb_static;
         is_link_dls = 1;
+
     } else if (obs_address_is_callable(
                    (const void *)&sceAppContentDownloadDataGetAvailableSpaceKb_be)) {
         fn_dl_space = (fn_dl_space_t)&sceAppContentDownloadDataGetAvailableSpaceKb_be;
@@ -4623,6 +4627,72 @@ static obs_result check_ux01_calls(void) {
                                (uint64_t)(uint32_t)rc_te_bad, "code");
         }
 
+        /* REQ-20261013T2030Z-pt01: TiltCorrection & GetTriggerEffectState */
+        typedef int (*fn_pad_tilt_t)(int, int);
+        fn_pad_tilt_t fn_tilt =
+            obs_address_is_callable((const void *)&scePadSetTiltCorrectionState_static)
+                ? (fn_pad_tilt_t)&scePadSetTiltCorrectionState_static
+                : NULL;
+        if (!fn_tilt) {
+            int h_pad = obs_module_open("libScePad");
+            if (h_pad > 0)
+                fn_tilt = (fn_pad_tilt_t)obs_module_symbol(h_pad, "$vDLMoJLde8I");
+        }
+        if (!fn_tilt) {
+            int h_pad = obs_module_open("libScePad");
+            if (h_pad > 0)
+                fn_tilt = (fn_pad_tilt_t)obs_module_symbol(
+                    h_pad, "scePadSetTiltCorrectionState");
+        }
+
+        if (fn_tilt) {
+            int rc_t1 = fn_tilt(pad_h, 1);
+            obs_report_measure(id, "PadSetTiltCorrectionState-open-1", "rc",
+                               (uint64_t)(uint32_t)rc_t1, "code");
+            int rc_t0 = fn_tilt(pad_h, 0);
+            obs_report_measure(id, "PadSetTiltCorrectionState-open-0", "rc",
+                               (uint64_t)(uint32_t)rc_t0, "code");
+            int rc_tbad = fn_tilt(0x7fffffff, 0);
+            obs_report_measure(id, "PadSetTiltCorrectionState-7fffffff", "rc",
+                               (uint64_t)(uint32_t)rc_tbad, "code");
+        }
+
+        typedef int (*fn_pad_gte_t)(int, void *, size_t);
+        fn_pad_gte_t fn_gte =
+            obs_address_is_callable((const void *)&scePadGetTriggerEffectState_static)
+                ? (fn_pad_gte_t)&scePadGetTriggerEffectState_static
+                : NULL;
+        if (!fn_gte) {
+            int h_pad = obs_module_open("libScePad");
+            if (h_pad > 0)
+                fn_gte = (fn_pad_gte_t)obs_module_symbol(h_pad, "$znaWI0gpuo8");
+        }
+        if (!fn_gte) {
+            int h_pad = obs_module_open("libScePad");
+            if (h_pad > 0)
+                fn_gte = (fn_pad_gte_t)obs_module_symbol(h_pad,
+                                                         "scePadGetTriggerEffectState");
+        }
+
+        if (fn_gte) {
+            uint8_t gte_buf[0x40];
+            memset(gte_buf, 0xcc, sizeof(gte_buf));
+            int rc_gte_open = fn_gte(pad_h, gte_buf, 0x40);
+            obs_report_measure(id, "PadGetTriggerEffectState-open", "rc",
+                               (uint64_t)(uint32_t)rc_gte_open, "code");
+            obs_report_bytes(id, "PadGetTriggerEffectState-open", "state-40b", 0,
+                             gte_buf, 0x40);
+
+            int rc_gte_null = fn_gte(pad_h, NULL, 0x40);
+            obs_report_measure(id, "PadGetTriggerEffectState-null-param", "rc",
+                               (uint64_t)(uint32_t)rc_gte_null, "code");
+
+            memset(gte_buf, 0xcc, sizeof(gte_buf));
+            int rc_gte_bad = fn_gte(0x7fffffff, gte_buf, 0x40);
+            obs_report_measure(id, "PadGetTriggerEffectState-7fffffff", "rc",
+                               (uint64_t)(uint32_t)rc_gte_bad, "code");
+        }
+
         if (pad_h > 0 && obs_address_is_callable((const void *)&scePadClose)) {
             scePadClose(pad_h);
         }
@@ -4654,14 +4724,41 @@ static obs_result check_ux01_calls(void) {
                 ? (fn_uds_handle_t)&sceNpUniversalDataSystemCreateHandle_static
                 : NULL;
 
+        int rc_uds_mod = -1;
+        if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+            rc_uds_mod = sceSysmoduleLoadModule(0x0105);
+        }
+        obs_report_measure(id, "uds-setup", "sysmodule-load-0x0105-rc",
+                           (uint64_t)(uint32_t)rc_uds_mod, "code");
+
+        static uint8_t s_uds_pool_ux[0x40000] __attribute__((aligned(64)));
+        uint64_t uds_param[4];
+        uds_param[0] = 0x10;
+        uds_param[1] = 0x40000;
+        uds_param[2] = (uint64_t)(uintptr_t)s_uds_pool_ux;
+        uds_param[3] = 0x10;
+
+        int rc_uds_init = -1;
         if (fn_uds_init)
-            fn_uds_init(NULL, NULL, 0, 0);
+            rc_uds_init = fn_uds_init(uds_param, NULL, 0, 0);
+        obs_report_measure(id, "uds-setup", "init-rc", (uint64_t)(uint32_t)rc_uds_init,
+                           "code");
+
         uint64_t ctx = 0;
+        int rc_uds_ctx = -1;
         if (fn_uds_ctx)
-            fn_uds_ctx(&ctx, user, 0, 0);
+            rc_uds_ctx = fn_uds_ctx(&ctx, user, 0, 0);
+        obs_report_measure(id, "uds-setup", "create-context-rc",
+                           (uint64_t)(uint32_t)rc_uds_ctx, "code");
+        obs_report_measure(id, "uds-setup", "context-val", ctx, "hex");
+
         uint64_t h = 0;
+        int rc_uds_h = -1;
         if (fn_uds_handle)
-            fn_uds_handle(&h);
+            rc_uds_h = fn_uds_handle(&h);
+        obs_report_measure(id, "uds-setup", "create-handle-rc",
+                           (uint64_t)(uint32_t)rc_uds_h, "code");
+        obs_report_measure(id, "uds-setup", "handle-val", h, "hex");
 
         /* REQ-20261013T1730Z-rf01 item 4:
          * s6W4Zl4Slgk(context, handle, name, name + 1, buf, buf) with name "activityId"
@@ -4775,11 +4872,16 @@ static obs_result check_ux01_calls(void) {
                     fn_ai(NULL);
             }
         }
+        char mp0[16] = {0};
+        snprintf(mp0, sizeof(mp0), "/download0");
+        char mp1[16] = {0};
+        snprintf(mp1, sizeof(mp1), "/download1");
+
         uint64_t kb0 = 0xccccccccccccccccULL;
         int rc_dls = -1;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_dls = fn_dl_space("/download0", &kb0);
+            rc_dls = fn_dl_space(mp0, &kb0);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -4798,7 +4900,7 @@ static obs_result check_ux01_calls(void) {
         int rc_dls_null_kb = -1;
         int sig_null_kb = OBS_FAULT_ARM(&guard);
         if (sig_null_kb == 0) {
-            rc_dls_null_kb = fn_dl_space("/download0", NULL);
+            rc_dls_null_kb = fn_dl_space(mp0, NULL);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -4824,7 +4926,7 @@ static obs_result check_ux01_calls(void) {
         int rc_dls1 = -1;
         int sig1 = OBS_FAULT_ARM(&guard);
         if (sig1 == 0) {
-            rc_dls1 = fn_dl_space("/download1", &kb1);
+            rc_dls1 = fn_dl_space(mp1, &kb1);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();

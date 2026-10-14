@@ -1035,11 +1035,23 @@ static obs_result check_system_dialogs(void) {
     }
     obs_report_measure(id, "common-dialog-order", "ime-dialog-init-before-cd-rc", (uint64_t)(uint32_t)rc_ime_pre, "code");
 
-    int h_msg_pre = obs_module_open("libSceMsgDialog.native");
+    (void)obs_sysmodule_load_id(0x00a4);
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        (void)sceKernelLoadStartModule("/system/common/lib/libSceMsgDialog.native.sprx", 0, NULL, 0, NULL, NULL);
+    }
+    int h_msg_sys = -1;
+    (void)obs_sysmodule_get_handle_id(0x00a4, &h_msg_sys);
+    int h_msg_pre = (h_msg_sys > 1) ? h_msg_sys : obs_module_open("libSceMsgDialog.native");
     if (h_msg_pre <= 1) h_msg_pre = obs_module_open("libSceMsgDialog");
     typedef int (*msg_open_fn)(const void *);
-    msg_open_fn fn_m_open_pre = (msg_open_fn)obs_module_symbol(h_msg_pre, "sceMsgDialogOpen");
+    msg_open_fn fn_m_open_pre = (msg_open_fn)obs_module_symbol(h_msg_pre, "$b06Hh0DPEaE");
+    if (!fn_m_open_pre) fn_m_open_pre = (msg_open_fn)obs_module_symbol(h_msg_pre, "sceMsgDialogOpen");
     if (!fn_m_open_pre && obs_address_is_callable((const void *)&sceMsgDialogOpen_static)) fn_m_open_pre = (msg_open_fn)&sceMsgDialogOpen_static;
+    if (!fn_m_open_pre) {
+        uintptr_t b_pre = obs_find_loaded_module_base("libSceMsgDialog.native");
+        if (b_pre == 0) b_pre = obs_find_loaded_module_base("libSceMsgDialog");
+        if (b_pre != 0) fn_m_open_pre = (msg_open_fn)(b_pre + 0x0480);
+    }
     int rc_msg_pre = -1;
     if (fn_m_open_pre) {
         uint8_t mp_pre[0x80];
@@ -1181,12 +1193,22 @@ static obs_result check_system_dialogs(void) {
     obs_report_measure(id, "msg-dialog", "load-msg-sprx", (uint64_t)(uint32_t)h_msg1, "code");
     obs_report_measure(id, "msg-dialog", "load-msg-native-sprx", (uint64_t)(uint32_t)h_msg2, "code");
 
-    int h_msg = (h_msg2 > 1) ? h_msg2 : ((h_msg1 > 1) ? h_msg1 : -1);
+    (void)obs_sysmodule_load_id(0x00a4);
+    (void)obs_sysmodule_load_id(0x00ac);
+    int h_msg_sys2 = -1;
+    (void)obs_sysmodule_get_handle_id(0x00a4, &h_msg_sys2);
+    int h_msg = (h_msg_sys2 > 1) ? h_msg_sys2 : obs_module_open("libSceMsgDialog");
     if (h_msg <= 1) {
         h_msg = obs_module_open("libSceMsgDialog.native");
     }
     if (h_msg <= 1) {
-        h_msg = obs_module_open("libSceMsgDialog");
+        h_msg = (h_msg2 > 1) ? h_msg2 : ((h_msg1 > 1) ? h_msg1 : -1);
+    }
+    if (h_msg <= 1) {
+        h_msg = obs_find_module_handle_by_library("libSceMsgDialog");
+    }
+    if (h_msg <= 1) {
+        h_msg = obs_find_module_handle_by_library("libSceMsgDialog.native");
     }
     obs_report_measure(id, "msg-dialog", "module-handle", (uint64_t)(uint32_t)h_msg, "handle");
 
@@ -1201,39 +1223,45 @@ static obs_result check_system_dialogs(void) {
     typedef int (*msg_term_fn)(void);
     typedef int (*msg_update_fn)(void);
 
-    msg_close_fn fn_m_close = (msg_close_fn)obs_module_symbol(h_msg, "sceMsgDialogClose");
+    msg_close_fn fn_m_close = (msg_close_fn)obs_module_symbol(h_msg, "$HTrcDKlFKuM");
+    if (!fn_m_close) fn_m_close = (msg_close_fn)obs_module_symbol(h_msg, "sceMsgDialogClose");
     if (!fn_m_close && obs_address_is_callable((const void *)&sceMsgDialogClose_static)) fn_m_close = (msg_close_fn)&sceMsgDialogClose_static;
-    msg_get_result_fn fn_m_result = (msg_get_result_fn)obs_module_symbol(h_msg, "sceMsgDialogGetResult");
-    if (!fn_m_result && obs_address_is_callable((const void *)&sceMsgDialogGetResult_static)) fn_m_result = (msg_get_result_fn)&sceMsgDialogGetResult_static;
-    msg_get_status_fn fn_m_status = (msg_get_status_fn)obs_module_symbol(h_msg, "sceMsgDialogGetStatus");
-    if (!fn_m_status && obs_address_is_callable((const void *)&sceMsgDialogGetStatus_static)) fn_m_status = (msg_get_status_fn)&sceMsgDialogGetStatus_static;
-    msg_init_fn fn_m_init = (msg_init_fn)obs_module_symbol(h_msg, "sceMsgDialogInitialize");
-    if (!fn_m_init && obs_address_is_callable((const void *)&sceMsgDialogInitialize_static)) fn_m_init = (msg_init_fn)&sceMsgDialogInitialize_static;
-    msg_open_fn fn_m_open = (msg_open_fn)obs_module_symbol(h_msg, "sceMsgDialogOpen");
-    if (!fn_m_open && obs_address_is_callable((const void *)&sceMsgDialogOpen_static)) fn_m_open = (msg_open_fn)&sceMsgDialogOpen_static;
-    msg_inc_fn fn_m_inc = (msg_inc_fn)obs_module_symbol(h_msg, "sceMsgDialogProgressBarInc");
-    if (!fn_m_inc && obs_address_is_callable((const void *)&sceMsgDialogProgressBarInc_static)) fn_m_inc = (msg_inc_fn)&sceMsgDialogProgressBarInc_static;
-    msg_set_val_fn fn_m_val = (msg_set_val_fn)obs_module_symbol(h_msg, "sceMsgDialogProgressBarSetValue");
-    if (!fn_m_val && obs_address_is_callable((const void *)&sceMsgDialogProgressBarSetValue_static)) fn_m_val = (msg_set_val_fn)&sceMsgDialogProgressBarSetValue_static;
-    msg_set_msg_fn fn_m_set_msg = (msg_set_msg_fn)obs_module_symbol(h_msg, "sceMsgDialogProgressBarSetMsg");
-    if (!fn_m_set_msg && obs_address_is_callable((const void *)&sceMsgDialogProgressBarSetMsg_static)) fn_m_set_msg = (msg_set_msg_fn)&sceMsgDialogProgressBarSetMsg_static;
-    msg_term_fn fn_m_term = (msg_term_fn)obs_module_symbol(h_msg, "sceMsgDialogTerminate");
-    if (!fn_m_term && obs_address_is_callable((const void *)&sceMsgDialogTerminate_static)) fn_m_term = (msg_term_fn)&sceMsgDialogTerminate_static;
-    msg_update_fn fn_m_update = (msg_update_fn)obs_module_symbol(h_msg, "sceMsgDialogUpdateStatus");
-    if (!fn_m_update && obs_address_is_callable((const void *)&sceMsgDialogUpdateStatus_static)) fn_m_update = (msg_update_fn)&sceMsgDialogUpdateStatus_static;
 
-    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
-        if (!fn_m_init) (void)sceKernelDlsym(h_msg, "lDqxaY1UbEo#G#A", (void **)&fn_m_init);
-        if (!fn_m_open) (void)sceKernelDlsym(h_msg, "b06Hh0DPEaE#G#A", (void **)&fn_m_open);
-        if (!fn_m_status) (void)sceKernelDlsym(h_msg, "CWVW78Qc3fI#G#A", (void **)&fn_m_status);
-        if (!fn_m_result) (void)sceKernelDlsym(h_msg, "Lr8ovHH9l6A#G#A", (void **)&fn_m_result);
-        if (!fn_m_close) (void)sceKernelDlsym(h_msg, "HTrcDKlFKuM#G#A", (void **)&fn_m_close);
-        if (!fn_m_term) (void)sceKernelDlsym(h_msg, "ePw-kqZmelo#G#A", (void **)&fn_m_term);
-        if (!fn_m_update) (void)sceKernelDlsym(h_msg, "6fIC3XKt2k0#G#A", (void **)&fn_m_update);
-        if (!fn_m_inc) (void)sceKernelDlsym(h_msg, "Gc5k1qcK4fs#G#A", (void **)&fn_m_inc);
-        if (!fn_m_val) (void)sceKernelDlsym(h_msg, "wTpfglkmv34#G#A", (void **)&fn_m_val);
-        if (!fn_m_set_msg) (void)sceKernelDlsym(h_msg, "6H-71OdrpXM#G#A", (void **)&fn_m_set_msg);
-    }
+    msg_get_result_fn fn_m_result = (msg_get_result_fn)obs_module_symbol(h_msg, "$Lr8ovHH9l6A");
+    if (!fn_m_result) fn_m_result = (msg_get_result_fn)obs_module_symbol(h_msg, "sceMsgDialogGetResult");
+    if (!fn_m_result && obs_address_is_callable((const void *)&sceMsgDialogGetResult_static)) fn_m_result = (msg_get_result_fn)&sceMsgDialogGetResult_static;
+
+    msg_get_status_fn fn_m_status = (msg_get_status_fn)obs_module_symbol(h_msg, "$CWVW78Qc3fI");
+    if (!fn_m_status) fn_m_status = (msg_get_status_fn)obs_module_symbol(h_msg, "sceMsgDialogGetStatus");
+    if (!fn_m_status && obs_address_is_callable((const void *)&sceMsgDialogGetStatus_static)) fn_m_status = (msg_get_status_fn)&sceMsgDialogGetStatus_static;
+
+    msg_init_fn fn_m_init = (msg_init_fn)obs_module_symbol(h_msg, "$lDqxaY1UbEo");
+    if (!fn_m_init) fn_m_init = (msg_init_fn)obs_module_symbol(h_msg, "sceMsgDialogInitialize");
+    if (!fn_m_init && obs_address_is_callable((const void *)&sceMsgDialogInitialize_static)) fn_m_init = (msg_init_fn)&sceMsgDialogInitialize_static;
+
+    msg_open_fn fn_m_open = (msg_open_fn)obs_module_symbol(h_msg, "$b06Hh0DPEaE");
+    if (!fn_m_open) fn_m_open = (msg_open_fn)obs_module_symbol(h_msg, "sceMsgDialogOpen");
+    if (!fn_m_open && obs_address_is_callable((const void *)&sceMsgDialogOpen_static)) fn_m_open = (msg_open_fn)&sceMsgDialogOpen_static;
+
+    msg_inc_fn fn_m_inc = (msg_inc_fn)obs_module_symbol(h_msg, "$Gc5k1qcK4fs");
+    if (!fn_m_inc) fn_m_inc = (msg_inc_fn)obs_module_symbol(h_msg, "sceMsgDialogProgressBarInc");
+    if (!fn_m_inc && obs_address_is_callable((const void *)&sceMsgDialogProgressBarInc_static)) fn_m_inc = (msg_inc_fn)&sceMsgDialogProgressBarInc_static;
+
+    msg_set_val_fn fn_m_val = (msg_set_val_fn)obs_module_symbol(h_msg, "$wTpfglkmv34");
+    if (!fn_m_val) fn_m_val = (msg_set_val_fn)obs_module_symbol(h_msg, "sceMsgDialogProgressBarSetValue");
+    if (!fn_m_val && obs_address_is_callable((const void *)&sceMsgDialogProgressBarSetValue_static)) fn_m_val = (msg_set_val_fn)&sceMsgDialogProgressBarSetValue_static;
+
+    msg_set_msg_fn fn_m_set_msg = (msg_set_msg_fn)obs_module_symbol(h_msg, "$6H-71OdrpXM");
+    if (!fn_m_set_msg) fn_m_set_msg = (msg_set_msg_fn)obs_module_symbol(h_msg, "sceMsgDialogProgressBarSetMsg");
+    if (!fn_m_set_msg && obs_address_is_callable((const void *)&sceMsgDialogProgressBarSetMsg_static)) fn_m_set_msg = (msg_set_msg_fn)&sceMsgDialogProgressBarSetMsg_static;
+
+    msg_term_fn fn_m_term = (msg_term_fn)obs_module_symbol(h_msg, "$ePw-kqZmelo");
+    if (!fn_m_term) fn_m_term = (msg_term_fn)obs_module_symbol(h_msg, "sceMsgDialogTerminate");
+    if (!fn_m_term && obs_address_is_callable((const void *)&sceMsgDialogTerminate_static)) fn_m_term = (msg_term_fn)&sceMsgDialogTerminate_static;
+
+    msg_update_fn fn_m_update = (msg_update_fn)obs_module_symbol(h_msg, "$6fIC3XKt2k0");
+    if (!fn_m_update) fn_m_update = (msg_update_fn)obs_module_symbol(h_msg, "sceMsgDialogUpdateStatus");
+    if (!fn_m_update && obs_address_is_callable((const void *)&sceMsgDialogUpdateStatus_static)) fn_m_update = (msg_update_fn)&sceMsgDialogUpdateStatus_static;
 
     uintptr_t base_msg = obs_find_loaded_module_base("libSceMsgDialog.native");
     int msg_is_native = 1;
@@ -1252,6 +1280,7 @@ static obs_result check_system_dialogs(void) {
             if (!fn_m_term) fn_m_term = (msg_term_fn)(base_msg + 0x0cb0);
             if (!fn_m_inc) fn_m_inc = (msg_inc_fn)(base_msg + 0x0d20);
             if (!fn_m_val) fn_m_val = (msg_set_val_fn)(base_msg + 0x0df0);
+            if (!fn_m_set_msg) fn_m_set_msg = (msg_set_msg_fn)(base_msg + 0x0eb0);
         } else {
             if (!fn_m_init) fn_m_init = (msg_init_fn)(base_msg + 0x0360);
             if (!fn_m_open) fn_m_open = (msg_open_fn)(base_msg + 0x0410);
@@ -1262,6 +1291,7 @@ static obs_result check_system_dialogs(void) {
             if (!fn_m_term) fn_m_term = (msg_term_fn)(base_msg + 0x0a90);
             if (!fn_m_inc) fn_m_inc = (msg_inc_fn)(base_msg + 0x0b00);
             if (!fn_m_val) fn_m_val = (msg_set_val_fn)(base_msg + 0x0bd0);
+            if (!fn_m_set_msg) fn_m_set_msg = (msg_set_msg_fn)(base_msg + 0x0c00);
         }
     }
     obs_report_measure(id, "msg-dialog", "module-base", (uint64_t)base_msg, "vaddr");
@@ -3087,21 +3117,52 @@ static obs_result check_aw03_ampr_command_buffer(void) {
             obs_fault_unregister();
         }
     }
-    uint8_t read_dest[0x100];
-    memset(read_dest, 0xcc, sizeof(read_dest));
-    uint64_t rc_read = 0xffffffffffffffffULL;
-    if (fn_read_file && obs_address_is_callable(fn_read_file)) {
+    /* 1. Resolve /app0/sce_sys/param.json */
+    const char *resolve_paths[1] = {"/app0/sce_sys/param.json"};
+    uint32_t file_id = 0;
+    uint64_t file_size = 0;
+    int32_t file_status = -1;
+    int rc_resolve = -1;
+    if (obs_address_is_callable(
+            (const void *)&sceKernelAprResolveFilepathsToIdsAndFileSizes_static)) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_read = ((uint64_t (*)(void *, uint32_t, void *, uint64_t, uint64_t))fn_read_file)(
-                obj, 0u, read_dest, 0x100u, 0u);
+            rc_resolve =
+                sceKernelAprResolveFilepathsToIdsAndFileSizes_static(
+                    resolve_paths, 1, &file_id, &file_size, &file_status, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "apr-resolve", "rc", (uint64_t)(int64_t)rc_resolve,
+                       "code");
+    obs_report_measure(id, "apr-resolve", "file-id", (uint64_t)file_id, "id");
+    obs_report_measure(id, "apr-resolve", "file-size", file_size, "bytes");
+    obs_report_measure(id, "apr-resolve", "file-status",
+                       (uint64_t)(int64_t)file_status, "status");
+
+    /* 2. ReadFile with resolved file_id (7 arguments: obj, obj+0x18, obj+0x20, id, dst, 16, 0) */
+    uint8_t dst[16];
+    memset(dst, 0xcc, sizeof(dst));
+    uint64_t rc_read = 0xffffffffffffffffULL;
+    typedef int (*fn_read_file_7_t)(void *, void *, void *, uint32_t, void *,
+                                    uint64_t, uint64_t);
+    fn_read_file_7_t fn_rf7 = (fn_read_file_7_t)fn_read_file;
+    if (fn_rf7 && obs_address_is_callable((const void *)fn_rf7)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_read = (uint64_t)(int64_t)fn_rf7(
+                obj, (uint8_t *)obj + 0x18, (uint8_t *)obj + 0x20, file_id, dst, 16, 0);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
         }
     }
     obs_report_measure(id, "apr-read-file", "rc", rc_read, "code");
+    obs_report_bytes(id, "apr-read-file", "dst-16b", 0, dst, 16);
 
+    /* 3. WriteAddress_04_00 */
     memset(slot, 0xcc, sizeof(slot));
     int rc_wa2 = -1;
     if (fn_write_addr) {
@@ -3113,25 +3174,36 @@ static obs_result check_aw03_ampr_command_buffer(void) {
             obs_fault_unregister();
         }
     }
-    obs_report_measure(id, "write-address-after-read", "rc", (uint64_t)(uint32_t)rc_wa2, "code");
+    obs_report_measure(id, "write-address-after-read", "rc",
+                       (uint64_t)(uint32_t)rc_wa2, "code");
 
+    /* 4. Submit buffer and wait */
+    uint64_t apr_out_result = 0;
+    uint32_t apr_wait_id = 0;
     uint64_t rc_submit_read = 0xffffffffffffffffULL;
     if (fn_apr_submit) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_submit_read = ((uint64_t (*)(void *, void *))fn_apr_submit)(obj, NULL);
+            rc_submit_read =
+                ((uint64_t (*)(void *, uint32_t, void *, void *))fn_apr_submit)(
+                    obj, 0, &apr_out_result, &apr_wait_id);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
         }
     }
     obs_report_measure(id, "submit-after-read", "rc", rc_submit_read, "code");
+    obs_report_measure(id, "submit-after-read", "wait-id",
+                       (uint64_t)apr_wait_id, "id");
+    obs_report_measure(id, "submit-after-read", "out-result", apr_out_result,
+                       "code");
 
     uint64_t rc_wait_read = 0xffffffffffffffffULL;
     if (fn_apr_wait && (int64_t)rc_submit_read >= 0) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_wait_read = ((uint64_t (*)(void *, uint64_t))fn_apr_wait)(obj, 1000000ULL);
+            uint32_t wid = apr_wait_id ? apr_wait_id : (uint32_t)(uintptr_t)obj;
+            rc_wait_read = ((uint64_t (*)(uint32_t))fn_apr_wait)(wid);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();

@@ -356,8 +356,8 @@ static obs_sysmodule_id_map obs_sysmodules[] = {
     {"libSceMouse", 0x00a9, -1},
     {"libSceAppContent", 0x00b4, -1},
     {"libSceCommonDialog", 0, -1},
-    {"libSceMsgDialog.native", 0, -1},
-    {"libSceMsgDialog", 0, -1},
+    {"libSceMsgDialog.native", 0x00a4, -1},
+    {"libSceMsgDialog", 0x00a4, -1},
     {"libSceJson2", 0x00e7, -1},
     {"libSceJson", 0x0080, -1},
     {"libSceFont", 0, -1},
@@ -661,6 +661,8 @@ int obs_find_module_handle_by_library(const char *library) {
                      "sceSaveDataDialogInitialize"},
                     {"libSceSaveDataDialog.native", "s9e3+YpRnzw",
                      "sceSaveDataDialogInitialize"},
+                    {"libSceMsgDialog", "b06Hh0DPEaE#G#A", "sceMsgDialogOpen"},
+                    {"libSceMsgDialog.native", "b06Hh0DPEaE#G#A", "sceMsgDialogOpen"},
                     {"libSceErrorDialog", "I88KChlynSs", "sceErrorDialogInitialize"},
                     {"libSceWebBrowserDialog", "jqb7HntFQFc",
                      "sceWebBrowserDialogInitialize"},
@@ -768,6 +770,7 @@ void obs_sysmodules_preload_and_cache(void) {
     (void)obs_sysmodule_load_id(0x008e);     /* libSceVideodec */
     (void)obs_sysmodule_load_id(0x008c);     /* libScePngDec */
     (void)obs_sysmodule_load_id(0x00e7);     /* libSceJson2 */
+    (void)obs_sysmodule_load_id(0x00a4);     /* libSceMsgDialog */
 
     for (unsigned int i = 0; i < OBS_COUNT(obs_sysmodules); i++) {
         if (obs_sysmodules[i].cached_handle <= 1) {
@@ -853,6 +856,20 @@ static const struct {
     const char *name;
     const char *nid;
 } obs_prospero_nids[] = {
+    {"_sceKernelSetThreadDtors", "rNhWz+lvOMU"},
+    {"_sceKernelSetThreadAtexitCount", "pB-yGZ2nQ9o"},
+    {"_sceKernelSetThreadAtexitReport", "WhCc1w3EhSI"},
+    {"_sceKernelRtldSetApplicationHeapAPI", "p5EcQeEeJAE"},
+    {"sceMsgDialogClose", "HTrcDKlFKuM#G#A"},
+    {"sceMsgDialogGetResult", "Lr8ovHH9l6A#G#A"},
+    {"sceMsgDialogGetStatus", "CWVW78Qc3fI#G#A"},
+    {"sceMsgDialogInitialize", "lDqxaY1UbEo#G#A"},
+    {"sceMsgDialogOpen", "b06Hh0DPEaE#G#A"},
+    {"sceMsgDialogProgressBarInc", "Gc5k1qcK4fs#G#A"},
+    {"sceMsgDialogProgressBarSetMsg", "6H-71OdrpXM#G#A"},
+    {"sceMsgDialogProgressBarSetValue", "wTpfglkmv34#G#A"},
+    {"sceMsgDialogTerminate", "ePw-kqZmelo#G#A"},
+    {"sceMsgDialogUpdateStatus", "6fIC3XKt2k0#G#A"},
     {"sceFontRenderCharGlyphImage", "3G4zhgKuxE8#U#V"},
     {"sceFontRenderCharGlyphImageHorizontal", "kAenWy1Zw5o#U#V"},
     {"sceFontCreateLibraryWithEdition", "n590hj5Oe-k#U#V"},

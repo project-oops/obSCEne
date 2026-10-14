@@ -793,7 +793,7 @@ int obs_linkmap_readable(uintptr_t p) {
     }
     int ret = sceKernelVirtualQuery((const void *)p, 0, info, sizeof(info));
     if (ret == 0) {
-        int prot = *(const int *)(info + 0x20);
+        int prot = *(const int *)(info + 0x18);
         if ((prot & 1) != 0) {
             return 1;
         }
@@ -939,8 +939,7 @@ unsigned int obs_linkmap_walk(int (*cb)(const char *name, unsigned long base,
                     (unsigned long)*(const uintptr_t *)(node + 0x00u);
                 uintptr_t name_ptr = *(const uintptr_t *)(node + 0x08u);
                 const char *l_name = "";
-                if (name_ptr != 0 && (name_ptr & 0x7u) == 0 &&
-                    obs_linkmap_readable(name_ptr)) {
+                if (name_ptr != 0 && obs_linkmap_readable(name_ptr)) {
                     l_name = (const char *)name_ptr;
                 }
                 count++;
@@ -1051,13 +1050,90 @@ static int obs_find_mod_cb(const char *name, unsigned long base, void *user) {
     return 0;
 }
 
+static const char *obs_mem_find(const char *hay, size_t hay_len, const char *needle,
+                                size_t needle_len) {
+    if (hay == NULL || needle == NULL || needle_len == 0 || hay_len < needle_len) {
+        return NULL;
+    }
+    for (size_t i = 0; i + needle_len <= hay_len; i++) {
+        size_t j = 0;
+        while (j < needle_len && hay[i + j] == needle[j]) {
+            j++;
+        }
+        if (j == needle_len) {
+            return hay + i;
+        }
+    }
+    return NULL;
+}
+
 uintptr_t obs_find_loaded_module_base(const char *pattern) {
     struct obs_find_mod_ctx ctx;
     ctx.pattern = pattern;
     ctx.base = 0;
     const char *reason = NULL;
     obs_linkmap_walk(obs_find_mod_cb, &ctx, &reason);
-    return (uintptr_t)ctx.base;
+    if (ctx.base != 0) {
+        return (uintptr_t)ctx.base;
+    }
+
+    /* Fallback: scan userland PRX address space (0x800000000 - 0x880000000) using
+     * VirtualQuery */
+    if (pattern != NULL &&
+        obs_address_is_callable((const void *)&sceKernelVirtualQuery)) {
+        if (obs_ctx_contains(pattern, "MsgDialog")) {
+            uintptr_t cur = 0x800000000ULL;
+            while (cur < 0x880000000ULL) {
+                char vq_buf[96];
+                for (size_t k = 0; k < sizeof(vq_buf); k++) {
+                    vq_buf[k] = 0;
+                }
+                int rc =
+                    sceKernelVirtualQuery((const void *)cur, 0, vq_buf, sizeof(vq_buf));
+                if (rc != 0) {
+                    cur += 0x10000ULL;
+                    continue;
+                }
+                uintptr_t seg_start = *(const uintptr_t *)(vq_buf + 0);
+                uintptr_t seg_end = *(const uintptr_t *)(vq_buf + 8);
+                if (seg_end <= seg_start) {
+                    cur += 0x10000ULL;
+                    continue;
+                }
+                int prot = *(const int *)(vq_buf + 0x18);
+                if ((prot & 1) != 0 || obs_linkmap_readable(seg_start)) {
+                    size_t seg_len = (size_t)(seg_end - seg_start);
+                    if (seg_len > 0x100000) {
+                        seg_len = 0x100000;
+                    }
+                    const char *match = obs_mem_find((const char *)seg_start, seg_len,
+                                                     "SceCdlgMsgUti", 13);
+                    if (match != NULL) {
+                        uintptr_t match_addr = (uintptr_t)match;
+                        uintptr_t cand_base = match_addr - 0x4511ULL;
+                        if ((cand_base & 0x3fffULL) == 0 &&
+                            cand_base >= 0x800000000ULL) {
+                            return cand_base;
+                        }
+                    }
+                    const char *target = "libSceMsgDialog.native.prx";
+                    size_t target_len = 26;
+                    match = obs_mem_find((const char *)seg_start, seg_len, target,
+                                         target_len);
+                    if (match != NULL) {
+                        uintptr_t match_addr = (uintptr_t)match;
+                        uintptr_t cand_base = match_addr - 0xc43fULL;
+                        if ((cand_base & 0x3fffULL) == 0 &&
+                            cand_base >= 0x800000000ULL) {
+                            return cand_base;
+                        }
+                    }
+                }
+                cur = seg_end;
+            }
+        }
+    }
+    return 0;
 }
 
 struct obs_ctx_gpu {

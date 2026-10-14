@@ -3416,6 +3416,437 @@ static obs_result check_json2_init_layout(void) {
 
     return obs_pass();
 }
+
+static obs_result check_json2_value_string(void) {
+    const char *id = "130-layout/json2-value-string";
+    obs_jmp_buf guard;
+
+    int mod_h = obs_module_open("libSceJson2");
+    if (mod_h <= 0) {
+        mod_h = obs_module_open("libSceJson2.sprx");
+    }
+    if (mod_h <= 0) {
+        mod_h = obs_module_open("libSceJson");
+    }
+
+    /* Resolvers for setup */
+    void (*fn_memalloc_ctor)(void *) = (void (*)(void *))&sceJsonMemAllocatorCtor_static;
+    if (!obs_address_is_callable((const void *)fn_memalloc_ctor))
+        fn_memalloc_ctor = (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json12MemAllocatorC2Ev", "$-hJRce8wn1U");
+
+    void (*fn_init_ctor)(void *) = (void (*)(void *))&sceJsonInitializerCtor_static;
+    if (!obs_address_is_callable((const void *)fn_init_ctor))
+        fn_init_ctor = (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11InitializerC1Ev", "$cK6bYHf-Q5E");
+
+    void (*fn_init_dtor)(void *) = (void (*)(void *))&sceJsonInitializerDtor_static;
+    if (!obs_address_is_callable((const void *)fn_init_dtor))
+        fn_init_dtor = (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11InitializerD1Ev", "$RujUxbr3haM");
+
+    int (*fn_initialize)(void *, const void *) = (int (*)(void *, const void *))&sceJsonInitializerInitialize_static;
+    if (!obs_address_is_callable((const void *)fn_initialize))
+        fn_initialize = (int (*)(void *, const void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11Initializer10initializeEPKNS0_13InitParameterE", "$Jv8Pj3N+3e4");
+
+    int (*fn_terminate)(void *) = (int (*)(void *))&sceJsonInitializerTerminate_static;
+    if (!obs_address_is_callable((const void *)fn_terminate))
+        fn_terminate = (int (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json11Initializer9terminateEv", "$PR5k1penBLM");
+
+    void (*fn_param2_ctor)(void *) = (void (*)(void *))(void *)&sceJsonInitParameter2Ctor_static;
+    if (!obs_address_is_callable((const void *)fn_param2_ctor))
+        fn_param2_ctor = (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json14InitParameter2C1Ev", "$WSOuge5IsCg");
+
+    void (*fn_param2_setalloc)(void *, void *) = (void (*)(void *, void *))(void *)&sceJsonInitParameter2SetAllocator_static;
+    if (!obs_address_is_callable((const void *)fn_param2_setalloc))
+        fn_param2_setalloc = (void (*)(void *, void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json14InitParameter212setAllocatorEPNS0_12MemAllocatorE", "$tKk17N2344Q");
+
+    /* Resolvers for js03 symbols */
+    void *(*fn_val_ctor)(void *) = obs_address_is_callable((const void *)&sceJson2ValueCtor_static)
+        ? (void *(*)(void *))&sceJson2ValueCtor_static
+        : (void *(*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5ValueC1Ev", "$qBMjqyBn3OM");
+
+    void (*fn_val_dtor)(void *) = obs_address_is_callable((const void *)&sceJson2ValueDtor_static)
+        ? (void (*)(void *))&sceJson2ValueDtor_static
+        : (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5ValueD1Ev", "$WTtYf+cNnXI");
+
+    void *(*fn_val_set_type)(void *, int) = obs_address_is_callable((const void *)&sceJson2ValueSetType_static)
+        ? (void *(*)(void *, int))&sceJson2ValueSetType_static
+        : (void *(*)(void *, int))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5Value3setENS0_9ValueTypeE", "$IKQimvG9Wqs");
+
+    void *(*fn_val_set_bool)(void *, int) = obs_address_is_callable((const void *)&sceJson2ValueSetBool_static)
+        ? (void *(*)(void *, int))&sceJson2ValueSetBool_static
+        : (void *(*)(void *, int))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5Value3setEb", "$5yHuiWXo2gg");
+
+    void *(*fn_val_set_double)(void *, double) = obs_address_is_callable((const void *)&sceJson2ValueSetDouble_static)
+        ? (void *(*)(void *, double))&sceJson2ValueSetDouble_static
+        : (void *(*)(void *, double))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5Value3setEd", "$BSmWDIkV4w4");
+
+    void *(*fn_val_set_long)(void *, long) = obs_address_is_callable((const void *)&sceJson2ValueSetLong_static)
+        ? (void *(*)(void *, long))&sceJson2ValueSetLong_static
+        : (void *(*)(void *, long))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5Value3setEl", "$QxVVYhP-mvg");
+
+    void *(*fn_val_set_ulong)(void *, unsigned long) = obs_address_is_callable((const void *)&sceJson2ValueSetUlong_static)
+        ? (void *(*)(void *, unsigned long))&sceJson2ValueSetUlong_static
+        : (void *(*)(void *, unsigned long))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5Value3setEm", "$SIe1ZmW7e7s");
+
+    void *(*fn_val_set_string)(void *, const void *) = obs_address_is_callable((const void *)&sceJson2ValueSetString_static)
+        ? (void *(*)(void *, const void *))&sceJson2ValueSetString_static
+        : (void *(*)(void *, const void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json5Value3setERKNS0_6StringE", "$6l3Bv2gysNc");
+
+    void *(*fn_str_ctor)(void *, const char *) = obs_address_is_callable((const void *)&sceJson2StringCtor_static)
+        ? (void *(*)(void *, const char *))&sceJson2StringCtor_static
+        : (void *(*)(void *, const char *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json6StringC1EPKc", "$9KUZFjI1IxA");
+
+    void (*fn_str_dtor)(void *) = obs_address_is_callable((const void *)&sceJson2StringDtor_static)
+        ? (void (*)(void *))&sceJson2StringDtor_static
+        : (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json6StringD1Ev", "$cG1VE2HMl6c");
+
+    void (*fn_memalloc_dtor)(void *) = obs_address_is_callable((const void *)&sceJson2MemAllocatorDtor2_static)
+        ? (void (*)(void *))&sceJson2MemAllocatorDtor2_static
+        : (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json12MemAllocatorD2Ev", "$OcAgPxcq5Vk");
+
+    int (*fn_push_event)(void *, void *, void *, void *, void *, void *) =
+        obs_address_is_callable((const void *)&sceNpWebApi2PushEventCreateHandle_static)
+            ? (int (*)(void *, void *, void *, void *, void *, void *))&sceNpWebApi2PushEventCreateHandle_static
+            : (int (*)(void *, void *, void *, void *, void *, void *))obs_module_symbol(obs_module_open("libSceNpWebApi2"), "$WV1GwM32NgY");
+
+    int (*fn_savedata_trans)(void *, void *, void *, void *, void *, void *) =
+        obs_address_is_callable((const void *)&sceSaveDataCreateTransactionResource_static)
+            ? (int (*)(void *, void *, void *, void *, void *, void *))&sceSaveDataCreateTransactionResource_static
+            : (int (*)(void *, void *, void *, void *, void *, void *))obs_module_symbol(obs_module_open("libSceSaveData"), "$gjRZNnw0JPE");
+
+    /* Report symbol bindings */
+    obs_report_measure(id, "Value::Value", "resolved", fn_val_ctor != NULL, "bool");
+    obs_report_measure(id, "Value::~Value", "resolved", fn_val_dtor != NULL, "bool");
+    obs_report_measure(id, "String::String", "resolved", fn_str_ctor != NULL, "bool");
+    obs_report_measure(id, "String::~String", "resolved", fn_str_dtor != NULL, "bool");
+    obs_report_measure(id, "MemAllocator::~MemAllocator", "resolved", fn_memalloc_dtor != NULL, "bool");
+    obs_report_measure(id, "sceNpWebApi2PushEventCreateHandle", "resolved", fn_push_event != NULL, "bool");
+    obs_report_measure(id, "sceSaveDataCreateTransactionResource", "resolved", fn_savedata_trans != NULL, "bool");
+
+    /* Setup library using MemAllocator with tracked alloc/dealloc */
+    uint8_t sub_alloc[0x40];
+    memset(sub_alloc, 0, sizeof(sub_alloc));
+    if (fn_memalloc_ctor) fn_memalloc_ctor(sub_alloc);
+    void **subclass_vtable = (void **)malloc(sizeof(void *) * 8);
+    subclass_vtable[0] = (void *)&custom_json_dtor;
+    subclass_vtable[1] = (void *)&custom_json_dtor;
+    subclass_vtable[2] = (void *)&custom_json_alloc;
+    subclass_vtable[3] = (void *)&custom_json_dealloc;
+    *(void ***)(void *)sub_alloc = subclass_vtable;
+
+    uint8_t param[0x40];
+    memset(param, 0, sizeof(param));
+    if (fn_param2_ctor) fn_param2_ctor(param);
+    if (fn_param2_setalloc) fn_param2_setalloc(param, sub_alloc);
+
+    uint8_t init_obj[0x40];
+    memset(init_obj, 0, sizeof(init_obj));
+    if (fn_init_ctor) fn_init_ctor(init_obj);
+
+    s_json_alloc_calls = 0;
+    s_json_dealloc_calls = 0;
+    int rc_init = -1;
+    if (fn_initialize) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_init = fn_initialize(init_obj, param);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "setup", "initialize-rc", (uint64_t)(uint32_t)rc_init, "code");
+
+    /* 1. Value::Value() on 0x80 byte block filled 0xcc */
+    uint8_t val_block[0x80];
+    memset(val_block, 0xcc, sizeof(val_block));
+    uint64_t rc_val_ctor = 0;
+    if (fn_val_ctor) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_val_ctor = (uint64_t)(uintptr_t)fn_val_ctor(val_block);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "Value::Value()", "rc", rc_val_ctor, "hex");
+    obs_report_buffer(id, "Value::Value()", "val-0x80", val_block, sizeof(val_block));
+
+    /* 2. set overloads on fresh constructed Values */
+    for (int t = 0; t <= 7; t++) {
+        uint8_t v[0x80];
+        memset(v, 0xcc, sizeof(v));
+        if (fn_val_ctor) fn_val_ctor(v);
+        uint64_t rc_set = 0;
+        if (fn_val_set_type) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_set = (uint64_t)(uintptr_t)fn_val_set_type(v, t);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "set-type-%d", t);
+        obs_report_measure(id, tag, "rc", rc_set, "hex");
+        obs_report_buffer(id, tag, "val-0x80", v, sizeof(v));
+    }
+
+    /* set(bool 1) */
+    {
+        uint8_t v[0x80];
+        memset(v, 0xcc, sizeof(v));
+        if (fn_val_ctor) fn_val_ctor(v);
+        uint64_t rc_set = 0;
+        if (fn_val_set_bool) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_set = (uint64_t)(uintptr_t)fn_val_set_bool(v, 1);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        obs_report_measure(id, "set-bool-1", "rc", rc_set, "hex");
+        obs_report_buffer(id, "set-bool-1", "val-0x80", v, sizeof(v));
+    }
+
+    /* set(double 1.5) */
+    {
+        uint8_t v[0x80];
+        memset(v, 0xcc, sizeof(v));
+        if (fn_val_ctor) fn_val_ctor(v);
+        uint64_t rc_set = 0;
+        if (fn_val_set_double) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_set = (uint64_t)(uintptr_t)fn_val_set_double(v, 1.5);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        obs_report_measure(id, "set-double-1.5", "rc", rc_set, "hex");
+        obs_report_buffer(id, "set-double-1.5", "val-0x80", v, sizeof(v));
+    }
+
+    /* set(long -2) */
+    {
+        uint8_t v[0x80];
+        memset(v, 0xcc, sizeof(v));
+        if (fn_val_ctor) fn_val_ctor(v);
+        uint64_t rc_set = 0;
+        if (fn_val_set_long) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_set = (uint64_t)(uintptr_t)fn_val_set_long(v, -2L);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        obs_report_measure(id, "set-long-neg2", "rc", rc_set, "hex");
+        obs_report_buffer(id, "set-long-neg2", "val-0x80", v, sizeof(v));
+    }
+
+    /* set(unsigned long 0x1122334455667788) */
+    {
+        uint8_t v[0x80];
+        memset(v, 0xcc, sizeof(v));
+        if (fn_val_ctor) fn_val_ctor(v);
+        uint64_t rc_set = 0;
+        if (fn_val_set_ulong) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_set = (uint64_t)(uintptr_t)fn_val_set_ulong(v, 0x1122334455667788UL);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        obs_report_measure(id, "set-ulong", "rc", rc_set, "hex");
+        obs_report_buffer(id, "set-ulong", "val-0x80", v, sizeof(v));
+    }
+
+    /* 3. String::String(const char*) on 0x40 byte block */
+    uint8_t str_alpha[0x40];
+    memset(str_alpha, 0xcc, sizeof(str_alpha));
+    if (fn_str_ctor) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            fn_str_ctor(str_alpha, "abcdefghijklmnopqrstuvwxyz");
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_buffer(id, "String::String(alpha)", "str-0x40", str_alpha, sizeof(str_alpha));
+    /* If a word is a pointer, dump 0x40 bytes it points at */
+    for (size_t wi = 0; wi < sizeof(str_alpha) / 8; wi++) {
+        uintptr_t ptr = ((uintptr_t *)str_alpha)[wi];
+        if (ptr > 0x10000 && ptr < 0x7fffffffffffULL) {
+            obs_jmp_buf pguard;
+            int psig = OBS_FAULT_ARM(&pguard);
+            if (psig == 0) {
+                char ptag[32];
+                oops_snprintf(ptag, sizeof(ptag), "str-alpha-deref-w%zu", wi);
+                obs_report_buffer(id, "String::String(alpha)", ptag,
+                                  (const uint8_t *)ptr, 0x40);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+    }
+
+    uint8_t str_empty[0x40];
+    memset(str_empty, 0xcc, sizeof(str_empty));
+    if (fn_str_ctor) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            fn_str_ctor(str_empty, "");
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_buffer(id, "String::String(empty)", "str-0x40", str_empty, sizeof(str_empty));
+
+    /* set(const String&) with str_alpha */
+    uint8_t val_with_str[0x80];
+    memset(val_with_str, 0xcc, sizeof(val_with_str));
+    if (fn_val_ctor) fn_val_ctor(val_with_str);
+    uint64_t rc_set_str = 0;
+    if (fn_val_set_string) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_set_str = (uint64_t)(uintptr_t)fn_val_set_string(val_with_str, str_alpha);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "set-string", "rc", rc_set_str, "hex");
+    obs_report_buffer(id, "set-string", "val-0x80", val_with_str, sizeof(val_with_str));
+
+    /* 4. ~Value() on Value holding String, and ~String() on String */
+    uint64_t dealloc_before_val_dtor = s_json_dealloc_calls;
+    if (fn_val_dtor) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            fn_val_dtor(val_with_str);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_buffer(id, "Value::~Value()", "val-after-dtor-0x80", val_with_str, sizeof(val_with_str));
+    obs_report_measure(id, "Value::~Value()", "dealloc-calls", s_json_dealloc_calls - dealloc_before_val_dtor, "count");
+
+    uint64_t dealloc_before_str_dtor = s_json_dealloc_calls;
+    if (fn_str_dtor) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            fn_str_dtor(str_alpha);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_buffer(id, "String::~String()", "str-after-dtor-0x40", str_alpha, sizeof(str_alpha));
+    obs_report_measure(id, "String::~String()", "dealloc-calls", s_json_dealloc_calls - dealloc_before_str_dtor, "count");
+
+    /* 5. Terminate and MemAllocator::~MemAllocator() */
+    int rc_term = -1;
+    if (fn_terminate) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_term = fn_terminate(init_obj);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "terminate", "rc", (uint64_t)(uint32_t)rc_term, "code");
+
+    if (fn_memalloc_dtor) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            fn_memalloc_dtor(sub_alloc);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_buffer(id, "MemAllocator::~MemAllocator()", "alloc-first-0x10", sub_alloc, 0x10);
+
+    /* 6. sceNpWebApi2PushEventCreateHandle */
+    if (fn_push_event) {
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc_zero = -1;
+        if (sig == 0) {
+            rc_zero = fn_push_event(NULL, NULL, NULL, NULL, NULL, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "PushEventCreateHandle-zero", "rc", (uint64_t)(uint32_t)rc_zero, "code");
+
+        uint8_t a0[0x100], a1[0x100], a2[0x100], a3[0x100], a4[0x100], a5[0x100];
+        memset(a0, 0xcc, sizeof(a0));
+        memset(a1, 0xcc, sizeof(a1));
+        memset(a2, 0xcc, sizeof(a2));
+        memset(a3, 0xcc, sizeof(a3));
+        memset(a4, 0xcc, sizeof(a4));
+        memset(a5, 0xcc, sizeof(a5));
+        int rc_buf = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_buf = fn_push_event(a0, a1, a2, a3, a4, a5);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "PushEventCreateHandle-buf", "rc", (uint64_t)(uint32_t)rc_buf, "code");
+        obs_report_buffer(id, "PushEventCreateHandle-buf", "a0", a0, sizeof(a0));
+        obs_report_buffer(id, "PushEventCreateHandle-buf", "a1", a1, sizeof(a1));
+    }
+
+    /* 7. sceSaveDataCreateTransactionResource */
+    if (fn_savedata_trans) {
+        int sig = OBS_FAULT_ARM(&guard);
+        int rc_zero = -1;
+        if (sig == 0) {
+            rc_zero = fn_savedata_trans(NULL, NULL, NULL, NULL, NULL, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "SaveDataCreateTransactionResource-zero", "rc", (uint64_t)(uint32_t)rc_zero, "code");
+
+        uint8_t b0[0x100], b1[0x100], b2[0x100], b3[0x100], b4[0x100], b5[0x100];
+        memset(b0, 0xcc, sizeof(b0));
+        memset(b1, 0xcc, sizeof(b1));
+        memset(b2, 0xcc, sizeof(b2));
+        memset(b3, 0xcc, sizeof(b3));
+        memset(b4, 0xcc, sizeof(b4));
+        memset(b5, 0xcc, sizeof(b5));
+        int rc_buf = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_buf = fn_savedata_trans(b0, b1, b2, b3, b4, b5);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "SaveDataCreateTransactionResource-buf", "rc", (uint64_t)(uint32_t)rc_buf, "code");
+        obs_report_buffer(id, "SaveDataCreateTransactionResource-buf", "b0", b0, sizeof(b0));
+        obs_report_buffer(id, "SaveDataCreateTransactionResource-buf", "b1", b1, sizeof(b1));
+    }
+
+    return obs_pass();
+}
 /* clang-format on */
 
 static void *s_layout_msp_malloc = NULL;
@@ -3442,6 +3873,16 @@ static void font_render_free_cb(void *msp, void *ptr) {
 
 static void font_render_destroy_cb(void *arg) {
     (void)arg;
+}
+
+static void *font_render_realloc_cb(void *msp, void *ptr, size_t size) {
+    (void)msp;
+    return realloc(ptr, size);
+}
+
+static void *font_render_calloc_cb(void *msp, size_t num, size_t size) {
+    (void)msp;
+    return calloc(num, size);
 }
 
 static obs_result check_font_render_glyph(void) {
@@ -3686,7 +4127,7 @@ static obs_result check_font_render_glyph(void) {
             (void *)layout_resolve_sym("libSceLibcInternal", "sceLibcMspaceFree");
     }
 
-    static _Alignas(4096) uint8_t s_font_arena[0x80000];
+    static _Alignas(4096) uint8_t s_font_arena[0x800000];
     void *msp = NULL;
     if (fn_msp_create && obs_address_is_callable((const void *)fn_msp_create)) {
         msp = fn_msp_create("font_render_msp", s_font_arena, sizeof(s_font_arena), 0);
@@ -3695,9 +4136,9 @@ static obs_result check_font_render_glyph(void) {
     void *memIf[8];
     memIf[0] = (void *)&font_render_alloc_cb;
     memIf[1] = (void *)&font_render_free_cb;
-    memIf[2] = (void *)&font_render_alloc_cb;
-    memIf[3] = (void *)&font_render_alloc_cb;
-    memIf[4] = (void *)&font_render_alloc_cb;
+    memIf[2] = (void *)&font_render_realloc_cb;
+    memIf[3] = (void *)&font_render_calloc_cb;
+    memIf[4] = NULL;
     memIf[5] = NULL;
     memIf[6] = NULL;
     memIf[7] = NULL;
@@ -3847,20 +4288,44 @@ static obs_result check_font_render_glyph(void) {
     obs_report_measure(id, "setup", "support-sys-rc", (uint64_t)(uint32_t)rc_sys,
                        "code");
 
+    typedef int (*fn_support_ext_t)(void *, uint64_t, uint64_t);
+    fn_support_ext_t fn_support_ext =
+        (fn_support_ext_t)layout_resolve_sym("libSceFont", "$G0l4V4f4-7s");
+    if (!fn_support_ext) {
+        fn_support_ext = (fn_support_ext_t)layout_resolve_sym(
+            "libSceFont", "sceFontSupportExternalFonts");
+    }
+    int rc_ext = -1;
+    if (fn_support_ext && lib &&
+        obs_address_is_callable((const void *)fn_support_ext)) {
+        obs_jmp_buf guard;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_ext = fn_support_ext(lib, 0x10, 0x52);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "setup", "support-ext-rc", (uint64_t)(uint32_t)rc_ext,
+                       "code");
+
     int rc_open = -1;
     if (fn_open_font_set && lib &&
         obs_address_is_callable((const void *)fn_open_font_set)) {
-        for (uint32_t sidx = 0; sidx < 16 && font == NULL; sidx++) {
+        for (uint32_t sidx = 0; sidx < 16; sidx++) {
             void *tmp_font = NULL;
             obs_jmp_buf guard;
             int sig = OBS_FAULT_ARM(&guard);
             if (sig == 0) {
                 int ro = fn_open_font_set(lib, sidx, 0, NULL, &tmp_font);
                 obs_fault_unregister();
-                if (ro == 0 && tmp_font != NULL) {
+                char stag[32];
+                oops_snprintf(stag, sizeof(stag), "open-font-set-%u-rc", sidx);
+                obs_report_measure(id, "setup", stag, (uint64_t)(uint32_t)ro, "code");
+                if (ro == 0 && tmp_font != NULL && font == NULL) {
                     font = tmp_font;
                     rc_open = ro;
-                    break;
                 } else if (rc_open < 0) {
                     rc_open = ro;
                 }
@@ -6666,6 +7131,8 @@ static const obs_check layout_checks[] = {
      OBS_FROM_ASSUMED},
     {"130-layout/json2-init-layout", "libSceJson2", "$Cxwy7wHq4J0", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_json2_init_layout, OBS_FROM_ASSUMED},
+    {"130-layout/json2-value-string", "libSceJson2", "$qBMjqyBn3OM", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_json2_value_string, OBS_FROM_ASSUMED},
     {"130-layout/video-out-output-status", "libSceVideoOut",
      "sceVideoOutGetOutputStatus", OBS_CAP_NONE, OBS_CAP_NONE,
      (const void *)check_video_out_output_status, check_video_out_output_status,

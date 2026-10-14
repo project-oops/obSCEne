@@ -83,7 +83,10 @@ sceKernelJitMapSharedMemory
 sceKernelJitCreateAliasOfSharedMemory
 sceAgcDcbResetQueue
 scePadSetTriggerEffect
+scePadSetTiltCorrectionState
+scePadGetTriggerEffectState
 sceKeyboardReadState
+
 sceMouseRead
 scePadReadState
 scePadRead
@@ -702,9 +705,7 @@ scePadGetHandle
 scePadSetMotionSensorState
 scePadResetOrientation
 scePadOpenExt
-scePadSetTiltCorrectionState
 scePadGetExtControllerInformation
-scePadGetTriggerEffectState
 scePadDisableTriggerEffect
 scePadSetVibrationMode
 scePadSetVibrationForce

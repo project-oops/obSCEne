@@ -88,21 +88,19 @@ static const uint8_t s_h264_sample_320x240[913] = {
 };
 
 typedef struct {
-    uint32_t this_size;
-    uint32_t pad;
+    uint64_t this_size;
     uint64_t shared_size;
     void *shared;
 } SceVideodec2ComputeMemoryInfo;
 
 typedef struct {
-    uint32_t this_size;
+    uint64_t this_size;
     uint32_t pipe;
     uint32_t queue;
-    uint32_t pad;
 } SceVideodec2ComputeQueueConfig;
 
 typedef struct {
-    uint32_t this_size;
+    uint64_t this_size;
     uint32_t resource_type;
     uint32_t codec_type;
     uint32_t profile;
@@ -116,7 +114,7 @@ typedef struct {
 } SceVideodec2DecoderConfig;
 
 typedef struct {
-    uint32_t this_size;
+    uint64_t this_size;
     uint32_t resource_type;
     uint32_t codec_type;
     uint32_t profile;
@@ -131,8 +129,7 @@ typedef struct {
 } SceVdecswDecoderConfig;
 
 typedef struct {
-    uint32_t this_size;
-    uint32_t pad;
+    uint64_t this_size;
     uint64_t cpu_memory_size;
     void *cpu_memory;
     uint64_t gpu_memory_size;
@@ -153,8 +150,7 @@ typedef struct {
 } SceVideodec2InputData;
 
 typedef struct {
-    uint32_t this_size;
-    uint32_t pad;
+    uint64_t this_size;
     uint32_t is_valid;
     uint32_t codec;
     uint32_t width;
@@ -166,6 +162,7 @@ typedef struct {
     uint32_t frame_format;
     uint32_t pitch_in_bytes;
 } SceVideodec2OutputInfo;
+
 
 static obs_result check_videodec2_oracle_census(void) {
     const char *id = "107-videodec/oracle-census";
@@ -223,7 +220,9 @@ static obs_result check_videodec2_oracle_census(void) {
     /* 1. QueryComputeMemoryInfo */
     SceVideodec2ComputeMemoryInfo cinfo;
     memset(&cinfo, 0xcc, sizeof(cinfo));
-    cinfo.this_size = (uint32_t)sizeof(cinfo);
+    cinfo.this_size = sizeof(cinfo);
+    obs_report_bytes(id, "QueryComputeMemoryInfo", "passed-cinfo-0x18", 0,
+                     (const unsigned char *)&cinfo, (unsigned int)sizeof(cinfo));
     if (obs_address_is_callable((const void *)fn_qcomp)) {
         int rc = -1;
         int sig = OBS_FAULT_ARM(&guard);
@@ -271,13 +270,16 @@ static obs_result check_videodec2_oracle_census(void) {
         qcfg.this_size = 0x10;
         qcfg.pipe = 0;
         qcfg.queue = 0;
-        qcfg.pad = 0;
 
         SceVideodec2ComputeMemoryInfo mem_in;
-        mem_in.this_size = 0x18;
-        mem_in.pad = 0;
+        memset(&mem_in, 0, sizeof(mem_in));
+        mem_in.this_size = sizeof(mem_in);
         mem_in.shared_size = (cinfo.shared_size > 0 && cinfo.shared_size <= sizeof(direct_shared)) ? cinfo.shared_size : 0x10000;
         mem_in.shared = direct_shared;
+        obs_report_bytes(id, "AllocateComputeQueue", "passed-qcfg-0x10", 0,
+                         (const unsigned char *)&qcfg, (unsigned int)sizeof(qcfg));
+        obs_report_bytes(id, "AllocateComputeQueue", "passed-mem_in-0x18", 0,
+                         (const unsigned char *)&mem_in, (unsigned int)sizeof(mem_in));
 
         int rc = -1;
         int sig = OBS_FAULT_ARM(&guard);
@@ -337,7 +339,11 @@ static obs_result check_videodec2_oracle_census(void) {
 
     SceVideodec2DecoderMemoryInfo minfo;
     memset(&minfo, 0xcc, sizeof(minfo));
-    minfo.this_size = (uint32_t)sizeof(minfo);
+    minfo.this_size = sizeof(minfo);
+    obs_report_bytes(id, "QueryDecoderMemoryInfo-1080p", "passed-minfo-0x48", 0,
+                     (const unsigned char *)&minfo, (unsigned int)sizeof(minfo));
+    obs_report_bytes(id, "QueryDecoderMemoryInfo-1080p", "passed-dcfg-0x40", 0,
+                     (const unsigned char *)&dcfg, (unsigned int)sizeof(dcfg));
 
     if (obs_address_is_callable((const void *)fn_qdec)) {
         int rc = -1;
@@ -356,7 +362,7 @@ static obs_result check_videodec2_oracle_census(void) {
         dcfg.max_width = 3840;
         dcfg.max_height = 2160;
         memset(&minfo, 0xcc, sizeof(minfo));
-        minfo.this_size = (uint32_t)sizeof(minfo);
+        minfo.this_size = sizeof(minfo);
         rc = fn_qdec(&dcfg, &minfo);
         obs_report_measure(id, "QueryDecoderMemoryInfo-4K", "rc", (uint64_t)(uint32_t)rc, "code");
         obs_report_bytes(id, "QueryDecoderMemoryInfo-4K", "mem-0x48", 0,
@@ -367,7 +373,7 @@ static obs_result check_videodec2_oracle_census(void) {
         dcfg.max_width = 1920;
         dcfg.max_height = 1088;
         memset(&minfo, 0xcc, sizeof(minfo));
-        minfo.this_size = (uint32_t)sizeof(minfo);
+        minfo.this_size = sizeof(minfo);
         rc = fn_qdec(&dcfg, &minfo);
         obs_report_measure(id, "QueryDecoderMemoryInfo-HEVC", "rc", (uint64_t)(uint32_t)rc, "code");
 
@@ -375,7 +381,7 @@ static obs_result check_videodec2_oracle_census(void) {
         dcfg.codec_type = 1;
         dcfg.compute_queue = 0;
         memset(&minfo, 0xcc, sizeof(minfo));
-        minfo.this_size = (uint32_t)sizeof(minfo);
+        minfo.this_size = sizeof(minfo);
         rc = fn_qdec(&dcfg, &minfo);
         obs_report_measure(id, "QueryDecoderMemoryInfo-q0", "rc", (uint64_t)(uint32_t)rc, "code");
 
@@ -418,9 +424,10 @@ static obs_result check_videodec2_oracle_census(void) {
         dcfg.compute_queue = (uint64_t)(uintptr_t)queue_handle;
         if (obs_address_is_callable((const void *)fn_qdec)) {
             memset(&minfo, 0, sizeof(minfo));
-            minfo.this_size = (uint32_t)sizeof(minfo);
+            minfo.this_size = sizeof(minfo);
             (void)fn_qdec(&dcfg, &minfo);
         }
+
 
         static uint8_t mem_cpu[0x40000] __attribute__((aligned(256)));
         static uint8_t mem_gpu[0x40000] __attribute__((aligned(256)));
@@ -453,9 +460,12 @@ static obs_result check_videodec2_oracle_census(void) {
 
             SceVideodec2OutputInfo out_info;
             memset(&out_info, 0xcc, sizeof(out_info));
-            out_info.this_size = 56;
+            out_info.this_size = sizeof(out_info);
             out_info.frame_buffer = frame_buf;
             out_info.size = sizeof(frame_buf);
+            obs_report_bytes(id, "decode-frame1-idr", "passed-out-info-56", 0,
+                             (const unsigned char *)&out_info, (unsigned int)sizeof(out_info));
+
 
             uint8_t pic_info[64];
             memset(pic_info, 0xcc, sizeof(pic_info));
