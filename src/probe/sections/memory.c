@@ -1217,7 +1217,213 @@ static obs_result check_7389_memory_pool_prt_aperture(void) {
     return obs_pass();
 }
 
+/* REQ-20261014T0230Z-bm01: what sceKernelBatchMap does with operation (+28) 1, 2, 3, 4
+ */
+static obs_result check_bm01_batch_map_operations(void) {
+    const char *id = "020-memory/batch-map-operations";
+    if (!obs_address_is_callable((const void *)&sceKernelBatchMap)) {
+        return obs_skip("sceKernelBatchMap is not callable");
+    }
+    OBS_REQUIRE(&sceKernelAllocateMainDirectMemory);
+    OBS_REQUIRE(&sceKernelReleaseDirectMemory);
+    OBS_REQUIRE(&sceKernelMunmap);
+
+    int (*fn_query_prot)(const void *, uint64_t *, uint64_t *, uint32_t *) =
+        (int (*)(const void *, uint64_t *, uint64_t *, uint32_t *))obs_module_symbol(
+            1, "sceKernelQueryMemoryProtection");
+    if (!fn_query_prot &&
+        obs_address_is_callable((const void *)&sceKernelQueryMemoryProtection)) {
+        fn_query_prot = (int (*)(const void *, uint64_t *, uint64_t *,
+                                 uint32_t *))&sceKernelQueryMemoryProtection;
+    }
+
+    obs_jmp_buf guard;
+
+    /* Base VA: 0x220000000 (8.5 GiB) */
+    uintptr_t base_va = 0x220000000ULL;
+    const size_t chunk_len = 0x10000;       /* 64 KiB */
+    const size_t total_len = 4 * chunk_len; /* 256 KiB */
+
+    /* Allocate 4 x 64 KiB of direct memory */
+    sce_off_t paddr = 0;
+    int rc_alloc = sceKernelAllocateMainDirectMemory(total_len, chunk_len,
+                                                     OBS_MEM_TYPE_WB_ONION, &paddr);
+    obs_report_measure(id, "setup", "rc-alloc", (uint64_t)(uint32_t)rc_alloc, "code");
+    obs_report_measure(id, "setup", "paddr", (uint64_t)paddr, "addr");
+    if (rc_alloc != 0 || paddr == 0) {
+        return obs_fail_code("direct memory allocation failed",
+                             (uint64_t)(uint32_t)rc_alloc);
+    }
+
+    /* Test operations 1, 2, 3, 4 */
+    for (uint32_t op = 1; op <= 4; op++) {
+        char op_tag[32];
+        oops_snprintf(op_tag, sizeof(op_tag), "op-%u", (unsigned int)op);
+
+        /* Fresh set-up: map 4 x 64 KiB with operation 0, prot 0x33 */
+        struct obs_batch_map_entry init_entries[4];
+        for (int k = 0; k < 4; k++) {
+            init_entries[k].vaddr = (void *)(base_va + (uintptr_t)k * chunk_len);
+            init_entries[k].paddr =
+                (sce_off_t)((uint64_t)paddr + (uint64_t)k * (uint64_t)chunk_len);
+            init_entries[k].len = chunk_len;
+            init_entries[k].prot =
+                OBS_PROT_CPU_RW | OBS_PROT_GPU_READ | OBS_PROT_GPU_WRITE;
+            init_entries[k].pad[0] = init_entries[k].pad[1] = init_entries[k].pad[2] =
+                0;
+            init_entries[k].flags = 0; /* op 0 = MAP */
+        }
+        int completed = 0;
+        int rc_init = sceKernelBatchMap(init_entries, 4, &completed);
+        obs_report_measure(id, op_tag, "setup-map-rc", (uint64_t)(uint32_t)rc_init,
+                           "code");
+        obs_report_measure(id, op_tag, "setup-map-completed", (uint64_t)completed,
+                           "count");
+
+        /* Write markers into each 64 KiB */
+        *(volatile uint32_t *)(base_va + 0x00000) = 0x11111111;
+        *(volatile uint32_t *)(base_va + 0x10000) = 0x22222222;
+        *(volatile uint32_t *)(base_va + 0x20000) = 0x33333333;
+        *(volatile uint32_t *)(base_va + 0x30000) = 0x44444444;
+
+        /* 1. One entry at va + 0x10000, length 0x10000, physical offset paddr +
+         * 0x10000, prot 0x33 (and 0x11 for op 2), operation op. */
+        struct obs_batch_map_entry test_entry;
+        test_entry.vaddr = (void *)(base_va + 0x10000);
+        test_entry.paddr = paddr + 0x10000;
+        test_entry.len = chunk_len;
+        test_entry.prot =
+            (op == 2) ? (OBS_PROT_CPU_READ | OBS_PROT_GPU_READ)
+                      : (OBS_PROT_CPU_RW | OBS_PROT_GPU_READ | OBS_PROT_GPU_WRITE);
+        test_entry.pad[0] = test_entry.pad[1] = test_entry.pad[2] = 0;
+        test_entry.flags = op;
+
+        int op_completed = 0;
+        int op_rc = sceKernelBatchMap(&test_entry, 1, &op_completed);
+        obs_report_measure(id, op_tag, "rc", (uint64_t)(uint32_t)op_rc, "code");
+        obs_report_measure(id, op_tag, "completed", (uint64_t)op_completed, "count");
+
+        /* 2. VirtualQuery(va + 0x10000) and QueryMemoryProtection */
+        unsigned char vq_buf[OBS_VQ_BUF_LEN];
+        memset(vq_buf, 0xcc, sizeof(vq_buf));
+        int vq_rc = -1;
+        if (obs_address_is_callable((const void *)&sceKernelVirtualQuery)) {
+            vq_rc = sceKernelVirtualQuery((const void *)(base_va + 0x10000), 0, vq_buf,
+                                          sizeof(vq_buf));
+        }
+        obs_report_measure(id, op_tag, "vq-rc", (uint64_t)(uint32_t)vq_rc, "code");
+        obs_report_bytes(id, op_tag, "vq-block", 0, vq_buf, 48);
+
+        uint64_t q_start = 0, q_end = 0;
+        uint32_t q_prot = 0;
+        int q_rc = -1;
+        if (fn_query_prot) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                q_rc = fn_query_prot((const void *)(base_va + 0x10000), &q_start,
+                                     &q_end, &q_prot);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                q_rc = -sig;
+            }
+        }
+        obs_report_measure(id, op_tag, "query-prot-rc", (uint64_t)(uint32_t)q_rc,
+                           "code");
+        obs_report_measure(id, op_tag, "query-prot-prot", (uint64_t)q_prot, "val");
+
+        /* 3. Whether reading va + 0x10000 faults and what marker it reads */
+        int fault1 = 0;
+        uint32_t marker1 = 0;
+        int sig1 = OBS_FAULT_ARM(&guard);
+        if (sig1 == 0) {
+            marker1 = *(volatile uint32_t *)(base_va + 0x10000);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            fault1 = sig1;
+        }
+        obs_report_measure(id, op_tag, "read-fault", (uint64_t)fault1, "signal");
+        obs_report_measure(id, op_tag, "read-marker", (uint64_t)marker1, "val");
+
+        /* 4. Same queries for va (0x00000) and va + 0x20000 */
+        int fault_n0 = 0;
+        uint32_t marker_n0 = 0;
+        int sig_n0 = OBS_FAULT_ARM(&guard);
+        if (sig_n0 == 0) {
+            marker_n0 = *(volatile uint32_t *)(base_va + 0x00000);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            fault_n0 = sig_n0;
+        }
+        obs_report_measure(id, op_tag, "neighbor-va0-fault", (uint64_t)fault_n0,
+                           "signal");
+        obs_report_measure(id, op_tag, "neighbor-va0-marker", (uint64_t)marker_n0,
+                           "val");
+
+        int fault_n2 = 0;
+        uint32_t marker_n2 = 0;
+        int sig_n2 = OBS_FAULT_ARM(&guard);
+        if (sig_n2 == 0) {
+            marker_n2 = *(volatile uint32_t *)(base_va + 0x20000);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            fault_n2 = sig_n2;
+        }
+        obs_report_measure(id, op_tag, "neighbor-va2-fault", (uint64_t)fault_n2,
+                           "signal");
+        obs_report_measure(id, op_tag, "neighbor-va2-marker", (uint64_t)marker_n2,
+                           "val");
+
+        /* 5. For operation 1: a second operation-0 entry at va + 0x10000 afterwards */
+        if (op == 1) {
+            struct obs_batch_map_entry remap_entry;
+            remap_entry.vaddr = (void *)(base_va + 0x10000);
+            remap_entry.paddr = paddr + 0x10000;
+            remap_entry.len = chunk_len;
+            remap_entry.prot = OBS_PROT_CPU_RW | OBS_PROT_GPU_READ | OBS_PROT_GPU_WRITE;
+            remap_entry.pad[0] = remap_entry.pad[1] = remap_entry.pad[2] = 0;
+            remap_entry.flags = 0; /* op 0 = MAP */
+
+            int remap_completed = 0;
+            int remap_rc = sceKernelBatchMap(&remap_entry, 1, &remap_completed);
+            obs_report_measure(id, "op-1-remap", "rc", (uint64_t)(uint32_t)remap_rc,
+                               "code");
+            obs_report_measure(id, "op-1-remap", "completed", (uint64_t)remap_completed,
+                               "count");
+
+            int remap_fault = 0;
+            uint32_t remap_marker = 0;
+            int sig_rm = OBS_FAULT_ARM(&guard);
+            if (sig_rm == 0) {
+                remap_marker = *(volatile uint32_t *)(base_va + 0x10000);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                remap_fault = sig_rm;
+            }
+            obs_report_measure(id, "op-1-remap", "fault", (uint64_t)remap_fault,
+                               "signal");
+            obs_report_measure(id, "op-1-remap", "marker", (uint64_t)remap_marker,
+                               "val");
+        }
+
+        /* Clean up this set-up */
+        sceKernelMunmap((void *)base_va, total_len);
+    }
+
+    /* Release direct memory */
+    sceKernelReleaseDirectMemory(paddr, total_len);
+
+    return obs_pass();
+}
+
 static const obs_check memory_checks[] = {
+    {"020-memory/batch-map-operations", "libkernel", "sceKernelBatchMap", OBS_CAP_NONE,
+     OBS_CAP_NONE, (const void *)&sceKernelBatchMap, check_bm01_batch_map_operations,
+     OBS_FROM_ASSUMED},
     {"020-memory/memory-pool-prt-aperture", "libkernel", "sceKernelMemoryPoolExpand",
      OBS_CAP_NONE, OBS_CAP_NONE, (const void *)&sceKernelMemoryPoolExpand,
      check_7389_memory_pool_prt_aperture, OBS_FROM_ASSUMED},

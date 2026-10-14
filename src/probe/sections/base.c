@@ -9547,7 +9547,173 @@ static obs_result check_rtc_datetime(void) {
 
 #include "wave1_checks.inc"
 
+/* REQ-20261014T0300Z-rf04 Arm 2: UniversalDataSystem lifecycle & s6W4Zl4Slgk */
+static obs_result check_rf04_uds(void) {
+    const char *id = "000-boot/uds-s6W4Zl4Slgk";
+    obs_jmp_buf guard;
+
+    /* 1. sceSysmoduleLoadModule(0x0105) rc */
+    int rc_mod = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_mod = sceSysmoduleLoadModule(0x0105);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "sceSysmoduleLoadModule", "rc-0x0105",
+                       (uint64_t)(uint32_t)rc_mod, "code");
+
+    /* 2. Resolve UDS functions */
+    typedef int (*fn_uds_init_t)(const void *, const void *, uint64_t, uint64_t);
+    typedef int (*fn_uds_ctx_t)(uint64_t *, int32_t, uint64_t, uint64_t);
+    typedef int (*fn_uds_handle_t)(uint64_t *);
+    typedef uint64_t (*fn_uds_call_t)(void *, void *, void *, void *, void *, void *);
+
+    int h_uds = obs_module_open("libSceNpUniversalDataSystem");
+    fn_uds_init_t fn_uds_init =
+        (fn_uds_init_t)obs_module_symbol(h_uds, "sceNpUniversalDataSystemInitialize");
+    if (!fn_uds_init)
+        fn_uds_init = (fn_uds_init_t)obs_module_symbol(h_uds, "$HngqGGyoNrI");
+    if (!fn_uds_init)
+        fn_uds_init = (fn_uds_init_t)obs_module_symbol(h_uds, "$sjaobBgqeB4");
+
+    fn_uds_ctx_t fn_uds_ctx =
+        (fn_uds_ctx_t)obs_module_symbol(h_uds, "sceNpUniversalDataSystemCreateContext");
+    if (!fn_uds_ctx)
+        fn_uds_ctx = (fn_uds_ctx_t)obs_module_symbol(h_uds, "$5zBnau1uIEo");
+
+    fn_uds_handle_t fn_uds_h = (fn_uds_handle_t)obs_module_symbol(
+        h_uds, "sceNpUniversalDataSystemCreateHandle");
+    if (!fn_uds_h)
+        fn_uds_h = (fn_uds_handle_t)obs_module_symbol(h_uds, "$hT0IAEvN+M0");
+
+    fn_uds_call_t fn_s6W4 = (fn_uds_call_t)obs_module_symbol(h_uds, "$s6W4Zl4Slgk");
+    if (!fn_s6W4)
+        fn_s6W4 = (fn_uds_call_t)obs_module_symbol(h_uds, "s6W4Zl4Slgk");
+    if (!fn_s6W4 && obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        (void)sceKernelDlsym(h_uds, "s6W4Zl4Slgk", (void **)&fn_s6W4);
+    }
+
+    /* 3. sceNpUniversalDataSystemInitialize with REQ-np02's 0x20-byte block */
+    static uint8_t s_uds_pool[0x40000] __attribute__((aligned(64)));
+    uint64_t uds_param[4] = {0x10, 0x40000, (uint64_t)(uintptr_t)s_uds_pool, 0x10};
+    int rc_init = -1;
+    if (fn_uds_init) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_init = fn_uds_init(uds_param, NULL, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "sceNpUniversalDataSystemInitialize", "rc",
+                       (uint64_t)(uint32_t)rc_init, "code");
+    obs_report_bytes(id, "sceNpUniversalDataSystemInitialize", "param-block", 0,
+                     (const unsigned char *)uds_param, sizeof(uds_param));
+
+    if (rc_init == (int)0x80553118) {
+        return obs_pass();
+    }
+
+    /* 4. CreateContext and CreateHandle */
+    int32_t user = 0;
+    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
+        if (sceUserServiceGetInitialUser(&user) != 0)
+            user = 0x1ea2f4d9;
+    } else {
+        user = 0x1ea2f4d9;
+    }
+    uint64_t ctx = 0;
+    int rc_ctx = -1;
+    if (fn_uds_ctx) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_ctx = fn_uds_ctx(&ctx, user, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "sceNpUniversalDataSystemCreateContext", "rc",
+                       (uint64_t)(uint32_t)rc_ctx, "code");
+    obs_report_measure(id, "sceNpUniversalDataSystemCreateContext", "ctx-val", ctx,
+                       "hex");
+
+    uint64_t handle = 0;
+    int rc_h = -1;
+    if (fn_uds_h) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_h = fn_uds_h(&handle);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    obs_report_measure(id, "sceNpUniversalDataSystemCreateHandle", "rc",
+                       (uint64_t)(uint32_t)rc_h, "code");
+    obs_report_measure(id, "sceNpUniversalDataSystemCreateHandle", "handle-val", handle,
+                       "hex");
+
+    /* 5. s6W4Zl4Slgk(ctx, handle, "activityId", name+1, buf, buf) */
+    const char *name = "activityId";
+    uint8_t buf4[0x100], buf5[0x100];
+    uint8_t before[0x100];
+    memset(buf4, 0xcc, sizeof(buf4));
+    memset(buf5, 0xcc, sizeof(buf5));
+    memset(before, 0xcc, sizeof(before));
+
+    uint64_t rc_act = 0xffffffffffffffffULL;
+    int sig_act = 0;
+    if (fn_s6W4) {
+        sig_act = OBS_FAULT_ARM(&guard);
+        if (sig_act == 0) {
+            rc_act = fn_s6W4((void *)(uintptr_t)ctx, (void *)(uintptr_t)handle,
+                             (void *)name, (void *)(name + 1), buf4, buf5);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    if (sig_act != 0) {
+        obs_report_measure(id, "s6W4Zl4Slgk-activity", "fault", (uint64_t)sig_act,
+                           "signal");
+    }
+    obs_report_measure(id, "s6W4Zl4Slgk-activity", "rc", rc_act, "code");
+    obs_report_written(id, "s6W4Zl4Slgk-activity", "buf4-changed", before, buf4,
+                       sizeof(buf4));
+    obs_report_written(id, "s6W4Zl4Slgk-activity", "buf5-changed", before, buf5,
+                       sizeof(buf5));
+
+    /* 6. All zero call: s6W4Zl4Slgk(0, 0, 0, 0, 0, 0) */
+    uint64_t rc_zero = 0xffffffffffffffffULL;
+    int sig_zero = 0;
+    if (fn_s6W4) {
+        sig_zero = OBS_FAULT_ARM(&guard);
+        if (sig_zero == 0) {
+            rc_zero = fn_s6W4(NULL, NULL, NULL, NULL, NULL, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+    }
+    if (sig_zero != 0) {
+        obs_report_measure(id, "s6W4Zl4Slgk-allzero", "fault", (uint64_t)sig_zero,
+                           "signal");
+    }
+    obs_report_measure(id, "s6W4Zl4Slgk-allzero", "rc", rc_zero, "code");
+
+    return obs_pass();
+}
+
 static const obs_check boot_checks[] = {
+    {"000-boot/audioout2-fresh-process", "libSceAudioOut2", "$g2tViFIohHE",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_audioout2_fresh_process,
+     OBS_FROM_SPEC},
 #if defined(OBS_FAULT_SELFTEST)
     {"000-boot/fault-guard-self-test", "obscene", "(self-check)", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_fault_guard_selftest, OBS_FROM_SPEC},
@@ -9568,6 +9734,8 @@ static const obs_check boot_checks[] = {
     {"000-boot/sysmodule-isloaded-lifecycle", "libSceSysmodule", "sceSysmoduleIsLoaded",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_41aa_sysmodule_isloaded_lifecycle,
      OBS_FROM_SPEC},
+    {"000-boot/uds-s6W4Zl4Slgk", "libSceNpUniversalDataSystem", "$s6W4Zl4Slgk",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_rf04_uds, OBS_FROM_SPEC},
     {"000-boot/audioout2-port-set-attributes", "libSceAudioOut2", "$0x6o1VVAYSY",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap03_audioout2_attributes,
      OBS_FROM_SPEC},
@@ -9575,9 +9743,6 @@ static const obs_check boot_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap02_audioout2_pcm_pump, OBS_FROM_SPEC},
     {"000-boot/audioout2-ppsa21564-context", "libSceAudioOut2", "$0x6o1VVAYSY",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ac02_audioout2_ppsa21564_context,
-     OBS_FROM_SPEC},
-    {"000-boot/audioout2-fresh-process", "libSceAudioOut2", "$g2tViFIohHE",
-     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_audioout2_fresh_process,
      OBS_FROM_SPEC},
     {"000-boot/unity-user-service-chain", "libSceUserService", "$j3YMu1MVNNo",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_unity_user_service_chain,
