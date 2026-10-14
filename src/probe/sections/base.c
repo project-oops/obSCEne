@@ -9745,6 +9745,8 @@ static const obs_check boot_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_sd02_savedata_avplayer, OBS_FROM_SPEC},
     {"000-boot/ge-indx-offset", "libSceAgc", "sceAgcDcbDrawIndexOffset", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_ix01_ge_indx_offset, OBS_FROM_SPEC},
+    {"000-boot/rf04-apr-app0-savedata", "libkernel", "$gEpBkcwxUjw", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_rf04_apr_app0_savedata, OBS_FROM_SPEC},
     {"000-boot/audioout2-port-set-attributes", "libSceAudioOut2", "$0x6o1VVAYSY",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap03_audioout2_attributes,
      OBS_FROM_SPEC},
