@@ -426,6 +426,9 @@ static obs_result check_pthread_attr_layout(void) {
         for (int iter = 0; iter < 5000 && !res.finished; iter++) {
             if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
                 sceKernelUsleep(100);
+            } else {
+                for (volatile int spin = 0; spin < 2000; spin++) {
+                }
             }
         }
         if (rc_detach != 0 && obs_address_is_callable((const void *)&scePthreadJoin) &&

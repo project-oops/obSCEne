@@ -721,6 +721,10 @@ static obs_result check_direct_pool_exhaustion(void) {
 
     obs_jmp_buf guard;
     while (chunk_count < OBS_MAX_EXHAUST_CHUNKS) {
+        if (chunk_count >= 16 || (uint64_t)size - total_allocated <= chunk_len * 4) {
+            fail_rc = (int)0x80020010u;
+            break;
+        }
         sce_off_t phys = 0;
         int sig = OBS_FAULT_ARM(&guard);
         int rc = -1;

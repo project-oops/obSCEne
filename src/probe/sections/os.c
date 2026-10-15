@@ -1502,10 +1502,256 @@ static obs_result check_oneshot_setup_calls(void) {
             }
         }
 
-        /* (4) REQ-20261009T1430Z-aj01: sceAjmFinalize(ctx) */
         const void *fn_fin =
             census_resolve_symbol("libSceAjm", "$61KsoOqrezA", "sceAjmFinalize",
                                   (const void *)&sceAjmFinalize, NULL);
+        if (!fn_fin) {
+            fn_fin =
+                census_resolve_symbol("libSceAjm", "$MHur6qCsUus", "sceAjmFinalize",
+                                      (const void *)&sceAjmFinalize, NULL);
+        }
+
+        /* REQ-20261015T0017Z-ai01: sceAjmInstanceCreate and sceAjmInstanceDestroy */
+        const void *fn_inst_cr = NULL;
+        if (obs_address_is_callable((const void *)&sceAjmInstanceCreate_static)) {
+            fn_inst_cr = (const void *)&sceAjmInstanceCreate_static;
+        } else {
+            fn_inst_cr = census_resolve_symbol("libSceAjm", "$AxoDrINp4J8",
+                                               "sceAjmInstanceCreate", NULL, NULL);
+            if (!fn_inst_cr) {
+                fn_inst_cr = census_resolve_symbol("libSceAjm", NULL,
+                                                   "sceAjmInstanceCreate", NULL, NULL);
+            }
+        }
+        const void *fn_inst_dst = NULL;
+        if (obs_address_is_callable((const void *)&sceAjmInstanceDestroy_static)) {
+            fn_inst_dst = (const void *)&sceAjmInstanceDestroy_static;
+        } else {
+            fn_inst_dst = census_resolve_symbol("libSceAjm", "$RbLbuKv8zho",
+                                                "sceAjmInstanceDestroy", NULL, NULL);
+            if (!fn_inst_dst) {
+                fn_inst_dst = census_resolve_symbol(
+                    "libSceAjm", NULL, "sceAjmInstanceDestroy", NULL, NULL);
+            }
+        }
+        obs_report_measure(id, "ai01-instance-create", "bound",
+                           (uint64_t)(fn_inst_cr != NULL), "bool");
+        obs_report_measure(id, "ai01-instance-destroy", "bound",
+                           (uint64_t)(fn_inst_dst != NULL), "bool");
+
+        uint8_t ctx_ai[0x40];
+        memset(ctx_ai, 0xff, sizeof(ctx_ai));
+        int rc_init_ai = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_init_ai = ((int (*)(uint64_t, void *))fn_ajm)(0, ctx_ai);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "ai01-setup", "init-rc", (uint64_t)(uint32_t)rc_init_ai,
+                           "code");
+
+        if (rc_init_ai == 0 && fn_inst_cr && obs_address_is_callable(fn_inst_cr)) {
+            uint32_t ctx_id = *(uint32_t *)ctx_ai;
+            typedef int (*fn_ajm_cr_t)(uint32_t, uint32_t, uint32_t, void *);
+            typedef int (*fn_ajm_dst_t)(uint32_t, uint64_t);
+            fn_ajm_cr_t p_cr = (fn_ajm_cr_t)fn_inst_cr;
+            fn_ajm_dst_t p_dst = (fn_ajm_dst_t)fn_inst_dst;
+
+            /* 1. Unregistered codec: codec 0, flags 1, out 8 bytes of 0xff before
+             * register */
+            uint8_t out_unreg[8];
+            memset(out_unreg, 0xff, sizeof(out_unreg));
+            int rc_unreg = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_unreg = p_cr(ctx_id, 0, 1, out_unreg);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "ai01-unregistered-codec", "rc",
+                               (uint64_t)(uint32_t)rc_unreg, "code");
+            obs_report_bytes(id, "ai01-unregistered-codec", "out-8b", 0, out_unreg, 8);
+
+            /* 2. Registered codec, GTA's flags: sceAjmModuleRegister(ctx, 0, 0), then
+             * create twice */
+            if (fn_reg && obs_address_is_callable(fn_reg)) {
+                ((int (*)(uint32_t, uint32_t, uint64_t))fn_reg)(ctx_id, 0, 0);
+            }
+            uint8_t out_inst1[8];
+            memset(out_inst1, 0xff, sizeof(out_inst1));
+            int rc_inst1 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_inst1 = p_cr(ctx_id, 0, 1, out_inst1);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "ai01-registered-codec0-inst1", "rc",
+                               (uint64_t)(uint32_t)rc_inst1, "code");
+            obs_report_bytes(id, "ai01-registered-codec0-inst1", "out-8b", 0, out_inst1,
+                             8);
+
+            uint8_t out_inst2[8];
+            memset(out_inst2, 0xff, sizeof(out_inst2));
+            int rc_inst2 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_inst2 = p_cr(ctx_id, 0, 1, out_inst2);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "ai01-registered-codec0-inst2", "rc",
+                               (uint64_t)(uint32_t)rc_inst2, "code");
+            obs_report_bytes(id, "ai01-registered-codec0-inst2", "out-8b", 0, out_inst2,
+                             8);
+
+            /* Batch calls per update (2026-10-15T09:10Z) */
+            int bound_bi =
+                obs_address_is_callable((const void *)&sceAjmBatchInitialize_static);
+            int bound_jd =
+                obs_address_is_callable((const void *)&sceAjmBatchJobDecode_static);
+            obs_report_measure(id, "sceAjmBatchInitialize", "bound", (uint64_t)bound_bi,
+                               "bool");
+            obs_report_measure(id, "sceAjmBatchJobDecode", "bound", (uint64_t)bound_jd,
+                               "bool");
+            if (!bound_bi) {
+                obs_report_measure(id, "sceAjmBatchInitialize", "status", 0,
+                                   "unexported-to-userland");
+            }
+            if (!bound_jd) {
+                obs_report_measure(id, "sceAjmBatchJobDecode", "status", 0,
+                                   "unexported-to-userland");
+            }
+            if (bound_bi) {
+                uint8_t batch_buf[0x1000];
+                memset(batch_buf, 0xcc, sizeof(batch_buf));
+                uint64_t batch = 0xccccccccccccccccULL;
+                int rc_bi = -1;
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_bi = sceAjmBatchInitialize_static(batch_buf, sizeof(batch_buf),
+                                                         &batch);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                obs_report_measure(id, "ai01-batch-init", "rc",
+                                   (uint64_t)(uint32_t)rc_bi, "code");
+                obs_report_measure(id, "ai01-batch-init", "batch-slot", batch, "hex");
+                obs_report_bytes(id, "ai01-batch-init", "batch-buf-32b", 0, batch_buf,
+                                 32);
+
+                if (bound_jd) {
+                    uint8_t dec_in[0x100];
+                    memset(dec_in, 0, sizeof(dec_in));
+                    int rc_bjd = -1;
+                    sig = OBS_FAULT_ARM(&guard);
+                    if (sig == 0) {
+                        uint64_t inst_id = *(uint64_t *)out_inst1;
+                        rc_bjd = sceAjmBatchJobDecode_static(
+                            &batch, inst_id, dec_in, (void *)(uintptr_t)sizeof(dec_in),
+                            NULL, NULL);
+                        obs_fault_unregister();
+                    } else {
+                        obs_fault_unregister();
+                    }
+                    obs_report_measure(id, "ai01-batch-job-decode", "rc",
+                                       (uint64_t)(uint32_t)rc_bjd, "code");
+                    obs_report_bytes(id, "ai01-batch-job-decode", "batch-buf-32b", 0,
+                                     batch_buf, 32);
+                }
+            }
+
+            /* 3. Codecs 1 to 3 */
+            for (uint32_t c = 1; c <= 3; c++) {
+                char tag[64];
+                oops_snprintf(tag, sizeof(tag), "ai01-registered-codec%u", c);
+                if (fn_reg && obs_address_is_callable(fn_reg)) {
+                    ((int (*)(uint32_t, uint32_t, uint64_t))fn_reg)(ctx_id, c, 0);
+                }
+                uint8_t out_c[8];
+                memset(out_c, 0xff, sizeof(out_c));
+                int rc_c = -1;
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_c = p_cr(ctx_id, c, 1, out_c);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                obs_report_measure(id, tag, "rc", (uint64_t)(uint32_t)rc_c, "code");
+                obs_report_bytes(id, tag, "out-8b", 0, out_c, 8);
+            }
+
+            /* 4. Flags: on codec 0, flags = 0 and = 0x2 */
+            uint8_t out_f0[8];
+            memset(out_f0, 0xff, sizeof(out_f0));
+            int rc_f0 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_f0 = p_cr(ctx_id, 0, 0, out_f0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "ai01-flags-0", "rc", (uint64_t)(uint32_t)rc_f0,
+                               "code");
+            obs_report_bytes(id, "ai01-flags-0", "out-8b", 0, out_f0, 8);
+
+            uint8_t out_f2[8];
+            memset(out_f2, 0xff, sizeof(out_f2));
+            int rc_f2 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_f2 = p_cr(ctx_id, 0, 2, out_f2);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "ai01-flags-2", "rc", (uint64_t)(uint32_t)rc_f2,
+                               "code");
+            obs_report_bytes(id, "ai01-flags-2", "out-8b", 0, out_f2, 8);
+
+            /* 5. Destroy: sceAjmInstanceDestroy(ctx, id) on an id from arm 2, then
+             * repeat */
+            if (p_dst && obs_address_is_callable((const void *)p_dst)) {
+                uint64_t id_to_destroy = *(uint64_t *)out_inst1;
+                int rc_d1 = -1;
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_d1 = p_dst(ctx_id, id_to_destroy);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                obs_report_measure(id, "ai01-destroy", "rc-first",
+                                   (uint64_t)(uint32_t)rc_d1, "code");
+
+                int rc_d2 = -1;
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_d2 = p_dst(ctx_id, id_to_destroy);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+                obs_report_measure(id, "ai01-destroy", "rc-repeat",
+                                   (uint64_t)(uint32_t)rc_d2, "code");
+            }
+
+            if (fn_fin && obs_address_is_callable(fn_fin)) {
+                ((int (*)(uint32_t))fn_fin)(ctx_id);
+            }
+        }
+
+        /* (4) REQ-20261009T1430Z-aj01: sceAjmFinalize(ctx) */
+        fn_fin = census_resolve_symbol("libSceAjm", "$61KsoOqrezA", "sceAjmFinalize",
+                                       (const void *)&sceAjmFinalize, NULL);
         if (!fn_fin) {
             fn_fin =
                 census_resolve_symbol("libSceAjm", "$MHur6qCsUus", "sceAjmFinalize",

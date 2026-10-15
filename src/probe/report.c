@@ -534,8 +534,7 @@ void obs_report_written(const char *id, const char *symbol, const char *what,
         if (before[i] == after[i]) {
             run++;
         } else if (run != 0) {
-            obs_report_bytes(id, symbol, "untouched", i - run,
-                             (const unsigned char *)"", run);
+            obs_report_bytes(id, symbol, "untouched", i - run, &after[i - run], run);
             run = 0;
         }
     }

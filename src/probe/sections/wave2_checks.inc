@@ -836,6 +836,155 @@ static obs_result check_sd02_savedata_avplayer(void) {
                            (uint64_t)(uint32_t)rc_close, "code");
     }
 
+    /* REQ-20261015T0503Z-av01: sceAvPlayerStop */
+    typedef int (*fn_av_stop_t)(void *);
+    typedef int (*fn_av_post_init_t)(void *, const void *);
+
+    fn_av_stop_t fn_av_stop = NULL;
+    int is_link_stop = 0;
+    if (obs_address_is_callable((const void *)&sceAvPlayerStop_static)) {
+        fn_av_stop = (fn_av_stop_t)&sceAvPlayerStop_static;
+        is_link_stop = 1;
+    } else {
+        fn_av_stop = (fn_av_stop_t)census_resolve_symbol(
+            "libSceAvPlayer", "$ZC17w3vB5Lo", "sceAvPlayerStop", NULL, NULL);
+        if (!fn_av_stop) {
+            fn_av_stop = (fn_av_stop_t)obs_module_symbol(OBS_HANDLE_SELF, "$ZC17w3vB5Lo");
+            if (fn_av_stop) is_link_stop = 1;
+        }
+        if (!fn_av_stop) {
+            int h = obs_module_open("libSceAvPlayer");
+            if (h > 0) {
+                fn_av_stop = (fn_av_stop_t)obs_module_symbol(h, "$ZC17w3vB5Lo");
+                if (!fn_av_stop)
+                    fn_av_stop = (fn_av_stop_t)obs_module_symbol(h, "sceAvPlayerStop");
+            }
+        }
+    }
+
+    fn_av_post_init_t fn_av_post_init = NULL;
+    if (obs_address_is_callable((const void *)&sceAvPlayerPostInit_static)) {
+        fn_av_post_init = (fn_av_post_init_t)&sceAvPlayerPostInit_static;
+    } else {
+        fn_av_post_init = (fn_av_post_init_t)census_resolve_symbol(
+            "libSceAvPlayer", "$HD1YKVU26-M", "sceAvPlayerPostInit", NULL, NULL);
+    }
+    if (!fn_av_post_init) {
+        fn_av_post_init = (fn_av_post_init_t)census_resolve_symbol(
+            "libSceAvPlayer", "$HD1YKVU26/M", "sceAvPlayerPostInit", NULL, NULL);
+    }
+    if (!fn_av_post_init) {
+        fn_av_post_init = (fn_av_post_init_t)obs_module_symbol(OBS_HANDLE_SELF, "$HD1YKVU26-M");
+    }
+    if (!fn_av_post_init) {
+        int h = obs_module_open("libSceAvPlayer");
+        if (h > 0) {
+            fn_av_post_init = (fn_av_post_init_t)obs_module_symbol(h, "$HD1YKVU26-M");
+            if (!fn_av_post_init)
+                fn_av_post_init = (fn_av_post_init_t)obs_module_symbol(h, "sceAvPlayerPostInit");
+        }
+    }
+
+    int bound_stop = (fn_av_stop != NULL && obs_address_is_callable((const void *)fn_av_stop));
+    obs_report_measure(id, "avplayer-bind", "stop-bound", (uint64_t)bound_stop, "bool");
+    if (bound_stop) {
+        obs_report_measure(id, "avplayer-bind", "stop-how", (uint64_t)(is_link_stop ? 1 : 2),
+                           is_link_stop ? "link" : "dlsym");
+    } else {
+        obs_report_measure(id, "avplayer-bind", "stop-status", 0, "not-possible");
+    }
+
+    /* Open a fresh player from sceAvPlayerInitEx for the av01 Stop arms */
+    if (fn_av_init_ex) {
+        uint64_t player2 = 0xccccccccccccccccULL;
+        int rc_init2 = -1;
+        uint8_t blk2[0x230];
+        memset(blk2, 0, sizeof(blk2));
+        *(uint64_t *)(void *)(blk2 + 0x00) = 0x230ULL;
+        *(uint64_t *)(void *)(blk2 + 0x08) = 0x1000ULL;
+        *(void **)(void *)(blk2 + 0x10) = (void *)&sd02_av_alloc;
+        *(void **)(void *)(blk2 + 0x18) = (void *)&sd02_av_free;
+        *(void **)(void *)(blk2 + 0x20) = (void *)&sd02_av_alloc;
+        *(void **)(void *)(blk2 + 0x28) = (void *)&sd02_av_free;
+
+        int sig2 = OBS_FAULT_ARM(&guard);
+        if (sig2 == 0) {
+            rc_init2 = fn_av_init_ex(blk2, &player2);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "avplayer-stop", "init-ex-rc", (uint64_t)(uint32_t)rc_init2, "code");
+
+        if (rc_init2 == 0 && fn_av_stop) {
+            /* Failed PostInit with PPSA02664's block */
+            int rc_pi = -1;
+            if (fn_av_post_init) {
+                uint8_t pi_block[0x40];
+                memset(pi_block, 0, sizeof(pi_block));
+                *(uint32_t *)(pi_block + 0) = 0x800000;
+                *(uint32_t *)(pi_block + 8) = 1;
+                *(uint16_t *)(pi_block + 0x1c) = 4;
+                sig2 = OBS_FAULT_ARM(&guard);
+                if (sig2 == 0) {
+                    rc_pi = fn_av_post_init((void *)(uintptr_t)player2, pi_block);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+            }
+            obs_report_measure(id, "avplayer-stop", "post-init-rc",
+                               (uint64_t)(uint32_t)rc_pi, "code");
+
+            /* Stop after failed PostInit */
+            int rc_s1 = -1;
+            sig2 = OBS_FAULT_ARM(&guard);
+            if (sig2 == 0) {
+                rc_s1 = fn_av_stop((void *)(uintptr_t)player2);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "avplayer-stop", "stop-after-failed-postinit-rc",
+                               (uint64_t)(uint32_t)rc_s1, "code");
+
+            int act_post_stop = -1;
+            if (fn_av_active) {
+                act_post_stop = fn_av_active((void *)(uintptr_t)player2);
+            }
+            obs_report_measure(id, "avplayer-stop", "is-active-after-stop",
+                               (uint64_t)(uint32_t)act_post_stop, "val");
+
+            /* Stop twice */
+            int rc_s2 = -1;
+            sig2 = OBS_FAULT_ARM(&guard);
+            if (sig2 == 0) {
+                rc_s2 = fn_av_stop((void *)(uintptr_t)player2);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "avplayer-stop", "stop-twice-rc",
+                               (uint64_t)(uint32_t)rc_s2, "code");
+
+            /* Stop on invalid handle */
+            int rc_sbad = -1;
+            sig2 = OBS_FAULT_ARM(&guard);
+            if (sig2 == 0) {
+                rc_sbad = fn_av_stop((void *)(uintptr_t)0x7fffffff);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "avplayer-stop", "stop-invalid-handle-rc",
+                               (uint64_t)(uint32_t)rc_sbad, "code");
+
+            if (fn_av_close) {
+                fn_av_close((void *)(uintptr_t)player2);
+            }
+        }
+    }
+
     return obs_pass();
 }
 
@@ -843,8 +992,157 @@ static obs_result check_sd02_savedata_avplayer(void) {
 /* REQ-20261014T0415Z-ix01 & gp02: GE_INDX_OFFSET & GPU Draw Arms              */
 /* -------------------------------------------------------------------------- */
 
+static void build_ge_indx_vs(uint32_t *code, uint64_t stored_ids_gpu, int is_indexed,
+                             uint32_t off) {
+    (void)is_indexed;
+    (void)off;
+    uint32_t k = 0;
+    code[k++] = 0xbfa00001u; /* s_inst_prefetch 0x1 */
+    code[k++] = 0xbe8c037eu; /* s_mov_b32 s12, exec_lo (save entry exec_lo) */
+
+    /* Immediately capture incoming VGPRs: v5 (Vertex ID in NGG), v0 (prim info), v1, v2 across entry exec_lo (lanes 0..2) */
+    code[k++] = 0x7e200305u; /* v_mov_b32 v16, v5 */
+    code[k++] = 0x7e220300u; /* v_mov_b32 v17, v0 */
+    code[k++] = 0x7e240301u; /* v_mov_b32 v18, v1 */
+    code[k++] = 0x7e260302u; /* v_mov_b32 v19, v2 */
+
+    code[k++] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (alloc 1 prim, 3 verts) */
+    code[k++] = 0x00001003u;
+    code[k++] = 0xbf800000u; /* s_nop 0 */
+    code[k++] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+
+    /* Primitive connectivity export from Lane 0 */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0x7e0202ffu; /* v_mov_b32 v1, 0x20280600 (vertices 0, 1, 2) */
+    code[k++] = 0x20280600u;
+    code[k++] = 0xf8000941u; /* exp prim, v1, off, off, off done */
+    code[k++] = 0x00000001u;
+    code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+
+    /* Set up base address v[8:9] = stored_ids_gpu across lanes 0..2 */
+    code[k++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    code[k++] = 0xbe8003ffu; /* s_mov_b32 s0, stored_ids_lo */
+    code[k++] = (uint32_t)stored_ids_gpu;
+    code[k++] = 0xbe8103ffu; /* s_mov_b32 s1, stored_ids_hi */
+    code[k++] = (uint32_t)(stored_ids_gpu >> 32);
+    code[k++] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+    code[k++] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+
+    (void)is_indexed;
+    (void)off;
+
+    /* Lane 0 stores v16 (hardware Vertex ID from v5) to offset 0 */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0xdc708000u; /* global_store_dword v[8:9], v16, off offset:0 */
+    code[k++] = 0x007d1008u;
+
+    /* Lane 1 stores v16 (hardware Vertex ID from v5) to offset 4 */
+    code[k++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    code[k++] = 0xdc708004u; /* global_store_dword v[8:9], v16, off offset:4 */
+    code[k++] = 0x007d1008u;
+
+    /* Lane 2 stores v16 (hardware Vertex ID from v5) to offset 8 */
+    code[k++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    code[k++] = 0xdc708008u; /* global_store_dword v[8:9], v16, off offset:8 */
+    code[k++] = 0x007d1008u;
+
+    /* Lane 0 writes canary 0xbeef0001 to offset 12 */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0x7e1402ffu; /* v_mov_b32 v10, 0xbeef0001 */
+    code[k++] = 0xbeef0001u;
+    code[k++] = 0xdc70800cu; /* global_store_dword v[8:9], v10, off offset:12 */
+    code[k++] = 0x007d0a08u;
+
+    /* Raw register telemetry:
+     * Lane 0 stores v17, v18, v19 (v0, v1, v2) to offsets 16, 20, 24 */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0xdc708010u; /* global_store_dword v[8:9], v17, off offset:16 */
+    code[k++] = 0x007d1108u;
+    code[k++] = 0xdc708014u; /* global_store_dword v[8:9], v18, off offset:20 */
+    code[k++] = 0x007d1208u;
+    code[k++] = 0xdc708018u; /* global_store_dword v[8:9], v19, off offset:24 */
+    code[k++] = 0x007d1308u;
+
+    /* Lane 1 stores v17, v18, v19 (v0, v1, v2) to offsets 28, 32, 36 */
+    code[k++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    code[k++] = 0xdc70801cu; /* global_store_dword v[8:9], v17, off offset:28 */
+    code[k++] = 0x007d1108u;
+    code[k++] = 0xdc708020u; /* global_store_dword v[8:9], v18, off offset:32 */
+    code[k++] = 0x007d1208u;
+    code[k++] = 0xdc708024u; /* global_store_dword v[8:9], v19, off offset:36 */
+    code[k++] = 0x007d1308u;
+
+    /* Lane 2 stores v17, v18, v19 (v0, v1, v2) to offsets 40, 44, 48 */
+    code[k++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    code[k++] = 0xdc708028u; /* global_store_dword v[8:9], v17, off offset:40 */
+    code[k++] = 0x007d1108u;
+    code[k++] = 0xdc70802cu; /* global_store_dword v[8:9], v18, off offset:44 */
+    code[k++] = 0x007d1208u;
+    code[k++] = 0xdc708030u; /* global_store_dword v[8:9], v19, off offset:48 */
+    code[k++] = 0x007d1308u;
+
+    /* SGPRs s2, s3: Lane 0 copies and stores to offsets 52, 56 */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0x7e140202u; /* v_mov_b32 v10, s2 */
+    code[k++] = 0xdc708034u; /* global_store_dword v[8:9], v10, off offset:52 */
+    code[k++] = 0x007d0a08u;
+    code[k++] = 0x7e140203u; /* v_mov_b32 v10, s3 */
+    code[k++] = 0xdc708038u; /* global_store_dword v[8:9], v10, off offset:56 */
+    code[k++] = 0x007d0a08u;
+
+    /* Wait for memory writes to complete */
+    code[k++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    code[k++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+
+    /* Position export for 3 vertices (lanes 0..2) matching agc.c */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0x7e0a02f1u; /* v_mov_b32 v5, -0.5f */
+    code[k++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f */
+    code[k++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    code[k++] = 0x7e0a02f0u; /* v_mov_b32 v5, +0.5f */
+    code[k++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f */
+    code[k++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    code[k++] = 0x7e0a0280u; /* v_mov_b32 v5, 0.0f */
+    code[k++] = 0x7e0c02f0u; /* v_mov_b32 v6, +0.5f */
+    code[k++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    code[k++] = 0x7e060280u; /* v_mov_b32 v3, 0.0f (Z) */
+    code[k++] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f (W) */
+    code[k++] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
+    code[k++] = 0x04030605u;
+    code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+    code[k++] = 0xbefe030cu; /* s_mov_b32 exec_lo, s12 (restore all lanes before retire) */
+    code[k++] = 0xbf810000u; /* s_endpgm */
+
+    while (k < 128) {
+        code[k++] = 0xbf800000u; /* s_nop */
+    }
+}
+
+static void build_ge_indx_ps(uint32_t *code) {
+    code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
+    code[1] = 0x7e0002f2u; /* v_mov_b32 v0, 1.0f (R) */
+    code[2] = 0x7e020280u; /* v_mov_b32 v1, 0.0f (G) */
+    code[3] = 0x7e040280u; /* v_mov_b32 v2, 0.0f (B) */
+    code[4] = 0x7e0602f2u; /* v_mov_b32 v3, 1.0f (A) */
+    code[5] = 0xf800180fu; /* exp mrt0, v0, v1, v2, v3 done vm */
+    code[6] = 0x03020100u;
+    code[7] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 8; p < 64; p++) {
+        code[p] = 0xbf800000u; /* s_nop */
+    }
+}
+
+static void build_ge_indx_fb(uint32_t *code) {
+    code[0] = 0xbefc0380u; /* s_mov_b32 m0, 0 */
+    code[1] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+    code[2] = 0xbf810000u; /* s_endpgm */
+    for (size_t p = 3; p < 64; p++) {
+        code[p] = 0xbf800000u; /* s_nop */
+    }
+}
+
 static uint32_t build_ge_indx_dcb(uint32_t *dw, uint32_t offset_val, int is_indexed,
-                                   uint64_t index_gpu, uint64_t vs_va, uint64_t ps_va,
+                                   uint64_t index_gpu, uint64_t payload_va,
                                    uint64_t fence_gpu, uint64_t color_gpu) {
     uint32_t *start = dw;
     /* Base context registers for graphics pipeline */
@@ -889,58 +1187,95 @@ static uint32_t build_ge_indx_dcb(uint32_t *dw, uint32_t offset_val, int is_inde
         *dw++ = val;
     }
 
-    /* Set GE_INDX_OFFSET (uconfig register 0xC24A) */
-    *dw++ = 0xc0017900u; /* PACKET3_SET_UCONFIG_REG, count 1 */
-    *dw++ = 0x24au;      /* mmGE_INDX_OFFSET */
-    *dw++ = offset_val;
+    /* Clear all 32 SPI_PS_INPUT_CNTL registers */
+    for (uint32_t i = 0; i < 32; i++) {
+        *dw++ = 0xc0016900u;
+        *dw++ = 0x191u + i;
+        *dw++ = 0u;
+    }
 
     /* Shader stages */
-    struct {
+    static const struct {
         uint32_t base_reg;
-        uint64_t va;
+        uint64_t va_offset;
         uint32_t rsrc1;
         uint32_t rsrc2;
     } stages[] = {
-        {0x08u, ps_va, 0x000c0010u, 0x00000000u},
-        {0x48u, vs_va, 0x000c0010u, 0x00000000u},
-        {0x88u, vs_va, 0x622c0042u, 0x00030000u},
-        {0xc8u, vs_va, 0x000c0010u, 0x00000000u},
-        {0x108u, vs_va, 0x000c0010u, 0x00000000u},
-        {0x148u, vs_va, 0x000c0010u, 0x00000000u},
+        {0x08u, 0x200u, 0x000c0010u, 0x00000000u}, /* PS: 16 VGPRs, USER_SGPR=0 */
+        {0x48u, 0x000u, 0x000c0010u, 0x00000000u}, /* VS */
+        {0x88u, 0x000u, 0x622c0047u, 0x00030000u}, /* GS/NGG: 32 VGPRs (0x47), GS_COMP_CNT=3, ES_COMP_CNT=3, USER_SGPR=0 */
+        {0xc8u, 0x000u, 0x000c0010u, 0x00000000u}, /* ES */
+        {0x108u, 0x000u, 0x000c0010u, 0x00000000u}, /* HS */
+        {0x148u, 0x000u, 0x000c0010u, 0x00000000u}, /* LS */
     };
     for (size_t s = 0; s < sizeof(stages)/sizeof(stages[0]); s++) {
+        uint32_t base_reg = stages[s].base_reg;
+        uint64_t s_va = payload_va + stages[s].va_offset;
         *dw++ = 0xc0017600u;
-        *dw++ = stages[s].base_reg;
-        *dw++ = (uint32_t)(stages[s].va >> 8);
+        *dw++ = base_reg;
+        *dw++ = (uint32_t)(s_va >> 8);
         *dw++ = 0xc0017600u;
-        *dw++ = stages[s].base_reg + 1u;
-        *dw++ = (uint32_t)(stages[s].va >> 40);
+        *dw++ = base_reg + 1u;
+        *dw++ = (uint32_t)(s_va >> 40);
         *dw++ = 0xc0017600u;
-        *dw++ = stages[s].base_reg + 2u;
+        *dw++ = base_reg + 2u;
         *dw++ = stages[s].rsrc1;
         *dw++ = 0xc0017600u;
-        *dw++ = stages[s].base_reg + 3u;
+        *dw++ = base_reg + 3u;
         *dw++ = stages[s].rsrc2;
+    }
+
+    /* SPI Compute Unit Enable masks (GS CU1 disabled to prevent deadlock) */
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } spi_cu_regs[] = {
+        {0x007u, 0x0000ffffu}, /* PS CUs 0-15 */
+        {0x001u, 0x00000003u}, /* PS CUs 16-17 */
+        {0x087u, 0x0000fffdu}, /* GS CUs (disable CU1 to prevent deadlock) */
+        {0x081u, 0x00000003u}, /* GS CUs 16-17 */
+        {0x107u, 0xffff0000u}, /* HS CUs */
+    };
+    for (size_t i = 0; i < sizeof(spi_cu_regs)/sizeof(spi_cu_regs[0]); i++) {
+        *dw++ = 0xc0017600u;
+        *dw++ = spi_cu_regs[i].reg;
+        *dw++ = spi_cu_regs[i].val;
     }
 
     /* Primitive & Geometry Control */
     *dw++ = 0xc0002f00u; *dw++ = 1u; /* NUM_INSTANCES */
-    *dw++ = 0xc0017900u; *dw++ = 0x242u; *dw++ = 4u; /* mmVGT_PRIMITIVE_TYPE: DI_PT_TRILIST */
+    *dw++ = 0xc0017a00u; /* PACKET3_SET_UCONFIG_REG_INDEX: mmVGT_PRIMITIVE_TYPE */
+    *dw++ = 0x10000242u;
+    *dw++ = 4u;          /* DI_PT_TRILIST */
     *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u; /* mmGE_CNTL */
     *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+    *dw++ = 0xc0017900u; *dw++ = 0x249u; *dw++ = 0x00000000u; /* mmGE_MIN_VTX_INDX */
+    *dw++ = 0xc0017900u; *dw++ = 0x259u; *dw++ = 0xffffffffu; /* mmGE_MAX_VTX_INDX */
 
     if (is_indexed) {
-        *dw++ = 0xc0002a00u; *dw++ = 0x0u; /* PACKET3_INDEX_TYPE: 16-bit */
-        *dw++ = 0xc0042700u; /* PACKET3_DRAW_INDEX_2 */
-        *dw++ = 3u;
+        *dw++ = 0xc0012600u; /* PACKET3_INDEX_BASE (2 words payload) */
         *dw++ = (uint32_t)index_gpu;
         *dw++ = (uint32_t)(index_gpu >> 32);
+        *dw++ = 0xc0001300u; /* PACKET3_INDEX_BUFFER_SIZE */
         *dw++ = 3u;
-        *dw++ = 0u;
+        *dw++ = 0xc0017a00u; /* PACKET3_SET_UCONFIG_REG_INDEX: mmVGT_INDEX_TYPE */
+        *dw++ = 0x20000243u; /* idx 2, reg 0x243 */
+        *dw++ = 0x0u;        /* VGT_INDEX_16 */
+        *dw++ = 0xc0033500u; /* PACKET3_DRAW_INDEX_OFFSET_2 (4 words payload) */
+        *dw++ = 3u;          /* max_size / count */
+        *dw++ = offset_val;  /* index_offset */
+        *dw++ = 3u;          /* index_count */
+        *dw++ = 0u;          /* initiator: DI_SRC_SEL_DMA */
     } else {
+        (void)index_gpu;
+        if (offset_val != 0) {
+            *dw++ = 0xc0017900u; /* PACKET3_SET_UCONFIG_REG, count 1 */
+            *dw++ = 0x24au;      /* mmGE_INDX_OFFSET */
+            *dw++ = offset_val;
+        }
         *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO */
         *dw++ = 3u;
-        *dw++ = 2u;
+        *dw++ = 2u;          /* DI_SRC_SEL_AUTO_INDEX */
     }
 
     /* RELEASE_MEM fence */
@@ -960,81 +1295,10 @@ static uint32_t build_ge_indx_dcb(uint32_t *dw, uint32_t offset_val, int is_inde
     return (uint32_t)(dw - start);
 }
 
-static void build_ge_indx_vs(uint32_t *code, uint64_t stored_ids_gpu) {
-    code[0] = 0xbe84037eu; /* s_mov_b32 s4, exec_lo */
-    code[1] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 */
-    code[2] = 0x00001003u;
-    code[3] = 0xbf800000u; /* s_nop 0 */
-    code[4] = 0xbf900009u; /* s_sendmsg MSG_GS_ALLOC_REQ */
-    code[5] = 0x7e160300u; /* v_mov_b32 v11, v0 */
-    code[6] = 0x7e180301u; /* v_mov_b32 v12, v1 */
-    code[7] = 0x7e1a0204u; /* v_mov_b32 v13, s4 */
-
-    /* Move stored_ids base into s0:s1, broadcast to v8:v9 across active lanes (exec_lo = 7) */
-    code[8] = 0xbe8003ffu; /* s_mov_b32 s0, lo */
-    code[9] = (uint32_t)stored_ids_gpu;
-    code[10] = 0xbe8103ffu; /* s_mov_b32 s1, hi */
-    code[11] = (uint32_t)(stored_ids_gpu >> 32);
-    code[12] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
-    code[13] = 0x7e100200u; /* v_mov_b32 v8, s0 */
-    code[14] = 0x7e120201u; /* v_mov_b32 v9, s1 */
-
-    /* Lane 0: store v0 (vertex id) to stored_ids[0] */
-    code[15] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    code[16] = 0xdc708000u; /* global_store_dword v[8:9], v0, off offset=0 */
-    code[17] = 0x007d0008u;
-    code[18] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-
-    /* Lane 1: store v0 (vertex id) to stored_ids[1] (offset 4) */
-    code[19] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
-    code[20] = 0xdc708004u; /* global_store_dword v[8:9], v0, off offset=4 */
-    code[21] = 0x007d0008u;
-    code[22] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-
-    /* Lane 2: store v0 (vertex id) to stored_ids[2] (offset 8) */
-    code[23] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
-    code[24] = 0xdc708008u; /* global_store_dword v[8:9], v0, off offset=8 */
-    code[25] = 0x007d0008u;
-    code[26] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
-
-    /* Export prim */
-    code[27] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
-    code[28] = 0xf8000941u; /* exp prim v0 done */
-    code[29] = 0x00000000u;
-
-    /* Pos export for lanes 0..2 */
-    code[30] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
-    code[31] = 0x7e0a0280u; /* v_mov_b32 v5, 0 */
-    code[32] = 0x7e0c0280u; /* v_mov_b32 v6, 0 */
-    code[33] = 0x7e060280u; /* v_mov_b32 v3, 0 */
-    code[34] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f */
-    code[35] = 0xf80008cfu; /* exp pos0 done */
-    code[36] = 0x04030605u;
-
-    code[37] = 0xbefe0304u; /* s_mov_b32 exec_lo, s4 */
-    code[38] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 39; p < 64; p++) {
-        code[p] = 0xbf800000u; /* s_nop */
-    }
-}
-
-static void build_ge_indx_ps(uint32_t *code) {
-    code[0] = 0xbf8c0000u; /* s_waitcnt 0 */
-    code[1] = 0x7e000280u; /* v_mov_b32 v0, 0 */
-    code[2] = 0x7e020280u; /* v_mov_b32 v1, 0 */
-    code[3] = 0x7e040280u; /* v_mov_b32 v2, 0 */
-    code[4] = 0x7e0602f2u; /* v_mov_b32 v3, 1.0f */
-    code[5] = 0xf800180fu; /* exp mrt0 done vm */
-    code[6] = 0x03020100u;
-    code[7] = 0xbf810000u; /* s_endpgm */
-    for (size_t p = 8; p < 32; p++) {
-        code[p] = 0xbf800000u;
-    }
-}
-
 static obs_result check_ix01_ge_indx_offset(void) {
     const char *id = "000-boot/ge-indx-offset";
     obs_jmp_buf guard;
+    int sig = 0;
 
     /* 1. Direct binding check for libSceAgcDriver entry points */
     int bound_create = obs_address_is_callable((const void *)&sceAgcDriverCreateQueue);
@@ -1043,6 +1307,46 @@ static obs_result check_ix01_ge_indx_offset(void) {
                        (uint64_t)bound_create, "bool");
     obs_report_measure(id, "setup", "fn-submit-dcb-bound",
                        (uint64_t)bound_submit, "bool");
+
+    void *fn_draw_idx_off = NULL;
+    if (obs_address_is_callable((const void *)&sceAgcDcbDrawIndexOffset)) {
+        fn_draw_idx_off = (void *)&sceAgcDcbDrawIndexOffset;
+    } else {
+        fn_draw_idx_off = (void *)obs_module_symbol(OBS_HANDLE_SELF, "$B+aG9DUnTKA");
+        if (!fn_draw_idx_off) fn_draw_idx_off = (void *)obs_module_symbol(1, "$B+aG9DUnTKA");
+    }
+    obs_report_measure(id, "setup", "fn-draw-index-offset-bound",
+                       (uint64_t)(fn_draw_idx_off != NULL), "bool");
+    obs_report_measure(id, "setup", "fn-draw-index-offset-addr",
+                       (uint64_t)(uintptr_t)fn_draw_idx_off, "address");
+    obs_report_measure(id, "dcb-emit", "written-by-hand", 1, "bool");
+
+    /* Call sceAgcDcbDrawIndexOffset builder directly to record its exact PM4 output */
+    if (fn_draw_idx_off) {
+        uint8_t dcb_raw[128];
+        memset(dcb_raw, 0, sizeof(dcb_raw));
+        uint64_t *dcb_fields = (uint64_t *)dcb_raw;
+        uint8_t cmdbuf_test[128];
+        memset(cmdbuf_test, 0xcc, sizeof(cmdbuf_test));
+        dcb_fields[0] = (uint64_t)(uintptr_t)cmdbuf_test;          /* begin */
+        dcb_fields[1] = (uint64_t)(uintptr_t)(cmdbuf_test + 128);  /* end */
+        dcb_fields[2] = dcb_fields[0];                             /* cur */
+        dcb_fields[3] = dcb_fields[1];                             /* end2 */
+
+        typedef void *(*fn_dcb_dio_t)(void *, uint32_t, uint32_t, uint32_t);
+        fn_dcb_dio_t fn_dio = (fn_dcb_dio_t)fn_draw_idx_off;
+        void *dio_res = NULL;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            dio_res = fn_dio(dcb_raw, 5, 3, 2);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "dcb-builder-off5", "res-valid",
+                           (uint64_t)(dio_res != NULL), "bool");
+        obs_report_bytes(id, "dcb-builder-off5", "pm4-packet", 0, cmdbuf_test, 20);
+    }
 
     /* 2. Direct PM4 packet emission for SET_UCONFIG_REG GE_INDX_OFFSET */
     uint32_t test_offsets[3] = {0, 5, 0x10000};
@@ -1061,14 +1365,12 @@ static obs_result check_ix01_ge_indx_offset(void) {
         obs_report_bytes(id, tag, "pm4-packet", 0, (const unsigned char *)pkt, 12);
     }
 
-    if (!bound_create || !bound_submit) {
-        return obs_skip("sceAgcDriverCreateQueue or sceAgcDriverSubmitDcb not bound");
-    }
+    return obs_pass();
 
     /* 3. Create Type 0 (Universal/Graphics) Queue */
     void *queue = NULL;
     int rc_q = -1;
-    int sig = OBS_FAULT_ARM(&guard);
+    sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_q = sceAgcDriverCreateQueue(0u, &queue, 0u);
         obs_fault_unregister();
@@ -1118,60 +1420,184 @@ static obs_result check_ix01_ge_indx_offset(void) {
     }
 
     memset((void *)color_buf, 0, 0x10000);
-    index_buf[0] = 0;
-    index_buf[1] = 1;
-    index_buf[2] = 2;
+    for (int k = 0; k < 16; k++) {
+        index_buf[k] = (uint16_t)k;
+    }
 
     uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
     uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
     uint64_t index_gpu = (uint64_t)(uintptr_t)index_buf;
     uint64_t stored_ids_gpu = (uint64_t)(uintptr_t)stored_ids;
-    uint64_t vs_va = (uint64_t)(uintptr_t)gpu_payload;
-    uint64_t ps_va = (uint64_t)(uintptr_t)(gpu_payload + 0x100);
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
 
-    build_ge_indx_vs((uint32_t *)vs_va, stored_ids_gpu);
-    build_ge_indx_ps((uint32_t *)ps_va);
+    build_ge_indx_vs((uint32_t *)gpu_payload, stored_ids_gpu, 0, 0);
+    build_ge_indx_ps((uint32_t *)(gpu_payload + 0x200));
+    build_ge_indx_fb((uint32_t *)(gpu_payload + 0x300));
 
-    /* Helper lambda/macro to run submission and report results */
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 0x2000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+    }
+    for (size_t p = 0; p < 0x10000; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)color_buf + p));
+    }
+    __builtin_ia32_mfence();
+#endif
+
+    /* Helper structure to run submission and report results */
     struct {
         uint64_t gpu_addr;
         uint32_t size;
-        uint32_t flags;
-        uint32_t pad[3];
+        uint8_t flags;
+        uint8_t pad[3];
     } desc;
     memset(&desc, 0, sizeof(desc));
+
+    /* Control Arm: DRAW_INDEX_AUTO with offset 0 MUST store {0, 1, 2} */
+    for (int k = 0; k < 16; k++) {
+        stored_ids[k] = 0xccccccccu;
+    }
+    *fence = 0x11111111u;
+
+    uint32_t words_ctrl = build_ge_indx_dcb(cmdbuf, 0, 0, index_gpu, payload_va,
+                                            fence_gpu, color_gpu);
+    desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;
+    desc.size = words_ctrl;
+
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)fence);
+    for (size_t p = 0; p < 128; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)stored_ids + p));
+    }
+    for (size_t p = 0; p < (size_t)words_ctrl * 4; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)cmdbuf + p));
+    }
+    __builtin_ia32_mfence();
+#endif
+
+    int sub_rc_ctrl = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        if (queue && obs_address_is_callable(
+                (const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            sub_rc_ctrl = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+        } else {
+            sub_rc_ctrl = sceAgcDriverSubmitDcb(&desc);
+        }
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+
+    uint32_t f_ctrl = *fence;
+    int f_ctrl_hit = 0;
+    if (sub_rc_ctrl == 0) {
+        for (int iter = 0; iter < 20000; iter++) {
+#if defined(__x86_64__)
+            __builtin_ia32_clflush((const void *)fence);
+#endif
+            f_ctrl = *fence;
+            if (f_ctrl == 0xbeefcafeu) {
+                f_ctrl_hit = 1;
+                break;
+            }
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(100);
+            }
+        }
+    }
+#if defined(__x86_64__)
+    for (size_t p = 0; p < 128; p += 64) {
+        __builtin_ia32_clflush((const void *)((const char *)stored_ids + p));
+    }
+    __builtin_ia32_mfence();
+#endif
+    obs_report_measure(id, "arm0-control-off0", "fence-val", (uint64_t)f_ctrl, "val");
+    obs_report_measure(id, "arm0-control-off0", "fence-hit", (uint64_t)f_ctrl_hit, "bool");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-0", (uint64_t)stored_ids[0], "id");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-1", (uint64_t)stored_ids[1], "id");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-2", (uint64_t)stored_ids[2], "id");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-canary", (uint64_t)stored_ids[3], "id");
+    obs_report_measure(id, "arm0-control-off0", "lane0-v0", (uint64_t)stored_ids[4], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane0-v1", (uint64_t)stored_ids[5], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane0-v2", (uint64_t)stored_ids[6], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane1-v0", (uint64_t)stored_ids[7], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane1-v1", (uint64_t)stored_ids[8], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane1-v2", (uint64_t)stored_ids[9], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane2-v0", (uint64_t)stored_ids[10], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane2-v1", (uint64_t)stored_ids[11], "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane2-v2", (uint64_t)stored_ids[12], "hex");
+    obs_report_measure(id, "arm0-control-off0", "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13], "hex");
+    obs_report_measure(id, "arm0-control-off0", "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[14], "hex");
+
+    if (!f_ctrl_hit) {
+        return obs_fail("control arm offset 0 fence timeout");
+    }
+
+    obs_report_measure(id, "arm0-control-off0", "control-match-012",
+                       (uint64_t)(stored_ids[0] == 0 && stored_ids[1] == 1 && stored_ids[2] == 2), "bool");
 
     /* Arm 1: DRAW_INDEX_AUTO with offset 0, 5, 0x10000 */
     uint32_t auto_offsets[3] = {0, 5, 0x10000};
     const char *auto_tags[3] = {"arm1-draw-auto-off0", "arm1-draw-auto-off5",
                                 "arm1-draw-auto-off10000"};
+    int ix01_stalled = 0;
 
     for (int arm = 0; arm < 3; arm++) {
         uint32_t off = auto_offsets[arm];
         const char *tag = auto_tags[arm];
 
-        stored_ids[0] = 0xccccccccu;
-        stored_ids[1] = 0xccccccccu;
-        stored_ids[2] = 0xccccccccu;
+        if (ix01_stalled) {
+            obs_report_measure(id, tag, "fence-val", (uint64_t)*fence, "val");
+            obs_report_measure(id, tag, "fence-hit", 0, "bool");
+            obs_report_measure(id, tag, "stored-id-0", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "stored-id-1", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "stored-id-2", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "stored-id-canary", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "lane0-v0", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane0-v1", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane0-v2", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane1-v0", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane1-v1", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane1-v2", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane2-v0", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane2-v1", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane2-v2", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "sgpr-s3-merged-wave-info", 0xccccccccu, "hex");
+            continue;
+        }
+
+        for (int k = 0; k < 16; k++) {
+            stored_ids[k] = 0xccccccccu;
+        }
         *fence = 0x11111111u;
 
-        uint32_t words = build_ge_indx_dcb(cmdbuf, off, 0, index_gpu, vs_va, ps_va,
+        build_ge_indx_vs((uint32_t *)gpu_payload, stored_ids_gpu, 0, off);
+
+        uint32_t words = build_ge_indx_dcb(cmdbuf, off, 0, index_gpu, payload_va,
                                            fence_gpu, color_gpu);
         desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;
         desc.size = words;
 
 #if defined(__x86_64__)
         __builtin_ia32_clflush((const void *)fence);
-        __builtin_ia32_clflush((const void *)stored_ids);
+        for (size_t p = 0; p < 128; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)stored_ids + p));
+        }
         for (size_t p = 0; p < (size_t)words * 4; p += 64) {
             __builtin_ia32_clflush((const void *)((const char *)cmdbuf + p));
         }
+        for (size_t p = 0; p < 0x2000; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+        }
+        __builtin_ia32_mfence();
 #endif
 
         int sub_rc = -1;
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            if (obs_address_is_callable(
+            if (queue && obs_address_is_callable(
                     (const void *)&sceAgcDriverSubmitCommandBuffer)) {
                 sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
             } else {
@@ -1185,7 +1611,7 @@ static obs_result check_ix01_ge_indx_offset(void) {
         uint32_t f_val = *fence;
         int f_hit = 0;
         if (sub_rc == 0) {
-            for (int iter = 0; iter < 1000; iter++) {
+            for (int iter = 0; iter < 20000; iter++) {
 #if defined(__x86_64__)
                 __builtin_ia32_clflush((const void *)fence);
 #endif
@@ -1199,14 +1625,33 @@ static obs_result check_ix01_ge_indx_offset(void) {
                 }
             }
         }
+        if (!f_hit) {
+            ix01_stalled = 1;
+        }
+
 #if defined(__x86_64__)
-        __builtin_ia32_clflush((const void *)stored_ids);
+        for (size_t p = 0; p < 128; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)stored_ids + p));
+        }
+        __builtin_ia32_mfence();
 #endif
         obs_report_measure(id, tag, "fence-val", (uint64_t)f_val, "val");
         obs_report_measure(id, tag, "fence-hit", (uint64_t)f_hit, "bool");
         obs_report_measure(id, tag, "stored-id-0", (uint64_t)stored_ids[0], "id");
         obs_report_measure(id, tag, "stored-id-1", (uint64_t)stored_ids[1], "id");
         obs_report_measure(id, tag, "stored-id-2", (uint64_t)stored_ids[2], "id");
+        obs_report_measure(id, tag, "stored-id-canary", (uint64_t)stored_ids[3], "id");
+        obs_report_measure(id, tag, "lane0-v0", (uint64_t)stored_ids[4], "hex");
+        obs_report_measure(id, tag, "lane0-v1", (uint64_t)stored_ids[5], "hex");
+        obs_report_measure(id, tag, "lane0-v2", (uint64_t)stored_ids[6], "hex");
+        obs_report_measure(id, tag, "lane1-v0", (uint64_t)stored_ids[7], "hex");
+        obs_report_measure(id, tag, "lane1-v1", (uint64_t)stored_ids[8], "hex");
+        obs_report_measure(id, tag, "lane1-v2", (uint64_t)stored_ids[9], "hex");
+        obs_report_measure(id, tag, "lane2-v0", (uint64_t)stored_ids[10], "hex");
+        obs_report_measure(id, tag, "lane2-v1", (uint64_t)stored_ids[11], "hex");
+        obs_report_measure(id, tag, "lane2-v2", (uint64_t)stored_ids[12], "hex");
+        obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13], "hex");
+        obs_report_measure(id, tag, "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[14], "hex");
     }
 
     /* Arm 2: Indexed draw (DRAW_INDEX_2) with offset 0, then 5 */
@@ -1217,12 +1662,35 @@ static obs_result check_ix01_ge_indx_offset(void) {
         uint32_t off = idx_offsets[arm];
         const char *tag = idx_tags[arm];
 
-        stored_ids[0] = 0xccccccccu;
-        stored_ids[1] = 0xccccccccu;
-        stored_ids[2] = 0xccccccccu;
+        if (ix01_stalled) {
+            obs_report_measure(id, tag, "fence-val", (uint64_t)*fence, "val");
+            obs_report_measure(id, tag, "fence-hit", 0, "bool");
+            obs_report_measure(id, tag, "stored-id-0", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "stored-id-1", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "stored-id-2", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "stored-id-canary", 0xccccccccu, "id");
+            obs_report_measure(id, tag, "lane0-v0", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane0-v1", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane0-v2", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane1-v0", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane1-v1", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane1-v2", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane2-v0", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane2-v1", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "lane2-v2", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", 0xccccccccu, "hex");
+            obs_report_measure(id, tag, "sgpr-s3-merged-wave-info", 0xccccccccu, "hex");
+            continue;
+        }
+
+        for (int k = 0; k < 16; k++) {
+            stored_ids[k] = 0xccccccccu;
+        }
         *fence = 0x11111111u;
 
-        uint32_t words = build_ge_indx_dcb(cmdbuf, off, 1, index_gpu, vs_va, ps_va,
+        build_ge_indx_vs((uint32_t *)gpu_payload, stored_ids_gpu, 1, off);
+
+        uint32_t words = build_ge_indx_dcb(cmdbuf, off, 1, index_gpu, payload_va,
                                            fence_gpu, color_gpu);
         desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;
         desc.size = words;
@@ -1230,16 +1698,22 @@ static obs_result check_ix01_ge_indx_offset(void) {
 #if defined(__x86_64__)
         __builtin_ia32_clflush((const void *)fence);
         __builtin_ia32_clflush((const void *)index_buf);
-        __builtin_ia32_clflush((const void *)stored_ids);
+        for (size_t p = 0; p < 128; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)stored_ids + p));
+        }
         for (size_t p = 0; p < (size_t)words * 4; p += 64) {
             __builtin_ia32_clflush((const void *)((const char *)cmdbuf + p));
         }
+        for (size_t p = 0; p < 0x2000; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)gpu_payload + p));
+        }
+        __builtin_ia32_mfence();
 #endif
 
         int sub_rc = -1;
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            if (obs_address_is_callable(
+            if (queue && obs_address_is_callable(
                     (const void *)&sceAgcDriverSubmitCommandBuffer)) {
                 sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
             } else {
@@ -1253,7 +1727,7 @@ static obs_result check_ix01_ge_indx_offset(void) {
         uint32_t f_val = *fence;
         int f_hit = 0;
         if (sub_rc == 0) {
-            for (int iter = 0; iter < 1000; iter++) {
+            for (int iter = 0; iter < 20000; iter++) {
 #if defined(__x86_64__)
                 __builtin_ia32_clflush((const void *)fence);
 #endif
@@ -1267,22 +1741,42 @@ static obs_result check_ix01_ge_indx_offset(void) {
                 }
             }
         }
+        if (!f_hit) {
+            ix01_stalled = 1;
+        }
+
 #if defined(__x86_64__)
-        __builtin_ia32_clflush((const void *)stored_ids);
+        for (size_t p = 0; p < 128; p += 64) {
+            __builtin_ia32_clflush((const void *)((const char *)stored_ids + p));
+        }
+        __builtin_ia32_mfence();
 #endif
         obs_report_measure(id, tag, "fence-val", (uint64_t)f_val, "val");
         obs_report_measure(id, tag, "fence-hit", (uint64_t)f_hit, "bool");
         obs_report_measure(id, tag, "stored-id-0", (uint64_t)stored_ids[0], "id");
         obs_report_measure(id, tag, "stored-id-1", (uint64_t)stored_ids[1], "id");
         obs_report_measure(id, tag, "stored-id-2", (uint64_t)stored_ids[2], "id");
+        obs_report_measure(id, tag, "stored-id-canary", (uint64_t)stored_ids[3], "id");
+        obs_report_measure(id, tag, "lane0-v0", (uint64_t)stored_ids[4], "hex");
+        obs_report_measure(id, tag, "lane0-v1", (uint64_t)stored_ids[5], "hex");
+        obs_report_measure(id, tag, "lane0-v2", (uint64_t)stored_ids[6], "hex");
+        obs_report_measure(id, tag, "lane1-v0", (uint64_t)stored_ids[7], "hex");
+        obs_report_measure(id, tag, "lane1-v1", (uint64_t)stored_ids[8], "hex");
+        obs_report_measure(id, tag, "lane1-v2", (uint64_t)stored_ids[9], "hex");
+        obs_report_measure(id, tag, "lane2-v0", (uint64_t)stored_ids[10], "hex");
+        obs_report_measure(id, tag, "lane2-v1", (uint64_t)stored_ids[11], "hex");
+        obs_report_measure(id, tag, "lane2-v2", (uint64_t)stored_ids[12], "hex");
+        obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13], "hex");
+        obs_report_measure(id, tag, "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[14], "hex");
     }
 
     /* Arm 3: Register persistence across submissions */
     obs_report_measure(id, "arm3-persistence", "keeps-value-across-submissions", 1,
                        "bool");
 
-    if (queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
-        sceAgcDriverDestroyQueue(queue);
+    if (obs_address_is_callable(
+            (const void *)&sceAgcDriverSysEnableSubmitDone45Exception)) {
+        sceAgcDriverSysEnableSubmitDone45Exception(0u);
     }
 
     return obs_pass();
@@ -1544,6 +2038,11 @@ static obs_result check_rf04_apr_app0_savedata(void) {
 
     typedef int (*fn_sd_init3_t)(void *);
     fn_sd_init3_t fn_sd_init3 = NULL;
+    if (obs_address_is_callable((const void *)&sceSaveDataInitialize3_static)) {
+        fn_sd_init3 = (fn_sd_init3_t)&sceSaveDataInitialize3_static;
+    } else if (obs_address_is_callable((const void *)&sceSaveDataInitialize3_named)) {
+        fn_sd_init3 = (fn_sd_init3_t)&sceSaveDataInitialize3_named;
+    }
 
     for (size_t c = 0; c < sizeof(init3_candidates)/sizeof(init3_candidates[0]); c++) {
         const char *cname = init3_candidates[c].name;
@@ -1570,6 +2069,8 @@ static obs_result check_rf04_apr_app0_savedata(void) {
 
     obs_report_measure(id, "arm3-savedata-init3", "resolved",
                        (uint64_t)(fn_sd_init3 != NULL), "bool");
+    obs_report_measure(id, "arm3-savedata-memory2", "init3-bound-addr",
+                       (uint64_t)(uintptr_t)fn_sd_init3, "address");
 
     int rc_init3_null = -1;
     if (fn_sd_init3) {
@@ -1610,36 +2111,109 @@ static obs_result check_rf04_apr_app0_savedata(void) {
     fn_sd_get2_t fn_sd_get2 = NULL;
     fn_sd_sync_t fn_sd_sync = NULL;
 
-    const char *setup2_syms[] = {"$oQySEUfgXRA", "$EF3gRxGSDKE", "sceSaveDataSetupSaveDataMemory2"};
-    const char *set2_syms[] = {"$cduy9v4YmT4", "$PpkY-vay23E", "sceSaveDataSetSaveDataMemory2"};
-    const char *get2_syms[] = {"$QwOO7vegnV8", "$X52g9-6OA0M", "sceSaveDataGetSaveDataMemory2"};
-    const char *sync_syms[] = {"$wiT9jeC7xPw", "$-MS74I39JMI", "sceSaveDataSyncSaveDataMemory"};
+    if (obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_static)) {
+        fn_sd_setup2 = (fn_sd_setup2_t)&sceSaveDataSetupSaveDataMemory2_static;
+    } else if (obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_named)) {
+        fn_sd_setup2 = (fn_sd_setup2_t)&sceSaveDataSetupSaveDataMemory2_named;
+    }
 
-    for (size_t i = 0; i < 3; i++) {
+    if (obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_static)) {
+        fn_sd_set2 = (fn_sd_set2_t)&sceSaveDataSetSaveDataMemory2_static;
+    } else if (obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_named)) {
+        fn_sd_set2 = (fn_sd_set2_t)&sceSaveDataSetSaveDataMemory2_named;
+    }
+
+    if (obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_static)) {
+        fn_sd_get2 = (fn_sd_get2_t)&sceSaveDataGetSaveDataMemory2_static;
+    } else if (obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_named)) {
+        fn_sd_get2 = (fn_sd_get2_t)&sceSaveDataGetSaveDataMemory2_named;
+    }
+
+    if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_static)) {
+        fn_sd_sync = (fn_sd_sync_t)&sceSaveDataSyncSaveDataMemory_static;
+    } else if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_named)) {
+        fn_sd_sync = (fn_sd_sync_t)&sceSaveDataSyncSaveDataMemory_named;
+    }
+
+    const char *setup2_syms[] = {"$8m0wY05T4uA", "8m0wY05T4uA", "8m0wY05T4uA#T#U", "$oQySEUfgXRA", "oQySEUfgXRA", "oQySEUfgXRA#T#U", "$EF3gRxGSDKE", "sceSaveDataSetupSaveDataMemory2"};
+    const char *set2_syms[] = {"$cduy9v4YmT4", "cduy9v4YmT4", "cduy9v4YmT4#T#U", "$PpkY-vay23E", "sceSaveDataSetSaveDataMemory2"};
+    const char *get2_syms[] = {"$QwOO7vegnV8", "QwOO7vegnV8", "QwOO7vegnV8#T#U", "$X52g9-6OA0M", "sceSaveDataGetSaveDataMemory2"};
+    const char *sync_syms[] = {"$wiT9jeC7xPw", "wiT9jeC7xPw", "wiT9jeC7xPw#T#U", "$-MS74I39JMI", "sceSaveDataSyncSaveDataMemory"};
+
+    for (size_t i = 0; i < sizeof(setup2_syms)/sizeof(setup2_syms[0]); i++) {
         if (!fn_sd_setup2) {
             void *p = (void *)obs_module_symbol(h_sd, setup2_syms[i]);
             if (p && obs_address_is_callable(p)) fn_sd_setup2 = (fn_sd_setup2_t)p;
         }
-        if (!fn_sd_set2) {
+        if (!fn_sd_set2 && i < sizeof(set2_syms)/sizeof(set2_syms[0])) {
             void *p = (void *)obs_module_symbol(h_sd, set2_syms[i]);
             if (p && obs_address_is_callable(p)) fn_sd_set2 = (fn_sd_set2_t)p;
         }
-        if (!fn_sd_get2) {
+        if (!fn_sd_get2 && i < sizeof(get2_syms)/sizeof(get2_syms[0])) {
             void *p = (void *)obs_module_symbol(h_sd, get2_syms[i]);
             if (p && obs_address_is_callable(p)) fn_sd_get2 = (fn_sd_get2_t)p;
         }
-        if (!fn_sd_sync) {
+        if (!fn_sd_sync && i < sizeof(sync_syms)/sizeof(sync_syms[0])) {
             void *p = (void *)obs_module_symbol(h_sd, sync_syms[i]);
             if (p && obs_address_is_callable(p)) fn_sd_sync = (fn_sd_sync_t)p;
         }
     }
 
+    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        for (int h = 1; h <= 256; h++) {
+            if (!fn_sd_setup2) {
+                void *p = NULL;
+                for (size_t i = 0; i < sizeof(setup2_syms)/sizeof(setup2_syms[0]); i++) {
+                    if (sceKernelDlsym(h, setup2_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                        fn_sd_setup2 = (fn_sd_setup2_t)p;
+                        break;
+                    }
+                }
+            }
+            if (!fn_sd_set2) {
+                void *p = NULL;
+                for (size_t i = 0; i < sizeof(set2_syms)/sizeof(set2_syms[0]); i++) {
+                    if (sceKernelDlsym(h, set2_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                        fn_sd_set2 = (fn_sd_set2_t)p;
+                        break;
+                    }
+                }
+            }
+            if (!fn_sd_get2) {
+                void *p = NULL;
+                for (size_t i = 0; i < sizeof(get2_syms)/sizeof(get2_syms[0]); i++) {
+                    if (sceKernelDlsym(h, get2_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                        fn_sd_get2 = (fn_sd_get2_t)p;
+                        break;
+                    }
+                }
+            }
+            if (!fn_sd_sync) {
+                void *p = NULL;
+                for (size_t i = 0; i < sizeof(sync_syms)/sizeof(sync_syms[0]); i++) {
+                    if (sceKernelDlsym(h, sync_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                        fn_sd_sync = (fn_sd_sync_t)p;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    obs_report_measure(id, "arm3-savedata-memory2", "setup2-bound-addr",
+                       (uint64_t)(uintptr_t)fn_sd_setup2, "address");
     obs_report_measure(id, "arm3-savedata-memory2", "setup2-resolved",
                        (uint64_t)(fn_sd_setup2 != NULL), "bool");
+    obs_report_measure(id, "arm3-savedata-memory2", "set2-bound-addr",
+                       (uint64_t)(uintptr_t)fn_sd_set2, "address");
     obs_report_measure(id, "arm3-savedata-memory2", "set2-resolved",
                        (uint64_t)(fn_sd_set2 != NULL), "bool");
+    obs_report_measure(id, "arm3-savedata-memory2", "get2-bound-addr",
+                       (uint64_t)(uintptr_t)fn_sd_get2, "address");
     obs_report_measure(id, "arm3-savedata-memory2", "get2-resolved",
                        (uint64_t)(fn_sd_get2 != NULL), "bool");
+    obs_report_measure(id, "arm3-savedata-memory2", "sync-bound-addr",
+                       (uint64_t)(uintptr_t)fn_sd_sync, "address");
     obs_report_measure(id, "arm3-savedata-memory2", "sync-resolved",
                        (uint64_t)(fn_sd_sync != NULL), "bool");
 
@@ -1706,6 +2280,815 @@ static obs_result check_rf04_apr_app0_savedata(void) {
     }
     obs_report_measure(id, "arm3-savedata-memory2", "sync-rc",
                        (uint64_t)(uint32_t)rc_sync, "code");
+
+    return obs_pass();
+}
+
+/* REQ-20261014T1655Z-ap01: AudioPropagation and Acm routes, QueryMemory, Create/Destroy */
+static obs_result check_ap01_audio_propagation_acm(void) {
+    const char *id = "000-boot/ap01-audio-propagation-acm";
+    obs_jmp_buf guard;
+
+    /* 1. Routes for libSceAudioPropagation */
+    int h_ap = -1;
+    int rc_ap_open = -1;
+    int rc_ap_sprx = -1;
+    int rc_ap_loadstart_common = -1;
+    int rc_ap_loadstart_priv = -1;
+    int rc_ap_loadstart_sys_ex = -1;
+
+    rc_ap_open = obs_module_open("libSceAudioPropagation");
+    if (rc_ap_open > 0) h_ap = rc_ap_open;
+
+    rc_ap_sprx = obs_module_open("libSceAudioPropagation.sprx");
+    if (rc_ap_sprx > 0 && h_ap <= 0) h_ap = rc_ap_sprx;
+
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        rc_ap_loadstart_common = sceKernelLoadStartModule("/system/common/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_ap_loadstart_common > 0 && h_ap <= 0) h_ap = rc_ap_loadstart_common;
+
+        rc_ap_loadstart_priv = sceKernelLoadStartModule("/system/priv/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_ap_loadstart_priv > 0 && h_ap <= 0) h_ap = rc_ap_loadstart_priv;
+
+        rc_ap_loadstart_sys_ex = sceKernelLoadStartModule("/system_ex/common/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_ap_loadstart_sys_ex > 0 && h_ap <= 0) h_ap = rc_ap_loadstart_sys_ex;
+    }
+
+    obs_report_measure(id, "routes-AudioPropagation", "open-lib-rc", (uint64_t)(uint32_t)rc_ap_open, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "open-sprx-rc", (uint64_t)(uint32_t)rc_ap_sprx, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "loadstart-common-rc", (uint64_t)(uint32_t)rc_ap_loadstart_common, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "loadstart-priv-rc", (uint64_t)(uint32_t)rc_ap_loadstart_priv, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "loadstart-sys-ex-rc", (uint64_t)(uint32_t)rc_ap_loadstart_sys_ex, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "handle", (uint64_t)(uint32_t)h_ap, "handle");
+
+    /* 1b. Routes for libSceAcm */
+    int h_acm = -1;
+    int rc_acm_open = -1;
+    int rc_acm_sprx = -1;
+    int rc_acm_loadstart_common = -1;
+    int rc_acm_loadstart_priv = -1;
+    int rc_acm_loadstart_sys_ex = -1;
+
+    rc_acm_open = obs_module_open("libSceAcm");
+    if (rc_acm_open > 0) h_acm = rc_acm_open;
+
+    rc_acm_sprx = obs_module_open("libSceAcm.sprx");
+    if (rc_acm_sprx > 0 && h_acm <= 0) h_acm = rc_acm_sprx;
+
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        rc_acm_loadstart_common = sceKernelLoadStartModule("/system/common/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_acm_loadstart_common > 0 && h_acm <= 0) h_acm = rc_acm_loadstart_common;
+
+        rc_acm_loadstart_priv = sceKernelLoadStartModule("/system/priv/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_acm_loadstart_priv > 0 && h_acm <= 0) h_acm = rc_acm_loadstart_priv;
+
+        rc_acm_loadstart_sys_ex = sceKernelLoadStartModule("/system_ex/common/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_acm_loadstart_sys_ex > 0 && h_acm <= 0) h_acm = rc_acm_loadstart_sys_ex;
+    }
+
+    obs_report_measure(id, "routes-Acm", "open-lib-rc", (uint64_t)(uint32_t)rc_acm_open, "code");
+    obs_report_measure(id, "routes-Acm", "open-sprx-rc", (uint64_t)(uint32_t)rc_acm_sprx, "code");
+    obs_report_measure(id, "routes-Acm", "loadstart-common-rc", (uint64_t)(uint32_t)rc_acm_loadstart_common, "code");
+    obs_report_measure(id, "routes-Acm", "loadstart-priv-rc", (uint64_t)(uint32_t)rc_acm_loadstart_priv, "code");
+    obs_report_measure(id, "routes-Acm", "loadstart-sys-ex-rc", (uint64_t)(uint32_t)rc_acm_loadstart_sys_ex, "code");
+    obs_report_measure(id, "routes-Acm", "handle", (uint64_t)(uint32_t)h_acm, "handle");
+
+    /* 2. Resolve AudioPropagation functions */
+    typedef int (*fn_ap_query_mem_t)(const void *, void *);
+    typedef int (*fn_ap_sys_create_t)(const void *, void *, uint64_t *);
+    typedef int (*fn_ap_sys_destroy_t)(uint64_t);
+
+    fn_ap_query_mem_t fn_query_mem = NULL;
+    if (obs_address_is_callable((const void *)&sceAudioPropagationSystemQueryMemory_static)) {
+        fn_query_mem = (fn_ap_query_mem_t)&sceAudioPropagationSystemQueryMemory_static;
+    } else {
+        fn_query_mem = (fn_ap_query_mem_t)census_resolve_symbol(
+            "libSceAudioPropagation", "$7xyAxrusLko", "sceAudioPropagationSystemQueryMemory", NULL, NULL);
+        if (!fn_query_mem) fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(OBS_HANDLE_SELF, "$7xyAxrusLko");
+        if (!fn_query_mem) fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAudioPropagationSystemQueryMemory");
+        if (!fn_query_mem && h_ap > 0) {
+            fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(h_ap, "$7xyAxrusLko");
+            if (!fn_query_mem) fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(h_ap, "sceAudioPropagationSystemQueryMemory");
+        }
+    }
+
+    fn_ap_sys_create_t fn_sys_create = NULL;
+    if (obs_address_is_callable((const void *)&sceAudioPropagationSystemCreate_static)) {
+        fn_sys_create = (fn_ap_sys_create_t)&sceAudioPropagationSystemCreate_static;
+    } else {
+        fn_sys_create = (fn_ap_sys_create_t)census_resolve_symbol(
+            "libSceAudioPropagation", "$aNEqtSHdUSo", "sceAudioPropagationSystemCreate", NULL, NULL);
+        if (!fn_sys_create) fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(OBS_HANDLE_SELF, "$aNEqtSHdUSo");
+        if (!fn_sys_create) fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAudioPropagationSystemCreate");
+        if (!fn_sys_create && h_ap > 0) {
+            fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(h_ap, "$aNEqtSHdUSo");
+            if (!fn_sys_create) fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(h_ap, "sceAudioPropagationSystemCreate");
+        }
+    }
+
+    fn_ap_sys_destroy_t fn_sys_destroy = NULL;
+    if (obs_address_is_callable((const void *)&sceAudioPropagationSystemDestroy_static)) {
+        fn_sys_destroy = (fn_ap_sys_destroy_t)&sceAudioPropagationSystemDestroy_static;
+    } else {
+        fn_sys_destroy = (fn_ap_sys_destroy_t)census_resolve_symbol(
+            "libSceAudioPropagation", "$x5VPqg5iyAk", "sceAudioPropagationSystemDestroy", NULL, NULL);
+        if (!fn_sys_destroy) fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "$x5VPqg5iyAk");
+        if (!fn_sys_destroy) fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAudioPropagationSystemDestroy");
+        if (!fn_sys_destroy && h_ap > 0) {
+            fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(h_ap, "$x5VPqg5iyAk");
+            if (!fn_sys_destroy) fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(h_ap, "sceAudioPropagationSystemDestroy");
+        }
+    }
+
+    obs_report_measure(id, "sceAudioPropagationSystemQueryMemory", "bound", (uint64_t)(fn_query_mem != NULL), "bool");
+    obs_report_measure(id, "sceAudioPropagationSystemCreate", "bound", (uint64_t)(fn_sys_create != NULL), "bool");
+    obs_report_measure(id, "sceAudioPropagationSystemDestroy", "bound", (uint64_t)(fn_sys_destroy != NULL), "bool");
+
+    /* 3. Resolve Acm functions */
+    typedef int (*fn_acm_create_t)(uint64_t *);
+    typedef int (*fn_acm_destroy_t)(uint64_t);
+
+    fn_acm_create_t fn_acm_create = NULL;
+    if (obs_address_is_callable((const void *)&sceAcmContextCreate_static)) {
+        fn_acm_create = (fn_acm_create_t)&sceAcmContextCreate_static;
+    } else {
+        fn_acm_create = (fn_acm_create_t)census_resolve_symbol(
+            "libSceAcm", "$ZIXln2K3XMk", "sceAcmContextCreate", NULL, NULL);
+        if (!fn_acm_create) fn_acm_create = (fn_acm_create_t)obs_module_symbol(OBS_HANDLE_SELF, "$ZIXln2K3XMk");
+        if (!fn_acm_create) fn_acm_create = (fn_acm_create_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAcmContextCreate");
+        if (!fn_acm_create && h_acm > 0) {
+            fn_acm_create = (fn_acm_create_t)obs_module_symbol(h_acm, "$ZIXln2K3XMk");
+            if (!fn_acm_create) fn_acm_create = (fn_acm_create_t)obs_module_symbol(h_acm, "sceAcmContextCreate");
+        }
+    }
+
+    fn_acm_destroy_t fn_acm_destroy = NULL;
+    if (obs_address_is_callable((const void *)&sceAcmContextDestroy_static)) {
+        fn_acm_destroy = (fn_acm_destroy_t)&sceAcmContextDestroy_static;
+    } else {
+        fn_acm_destroy = (fn_acm_destroy_t)census_resolve_symbol(
+            "libSceAcm", "$jBgBjAj02R8", "sceAcmContextDestroy", NULL, NULL);
+        if (!fn_acm_destroy) fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "$jBgBjAj02R8");
+        if (!fn_acm_destroy) fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAcmContextDestroy");
+        if (!fn_acm_destroy && h_acm > 0) {
+            fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(h_acm, "$jBgBjAj02R8");
+            if (!fn_acm_destroy) fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(h_acm, "sceAcmContextDestroy");
+        }
+    }
+
+    obs_report_measure(id, "sceAcmContextCreate", "bound", (uint64_t)(fn_acm_create != NULL), "bool");
+    obs_report_measure(id, "sceAcmContextDestroy", "bound", (uint64_t)(fn_acm_destroy != NULL), "bool");
+
+    /* 4. Execute SystemQueryMemory arms if bound */
+    uint32_t returned_mem_sz = 0;
+    if (fn_query_mem) {
+        /* Base shape: rsi 64-byte block: dword 0x010107d4 at +0, qword 0x30 at +8, 0xcc elsewhere. rdi 0x38 bytes zeroed */
+        uint8_t rdi_sys[0x38];
+        uint8_t rsi_mem[64];
+        memset(rdi_sys, 0, sizeof(rdi_sys));
+        memset(rsi_mem, 0xcc, sizeof(rsi_mem));
+        *(uint32_t *)(rsi_mem + 0) = 0x010107d4;
+        *(uint64_t *)(rsi_mem + 8) = 0x30;
+
+        int sig_qm = OBS_FAULT_ARM(&guard);
+        uint64_t rc_qm = 0xffffffffffffffffULL;
+        if (sig_qm == 0) {
+            rc_qm = (uint64_t)(uint32_t)fn_query_mem(rdi_sys, rsi_mem);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "query-mem-base", "fault", (uint64_t)sig_qm, "signal");
+        }
+        obs_report_measure(id, "query-mem-base", "rc", rc_qm, "code");
+        obs_report_bytes(id, "query-mem-base", "rdi-38b", 0, rdi_sys, sizeof(rdi_sys));
+        obs_report_bytes(id, "query-mem-base", "rsi-64b", 0, rsi_mem, sizeof(rsi_mem));
+        if (rc_qm == 0) {
+            returned_mem_sz = *(uint32_t *)(rsi_mem + 0x18);
+            obs_report_measure(id, "query-mem-base", "size-at-18", (uint64_t)returned_mem_sz, "bytes");
+        }
+
+        /* 2a. rdi +0x20 set to 1, 4, 16 */
+        static const uint32_t dword_20_vals[] = {1, 4, 16};
+        for (size_t i = 0; i < 3; i++) {
+            char tag[64];
+            snprintf(tag, sizeof(tag), "query-mem-rdi20-%u", dword_20_vals[i]);
+            memset(rdi_sys, 0, sizeof(rdi_sys));
+            *(uint32_t *)(rdi_sys + 0x20) = dword_20_vals[i];
+            memset(rsi_mem, 0xcc, sizeof(rsi_mem));
+            *(uint32_t *)(rsi_mem + 0) = 0x010107d4;
+            *(uint64_t *)(rsi_mem + 8) = 0x30;
+
+            int sig_v = OBS_FAULT_ARM(&guard);
+            uint64_t rc_v = 0xffffffffffffffffULL;
+            if (sig_v == 0) {
+                rc_v = (uint64_t)(uint32_t)fn_query_mem(rdi_sys, rsi_mem);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, tag, "fault", (uint64_t)sig_v, "signal");
+            }
+            obs_report_measure(id, tag, "rc", rc_v, "code");
+            obs_report_bytes(id, tag, "rdi-38b", 0, rdi_sys, sizeof(rdi_sys));
+            obs_report_bytes(id, tag, "rsi-64b", 0, rsi_mem, sizeof(rsi_mem));
+        }
+
+        /* 2b. rsi +0 set to 0, and rsi null */
+        memset(rdi_sys, 0, sizeof(rdi_sys));
+        memset(rsi_mem, 0xcc, sizeof(rsi_mem));
+        *(uint32_t *)(rsi_mem + 0) = 0;
+        *(uint64_t *)(rsi_mem + 8) = 0x30;
+        int sig_v0 = OBS_FAULT_ARM(&guard);
+        uint64_t rc_v0 = 0xffffffffffffffffULL;
+        if (sig_v0 == 0) {
+            rc_v0 = (uint64_t)(uint32_t)fn_query_mem(rdi_sys, rsi_mem);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "query-mem-ver0", "fault", (uint64_t)sig_v0, "signal");
+        }
+        obs_report_measure(id, "query-mem-ver0", "rc", rc_v0, "code");
+        obs_report_bytes(id, "query-mem-ver0", "rsi-64b", 0, rsi_mem, sizeof(rsi_mem));
+
+        int sig_null = OBS_FAULT_ARM(&guard);
+        uint64_t rc_null = 0xffffffffffffffffULL;
+        if (sig_null == 0) {
+            rc_null = (uint64_t)(uint32_t)fn_query_mem(rdi_sys, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "query-mem-rsi-null", "fault", (uint64_t)sig_null, "signal");
+        }
+        obs_report_measure(id, "query-mem-rsi-null", "rc", rc_null, "code");
+    }
+
+    /* 3. SystemCreate / Destroy */
+    if (fn_sys_create) {
+        size_t alloc_sz = (returned_mem_sz > 0 && returned_mem_sz < 64 * 1024 * 1024) ? returned_mem_sz : 0x10000;
+        (void)alloc_sz;
+        static _Alignas(64) uint8_t sys_buf[0x10000];
+
+        uint8_t rdi_sys[0x38];
+        uint8_t rsi_mem[64];
+        memset(rdi_sys, 0, sizeof(rdi_sys));
+        memset(rsi_mem, 0xcc, sizeof(rsi_mem));
+        *(uint32_t *)(rsi_mem + 0) = 0x010107d4;
+        *(uint64_t *)(rsi_mem + 8) = 0x30;
+
+        uint64_t sys_handle = 0xccccccccccccccccULL;
+        int sig_sc = OBS_FAULT_ARM(&guard);
+        uint64_t rc_sc = 0xffffffffffffffffULL;
+        if (sig_sc == 0) {
+            rc_sc = (uint64_t)(uint32_t)fn_sys_create(rdi_sys, sys_buf, &sys_handle);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "system-create", "fault", (uint64_t)sig_sc, "signal");
+        }
+        obs_report_measure(id, "system-create", "rc", rc_sc, "code");
+        obs_report_bytes(id, "system-create", "handle-8b", 0, (const unsigned char *)&sys_handle, 8);
+
+        if (fn_sys_destroy && sys_handle != 0xccccccccccccccccULL) {
+            int sig_sd = OBS_FAULT_ARM(&guard);
+            uint64_t rc_sd = 0xffffffffffffffffULL;
+            if (sig_sd == 0) {
+                rc_sd = (uint64_t)(uint32_t)fn_sys_destroy(sys_handle);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "system-destroy", "fault", (uint64_t)sig_sd, "signal");
+            }
+            obs_report_measure(id, "system-destroy", "rc", rc_sd, "code");
+        }
+    }
+
+    /* 4. Acm ContextCreate / Destroy */
+    if (fn_acm_create) {
+        uint64_t acm_handle = 0xccccccccccccccccULL;
+        int sig_acc = OBS_FAULT_ARM(&guard);
+        uint64_t rc_acc = 0xffffffffffffffffULL;
+        if (sig_acc == 0) {
+            rc_acc = (uint64_t)(uint32_t)fn_acm_create(&acm_handle);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "acm-context-create", "fault", (uint64_t)sig_acc, "signal");
+        }
+        obs_report_measure(id, "acm-context-create", "rc", rc_acc, "code");
+        obs_report_bytes(id, "acm-context-create", "handle-8b", 0, (const unsigned char *)&acm_handle, 8);
+
+        if (fn_acm_destroy && acm_handle != 0xccccccccccccccccULL) {
+            int sig_acd = OBS_FAULT_ARM(&guard);
+            uint64_t rc_acd = 0xffffffffffffffffULL;
+            if (sig_acd == 0) {
+                rc_acd = (uint64_t)(uint32_t)fn_acm_destroy(acm_handle);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "acm-context-destroy", "fault", (uint64_t)sig_acd, "signal");
+            }
+            obs_report_measure(id, "acm-context-destroy", "rc", rc_acd, "code");
+        }
+    }
+
+    return obs_pass();
+}
+
+/* -------------------------------------------------------------------------- */
+/* REQ-20261014T1350Z-ly01: census: primitive exported layer and topology 7   */
+/* -------------------------------------------------------------------------- */
+
+static void build_ly01_vs(uint32_t *code, int layer_mode, int const_layer,
+                          int export_pos1, uint64_t stored_ids_gpu, int store_ids) {
+    uint32_t k = 0;
+    code[k++] = 0xbfa00001u; /* s_inst_prefetch 0x1 */
+    code[k++] = 0xbe8c037eu; /* s_mov_b32 s12, exec_lo */
+    code[k++] = 0xbefc03ffu; /* s_mov_b32 m0, 0x1003 (alloc 1 prim, 3 verts) */
+    code[k++] = 0x00001003u;
+    code[k++] = 0xbf800000u; /* s_nop 0 */
+    code[k++] = 0xbf900009u; /* s_sendmsg sendmsg(MSG_GS_ALLOC_REQ) */
+
+    /* Primitive connectivity export from Lane 0 */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0x7e0202ffu; /* v_mov_b32 v1, 0x20280600 (vertices 0, 1, 2) */
+    code[k++] = 0x20280600u;
+    code[k++] = 0xf8000941u; /* exp prim, v1, off, off, off done */
+    code[k++] = 0x00000001u;
+    code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+
+    if (store_ids) {
+        code[k++] = 0xbe8003ffu; /* s_mov_b32 s0, stored_ids_lo */
+        code[k++] = (uint32_t)stored_ids_gpu;
+        code[k++] = 0xbe8103ffu; /* s_mov_b32 s1, stored_ids_hi */
+        code[k++] = (uint32_t)(stored_ids_gpu >> 32);
+        code[k++] = 0x7e100200u; /* v_mov_b32 v8, s0 */
+        code[k++] = 0x7e120201u; /* v_mov_b32 v9, s1 */
+
+        /* Lane 0 stores vertex ID 0 to offset 0 */
+        code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+        code[k++] = 0x7e1402ffu; /* v_mov_b32 v10, 0 */
+        code[k++] = 0u;
+        code[k++] = 0xdc708000u; /* global_store_dword v[8:9], v10, off offset:0 */
+        code[k++] = 0x007d0a08u;
+
+        /* Lane 1 stores vertex ID 1 to offset 4 */
+        code[k++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+        code[k++] = 0x7e1402ffu; /* v_mov_b32 v10, 1 */
+        code[k++] = 1u;
+        code[k++] = 0xdc708004u; /* global_store_dword v[8:9], v10, off offset:4 */
+        code[k++] = 0x007d0a08u;
+
+        /* Lane 2 stores vertex ID 2 to offset 8 */
+        code[k++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+        code[k++] = 0x7e1402ffu; /* v_mov_b32 v10, 2 */
+        code[k++] = 2u;
+        code[k++] = 0xdc708008u; /* global_store_dword v[8:9], v10, off offset:8 */
+        code[k++] = 0x007d0a08u;
+
+        code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+        code[k++] = 0x7e140202u; /* v_mov_b32 v10, s2 */
+        code[k++] = 0xdc70800cu; /* global_store_dword v[8:9], v10, off offset:12 */
+        code[k++] = 0x007d0a08u;
+        code[k++] = 0x7e140203u; /* v_mov_b32 v10, s3 */
+        code[k++] = 0xdc708010u; /* global_store_dword v[8:9], v10, off offset:16 */
+        code[k++] = 0x007d0a08u;
+
+        code[k++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+        code[k++] = 0xbf8c3f70u; /* s_waitcnt vmcnt(0) */
+    }
+
+    /* Position export pos0 (must precede pos1 in hardware sequence) */
+    code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+    code[k++] = 0x7e0a02f1u; /* v_mov_b32 v5, -0.5f */
+    code[k++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f */
+    code[k++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+    code[k++] = 0x7e0a02f0u; /* v_mov_b32 v5, +0.5f */
+    code[k++] = 0x7e0c02f1u; /* v_mov_b32 v6, -0.5f */
+    code[k++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+    code[k++] = 0x7e0a0280u; /* v_mov_b32 v5, 0.0f */
+    code[k++] = 0x7e0c02f0u; /* v_mov_b32 v6, +0.5f */
+    code[k++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+    code[k++] = 0x7e060280u; /* v_mov_b32 v3, 0.0f (Z) */
+    code[k++] = 0x7e0802f2u; /* v_mov_b32 v4, 1.0f (W) */
+
+    if (export_pos1) {
+        code[k++] = 0xf80000cfu; /* exp pos0, v5, v6, v3, v4 (done=0) */
+        code[k++] = 0x04030605u;
+        code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+
+        /* Position export pos1 carrying layer in Z (channel 2), final export with done=1 */
+        if (layer_mode == 1) {
+            /* Disagreeing vertices: lane 0 -> 1, lane 1 -> 2, lane 2 -> 2 */
+            code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
+            code[k++] = 0x7e1002ffu; /* v_mov_b32 v8, 1 */
+            code[k++] = 1u;
+            code[k++] = 0xbefe0382u; /* s_mov_b32 exec_lo, 2 */
+            code[k++] = 0x7e1002ffu; /* v_mov_b32 v8, 2 */
+            code[k++] = 2u;
+            code[k++] = 0xbefe0384u; /* s_mov_b32 exec_lo, 4 */
+            code[k++] = 0x7e1002ffu; /* v_mov_b32 v8, 2 */
+            code[k++] = 2u;
+        } else {
+            code[k++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+            code[k++] = 0x7e1002ffu; /* v_mov_b32 v8, const_layer */
+            code[k++] = (uint32_t)const_layer;
+        }
+        code[k++] = 0xbefe0387u; /* s_mov_b32 exec_lo, 7 */
+        code[k++] = 0xf80008d4u; /* exp pos1 off, off, v8, off done */
+        code[k++] = 0x00080000u;
+        code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+    } else {
+        code[k++] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
+        code[k++] = 0x04030605u;
+        code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
+    }
+    code[k++] = 0xbefe030cu; /* s_mov_b32 exec_lo, s12 (restore all lanes before retire) */
+    code[k++] = 0xbf810000u; /* s_endpgm */
+
+    while (k < 128) {
+        code[k++] = 0xbf800000u; /* s_nop */
+    }
+}
+
+static uint32_t build_ly01_dcb(uint32_t *dw, uint32_t color_view,
+                               uint32_t pa_cl_vs_out_cntl, uint32_t pa_su_sc_mode_cntl,
+                               uint32_t prim_type, uint32_t draw_vertex_count,
+                               uint64_t payload_va, uint64_t fence_gpu,
+                               uint64_t color_gpu, int export_pos1) {
+    uint32_t *start = dw;
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } base_ctx[] = {
+        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0}, {0x31cu, 0x000180a8u},
+        {0x31du, 0}, {0x31eu, 0}, {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c004u},
+        {0x109u, 0}, {0x202u, 0x00cc0010u}, {0x08eu, 0xfu}, {0x08fu, 0xfu},
+        {0x1e0u, 0x20010001u}, {0x200u, 0}, {0x08cu, 0xaa99aaaau}, {0x1d4u, 0xffu},
+        {0x291u, 0x10020040u}, {0x29bu, 0}, {0x2d3u, 1u}, {0x2d5u, 0x02002000u},
+        {0x1ffu, 0x40u}, {0x20eu, 0x78u}, {0x2a1u, 0}, {0x2a6u, 0x40u},
+        {0x2adu, 0}, {0x2abu, 4u}, {0x2ceu, 0}, {0x2d4u, 0x88101000u},
+        {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu}, {0x30fu, 0xffffffffu},
+        {0x310u, 0}, {0x314u, 0x202u}, {0x311u, 0x01fd2002u}, {0x312u, 0x03ff0080u},
+        {0x313u, 0x6000u}, {0x00eu, 2u}, {0x280u, 0x00080008u}, {0x281u, 0xffff0000u},
+        {0x282u, 8u}, {0x2deu, 0x1e9u}, {0x00cu, 0}, {0x00du, 0x40004000u},
+        {0x081u, 0x80000000u}, {0x082u, 0x40004000u}, {0x090u, 0x80000000u},
+        {0x091u, 0x40004000u}, {0x094u, 0x80000000u}, {0x095u, 0x40004000u},
+        {0x0b4u, 0}, {0x0b5u, 0x3f800000u}, {0x10fu, 0x42000000u},
+        {0x110u, 0x42000000u}, {0x111u, 0x42000000u}, {0x112u, 0x42000000u},
+        {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u}, {0x083u, 0xffffu},
+        {0x084u, 0}, {0x085u, 0x20002000u}, {0x204u, 0}, {0x206u, 0x43fu},
+        {0x207u, 0}, {0x2fau, 0x3f800000u}, {0x2fbu, 0x3f800000u},
+        {0x2fcu, 0x3f800000u}, {0x2fdu, 0x3f800000u}, {0x205u, 0x240u},
+        {0x20cu, 0}, {0x292u, 2u}, {0x293u, 0x06020000u}, {0x2f8u, 0},
+        {0x2f9u, 0x2du}, {0x1b1u, 0x80u}, {0x1c2u, 1u}, {0x1c3u, 4u},
+        {0x1c5u, 9u}, {0x1b3u, 2u}, {0x1b4u, 2u}, {0x1b5u, 1u},
+        {0x1b6u, 0}, {0x1b8u, 0x01000000u}
+    };
+    for (size_t i = 0; i < sizeof(base_ctx)/sizeof(base_ctx[0]); i++) {
+        uint32_t reg = base_ctx[i].reg;
+        uint32_t val = base_ctx[i].val;
+        if (reg == 0x318u) {
+            val = (uint32_t)(color_gpu >> 8);
+        } else if (reg == 0x390u) {
+            val = (uint32_t)(color_gpu >> 40);
+        } else if (reg == 0x31bu) {
+            val = color_view;
+        } else if (reg == 0x207u) {
+            val = pa_cl_vs_out_cntl;
+        } else if (reg == 0x205u) {
+            val = pa_su_sc_mode_cntl;
+        } else if (reg == 0x1c3u) {
+            val = export_pos1 ? 0x24u : 4u;
+        } else if (reg == 0x1b1u) {
+            val = 0x80u;
+        }
+        *dw++ = 0xc0016900u;
+        *dw++ = reg;
+        *dw++ = val;
+    }
+
+    for (uint32_t i = 0; i < 32; i++) {
+        *dw++ = 0xc0016900u;
+        *dw++ = 0x191u + i;
+        *dw++ = 0u;
+    }
+
+    static const struct {
+        uint32_t base_reg;
+        uint64_t va_offset;
+        uint32_t rsrc1;
+        uint32_t rsrc2;
+    } stages[] = {
+        {0x08u, 0x200u, 0x000c0010u, 0x00000000u},
+        {0x48u, 0x000u, 0x000c0010u, 0x00000000u},
+        {0x88u, 0x000u, 0x622c0047u, 0x00030000u},
+        {0xc8u, 0x000u, 0x000c0010u, 0x00000000u},
+        {0x108u, 0x000u, 0x000c0010u, 0x00000000u},
+        {0x148u, 0x000u, 0x000c0010u, 0x00000000u},
+    };
+    for (size_t s = 0; s < sizeof(stages)/sizeof(stages[0]); s++) {
+        uint32_t base_reg = stages[s].base_reg;
+        uint64_t s_va = payload_va + stages[s].va_offset;
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg;
+        *dw++ = (uint32_t)(s_va >> 8);
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg + 1u;
+        *dw++ = (uint32_t)(s_va >> 40);
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg + 2u;
+        *dw++ = stages[s].rsrc1;
+        *dw++ = 0xc0017600u;
+        *dw++ = base_reg + 3u;
+        *dw++ = stages[s].rsrc2;
+    }
+
+    static const struct {
+        uint32_t reg;
+        uint32_t val;
+    } spi_cu_regs[] = {
+        {0x007u, 0x0000ffffu},
+        {0x001u, 0x00000003u},
+        {0x087u, 0x0000fffdu},
+        {0x081u, 0x00000003u},
+        {0x107u, 0xffff0000u},
+    };
+    for (size_t i = 0; i < sizeof(spi_cu_regs)/sizeof(spi_cu_regs[0]); i++) {
+        *dw++ = 0xc0017600u;
+        *dw++ = spi_cu_regs[i].reg;
+        *dw++ = spi_cu_regs[i].val;
+    }
+
+    *dw++ = 0xc0002f00u; *dw++ = 1u; /* NUM_INSTANCES */
+    *dw++ = 0xc0017a00u; /* PACKET3_SET_UCONFIG_REG_INDEX: mmVGT_PRIMITIVE_TYPE */
+    *dw++ = 0x10000242u;
+    *dw++ = prim_type;
+    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u; /* mmGE_CNTL */
+    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+    *dw++ = 0xc0017900u; *dw++ = 0x249u; *dw++ = 0x00000000u; /* mmGE_MIN_VTX_INDX */
+    *dw++ = 0xc0017900u; *dw++ = 0x259u; *dw++ = 0xffffffffu; /* mmGE_MAX_VTX_INDX */
+
+    *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO */
+    *dw++ = draw_vertex_count;
+    *dw++ = 2u;
+
+    *dw++ = 0xc0064900u; /* RELEASE_MEM */
+    *dw++ = 0x06603514u;
+    *dw++ = 0x20000000u;
+    *dw++ = (uint32_t)fence_gpu;
+    *dw++ = (uint32_t)(fence_gpu >> 32);
+    *dw++ = 0xbeefcafeu;
+    *dw++ = 0u;
+    *dw++ = 0u;
+
+    for (int p = 0; p < 16; p++) {
+        dw[p] = 0xffff1000u;
+    }
+    dw += 16;
+    return (uint32_t)(dw - start);
+}
+
+static inline void ly01_flush_range(const void *p, size_t sz) {
+#if defined(__x86_64__)
+    const char *cp = (const char *)p;
+    for (size_t off = 0; off < sz; off += 64) {
+        __builtin_ia32_clflush((const void *)(cp + off));
+    }
+    __builtin_ia32_mfence();
+#else
+    (void)p;
+    (void)sz;
+#endif
+}
+
+static inline void ly01_flush_fence(volatile uint32_t *f) {
+#if defined(__x86_64__)
+    __builtin_ia32_clflush((const void *)f);
+    __builtin_ia32_mfence();
+#else
+    (void)f;
+#endif
+}
+
+static obs_result check_ly01_layer_export_topology7(void) {
+    return obs_skip("hardware GFX pipe safety: DCB stalls ring on hardware");
+    const char *id = "000-boot/ly01-layer-export-topology7";
+    obs_jmp_buf guard;
+
+    int bound_create = obs_address_is_callable((const void *)&sceAgcDriverCreateQueue);
+    int bound_submit = obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb);
+    obs_report_measure(id, "setup", "fn-create-queue-bound", (uint64_t)bound_create, "bool");
+    obs_report_measure(id, "setup", "fn-submit-dcb-bound", (uint64_t)bound_submit, "bool");
+    if (!bound_create || !bound_submit) {
+        return obs_skip("sceAgcDriverCreateQueue or sceAgcDriverSubmitDcb not bound");
+    }
+
+    void *queue = NULL;
+    int rc_q = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_q = sceAgcDriverCreateQueue(0u, &queue, 0u);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+    obs_report_measure(id, "setup", "queue-create-rc", (uint64_t)(uint32_t)rc_q, "code");
+    if (rc_q != 0 || queue == NULL) {
+        return obs_skip("failed to create type 0 queue");
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    volatile uint32_t *fence =
+        (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
+    uint32_t *cmdbuf =
+        (uint32_t *)oops_mem_alloc(0x10000, 0x1000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *color_buf =
+        (volatile uint32_t *)oops_mem_alloc(0x40000, 0x10000, OOPS_MEM_WB_ONION);
+    volatile uint32_t *stored_ids =
+        (volatile uint32_t *)oops_mem_alloc(0x10000, 0x1000, OOPS_MEM_WB_ONION);
+    uint8_t *gpu_payload =
+        (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+#else
+    static _Alignas(64) uint32_t s_host_fence[16];
+    static _Alignas(64) uint32_t s_host_cmdbuf[0x4000];
+    static _Alignas(65536) uint32_t s_host_color_buf[65536];
+    static _Alignas(64) uint32_t s_host_stored_ids[0x4000];
+    static _Alignas(256) uint8_t s_host_payload[0x2000];
+    volatile uint32_t *fence = s_host_fence;
+    uint32_t *cmdbuf = s_host_cmdbuf;
+    volatile uint32_t *color_buf = s_host_color_buf;
+    volatile uint32_t *stored_ids = s_host_stored_ids;
+    uint8_t *gpu_payload = s_host_payload;
+#endif
+
+    if (!fence || !cmdbuf || !color_buf || !stored_ids || !gpu_payload) {
+        return obs_skip("memory allocation for GPU draw test failed");
+    }
+
+    uint64_t fence_gpu = (uint64_t)(uintptr_t)fence;
+    uint64_t color_gpu = (uint64_t)(uintptr_t)color_buf;
+    uint64_t stored_ids_gpu = (uint64_t)(uintptr_t)stored_ids;
+    uint64_t payload_va = (uint64_t)(uintptr_t)gpu_payload;
+
+    build_ge_indx_ps((uint32_t *)(gpu_payload + 0x200));
+    build_ge_indx_fb((uint32_t *)(gpu_payload + 0x300));
+
+    struct {
+        uint64_t gpu_addr;
+        uint32_t size;
+        uint32_t flags;
+        uint32_t pad[3];
+    } desc;
+    memset(&desc, 0, sizeof(desc));
+
+    int ly01_stalled = 0;
+#define LY01_PA_CL_ON  ((1u << 18) | (1u << 21) | (1u << 24))
+#define LY01_PA_CL_OFF ((1u << 21) | (1u << 24))
+
+    /* Helper lambda/macro to run a draw pass and report slices */
+    #define RUN_LY01_PASS(arm_name, color_view_val, pa_cl_val, pa_su_val, layer_m, const_l, exp_pos1) do { \
+        if (ly01_stalled) { \
+            obs_report_measure(id, arm_name, "fence-hit", 0, "bool"); \
+            break; \
+        } \
+        for (int s = 0; s < 4; s++) { \
+            uint32_t clear_val = 0x11111111u * (uint32_t)(s + 1); \
+            uint32_t *slice_ptr = (uint32_t *)((uint8_t *)color_buf + s * 0x10000); \
+            for (size_t px = 0; px < 256; px++) { slice_ptr[px] = clear_val; } \
+        } \
+        build_ly01_vs((uint32_t *)gpu_payload, (layer_m), (const_l), (exp_pos1), stored_ids_gpu, 0); \
+        for (size_t p = 0; p < 64; p++) { ((uint32_t *)(gpu_payload + 0x100))[p] = ((uint32_t *)gpu_payload)[p]; } \
+        uint32_t words = build_ly01_dcb(cmdbuf, (color_view_val), (pa_cl_val), (pa_su_val), 4u, 3u, payload_va, fence_gpu, color_gpu, (exp_pos1)); \
+        *fence = 0x11111111u; \
+        desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf; \
+        desc.size = words; \
+        ly01_flush_range(gpu_payload, 0x2000); \
+        ly01_flush_range((const void *)color_buf, 0x40000); \
+        ly01_flush_range(cmdbuf, (size_t)words * 4); \
+        ly01_flush_fence(fence); \
+        sig = OBS_FAULT_ARM(&guard); \
+        int sub_rc = -1; \
+        if (sig == 0) { \
+            if (queue && obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) { \
+                sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc); \
+            } else { \
+                sub_rc = sceAgcDriverSubmitDcb(&desc); \
+            } \
+            obs_fault_unregister(); \
+        } else { \
+            obs_fault_unregister(); \
+        } \
+        int hit = 0; \
+        if (sub_rc == 0) { \
+            for (int iter = 0; iter < 10000; iter++) { \
+                ly01_flush_fence(fence); \
+                if (*fence == 0xbeefcafeu) { hit = 1; break; } \
+                if (obs_address_is_callable((const void *)&sceKernelUsleep)) { sceKernelUsleep(100); } \
+            } \
+        } \
+        if (!hit) { \
+            ly01_stalled = 1; \
+        } \
+        ly01_flush_range((const void *)color_buf, 0x40000); \
+        obs_report_measure(id, arm_name, "fence-hit", (uint64_t)hit, "bool"); \
+        for (int s = 0; s < 4; s++) { \
+            char stag[32]; snprintf(stag, sizeof(stag), "slice%d-64b", s); \
+            obs_report_bytes(id, arm_name, stag, 0, (const unsigned char *)((const uint8_t *)color_buf + s * 0x10000), 64); \
+        } \
+    } while (0)
+
+    /* Arm 1: Layer in range. SLICE_START=0, SLICE_MAX=3 (0x6000), bit 18 set (LY01_PA_CL_ON) */
+    /* Draw constant layer 0, then 2, then 3 */
+    RUN_LY01_PASS("arm1-layer-in-range-lay0", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 0, 0, 1);
+    RUN_LY01_PASS("arm1-layer-in-range-lay2", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 0, 2, 1);
+    RUN_LY01_PASS("arm1-layer-in-range-lay3", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 0, 3, 1);
+
+    /* Arm 2: Layer offset by view. SLICE_START=1, SLICE_MAX=3 (0x6001), layer 1 */
+    RUN_LY01_PASS("arm2-layer-offset-by-view", 0x00006001u, LY01_PA_CL_ON, 0x00000240u, 0, 1, 1);
+
+    /* Arm 3: Layer past view. SLICE_START=0, SLICE_MAX=1 (0x2000), layer 3 */
+    RUN_LY01_PASS("arm3-layer-past-view", 0x00002000u, LY01_PA_CL_ON, 0x00000240u, 0, 3, 1);
+
+    /* Arm 4: Bit 18 clear. SLICE_START=0, SLICE_MAX=3 (0x6000), bit 18 clear (LY01_PA_CL_OFF), layer 2 */
+    RUN_LY01_PASS("arm4-bit18-clear-lay2", 0x00006000u, LY01_PA_CL_OFF, 0x00000240u, 0, 2, 1);
+
+    /* Arm 5: Disagreeing vertices (1, 2, 2) */
+    /* Sub-arm 5a: PROVOKING_VTX_LAST clear (0x00000240) */
+    RUN_LY01_PASS("arm5-disagreeing-vtx-first", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 1, 0, 1);
+    /* Sub-arm 5b: PROVOKING_VTX_LAST set (0x00080240) */
+    RUN_LY01_PASS("arm5-disagreeing-vtx-last", 0x00006000u, LY01_PA_CL_ON, 0x00080240u, 1, 0, 1);
+
+    #undef RUN_LY01_PASS
+    #undef LY01_PA_CL_ON
+    #undef LY01_PA_CL_OFF
+
+    /* Arm 6: Topology 7 (VGT_PRIMITIVE_TYPE 7). Draw 3, 4, 6 vertices storing IDs, s2, s3 */
+    static const uint32_t top7_counts[3] = {3, 4, 6};
+    for (int i = 0; i < 3; i++) {
+        if (ly01_stalled) {
+            break;
+        }
+        uint32_t vcount = top7_counts[i];
+        char arm_tag[32];
+        snprintf(arm_tag, sizeof(arm_tag), "arm6-topology7-draw%u", (unsigned int)vcount);
+
+        for (int k = 0; k < 16; k++) { stored_ids[k] = 0xccccccccu; }
+        build_ly01_vs((uint32_t *)gpu_payload, 0, 0, 0, stored_ids_gpu, 1);
+        for (size_t p = 0; p < 64; p++) { ((uint32_t *)(gpu_payload + 0x100))[p] = ((uint32_t *)gpu_payload)[p]; }
+
+        uint32_t words = build_ly01_dcb(cmdbuf, 0x00006000u, 0u, 0x00000240u,
+                                        7u, vcount, payload_va, fence_gpu, color_gpu, 0);
+        *fence = 0x11111111u;
+        desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;
+        desc.size = words;
+
+        ly01_flush_range(gpu_payload, 0x2000);
+        ly01_flush_range((const void *)stored_ids, 128);
+        ly01_flush_range(cmdbuf, (size_t)words * 4);
+        ly01_flush_fence(fence);
+
+        sig = OBS_FAULT_ARM(&guard);
+        int sub_rc = -1;
+        if (sig == 0) {
+            if (queue && obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+                sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
+            } else {
+                sub_rc = sceAgcDriverSubmitDcb(&desc);
+            }
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        int hit = 0;
+        if (sub_rc == 0) {
+            for (int iter = 0; iter < 10000; iter++) {
+                ly01_flush_fence(fence);
+                if (*fence == 0xbeefcafeu) { hit = 1; break; }
+                if (obs_address_is_callable((const void *)&sceKernelUsleep)) { sceKernelUsleep(100); }
+            }
+        }
+        if (!hit) {
+            ly01_stalled = 1;
+        }
+        ly01_flush_range((const void *)stored_ids, 128);
+
+        obs_report_measure(id, arm_tag, "fence-hit", (uint64_t)hit, "bool");
+        obs_report_measure(id, arm_tag, "stored-id-0", (uint64_t)stored_ids[0], "id");
+        obs_report_measure(id, arm_tag, "stored-id-1", (uint64_t)stored_ids[1], "id");
+        obs_report_measure(id, arm_tag, "stored-id-2", (uint64_t)stored_ids[2], "id");
+        obs_report_measure(id, arm_tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[3], "hex");
+        obs_report_measure(id, arm_tag, "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[4], "hex");
+    }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    if (fence) oops_mem_free((void *)fence);
+    if (cmdbuf) oops_mem_free((void *)cmdbuf);
+    if (color_buf) oops_mem_free((void *)color_buf);
+    if (stored_ids) oops_mem_free((void *)stored_ids);
+    if (gpu_payload) oops_mem_free((void *)gpu_payload);
+#endif
+    if (queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
+        (void)sceAgcDriverDestroyQueue(queue);
+    }
 
     return obs_pass();
 }

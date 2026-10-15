@@ -1565,98 +1565,7 @@ static obs_result check_retail_start_libkernel(void) {
         }
     }
 
-    /* (3) REQ-20261009T1610Z-sp02: _sceKernelRtldSetApplicationHeapAPI */
-    const void *fn_set_heap = census_resolve_symbol(
-        "libkernel", "$p5EcQeEeJAE", "_sceKernelRtldSetApplicationHeapAPI",
-        (const void *)&_sceKernelRtldSetApplicationHeapAPI, NULL);
-    obs_report_measure(id, "set-app-heap-api", "resolved",
-                       (uint64_t)(fn_set_heap != NULL), "bool");
-    /* (3.1) Report how it resolved: static import vs dlsym */
-    obs_report_measure(id, "set-app-heap-api", "resolved-by-link-import",
-                       (uint64_t)(obs_address_is_callable(
-                           (const void *)&_sceKernelRtldSetApplicationHeapAPI)),
-                       "bool");
-    void *dlsym_ptr_name = NULL;
-    int dlsym_name_rc = -1;
-    void *dlsym_ptr_nid = NULL;
-    int dlsym_nid_rc = -1;
-    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
-        dlsym_name_rc =
-            sceKernelDlsym(1, "_sceKernelRtldSetApplicationHeapAPI", &dlsym_ptr_name);
-        dlsym_nid_rc = sceKernelDlsym(1, "p5EcQeEeJAE", &dlsym_ptr_nid);
-    }
-    obs_report_measure(id, "set-app-heap-api", "dlsym-handle1-name-rc",
-                       (uint64_t)(uint32_t)dlsym_name_rc, "code");
-    obs_report_measure(id, "set-app-heap-api", "dlsym-handle1-nid-rc",
-                       (uint64_t)(uint32_t)dlsym_nid_rc, "code");
-
-    if (fn_set_heap && obs_address_is_callable(fn_set_heap)) {
-        /* (3.2) Two calls with different tables, rax set to 0x1111 then 0x2222 */
-        void *table_a[8] = {(void *)&dummy_heap_fn_a0, (void *)&dummy_heap_fn_a1,
-                            (void *)&dummy_heap_fn_a2, (void *)&dummy_heap_fn_a3,
-                            (void *)&dummy_heap_fn_a4, (void *)&dummy_heap_fn_a5,
-                            (void *)&dummy_heap_fn_a6, (void *)&dummy_heap_fn_a7};
-        void *table_b[8] = {(void *)&dummy_heap_fn_b0, (void *)&dummy_heap_fn_b1,
-                            (void *)&dummy_heap_fn_b2, (void *)&dummy_heap_fn_b3,
-                            (void *)&dummy_heap_fn_b4, (void *)&dummy_heap_fn_b5,
-                            (void *)&dummy_heap_fn_b6, (void *)&dummy_heap_fn_b7};
-
-        int sig1 = OBS_FAULT_ARM(&guard);
-        uint64_t rax_after1 = 0;
-        if (sig1 == 0) {
-            rax_after1 = obs_call_with_rax(fn_set_heap, table_a, 0x1111ULL);
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
-            obs_report_measure(id, "set-app-heap-api", "call1-fault", (uint64_t)sig1,
-                               "signal");
-        }
-        obs_report_measure(id, "set-app-heap-api", "call1-rax-before", 0x1111ULL,
-                           "hex");
-        obs_report_measure(id, "set-app-heap-api", "call1-rax-after", rax_after1,
-                           "hex");
-        obs_report_measure(id, "set-app-heap-api", "rc", (uint64_t)(uint32_t)rax_after1,
-                           "code");
-
-        int sig2 = OBS_FAULT_ARM(&guard);
-        uint64_t rax_after2 = 0;
-        if (sig2 == 0) {
-            rax_after2 = obs_call_with_rax(fn_set_heap, table_b, 0x2222ULL);
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
-            obs_report_measure(id, "set-app-heap-api", "call2-fault", (uint64_t)sig2,
-                               "signal");
-        }
-        obs_report_measure(id, "set-app-heap-api", "call2-rax-before", 0x2222ULL,
-                           "hex");
-        obs_report_measure(id, "set-app-heap-api", "call2-rax-after", rax_after2,
-                           "hex");
-
-        /* (3.3) malloc(0x40) after call: pointer and whether dummy table entry was
-         * called */
-        for (int i = 0; i < 8; i++) {
-            s_heap_dummy_calls_b[i] = 0;
-        }
-        void *p_test = malloc(0x40);
-        obs_report_measure(id, "post-heap-api-malloc", "ptr",
-                           (uint64_t)(uintptr_t)p_test, "hex");
-        uint32_t total_dummy_calls = 0;
-        for (int i = 0; i < 8; i++) {
-            total_dummy_calls += s_heap_dummy_calls_b[i];
-            char key_calls[32];
-            oops_snprintf(key_calls, sizeof(key_calls), "dummy-fn-%d-calls", i);
-            obs_report_measure(id, "post-heap-api-malloc", key_calls,
-                               (uint64_t)s_heap_dummy_calls_b[i], "count");
-        }
-        obs_report_measure(id, "post-heap-api-malloc", "total-dummy-calls",
-                           (uint64_t)total_dummy_calls, "count");
-        if (p_test) {
-            free(p_test);
-        }
-    }
-
-    /* (4) malloc_stats_fast */
+    /* (3) malloc_stats_fast */
     const void *fn_msf =
         census_resolve_symbol("libSceLibcInternal", "$KuOuD58hqn4", "malloc_stats_fast",
                               (const void *)&malloc_stats_fast, NULL);
@@ -1681,7 +1590,7 @@ static obs_result check_retail_start_libkernel(void) {
                          sizeof(msf_out));
     }
 
-    /* (5) sceLibcHeapGetTraceInfo */
+    /* (4) sceLibcHeapGetTraceInfo */
     const void *fn_trace = census_resolve_symbol(
         "libSceLibcInternalExt", "$NWtTN10cJzE", "sceLibcHeapGetTraceInfo",
         (const void *)&sceLibcHeapGetTraceInfo, NULL);
@@ -1744,6 +1653,100 @@ static obs_result check_retail_start_libkernel(void) {
                                    (uint64_t)sig, "signal");
             }
         }
+    }
+
+    /* (5) REQ-20261009T1610Z-sp02: _sceKernelRtldSetApplicationHeapAPI */
+    const void *fn_set_heap = census_resolve_symbol(
+        "libkernel", "$p5EcQeEeJAE", "_sceKernelRtldSetApplicationHeapAPI",
+        (const void *)&_sceKernelRtldSetApplicationHeapAPI, NULL);
+    obs_report_measure(id, "set-app-heap-api", "resolved",
+                       (uint64_t)(fn_set_heap != NULL), "bool");
+    /* (5.1) Report how it resolved: static import vs dlsym */
+    obs_report_measure(id, "set-app-heap-api", "resolved-by-link-import",
+                       (uint64_t)(obs_address_is_callable(
+                           (const void *)&_sceKernelRtldSetApplicationHeapAPI)),
+                       "bool");
+    void *dlsym_ptr_name = NULL;
+    int dlsym_name_rc = -1;
+    void *dlsym_ptr_nid = NULL;
+    int dlsym_nid_rc = -1;
+    if (obs_address_is_callable((const void *)&sceKernelDlsym)) {
+        dlsym_name_rc =
+            sceKernelDlsym(1, "_sceKernelRtldSetApplicationHeapAPI", &dlsym_ptr_name);
+        dlsym_nid_rc = sceKernelDlsym(1, "p5EcQeEeJAE", &dlsym_ptr_nid);
+    }
+    obs_report_measure(id, "set-app-heap-api", "dlsym-handle1-name-rc",
+                       (uint64_t)(uint32_t)dlsym_name_rc, "code");
+    obs_report_measure(id, "set-app-heap-api", "dlsym-handle1-nid-rc",
+                       (uint64_t)(uint32_t)dlsym_nid_rc, "code");
+
+    if (fn_set_heap && obs_address_is_callable(fn_set_heap)) {
+        /* (5.2) Two calls with different tables, rax set to 0x1111 then 0x2222 */
+        void *table_a[8] = {(void *)&dummy_heap_fn_a0, (void *)&dummy_heap_fn_a1,
+                            (void *)&dummy_heap_fn_a2, (void *)&dummy_heap_fn_a3,
+                            (void *)&dummy_heap_fn_a4, (void *)&dummy_heap_fn_a5,
+                            (void *)&dummy_heap_fn_a6, (void *)&dummy_heap_fn_a7};
+        void *table_b[8] = {(void *)&dummy_heap_fn_b0, (void *)&dummy_heap_fn_b1,
+                            (void *)&dummy_heap_fn_b2, (void *)&dummy_heap_fn_b3,
+                            (void *)&dummy_heap_fn_b4, (void *)&dummy_heap_fn_b5,
+                            (void *)&dummy_heap_fn_b6, (void *)&dummy_heap_fn_b7};
+
+        int sig1 = OBS_FAULT_ARM(&guard);
+        uint64_t rax_after1 = 0;
+        if (sig1 == 0) {
+            rax_after1 = obs_call_with_rax(fn_set_heap, table_a, 0x1111ULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "set-app-heap-api", "call1-fault", (uint64_t)sig1,
+                               "signal");
+        }
+        obs_report_measure(id, "set-app-heap-api", "call1-rax-before", 0x1111ULL,
+                           "hex");
+        obs_report_measure(id, "set-app-heap-api", "call1-rax-after", rax_after1,
+                           "hex");
+        obs_report_measure(id, "set-app-heap-api", "rc", (uint64_t)(uint32_t)rax_after1,
+                           "code");
+
+        int sig2 = OBS_FAULT_ARM(&guard);
+        uint64_t rax_after2 = 0;
+        if (sig2 == 0) {
+            rax_after2 = obs_call_with_rax(fn_set_heap, table_b, 0x2222ULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "set-app-heap-api", "call2-fault", (uint64_t)sig2,
+                               "signal");
+        }
+        obs_report_measure(id, "set-app-heap-api", "call2-rax-before", 0x2222ULL,
+                           "hex");
+        obs_report_measure(id, "set-app-heap-api", "call2-rax-after", rax_after2,
+                           "hex");
+
+        /* (5.3) malloc(0x40) after call: pointer and whether dummy table entry was
+         * called */
+        for (int i = 0; i < 8; i++) {
+            s_heap_dummy_calls_b[i] = 0;
+        }
+        void *p_test = malloc(0x40);
+        obs_report_measure(id, "post-heap-api-malloc", "ptr",
+                           (uint64_t)(uintptr_t)p_test, "hex");
+        uint32_t total_dummy_calls = 0;
+        for (int i = 0; i < 8; i++) {
+            total_dummy_calls += s_heap_dummy_calls_b[i];
+            char key_calls[32];
+            oops_snprintf(key_calls, sizeof(key_calls), "dummy-fn-%d-calls", i);
+            obs_report_measure(id, "post-heap-api-malloc", key_calls,
+                               (uint64_t)s_heap_dummy_calls_b[i], "count");
+        }
+        obs_report_measure(id, "post-heap-api-malloc", "total-dummy-calls",
+                           (uint64_t)total_dummy_calls, "count");
+        if (p_test) {
+            free(p_test);
+        }
+
+        /* Restore heap API to default (NULL) */
+        obs_call_with_rax(fn_set_heap, NULL, 0ULL);
     }
 
     return obs_pass();

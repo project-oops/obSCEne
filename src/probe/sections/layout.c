@@ -2159,50 +2159,77 @@ static obs_result check_savedata_mount_capacity(void) {
     typedef int (*fn_mount_info_t)(const void *, void *);
     typedef int (*fn_umount2_t)(const void *);
 
-    fn_init_t fn_init = (fn_init_t)(const void *)&sceSaveDataInitialize3_static;
-    if (!obs_address_is_callable((const void *)fn_init)) {
+    fn_init_t fn_init = (fn_init_t)layout_resolve_sym("libSceSaveData_native", "$TywrFKCoLGY");
+    if (!fn_init) {
+        fn_init = (fn_init_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataInitialize3");
+    }
+    if (!fn_init && obs_address_is_callable((const void *)&sceSaveDataInitialize3_static)) {
+        fn_init = (fn_init_t)(const void *)&sceSaveDataInitialize3_static;
+    }
+    if (!fn_init) {
         fn_init = (fn_init_t)savedata_resolve_sym(
             h_sd, "TywrFKCoLGY#T#U", "TywrFKCoLGY", "sceSaveDataInitialize3");
     }
-    fn_term_t fn_term = (fn_term_t)(const void *)&sceSaveDataTerminate_static;
-    if (!obs_address_is_callable((const void *)fn_term)) {
+
+    fn_term_t fn_term = (fn_term_t)layout_resolve_sym("libSceSaveData_native", "$yKDy8S5yLA0");
+    if (!fn_term) {
+        fn_term = (fn_term_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataTerminate");
+    }
+    if (!fn_term && obs_address_is_callable((const void *)&sceSaveDataTerminate_static)) {
+        fn_term = (fn_term_t)(const void *)&sceSaveDataTerminate_static;
+    }
+    if (!fn_term) {
         fn_term = (fn_term_t)savedata_resolve_sym(
             h_sd, "yKDy8S5yLA0#T#U", "yKDy8S5yLA0", "sceSaveDataTerminate");
     }
-    fn_mount2_t fn_mount2 = (fn_mount2_t)(const void *)&sceSaveDataMount2_static;
-    if (!obs_address_is_callable((const void *)fn_mount2)) {
+
+    fn_mount2_t fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData_native", "$0kj-gTw5PtM");
+    if (!fn_mount2) {
+        fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataMount2");
+    }
+    if (!fn_mount2 && obs_address_is_callable((const void *)&sceSaveDataMount2_static)) {
+        fn_mount2 = (fn_mount2_t)(const void *)&sceSaveDataMount2_static;
+    }
+    if (!fn_mount2 && obs_address_is_callable((const void *)&sceSaveDataMount2_minus)) {
         fn_mount2 = (fn_mount2_t)(const void *)&sceSaveDataMount2_minus;
     }
-    if (!obs_address_is_callable((const void *)fn_mount2)) {
+    if (!fn_mount2 && obs_address_is_callable((const void *)&sceSaveDataMount2_plus)) {
         fn_mount2 = (fn_mount2_t)(const void *)&sceSaveDataMount2_plus;
     }
-    if (!obs_address_is_callable((const void *)fn_mount2)) {
+    if (!fn_mount2) {
         fn_mount2 = (fn_mount2_t)savedata_resolve_sym(
             h_sd, "0z45PIH+SNI#J#A", "0z45PIH+SNI", "sceSaveDataMount2");
     }
-    if (fn_mount2 == NULL) {
+    if (!fn_mount2) {
         fn_mount2 = (fn_mount2_t)savedata_resolve_sym(
             h_sd, "0z45PIH-SNI#T#U", "0z45PIH-SNI", "sceSaveDataMount2");
     }
-    if (fn_mount2 == NULL) {
-        fn_mount2 = (fn_mount2_t)layout_resolve_sym("libSceSaveData_native", "$0kj-gTw5PtM");
+
+    fn_mount_info_t fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData_native", "$q8-aBtFHles");
+    if (!fn_minfo) {
+        fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataGetMountInfo");
     }
-    fn_mount_info_t fn_minfo = (fn_mount_info_t)(const void *)&sceSaveDataGetMountInfo_static;
-    if (!obs_address_is_callable((const void *)fn_minfo)) {
+    if (!fn_minfo && obs_address_is_callable((const void *)&sceSaveDataGetMountInfo_static)) {
+        fn_minfo = (fn_mount_info_t)(const void *)&sceSaveDataGetMountInfo_static;
+    }
+    if (!fn_minfo && obs_address_is_callable((const void *)&sceSaveDataGetMountInfo_65vh)) {
         fn_minfo = (fn_mount_info_t)(const void *)&sceSaveDataGetMountInfo_65vh;
     }
-    if (!obs_address_is_callable((const void *)fn_minfo)) {
+    if (!fn_minfo) {
         fn_minfo = (fn_mount_info_t)savedata_resolve_sym(
             h_sd, "65VH0Qaaz6s#T#U", "65VH0Qaaz6s", "sceSaveDataGetMountInfo");
     }
-    if (fn_minfo == NULL) {
-        fn_minfo = (fn_mount_info_t)layout_resolve_sym("libSceSaveData_native", "$q8-aBtFHles");
+
+    fn_umount2_t fn_umount = (fn_umount2_t)layout_resolve_sym("libSceSaveData_native", "$uW4vfTwMQVo");
+    if (!fn_umount) {
+        fn_umount = (fn_umount2_t)layout_resolve_sym("libSceSaveData_native", "sceSaveDataUmount2");
     }
-    fn_umount2_t fn_umount = (fn_umount2_t)(const void *)&sceSaveDataUmount2_static;
-    if (!obs_address_is_callable((const void *)fn_umount)) {
-        fn_umount = (fn_umount2_t)layout_resolve_sym("libSceSaveData_native", "$uW4vfTwMQVo");
+    if (!fn_umount && obs_address_is_callable((const void *)&sceSaveDataUmount2_static)) {
+        fn_umount = (fn_umount2_t)(const void *)&sceSaveDataUmount2_static;
     }
 
+    obs_report_measure(id, "resolve", "init3-resolved",
+                       (uint64_t)(fn_init != NULL && obs_address_is_callable((const void *)fn_init)), "bool");
     obs_report_measure(id, "sceSaveDataGetMountInfo", "resolved",
                        (uint64_t)(fn_minfo != NULL && obs_address_is_callable((const void *)fn_minfo)), "bool");
     obs_report_measure(id, "sceSaveDataMount2", "resolved",
@@ -3008,7 +3035,17 @@ static size_t s_json_events_count = 0;
 
 static void report_json_events(const char *id, const char *step, size_t from_idx) {
     size_t count = s_json_events_count - from_idx;
+    size_t alloc_count = 0;
+    size_t dealloc_count = 0;
+    for (size_t i = from_idx; i < s_json_events_count; i++) {
+        if (s_json_events[i].is_alloc)
+            alloc_count++;
+        else
+            dealloc_count++;
+    }
     obs_report_measure(id, step, "events-count", (uint64_t)count, "count");
+    obs_report_measure(id, step, "alloc-calls", (uint64_t)alloc_count, "count");
+    obs_report_measure(id, step, "dealloc-calls", (uint64_t)dealloc_count, "count");
     for (size_t i = from_idx; i < s_json_events_count; i++) {
         char tag[48];
         oops_snprintf(tag, sizeof(tag), "ev-%zu-%s", i - from_idx,
@@ -3582,15 +3619,30 @@ static obs_result check_json2_value_string(void) {
         ? (void (*)(void *))&sceJson2MemAllocatorDtor2_static
         : (void (*)(void *))layout_resolve_json_sym(mod_h, "_ZN3sce4Json12MemAllocatorD2Ev", "$OcAgPxcq5Vk");
 
+    int (*fn_webapi_init)(const void *) =
+        obs_address_is_callable((const void *)&sceNpWebApi2Initialize_static)
+            ? (int (*)(const void *))&sceNpWebApi2Initialize_static
+            : (int (*)(const void *))obs_module_symbol(obs_module_open("libSceNpWebApi2"), "$+o9816YQhqQ");
+    if (!fn_webapi_init) {
+        fn_webapi_init = (int (*)(const void *))layout_resolve_sym("libSceNpWebApi2", "$+o9816YQhqQ");
+    }
+
     int (*fn_push_event)(void *, void *, void *, void *, void *, void *) =
         obs_address_is_callable((const void *)&sceNpWebApi2PushEventCreateHandle_static)
             ? (int (*)(void *, void *, void *, void *, void *, void *))&sceNpWebApi2PushEventCreateHandle_static
             : (int (*)(void *, void *, void *, void *, void *, void *))obs_module_symbol(obs_module_open("libSceNpWebApi2"), "$WV1GwM32NgY");
+    if (!fn_push_event) {
+        fn_push_event = (int (*)(void *, void *, void *, void *, void *, void *))layout_resolve_sym("libSceNpWebApi2", "$WV1GwM32NgY");
+    }
 
     int (*fn_savedata_trans)(void *, void *, void *, void *, void *, void *) =
-        obs_address_is_callable((const void *)&sceSaveDataCreateTransactionResource_static)
-            ? (int (*)(void *, void *, void *, void *, void *, void *))&sceSaveDataCreateTransactionResource_static
-            : (int (*)(void *, void *, void *, void *, void *, void *))obs_module_symbol(obs_module_open("libSceSaveData"), "$gjRZNnw0JPE");
+        (int (*)(void *, void *, void *, void *, void *, void *))layout_resolve_sym("libSceSaveData_native", "$gjRZNnw0JPE");
+    if (!fn_savedata_trans) {
+        fn_savedata_trans = (int (*)(void *, void *, void *, void *, void *, void *))layout_resolve_sym("libSceSaveData_native", "sceSaveDataCreateTransactionResource");
+    }
+    if (!fn_savedata_trans && obs_address_is_callable((const void *)&sceSaveDataCreateTransactionResource_static)) {
+        fn_savedata_trans = (int (*)(void *, void *, void *, void *, void *, void *))&sceSaveDataCreateTransactionResource_static;
+    }
 
     /* Report symbol bindings */
     obs_report_measure(id, "Value::Value", "resolved", fn_val_ctor != NULL, "bool");
@@ -3912,8 +3964,32 @@ static obs_result check_json2_value_string(void) {
     obs_report_bytes(id, "MemAllocator::~MemAllocator()", "alloc-first-10h", 0, sub_alloc, 0x10);
     obs_report_buffer(id, "MemAllocator::~MemAllocator()", "alloc-first-0x10", sub_alloc, 0x10);
 
-    /* 6. sceNpWebApi2PushEventCreateHandle */
+    /* 6. sceNpWebApi2PushEventCreateHandle (called after sceNpWebApi2Initialize per rf03) */
     if (fn_push_event) {
+        int rc_web_init = -1;
+        if (fn_webapi_init) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_web_init = fn_webapi_init(NULL);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            if (rc_web_init != 0) {
+                uint8_t wparam[64];
+                memset(wparam, 0, sizeof(wparam));
+                *(uint32_t *)(void *)wparam = 64;
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_web_init = fn_webapi_init(wparam);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                }
+            }
+        }
+        obs_report_measure(id, "sceNpWebApi2Initialize", "rc", (uint64_t)(uint32_t)rc_web_init, "code");
+
         int sig = OBS_FAULT_ARM(&guard);
         int rc_zero = -1;
         if (sig == 0) {

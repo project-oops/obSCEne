@@ -2963,57 +2963,87 @@ static void *av_alloc_buffer(size_t size, size_t align) {
     return NULL;
 }
 
-static void *av_cb_0(void *obj, uint32_t size, uint32_t align) {
-    void *p = av_alloc_buffer(size, align);
+static void *av_cb_0(void *obj, uint64_t a1, uint64_t a2) {
+    uint32_t size = (uint32_t)a1;
+    uint32_t align = (uint32_t)a2;
+    if (a2 > a1 && a1 <= 256) {
+        size = (uint32_t)a2;
+        align = (uint32_t)a1;
+    }
+    void *p = av_alloc_buffer(size, align ? align : 32);
     if (s_av_log_count < 128) {
         s_av_logs[s_av_log_count].cb_id = 0;
         s_av_logs[s_av_log_count].a0 = (uint64_t)(uintptr_t)obj;
-        s_av_logs[s_av_log_count].a1 = size;
-        s_av_logs[s_av_log_count].a2 = align;
+        s_av_logs[s_av_log_count].a1 = a1;
+        s_av_logs[s_av_log_count].a2 = a2;
         s_av_logs[s_av_log_count].ret = (uint64_t)(uintptr_t)p;
         s_av_log_count++;
     }
     return p;
 }
 
-static void av_cb_1(void *obj, void *ptr) {
+static void av_cb_1(void *obj, void *ptr, uint64_t a2) {
     if (s_av_log_count < 128) {
         s_av_logs[s_av_log_count].cb_id = 1;
         s_av_logs[s_av_log_count].a0 = (uint64_t)(uintptr_t)obj;
         s_av_logs[s_av_log_count].a1 = (uint64_t)(uintptr_t)ptr;
-        s_av_logs[s_av_log_count].a2 = 0;
+        s_av_logs[s_av_log_count].a2 = a2;
         s_av_logs[s_av_log_count].ret = 0;
         s_av_log_count++;
     }
 }
 
-static void *av_cb_2(void *obj, uint32_t size, uint32_t align) {
-    void *p = av_alloc_buffer(size, align);
+static void *av_cb_2(void *obj, uint64_t a1, uint64_t a2) {
+    uint32_t size = (uint32_t)a1;
+    uint32_t align = (uint32_t)a2;
+    if (a2 > a1 && a1 <= 256) {
+        size = (uint32_t)a2;
+        align = (uint32_t)a1;
+    }
+    void *p = av_alloc_buffer(size, align ? align : 32);
     if (s_av_log_count < 128) {
         s_av_logs[s_av_log_count].cb_id = 2;
         s_av_logs[s_av_log_count].a0 = (uint64_t)(uintptr_t)obj;
-        s_av_logs[s_av_log_count].a1 = size;
-        s_av_logs[s_av_log_count].a2 = align;
+        s_av_logs[s_av_log_count].a1 = a1;
+        s_av_logs[s_av_log_count].a2 = a2;
         s_av_logs[s_av_log_count].ret = (uint64_t)(uintptr_t)p;
         s_av_log_count++;
     }
     return p;
 }
 
-static void av_cb_3(void *obj, void *ptr) {
+static void av_cb_3(void *obj, void *ptr, uint64_t a2) {
     if (s_av_log_count < 128) {
         s_av_logs[s_av_log_count].cb_id = 3;
         s_av_logs[s_av_log_count].a0 = (uint64_t)(uintptr_t)obj;
         s_av_logs[s_av_log_count].a1 = (uint64_t)(uintptr_t)ptr;
-        s_av_logs[s_av_log_count].a2 = 0;
+        s_av_logs[s_av_log_count].a2 = a2;
         s_av_logs[s_av_log_count].ret = 0;
         s_av_log_count++;
     }
 }
 
-static void av_log_cb(void *obj, const char *msg) {
-    (void)obj;
-    (void)msg;
+static struct {
+    uint64_t user;
+    char msg[128];
+} s_av_user_logs[32];
+static size_t s_av_user_log_count = 0;
+
+static void av_log_cb(void *user, const char *msg) {
+    if (s_av_user_log_count < 32) {
+        s_av_user_logs[s_av_user_log_count].user = (uint64_t)(uintptr_t)user;
+        if (msg) {
+            size_t len = 0;
+            while (msg[len] && len < sizeof(s_av_user_logs[0].msg) - 1) {
+                s_av_user_logs[s_av_user_log_count].msg[len] = msg[len];
+                len++;
+            }
+            s_av_user_logs[s_av_user_log_count].msg[len] = '\0';
+        } else {
+            s_av_user_logs[s_av_user_log_count].msg[0] = '\0';
+        }
+        s_av_user_log_count++;
+    }
 }
 
 static obs_result check_avplayer_lifecycle(void) {
@@ -3066,7 +3096,7 @@ static obs_result check_avplayer_lifecycle(void) {
         {"sceAvPlayerSetLooping", "$OVths0xGfho", NULL},
         {"sceAvPlayerSetTrickSpeed", "$av8Z++94rs0", NULL},
         {"sceAvPlayerStart", "$ET4Gr-Uu07s", NULL},
-        {"sceAvPlayerStop", "$ZC17w3vB5Lo", NULL},
+        {"sceAvPlayerStop", "$ZC17w3vB5Lo", (const void *)&sceAvPlayerStop_static},
         {"sceAvPlayerStreamCount", "$hdTyRzCXQeQ",
          (const void *)&sceAvPlayerStreamCount_static},
         {"sceAvPlayerVprintf", "$yN7Jhuv8g24", NULL},
@@ -3079,6 +3109,7 @@ static obs_result check_avplayer_lifecycle(void) {
     typedef int (*fn_add_src_ex_t)(void *, int, const char *);
     typedef int (*fn_close_t)(void *);
     typedef int (*fn_set_log_t)(void *, void *);
+    typedef int (*fn_stop_t)(void *);
 
     fn_init_ex_t fn_init_ex = NULL;
     fn_post_init_t fn_post_init = NULL;
@@ -3087,6 +3118,7 @@ static obs_result check_avplayer_lifecycle(void) {
     fn_add_src_ex_t fn_add_src_ex = NULL;
     fn_close_t fn_close = NULL;
     fn_set_log_t fn_set_log = NULL;
+    fn_stop_t fn_stop = NULL;
 
     for (size_t i = 0; i < sizeof(av_census) / sizeof(av_census[0]); i++) {
         const char *name = av_census[i].name;
@@ -3129,6 +3161,8 @@ static obs_result check_avplayer_lifecycle(void) {
                 fn_close = (fn_close_t)fn;
             else if (same_text(name, "sceAvPlayerSetLogCallback", 25))
                 fn_set_log = (fn_set_log_t)fn;
+            else if (same_text(name, "sceAvPlayerStop", 15))
+                fn_stop = (fn_stop_t)fn;
         }
     }
 
@@ -3137,16 +3171,37 @@ static obs_result check_avplayer_lifecycle(void) {
     }
 
     s_av_log_count = 0;
+    s_av_user_log_count = 0;
     s_av_pool_offset = 0;
 
+    int sig = 0;
+
     if (fn_set_log) {
-        fn_set_log((void *)&av_log_cb, (void *)0x1000);
+        int rc_set_log = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_set_log = fn_set_log((void *)&av_log_cb, (void *)0x1000);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "SetLogCallback", "rc", (uint64_t)(uint32_t)rc_set_log,
+                           "code");
+        obs_report_measure(id, "SetLogCallback", "callbacks",
+                           (uint64_t)s_av_user_log_count, "count");
+        for (size_t i = 0; i < s_av_user_log_count; i++) {
+            char tag[64];
+            snprintf(tag, sizeof(tag), "SetLogCallback-cb%zu", i);
+            obs_report_measure(id, tag, "user", s_av_user_logs[i].user, "addr");
+            obs_report_measure(id, tag, "len", (uint64_t)strlen(s_av_user_logs[i].msg),
+                               "count");
+        }
     }
 
     uint8_t av_init_block[0x230];
     memset(av_init_block, 0, sizeof(av_init_block));
     *(uint64_t *)(void *)(av_init_block + 0x00) = 0x230ULL;
-    *(uint64_t *)(void *)(av_init_block + 0x08) = 0x1000ULL;
+    *(uint64_t *)(void *)(av_init_block + 0x08) = 0x5a5a0000ULL;
     *(void **)(void *)(av_init_block + 0x10) = (void *)&av_cb_0;
     *(void **)(void *)(av_init_block + 0x18) = (void *)&av_cb_1;
     *(void **)(void *)(av_init_block + 0x20) = (void *)&av_cb_2;
@@ -3175,7 +3230,7 @@ static obs_result check_avplayer_lifecycle(void) {
     uint64_t handle = 0xccccccccccccccccULL;
     size_t before_cnt = s_av_log_count;
     int rc_init = -1;
-    int sig = OBS_FAULT_ARM(&guard);
+    sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
         rc_init = fn_init_ex(av_init_block, &handle);
         obs_fault_unregister();
@@ -3193,6 +3248,7 @@ static obs_result check_avplayer_lifecycle(void) {
         obs_report_measure(id, tag, "id", (uint64_t)s_av_logs[i].cb_id, "id");
         obs_report_measure(id, tag, "a0", s_av_logs[i].a0, "val");
         obs_report_measure(id, tag, "a1", s_av_logs[i].a1, "val");
+        obs_report_measure(id, tag, "a2", s_av_logs[i].a2, "val");
         obs_report_measure(id, tag, "ret", s_av_logs[i].ret, "addr");
     }
 
@@ -3211,6 +3267,35 @@ static obs_result check_avplayer_lifecycle(void) {
         obs_report_measure(id, "PostInit", "rc", (uint64_t)(uint32_t)rc_post, "code");
         obs_report_measure(id, "PostInit", "callbacks",
                            (uint64_t)(s_av_log_count - before_cnt), "count");
+    }
+
+    /* 2b. Stop on player with no source after PostInit per rf03 */
+    if (fn_stop && rc_init == 0) {
+        before_cnt = s_av_log_count;
+        size_t before_user_cnt = s_av_user_log_count;
+        int rc_stop = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_stop = fn_stop((void *)(uintptr_t)handle);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "Stop-no-source", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "Stop-no-source", "rc", (uint64_t)(uint32_t)rc_stop,
+                           "code");
+        obs_report_measure(id, "Stop-no-source", "callbacks",
+                           (uint64_t)(s_av_log_count - before_cnt), "count");
+        for (size_t i = before_cnt; i < s_av_log_count; i++) {
+            char tag[64];
+            snprintf(tag, sizeof(tag), "Stop-no-source-cb%zu", i - before_cnt);
+            obs_report_measure(id, tag, "id", (uint64_t)s_av_logs[i].cb_id, "id");
+            obs_report_measure(id, tag, "a0", s_av_logs[i].a0, "val");
+            obs_report_measure(id, tag, "a1", s_av_logs[i].a1, "val");
+            obs_report_measure(id, tag, "a2", s_av_logs[i].a2, "val");
+        }
+        obs_report_measure(id, "Stop-no-source", "user-callbacks",
+                           (uint64_t)(s_av_user_log_count - before_user_cnt), "count");
     }
 
     /* 3. IsActive and StreamCount with no source */
@@ -3283,6 +3368,14 @@ static obs_result check_avplayer_lifecycle(void) {
                            "code");
         obs_report_measure(id, "Close-first", "callbacks",
                            (uint64_t)(s_av_log_count - before_cnt), "count");
+        for (size_t i = before_cnt; i < s_av_log_count; i++) {
+            char tag[64];
+            snprintf(tag, sizeof(tag), "Close-first-cb%zu", i - before_cnt);
+            obs_report_measure(id, tag, "id", (uint64_t)s_av_logs[i].cb_id, "id");
+            obs_report_measure(id, tag, "a0", s_av_logs[i].a0, "val");
+            obs_report_measure(id, tag, "a1", s_av_logs[i].a1, "val");
+            obs_report_measure(id, tag, "a2", s_av_logs[i].a2, "val");
+        }
     }
 
     /* 6. Repeat Steps 1 and 5 for second handle */
@@ -3301,6 +3394,15 @@ static obs_result check_avplayer_lifecycle(void) {
     obs_report_bytes(id, "InitEx-second", "handle-8b", 0, (const uint8_t *)&handle2, 8);
     obs_report_measure(id, "InitEx-second", "callbacks",
                        (uint64_t)(s_av_log_count - before_cnt), "count");
+    for (size_t i = before_cnt; i < s_av_log_count; i++) {
+        char tag[64];
+        snprintf(tag, sizeof(tag), "InitEx-second-cb%zu", i - before_cnt);
+        obs_report_measure(id, tag, "id", (uint64_t)s_av_logs[i].cb_id, "id");
+        obs_report_measure(id, tag, "a0", s_av_logs[i].a0, "val");
+        obs_report_measure(id, tag, "a1", s_av_logs[i].a1, "val");
+        obs_report_measure(id, tag, "a2", s_av_logs[i].a2, "val");
+        obs_report_measure(id, tag, "ret", s_av_logs[i].ret, "addr");
+    }
 
     if (fn_close && rc_init2 == 0) {
         before_cnt = s_av_log_count;
@@ -3317,6 +3419,14 @@ static obs_result check_avplayer_lifecycle(void) {
                            "code");
         obs_report_measure(id, "Close-second", "callbacks",
                            (uint64_t)(s_av_log_count - before_cnt), "count");
+        for (size_t i = before_cnt; i < s_av_log_count; i++) {
+            char tag[64];
+            snprintf(tag, sizeof(tag), "Close-second-cb%zu", i - before_cnt);
+            obs_report_measure(id, tag, "id", (uint64_t)s_av_logs[i].cb_id, "id");
+            obs_report_measure(id, tag, "a0", s_av_logs[i].a0, "val");
+            obs_report_measure(id, tag, "a1", s_av_logs[i].a1, "val");
+            obs_report_measure(id, tag, "a2", s_av_logs[i].a2, "val");
+        }
     }
 
     /* REQ-20261012T2011Z-625e: Follow-up arms */
@@ -4665,6 +4775,93 @@ static obs_result check_ux01_calls(void) {
         obs_report_measure(id, "PadGetExtendedInfo-7fffffff", "rc",
                            (uint64_t)(uint32_t)rc_bad_pe, "code");
 
+        /* REQ-20261015T0210Z-pd01: scePadDeviceClassParseData */
+        typedef int (*fn_pad_parse_t)(int, const void *, void *);
+        fn_pad_parse_t fn_pdp = NULL;
+        int is_link_pdp = 0;
+        if (obs_address_is_callable((const void *)&scePadDeviceClassParseData_static)) {
+            fn_pdp = (fn_pad_parse_t)&scePadDeviceClassParseData_static;
+            is_link_pdp = 1;
+        }
+        if (!fn_pdp) {
+            fn_pdp = (fn_pad_parse_t)census_resolve_symbol(
+                "libScePad", "$IHPqcbc0zCA", "scePadDeviceClassParseData", NULL, NULL);
+        }
+        if (!fn_pdp) {
+            fn_pdp = (fn_pad_parse_t)obs_module_symbol(OBS_HANDLE_SELF, "$IHPqcbc0zCA");
+            if (fn_pdp)
+                is_link_pdp = 1;
+        }
+        if (!fn_pdp) {
+            int h_pad = obs_module_open("libScePad");
+            if (h_pad > 0) {
+                fn_pdp = (fn_pad_parse_t)obs_module_symbol(h_pad, "$IHPqcbc0zCA");
+                if (!fn_pdp)
+                    fn_pdp = (fn_pad_parse_t)obs_module_symbol(
+                        h_pad, "scePadDeviceClassParseData");
+            }
+        }
+        int bound_pdp =
+            (fn_pdp != NULL && obs_address_is_callable((const void *)fn_pdp));
+        obs_report_measure(id, "scePadDeviceClassParseData", "bound",
+                           (uint64_t)bound_pdp, "bool");
+        if (bound_pdp) {
+            obs_report_measure(id, "scePadDeviceClassParseData", "how",
+                               (uint64_t)(is_link_pdp ? 1 : 2),
+                               is_link_pdp ? "link" : "dlsym");
+            uint8_t read_data[0x80];
+            memset(read_data, 0, sizeof(read_data));
+            if (obs_address_is_callable((const void *)&scePadRead)) {
+                scePadRead(pad_h, read_data, 1);
+            }
+
+            /* Arm 2: One parse twice */
+            uint8_t out1[0x100];
+            memset(out1, 0xcc, sizeof(out1));
+            int rc_p1 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_p1 = fn_pdp(pad_h, read_data, out1);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "pad-device-class-parse-1", "rc",
+                               (uint64_t)(uint32_t)rc_p1, "code");
+            obs_report_bytes(id, "pad-device-class-parse-1", "out-100b", 0, out1,
+                             0x100);
+
+            uint8_t out2[0x100];
+            memset(out2, 0xcc, sizeof(out2));
+            int rc_p2 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_p2 = fn_pdp(pad_h, read_data, out2);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "pad-device-class-parse-2", "rc",
+                               (uint64_t)(uint32_t)rc_p2, "code");
+            obs_report_bytes(id, "pad-device-class-parse-2", "out-100b", 0, out2,
+                             0x100);
+
+            /* Arm 3: Null out */
+            int rc_p_null = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_p_null = fn_pdp(pad_h, read_data, NULL);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "pad-device-class-parse-null", "rc",
+                               (uint64_t)(uint32_t)rc_p_null, "code");
+        } else {
+            obs_report_measure(id, "scePadDeviceClassParseData", "status", 0,
+                               "not-possible");
+        }
+
         /* REQ-20261013T1500Z-pd02: Pad reset lightbar and trigger effect */
         typedef int (*fn_pad_rl_t)(int);
         typedef int (*fn_pad_te_t)(int, const void *);
@@ -4939,6 +5136,146 @@ static obs_result check_ux01_calls(void) {
                 snprintf(tag_by, sizeof(tag_by), "b%d-bytes", k);
                 obs_report_bytes(id, "uds-0996125e-allbuf", tag_by, 0, bufs[k], 0x80);
             }
+        }
+
+        /* REQ-20261015T0653Z-ud01: SetString and DestroyHandle */
+        typedef int (*fn_uds_set_str_t)(uint64_t, const char *, const char *);
+        typedef int (*fn_uds_dst_h_t)(uint64_t);
+
+        fn_uds_set_str_t fn_setstr = NULL;
+        int is_link_setstr = 0;
+        if (obs_address_is_callable(
+                (const void
+                     *)&sceNpUniversalDataSystemEventPropertyObjectSetString_static)) {
+            fn_setstr = &sceNpUniversalDataSystemEventPropertyObjectSetString_static;
+            is_link_setstr = 1;
+        } else {
+            fn_setstr = (fn_uds_set_str_t)census_resolve_symbol(
+                "libSceNpUniversalDataSystem", "$MfDb+4Nln64",
+                "sceNpUniversalDataSystemEventPropertyObjectSetString", NULL, NULL);
+            if (!fn_setstr) {
+                fn_setstr = (fn_uds_set_str_t)obs_module_symbol(OBS_HANDLE_SELF,
+                                                                "$MfDb+4Nln64");
+                if (fn_setstr)
+                    is_link_setstr = 1;
+            }
+            if (!fn_setstr) {
+                fn_setstr = (fn_uds_set_str_t)obs_module_symbol(OBS_HANDLE_SELF,
+                                                                "$MfDb-4Nln64");
+                if (fn_setstr)
+                    is_link_setstr = 1;
+            }
+        }
+
+        fn_uds_dst_h_t fn_dst_h = NULL;
+        int is_link_dst_h = 0;
+        if (obs_address_is_callable(
+                (const void *)&sceNpUniversalDataSystemDestroyHandle_static)) {
+            fn_dst_h = &sceNpUniversalDataSystemDestroyHandle_static;
+            is_link_dst_h = 1;
+        } else {
+            fn_dst_h = (fn_uds_dst_h_t)census_resolve_symbol(
+                "libSceNpUniversalDataSystem", "$AUIHb7jUX3I",
+                "sceNpUniversalDataSystemDestroyHandle", NULL, NULL);
+            if (!fn_dst_h) {
+                fn_dst_h =
+                    (fn_uds_dst_h_t)obs_module_symbol(OBS_HANDLE_SELF, "$AUIHb7jUX3I");
+                if (fn_dst_h)
+                    is_link_dst_h = 1;
+            }
+        }
+
+        int bound_setstr =
+            (fn_setstr != NULL && obs_address_is_callable((const void *)fn_setstr));
+        obs_report_measure(id, "sceNpUniversalDataSystemEventPropertyObjectSetString",
+                           "bound", (uint64_t)bound_setstr, "bool");
+        if (bound_setstr) {
+            obs_report_measure(
+                id, "sceNpUniversalDataSystemEventPropertyObjectSetString", "how",
+                (uint64_t)(is_link_setstr ? 1 : 2), is_link_setstr ? "link" : "dlsym");
+        } else {
+            obs_report_measure(id,
+                               "sceNpUniversalDataSystemEventPropertyObjectSetString",
+                               "status", 0, "not-possible");
+        }
+
+        int bound_dst_h =
+            (fn_dst_h != NULL && obs_address_is_callable((const void *)fn_dst_h));
+        obs_report_measure(id, "sceNpUniversalDataSystemDestroyHandle", "bound",
+                           (uint64_t)bound_dst_h, "bool");
+        if (bound_dst_h) {
+            obs_report_measure(id, "sceNpUniversalDataSystemDestroyHandle", "how",
+                               (uint64_t)(is_link_dst_h ? 1 : 2),
+                               is_link_dst_h ? "link" : "dlsym");
+        } else {
+            obs_report_measure(id, "sceNpUniversalDataSystemDestroyHandle", "status", 0,
+                               "not-possible");
+        }
+
+        /* 2. SetString on property object */
+        uint64_t prop_obj = *(uint64_t *)b0;
+        int rc_cpo = (prop_obj != 0 && prop_obj != 0xccccccccccccccccULL) ? 0 : -1;
+        obs_report_measure(id, "uds-create-prop-obj", "rc", (uint64_t)(uint32_t)rc_cpo,
+                           "code");
+
+        if (fn_setstr && bound_setstr) {
+            int rc_s1 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_s1 = fn_setstr(prop_obj, "activityId", "a1");
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "uds-set-string-a1", "rc", (uint64_t)(uint32_t)rc_s1,
+                               "code");
+
+            int rc_s2 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_s2 = fn_setstr(prop_obj, "activityId", "a2");
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "uds-set-string-a2", "rc", (uint64_t)(uint32_t)rc_s2,
+                               "code");
+
+            int rc_snull = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_snull = fn_setstr(prop_obj, "activityId", NULL);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "uds-set-string-null", "rc",
+                               (uint64_t)(uint32_t)rc_snull, "code");
+        }
+
+        /* 3. DestroyHandle twice */
+        if (fn_dst_h && bound_dst_h) {
+            int rc_dh1 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_dh1 = fn_dst_h(h);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "uds-destroy-handle-1", "rc",
+                               (uint64_t)(uint32_t)rc_dh1, "code");
+
+            int rc_dh2 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_dh2 = fn_dst_h(h);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            obs_report_measure(id, "uds-destroy-handle-2", "rc",
+                               (uint64_t)(uint32_t)rc_dh2, "code");
         }
     }
 
@@ -5652,6 +5989,23 @@ static obs_result check_aw01_ampr_write_address(void) {
         }
     }
 
+    typedef int (*fn_reset_t)(void *);
+    fn_reset_t fn_reset = NULL;
+    if (obs_address_is_callable((const void *)&sceAmprCommandBufferReset_alt)) {
+        fn_reset = (fn_reset_t)(void *)&sceAmprCommandBufferReset_alt;
+    } else if (obs_address_is_callable(
+                   (const void *)&sceAmprCommandBufferReset_static)) {
+        fn_reset = (fn_reset_t)(void *)&sceAmprCommandBufferReset_static;
+    }
+    if (!fn_reset && h_ampr > 0) {
+        fn_reset = (fn_reset_t)obs_module_symbol(h_ampr, "$voD27PUOpG0");
+        if (!fn_reset)
+            fn_reset = (fn_reset_t)obs_module_symbol(h_ampr, "$baQO9ez2gL4");
+        if (!fn_reset)
+            fn_reset =
+                (fn_reset_t)obs_module_symbol(h_ampr, "sceAmprCommandBufferReset");
+    }
+
     /* Symbol 1: sceAmprCommandBufferWriteAddress_04_00 */
     typedef int (*fn_write_addr_t)(void *, void *, uint32_t, uint32_t);
     fn_write_addr_t fn_write_addr = NULL;
@@ -5852,6 +6206,98 @@ static obs_result check_aw01_ampr_write_address(void) {
         obs_report_bytes(id, "write-address-2", "buf-after-40b", 0, buf, 0x40);
         obs_report_bytes(id, "write-address-2", "buf-after-80b", 0x40, buf + 0x40,
                          0x40);
+
+        /* REQ-20261014T1710Z-ar01: Reset after two commands and append after reset */
+        obs_report_bytes(id, "ar01-reset-after-2", "obj-before-20b", 0, obj, 0x20);
+        uint64_t rc_reset = 0xffffffffffffffffULL;
+        if (fn_reset) {
+            int sig_rst = OBS_FAULT_ARM(&guard);
+            if (sig_rst == 0) {
+                rc_reset = (uint64_t)(uint32_t)fn_reset(obj);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "ar01-reset-after-2", "fault", (uint64_t)sig_rst,
+                                   "signal");
+            }
+        }
+        obs_report_measure(id, "ar01-reset-after-2", "rc", rc_reset, "code");
+        obs_report_bytes(id, "ar01-reset-after-2", "obj-after-20b", 0, obj, 0x20);
+
+        /* Arm 2: The append after it */
+        int sig_post = OBS_FAULT_ARM(&guard);
+        uint64_t rc_post = 0xffffffffffffffffULL;
+        if (sig_post == 0) {
+            rc_post = (uint64_t)(uint32_t)fn_write_addr(obj, slot, 0x87654321, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "ar01-append-after-reset", "fault",
+                               (uint64_t)sig_post, "signal");
+        }
+        obs_report_measure(id, "ar01-append-after-reset", "rc", rc_post, "code");
+        uint32_t bytes_used_post = *(const uint32_t *)(obj + 4);
+        uint32_t cmd_cnt_post = *(const uint32_t *)(obj + 8);
+        obs_report_measure(id, "ar01-append-after-reset", "bytes-used-plus4",
+                           (uint64_t)bytes_used_post, "bytes");
+        obs_report_measure(id, "ar01-append-after-reset", "cmd-count-plus8",
+                           (uint64_t)cmd_cnt_post, "count");
+        obs_report_bytes(id, "ar01-append-after-reset", "buf-after-30b", 0, buf, 0x30);
+
+        /* Arm 3: An append that does not fit (0x20-byte buffer) */
+        static _Alignas(64) uint8_t obj_small[0x200];
+        static _Alignas(64) uint8_t cbuf_small[0x200];
+        static _Alignas(64) uint8_t buf_small[0x20];
+        memset(obj_small, 0xcc, sizeof(obj_small));
+        memset(cbuf_small, 0xcc, sizeof(cbuf_small));
+        memset(buf_small, 0xcc, sizeof(buf_small));
+        if (fn_ctor) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                ((void (*)(void *, void *, void *, uint64_t, void *, uint64_t))fn_ctor)(
+                    obj_small, obj_small, cbuf_small, 0, cbuf_small, 0x47d);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        if (fn_setbuf) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                int rc_sb =
+                    ((int (*)(void *, void *, uint32_t, uint64_t, uint64_t,
+                              uint64_t))fn_setbuf)(obj_small, buf_small, 0x20, 0, 0, 0);
+                obs_fault_unregister();
+                obs_report_measure(id, "ar01-overflow-setbuf", "rc",
+                                   (uint64_t)(uint32_t)rc_sb, "code");
+            } else {
+                obs_fault_unregister();
+            }
+        }
+        for (int i = 0; i < 3; i++) {
+            char tag[64];
+            snprintf(tag, sizeof(tag), "ar01-overflow-append-%d", i + 1);
+            int sig_ovf = OBS_FAULT_ARM(&guard);
+            uint64_t rc_ovf = 0xffffffffffffffffULL;
+            if (sig_ovf == 0) {
+                rc_ovf =
+                    (uint64_t)(uint32_t)fn_write_addr(obj_small, slot, 0x12345678, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, tag, "fault", (uint64_t)sig_ovf, "signal");
+            }
+            obs_report_measure(id, tag, "rc", rc_ovf, "code");
+            uint32_t bu = *(const uint32_t *)(obj_small + 4);
+            uint32_t cc = *(const uint32_t *)(obj_small + 8);
+            obs_report_measure(id, tag, "bytes-used-plus4", (uint64_t)bu, "bytes");
+            obs_report_measure(id, tag, "cmd-count-plus8", (uint64_t)cc, "count");
+            obs_report_bytes(id, tag, "obj-20b", 0, obj_small, 0x20);
+            obs_report_bytes(id, tag, "buf-20b", 0, buf_small, 0x20);
+            if (rc_ovf != 0) {
+                break;
+            }
+        }
 
         /* REQ-20261012T1900Z-aw02: fresh buffer with high stack address, specific
          * values, and misaligned address */
@@ -9747,6 +10193,9 @@ static const obs_check boot_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_ix01_ge_indx_offset, OBS_FROM_SPEC},
     {"000-boot/rf04-apr-app0-savedata", "libkernel", "$gEpBkcwxUjw", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_rf04_apr_app0_savedata, OBS_FROM_SPEC},
+    {"000-boot/ap01-audio-propagation-acm", "libSceAudioPropagation", "$7xyAxrusLko",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap01_audio_propagation_acm,
+     OBS_FROM_SPEC},
     {"000-boot/audioout2-port-set-attributes", "libSceAudioOut2", "$0x6o1VVAYSY",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ap03_audioout2_attributes,
      OBS_FROM_SPEC},
@@ -9807,6 +10256,9 @@ static const obs_check boot_checks[] = {
     {"000-boot/write-rejects-bad-fd", "libkernel", "sceKernelWrite", OBS_CAP_NONE,
      OBS_CAP_NONE, (const void *)&sceKernelWrite, check_write_rejects_bad_descriptor,
      OBS_FROM_DERIVED},
+    {"000-boot/ly01-layer-export-topology7", "libSceAgc", "sceAgcDcbDrawIndexOffset",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_ly01_layer_export_topology7,
+     OBS_FROM_SPEC},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };

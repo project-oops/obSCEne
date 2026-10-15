@@ -33,6 +33,7 @@
  */
 
 #include "oops/freestd.h"
+#include "oops/memory.h"
 #include "obscene/fault.h"
 #include "obscene/harness.h"
 #include "obscene/platform.h"

@@ -1926,6 +1926,8 @@ OBS_WEAK int
 sceAgcQueueEndOfPipeActionPatchAddress(void *packet_ptr,
                                        uint64_t addr) __asm__("$0fWWK5uG9rQ");
 OBS_WEAK int sceAgcGetDeviceInfo(void *info_buf) __asm__("$Tasc5SLczww");
+OBS_WEAK int sceAgcSuspendPoint(void) __asm__("$h9z6+0hEydk");
+OBS_WEAK int sceAgcSuspendPointAndCheckStatus(void *status) __asm__("$b+fis+WZ3Ig");
 OBS_WEAK int sceAgcDriverGetDeviceInfo(void *info_buf) __asm__("$ZGMnhAlcv9Y");
 OBS_WEAK int sceGnmGetGpuInfo(void *info_buf) __asm__("$GKIlegek0JQ");
 OBS_WEAK int sceGnmGetGpuCoreClockFrequency(uint32_t *out_freq) __asm__("$Fwvh++m9IQI");
@@ -1935,6 +1937,11 @@ OBS_WEAK int sceAgcDriverCreateQueue(uint32_t type, void **out_queue, uint64_t f
 OBS_WEAK int sceAgcDriverDestroyQueue(void *queue);
 OBS_WEAK int sceAgcDriverSubmitDcb(const void *dcb);
 OBS_WEAK int sceAgcDriverSubmitCommandBuffer(void *queue, const void *dcb);
+OBS_WEAK int sceAgcDriverSuspendPointSubmitDirect(void) __asm__("$ZV04pRl7cWU");
+OBS_WEAK int sceAgcDriverSuspendPointSubmit(void *queue,
+                                            uint32_t flags) __asm__("$QcmHLO2n7mk");
+OBS_WEAK int
+sceAgcDriverSysEnableSubmitDone45Exception(uint32_t enable) __asm__("$x3K61sY5m8Q");
 OBS_WEAK int sceAgcDriverAddEqEvent(uint64_t queue, int arg1, int arg2);
 OBS_WEAK int sceAgcDriverDeleteEqEvent(uint64_t queue, int arg1);
 OBS_WEAK int sceAgcDriverGetEqEventType(const void *event);
@@ -2448,5 +2455,45 @@ OBS_WEAK void *sceJson2StringCtor_static(void *str,
                                          const char *s) __asm__("$9KUZFjI1IxA");
 OBS_WEAK void sceJson2StringDtor_static(void *str) __asm__("$cG1VE2HMl6c");
 OBS_WEAK void sceJson2MemAllocatorDtor2_static(void *alloc) __asm__("$OcAgPxcq5Vk");
+
+/* REQ-20261015T0503Z-av01: AvPlayer stop */
+OBS_WEAK int sceAvPlayerStop_static(void *handle) __asm__("$ZC17w3vB5Lo");
+
+/* REQ-20261015T0210Z-pd01: scePadDeviceClassParseData */
+OBS_WEAK int scePadDeviceClassParseData_static(int handle, const void *data,
+                                               void *out) __asm__("$IHPqcbc0zCA");
+
+/* REQ-20261015T0653Z-ud01: UDS SetString and DestroyHandle */
+OBS_WEAK int sceNpUniversalDataSystemCreateEventPropertyObject_static(
+    uint64_t *out) __asm__("$s6W4Zl4Slgk");
+OBS_WEAK int sceNpUniversalDataSystemEventPropertyObjectSetString_static(
+    uint64_t obj, const char *key, const char *val) __asm__("$MfDb+4Nln64");
+OBS_WEAK int
+sceNpUniversalDataSystemDestroyHandle_static(uint64_t handle) __asm__("$AUIHb7jUX3I");
+
+/* REQ-20261015T0017Z-ai01: sceAjmInstanceCreate / Destroy / Batch */
+OBS_WEAK int sceAjmInstanceCreate_static(uint32_t ctx, uint32_t codec, uint32_t flags,
+                                         void *out) __asm__("$AxoDrINp4J8");
+OBS_WEAK int sceAjmInstanceDestroy_static(uint32_t ctx,
+                                          uint64_t id) __asm__("$RbLbuKv8zho");
+OBS_WEAK int sceAjmBatchInitialize_static(void *buffer, size_t size,
+                                          void *batch) __asm__("$MmpF1XsQiHw");
+OBS_WEAK int sceAjmBatchJobDecode_static(void *batch, uint64_t instance, void *a2,
+                                         void *a3, void *a4,
+                                         void *a5) __asm__("$39WxhR-ePew");
+
+/* REQ-20261014T1655Z-ap01: AudioPropagation and Acm */
+OBS_WEAK int
+sceAudioPropagationSystemQueryMemory_static(const void *p1,
+                                            void *p2) __asm__("$7xyAxrusLko");
+OBS_WEAK int
+sceAudioPropagationSystemCreate_static(const void *p1, void *p2,
+                                       uint64_t *out) __asm__("$aNEqtSHdUSo");
+OBS_WEAK int
+sceAudioPropagationSystemDestroy_static(uint64_t handle) __asm__("$x5VPqg5iyAk");
+OBS_WEAK int sceAcmContextCreate_static(uint64_t *out) __asm__("$ZIXln2K3XMk");
+OBS_WEAK int sceAcmContextDestroy_static(uint64_t handle) __asm__("$jBgBjAj02R8");
+
+OBS_WEAK int sceSystemServicePowerTick(void) __asm__("$ky8+cQvJtl0");
 
 #endif /* OBSCENE_PLATFORM_H */

@@ -6,85 +6,75 @@
 #ifndef OBS_VIDEODEC_ORACLE_INC
 #define OBS_VIDEODEC_ORACLE_INC
 
-/* 320x240 Baseline AVC bitstream: SPS, PPS, SEI, IDR frame (frame 1), P frame (frame 2) */
+/* 320x240 Baseline AVC bitstream: SPS, PPS, SEI, IDR frame (frame 1), P frame (frame 2)
+ */
 static const uint8_t s_h264_sample_320x240[913] = {
-    0x00, 0x00, 0x00, 0x01, 0x67, 0x42, 0xc0, 0x1e, 0xd9, 0x01, 0x41, 0xfb,
-    0x01, 0x10, 0x00, 0x00, 0x03, 0x00, 0x10, 0x00, 0x00, 0x03, 0x03, 0x20,
-    0xf1, 0x62, 0xe4, 0x80, 0x00, 0x00, 0x00, 0x01, 0x68, 0xcb, 0x83, 0xcb,
-    0x20, 0x00, 0x00, 0x01, 0x06, 0x05, 0xff, 0xff, 0x5f, 0xdc, 0x45, 0xe9,
-    0xbd, 0xe6, 0xd9, 0x48, 0xb7, 0x96, 0x2c, 0xd8, 0x20, 0xd9, 0x23, 0xee,
-    0xef, 0x78, 0x32, 0x36, 0x34, 0x20, 0x2d, 0x20, 0x63, 0x6f, 0x72, 0x65,
-    0x20, 0x31, 0x36, 0x35, 0x20, 0x2d, 0x20, 0x48, 0x2e, 0x32, 0x36, 0x34,
-    0x2f, 0x4d, 0x50, 0x45, 0x47, 0x2d, 0x34, 0x20, 0x41, 0x56, 0x43, 0x20,
-    0x63, 0x6f, 0x64, 0x65, 0x63, 0x20, 0x2d, 0x20, 0x43, 0x6f, 0x70, 0x79,
-    0x6c, 0x65, 0x66, 0x74, 0x20, 0x32, 0x30, 0x30, 0x33, 0x2d, 0x32, 0x30,
-    0x32, 0x35, 0x20, 0x2d, 0x20, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f,
-    0x77, 0x77, 0x77, 0x2e, 0x76, 0x69, 0x64, 0x65, 0x6f, 0x6c, 0x61, 0x6e,
-    0x2e, 0x6f, 0x72, 0x67, 0x2f, 0x78, 0x32, 0x36, 0x34, 0x2e, 0x68, 0x74,
-    0x6d, 0x6c, 0x20, 0x2d, 0x20, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73,
-    0x3a, 0x20, 0x63, 0x61, 0x62, 0x61, 0x63, 0x3d, 0x30, 0x20, 0x72, 0x65,
-    0x66, 0x3d, 0x33, 0x20, 0x64, 0x65, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x3d,
-    0x31, 0x3a, 0x30, 0x3a, 0x30, 0x20, 0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73,
-    0x65, 0x3d, 0x30, 0x78, 0x31, 0x3a, 0x30, 0x78, 0x31, 0x31, 0x31, 0x20,
-    0x6d, 0x65, 0x3d, 0x68, 0x65, 0x78, 0x20, 0x73, 0x75, 0x62, 0x6d, 0x65,
-    0x3d, 0x37, 0x20, 0x70, 0x73, 0x79, 0x3d, 0x31, 0x20, 0x70, 0x73, 0x79,
-    0x5f, 0x72, 0x64, 0x3d, 0x31, 0x2e, 0x30, 0x30, 0x3a, 0x30, 0x2e, 0x30,
-    0x30, 0x20, 0x6d, 0x69, 0x78, 0x65, 0x64, 0x5f, 0x72, 0x65, 0x66, 0x3d,
-    0x31, 0x20, 0x6d, 0x65, 0x5f, 0x72, 0x61, 0x6e, 0x67, 0x65, 0x3d, 0x31,
-    0x36, 0x20, 0x63, 0x68, 0x72, 0x6f, 0x6d, 0x61, 0x5f, 0x6d, 0x65, 0x3d,
-    0x31, 0x20, 0x74, 0x72, 0x65, 0x6c, 0x6c, 0x69, 0x73, 0x3d, 0x31, 0x20,
-    0x38, 0x78, 0x38, 0x64, 0x63, 0x74, 0x3d, 0x30, 0x20, 0x63, 0x71, 0x6d,
-    0x3d, 0x30, 0x20, 0x64, 0x65, 0x61, 0x64, 0x7a, 0x6f, 0x6e, 0x65, 0x3d,
-    0x32, 0x31, 0x2c, 0x31, 0x31, 0x20, 0x66, 0x61, 0x73, 0x74, 0x5f, 0x70,
-    0x73, 0x6b, 0x69, 0x70, 0x3d, 0x31, 0x20, 0x63, 0x68, 0x72, 0x6f, 0x6d,
-    0x61, 0x5f, 0x71, 0x70, 0x5f, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x3d,
-    0x2d, 0x32, 0x20, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64, 0x73, 0x3d, 0x37,
-    0x20, 0x6c, 0x6f, 0x6f, 0x6b, 0x61, 0x68, 0x65, 0x61, 0x64, 0x5f, 0x74,
-    0x68, 0x72, 0x65, 0x61, 0x64, 0x73, 0x3d, 0x31, 0x20, 0x73, 0x6c, 0x69,
-    0x63, 0x65, 0x64, 0x5f, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64, 0x73, 0x3d,
-    0x30, 0x20, 0x6e, 0x72, 0x3d, 0x30, 0x20, 0x64, 0x65, 0x63, 0x69, 0x6d,
-    0x61, 0x74, 0x65, 0x3d, 0x31, 0x20, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6c,
-    0x61, 0x63, 0x65, 0x64, 0x3d, 0x30, 0x20, 0x62, 0x6c, 0x75, 0x72, 0x61,
-    0x79, 0x5f, 0x63, 0x6f, 0x6d, 0x70, 0x61, 0x74, 0x3d, 0x30, 0x20, 0x63,
-    0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69, 0x6e, 0x65, 0x64, 0x5f, 0x69,
-    0x6e, 0x74, 0x72, 0x61, 0x3d, 0x30, 0x20, 0x62, 0x66, 0x72, 0x61, 0x6d,
-    0x65, 0x73, 0x3d, 0x30, 0x20, 0x77, 0x65, 0x69, 0x67, 0x68, 0x74, 0x70,
-    0x3d, 0x30, 0x20, 0x6b, 0x65, 0x79, 0x69, 0x6e, 0x74, 0x3d, 0x32, 0x35,
-    0x30, 0x20, 0x6b, 0x65, 0x79, 0x69, 0x6e, 0x74, 0x5f, 0x6d, 0x69, 0x6e,
-    0x3d, 0x32, 0x35, 0x20, 0x73, 0x63, 0x65, 0x6e, 0x65, 0x63, 0x75, 0x74,
-    0x3d, 0x34, 0x30, 0x20, 0x69, 0x6e, 0x74, 0x72, 0x61, 0x5f, 0x72, 0x65,
-    0x66, 0x72, 0x65, 0x73, 0x68, 0x3d, 0x30, 0x20, 0x72, 0x63, 0x5f, 0x6c,
-    0x6f, 0x6f, 0x6b, 0x61, 0x68, 0x65, 0x61, 0x64, 0x3d, 0x34, 0x30, 0x20,
-    0x72, 0x63, 0x3d, 0x63, 0x72, 0x66, 0x20, 0x6d, 0x62, 0x74, 0x72, 0x65,
-    0x65, 0x3d, 0x31, 0x20, 0x63, 0x72, 0x66, 0x3d, 0x32, 0x33, 0x2e, 0x30,
-    0x20, 0x71, 0x63, 0x6f, 0x6d, 0x70, 0x3d, 0x30, 0x2e, 0x36, 0x30, 0x20,
-    0x71, 0x70, 0x6d, 0x69, 0x6e, 0x3d, 0x30, 0x20, 0x71, 0x70, 0x6d, 0x61,
-    0x78, 0x3d, 0x36, 0x39, 0x20, 0x71, 0x70, 0x73, 0x74, 0x65, 0x70, 0x3d,
-    0x34, 0x20, 0x69, 0x70, 0x5f, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x3d, 0x31,
-    0x2e, 0x34, 0x30, 0x20, 0x61, 0x71, 0x3d, 0x31, 0x3a, 0x31, 0x2e, 0x30,
-    0x30, 0x00, 0x80, 0x00, 0x00, 0x01, 0x65, 0x88, 0x84, 0x0b, 0xf1, 0x18,
-    0xa0, 0x00, 0x24, 0x73, 0x1c, 0x00, 0x04, 0x43, 0x63, 0x80, 0x00, 0x9a,
-    0xd4, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c,
-    0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
-    0xd7, 0x5e, 0x00, 0x00, 0x00, 0x01, 0x41, 0x9a, 0x38, 0x15, 0xe0, 0x12,
-    0xd8,
+    0x00, 0x00, 0x00, 0x01, 0x67, 0x42, 0xc0, 0x1e, 0xd9, 0x01, 0x41, 0xfb, 0x01, 0x10,
+    0x00, 0x00, 0x03, 0x00, 0x10, 0x00, 0x00, 0x03, 0x03, 0x20, 0xf1, 0x62, 0xe4, 0x80,
+    0x00, 0x00, 0x00, 0x01, 0x68, 0xcb, 0x83, 0xcb, 0x20, 0x00, 0x00, 0x01, 0x06, 0x05,
+    0xff, 0xff, 0x5f, 0xdc, 0x45, 0xe9, 0xbd, 0xe6, 0xd9, 0x48, 0xb7, 0x96, 0x2c, 0xd8,
+    0x20, 0xd9, 0x23, 0xee, 0xef, 0x78, 0x32, 0x36, 0x34, 0x20, 0x2d, 0x20, 0x63, 0x6f,
+    0x72, 0x65, 0x20, 0x31, 0x36, 0x35, 0x20, 0x2d, 0x20, 0x48, 0x2e, 0x32, 0x36, 0x34,
+    0x2f, 0x4d, 0x50, 0x45, 0x47, 0x2d, 0x34, 0x20, 0x41, 0x56, 0x43, 0x20, 0x63, 0x6f,
+    0x64, 0x65, 0x63, 0x20, 0x2d, 0x20, 0x43, 0x6f, 0x70, 0x79, 0x6c, 0x65, 0x66, 0x74,
+    0x20, 0x32, 0x30, 0x30, 0x33, 0x2d, 0x32, 0x30, 0x32, 0x35, 0x20, 0x2d, 0x20, 0x68,
+    0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x77, 0x77, 0x77, 0x2e, 0x76, 0x69, 0x64, 0x65,
+    0x6f, 0x6c, 0x61, 0x6e, 0x2e, 0x6f, 0x72, 0x67, 0x2f, 0x78, 0x32, 0x36, 0x34, 0x2e,
+    0x68, 0x74, 0x6d, 0x6c, 0x20, 0x2d, 0x20, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+    0x3a, 0x20, 0x63, 0x61, 0x62, 0x61, 0x63, 0x3d, 0x30, 0x20, 0x72, 0x65, 0x66, 0x3d,
+    0x33, 0x20, 0x64, 0x65, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x3d, 0x31, 0x3a, 0x30, 0x3a,
+    0x30, 0x20, 0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x65, 0x3d, 0x30, 0x78, 0x31, 0x3a,
+    0x30, 0x78, 0x31, 0x31, 0x31, 0x20, 0x6d, 0x65, 0x3d, 0x68, 0x65, 0x78, 0x20, 0x73,
+    0x75, 0x62, 0x6d, 0x65, 0x3d, 0x37, 0x20, 0x70, 0x73, 0x79, 0x3d, 0x31, 0x20, 0x70,
+    0x73, 0x79, 0x5f, 0x72, 0x64, 0x3d, 0x31, 0x2e, 0x30, 0x30, 0x3a, 0x30, 0x2e, 0x30,
+    0x30, 0x20, 0x6d, 0x69, 0x78, 0x65, 0x64, 0x5f, 0x72, 0x65, 0x66, 0x3d, 0x31, 0x20,
+    0x6d, 0x65, 0x5f, 0x72, 0x61, 0x6e, 0x67, 0x65, 0x3d, 0x31, 0x36, 0x20, 0x63, 0x68,
+    0x72, 0x6f, 0x6d, 0x61, 0x5f, 0x6d, 0x65, 0x3d, 0x31, 0x20, 0x74, 0x72, 0x65, 0x6c,
+    0x6c, 0x69, 0x73, 0x3d, 0x31, 0x20, 0x38, 0x78, 0x38, 0x64, 0x63, 0x74, 0x3d, 0x30,
+    0x20, 0x63, 0x71, 0x6d, 0x3d, 0x30, 0x20, 0x64, 0x65, 0x61, 0x64, 0x7a, 0x6f, 0x6e,
+    0x65, 0x3d, 0x32, 0x31, 0x2c, 0x31, 0x31, 0x20, 0x66, 0x61, 0x73, 0x74, 0x5f, 0x70,
+    0x73, 0x6b, 0x69, 0x70, 0x3d, 0x31, 0x20, 0x63, 0x68, 0x72, 0x6f, 0x6d, 0x61, 0x5f,
+    0x71, 0x70, 0x5f, 0x6f, 0x66, 0x66, 0x73, 0x65, 0x74, 0x3d, 0x2d, 0x32, 0x20, 0x74,
+    0x68, 0x72, 0x65, 0x61, 0x64, 0x73, 0x3d, 0x37, 0x20, 0x6c, 0x6f, 0x6f, 0x6b, 0x61,
+    0x68, 0x65, 0x61, 0x64, 0x5f, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64, 0x73, 0x3d, 0x31,
+    0x20, 0x73, 0x6c, 0x69, 0x63, 0x65, 0x64, 0x5f, 0x74, 0x68, 0x72, 0x65, 0x61, 0x64,
+    0x73, 0x3d, 0x30, 0x20, 0x6e, 0x72, 0x3d, 0x30, 0x20, 0x64, 0x65, 0x63, 0x69, 0x6d,
+    0x61, 0x74, 0x65, 0x3d, 0x31, 0x20, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6c, 0x61, 0x63,
+    0x65, 0x64, 0x3d, 0x30, 0x20, 0x62, 0x6c, 0x75, 0x72, 0x61, 0x79, 0x5f, 0x63, 0x6f,
+    0x6d, 0x70, 0x61, 0x74, 0x3d, 0x30, 0x20, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61,
+    0x69, 0x6e, 0x65, 0x64, 0x5f, 0x69, 0x6e, 0x74, 0x72, 0x61, 0x3d, 0x30, 0x20, 0x62,
+    0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x3d, 0x30, 0x20, 0x77, 0x65, 0x69, 0x67, 0x68,
+    0x74, 0x70, 0x3d, 0x30, 0x20, 0x6b, 0x65, 0x79, 0x69, 0x6e, 0x74, 0x3d, 0x32, 0x35,
+    0x30, 0x20, 0x6b, 0x65, 0x79, 0x69, 0x6e, 0x74, 0x5f, 0x6d, 0x69, 0x6e, 0x3d, 0x32,
+    0x35, 0x20, 0x73, 0x63, 0x65, 0x6e, 0x65, 0x63, 0x75, 0x74, 0x3d, 0x34, 0x30, 0x20,
+    0x69, 0x6e, 0x74, 0x72, 0x61, 0x5f, 0x72, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x3d,
+    0x30, 0x20, 0x72, 0x63, 0x5f, 0x6c, 0x6f, 0x6f, 0x6b, 0x61, 0x68, 0x65, 0x61, 0x64,
+    0x3d, 0x34, 0x30, 0x20, 0x72, 0x63, 0x3d, 0x63, 0x72, 0x66, 0x20, 0x6d, 0x62, 0x74,
+    0x72, 0x65, 0x65, 0x3d, 0x31, 0x20, 0x63, 0x72, 0x66, 0x3d, 0x32, 0x33, 0x2e, 0x30,
+    0x20, 0x71, 0x63, 0x6f, 0x6d, 0x70, 0x3d, 0x30, 0x2e, 0x36, 0x30, 0x20, 0x71, 0x70,
+    0x6d, 0x69, 0x6e, 0x3d, 0x30, 0x20, 0x71, 0x70, 0x6d, 0x61, 0x78, 0x3d, 0x36, 0x39,
+    0x20, 0x71, 0x70, 0x73, 0x74, 0x65, 0x70, 0x3d, 0x34, 0x20, 0x69, 0x70, 0x5f, 0x72,
+    0x61, 0x74, 0x69, 0x6f, 0x3d, 0x31, 0x2e, 0x34, 0x30, 0x20, 0x61, 0x71, 0x3d, 0x31,
+    0x3a, 0x31, 0x2e, 0x30, 0x30, 0x00, 0x80, 0x00, 0x00, 0x01, 0x65, 0x88, 0x84, 0x0b,
+    0xf1, 0x18, 0xa0, 0x00, 0x24, 0x73, 0x1c, 0x00, 0x04, 0x43, 0x63, 0x80, 0x00, 0x9a,
+    0xd4, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9c,
+    0x9c, 0x9c, 0x9c, 0x9c, 0x9c, 0x9d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7,
+    0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
+    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d,
+    0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7,
+    0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
+    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d,
+    0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7,
+    0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
+    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d,
+    0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7,
+    0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
+    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d,
+    0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7,
+    0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75,
+    0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5d,
+    0x75, 0xd7, 0x5d, 0x75, 0xd7, 0x5e, 0x00, 0x00, 0x00, 0x01, 0x41, 0x9a, 0x38, 0x15,
+    0xe0, 0x12, 0xd8,
 };
 
 typedef struct {
@@ -163,7 +153,6 @@ typedef struct {
     uint32_t pitch_in_bytes;
 } SceVideodec2OutputInfo;
 
-
 static obs_result check_videodec2_oracle_census(void) {
     const char *id = "107-videodec/oracle-census";
     obs_jmp_buf guard;
@@ -183,39 +172,70 @@ static obs_result check_videodec2_oracle_census(void) {
     typedef int (*flush_fn)(void *, void *, void *);
     typedef int (*reset_fn)(void *);
 
-    query_compute_fn fn_qcomp = (query_compute_fn)obs_module_symbol(handle, "sceVideodec2QueryComputeMemoryInfo");
-    if (!fn_qcomp) fn_qcomp = (query_compute_fn)videodec_direct_sym("sceVideodec2QueryComputeMemoryInfo");
-    alloc_queue_fn fn_alloc_q = (alloc_queue_fn)obs_module_symbol(handle, "sceVideodec2AllocateComputeQueue");
-    if (!fn_alloc_q) fn_alloc_q = (alloc_queue_fn)videodec_direct_sym("sceVideodec2AllocateComputeQueue");
-    release_queue_fn fn_rel_q = (release_queue_fn)obs_module_symbol(handle, "sceVideodec2ReleaseComputeQueue");
-    if (!fn_rel_q) fn_rel_q = (release_queue_fn)videodec_direct_sym("sceVideodec2ReleaseComputeQueue");
-    query_dec_fn fn_qdec = (query_dec_fn)obs_module_symbol(handle, "sceVideodec2QueryDecoderMemoryInfo");
-    if (!fn_qdec) fn_qdec = (query_dec_fn)videodec_direct_sym("sceVideodec2QueryDecoderMemoryInfo");
-    create_dec_fn fn_create = (create_dec_fn)obs_module_symbol(handle, "sceVideodec2CreateDecoder");
-    if (!fn_create) fn_create = (create_dec_fn)videodec_direct_sym("sceVideodec2CreateDecoder");
-    delete_dec_fn fn_delete = (delete_dec_fn)obs_module_symbol(handle, "sceVideodec2DeleteDecoder");
-    if (!fn_delete) fn_delete = (delete_dec_fn)videodec_direct_sym("sceVideodec2DeleteDecoder");
+    query_compute_fn fn_qcomp = (query_compute_fn)obs_module_symbol(
+        handle, "sceVideodec2QueryComputeMemoryInfo");
+    if (!fn_qcomp)
+        fn_qcomp =
+            (query_compute_fn)videodec_direct_sym("sceVideodec2QueryComputeMemoryInfo");
+    alloc_queue_fn fn_alloc_q =
+        (alloc_queue_fn)obs_module_symbol(handle, "sceVideodec2AllocateComputeQueue");
+    if (!fn_alloc_q)
+        fn_alloc_q =
+            (alloc_queue_fn)videodec_direct_sym("sceVideodec2AllocateComputeQueue");
+    release_queue_fn fn_rel_q =
+        (release_queue_fn)obs_module_symbol(handle, "sceVideodec2ReleaseComputeQueue");
+    if (!fn_rel_q)
+        fn_rel_q =
+            (release_queue_fn)videodec_direct_sym("sceVideodec2ReleaseComputeQueue");
+    query_dec_fn fn_qdec =
+        (query_dec_fn)obs_module_symbol(handle, "sceVideodec2QueryDecoderMemoryInfo");
+    if (!fn_qdec)
+        fn_qdec =
+            (query_dec_fn)videodec_direct_sym("sceVideodec2QueryDecoderMemoryInfo");
+    create_dec_fn fn_create =
+        (create_dec_fn)obs_module_symbol(handle, "sceVideodec2CreateDecoder");
+    if (!fn_create)
+        fn_create = (create_dec_fn)videodec_direct_sym("sceVideodec2CreateDecoder");
+    delete_dec_fn fn_delete =
+        (delete_dec_fn)obs_module_symbol(handle, "sceVideodec2DeleteDecoder");
+    if (!fn_delete)
+        fn_delete = (delete_dec_fn)videodec_direct_sym("sceVideodec2DeleteDecoder");
     decode_fn fn_decode = (decode_fn)obs_module_symbol(handle, "sceVideodec2Decode");
-    if (!fn_decode) fn_decode = (decode_fn)videodec_direct_sym("sceVideodec2Decode");
+    if (!fn_decode)
+        fn_decode = (decode_fn)videodec_direct_sym("sceVideodec2Decode");
     flush_fn fn_flush = (flush_fn)obs_module_symbol(handle, "sceVideodec2Flush");
-    if (!fn_flush) fn_flush = (flush_fn)videodec_direct_sym("sceVideodec2Flush");
+    if (!fn_flush)
+        fn_flush = (flush_fn)videodec_direct_sym("sceVideodec2Flush");
     reset_fn fn_reset = (reset_fn)obs_module_symbol(handle, "sceVideodec2Reset");
-    if (!fn_reset) fn_reset = (reset_fn)videodec_direct_sym("sceVideodec2Reset");
+    if (!fn_reset)
+        fn_reset = (reset_fn)videodec_direct_sym("sceVideodec2Reset");
 
     int h_vdecsw = obs_module_open("libSceVdecsw");
-    query_compute_fn fn_vdecsw_qcomp = (query_compute_fn)obs_module_symbol(h_vdecsw > 0 ? h_vdecsw : handle, "sceVdecswQueryComputeMemoryInfo");
+    query_compute_fn fn_vdecsw_qcomp = (query_compute_fn)obs_module_symbol(
+        h_vdecsw > 0 ? h_vdecsw : handle, "sceVdecswQueryComputeMemoryInfo");
     if (!fn_vdecsw_qcomp) {
-        fn_vdecsw_qcomp = (query_compute_fn)obs_module_symbol(h_vdecsw > 0 ? h_vdecsw : handle, "$0moTubWCsTM");
+        fn_vdecsw_qcomp = (query_compute_fn)obs_module_symbol(
+            h_vdecsw > 0 ? h_vdecsw : handle, "$0moTubWCsTM");
     }
-    query_dec_fn fn_vdecsw_qdec = (query_dec_fn)obs_module_symbol(h_vdecsw > 0 ? h_vdecsw : handle, "sceVdecswQueryDecoderMemoryInfo");
+    query_dec_fn fn_vdecsw_qdec = (query_dec_fn)obs_module_symbol(
+        h_vdecsw > 0 ? h_vdecsw : handle, "sceVdecswQueryDecoderMemoryInfo");
     if (!fn_vdecsw_qdec) {
-        fn_vdecsw_qdec = (query_dec_fn)obs_module_symbol(h_vdecsw > 0 ? h_vdecsw : handle, "$A+2M7EivuOU");
+        fn_vdecsw_qdec = (query_dec_fn)obs_module_symbol(
+            h_vdecsw > 0 ? h_vdecsw : handle, "$A+2M7EivuOU");
     }
 
-    obs_report_measure(id, "resolve", "query-compute", (uint64_t)obs_address_is_callable((const void *)fn_qcomp), "bool");
-    obs_report_measure(id, "resolve", "alloc-queue", (uint64_t)obs_address_is_callable((const void *)fn_alloc_q), "bool");
-    obs_report_measure(id, "resolve", "query-decoder", (uint64_t)obs_address_is_callable((const void *)fn_qdec), "bool");
-    obs_report_measure(id, "resolve", "create-decoder", (uint64_t)obs_address_is_callable((const void *)fn_create), "bool");
+    obs_report_measure(id, "resolve", "query-compute",
+                       (uint64_t)obs_address_is_callable((const void *)fn_qcomp),
+                       "bool");
+    obs_report_measure(id, "resolve", "alloc-queue",
+                       (uint64_t)obs_address_is_callable((const void *)fn_alloc_q),
+                       "bool");
+    obs_report_measure(id, "resolve", "query-decoder",
+                       (uint64_t)obs_address_is_callable((const void *)fn_qdec),
+                       "bool");
+    obs_report_measure(id, "resolve", "create-decoder",
+                       (uint64_t)obs_address_is_callable((const void *)fn_create),
+                       "bool");
 
     /* 1. QueryComputeMemoryInfo */
     SceVideodec2ComputeMemoryInfo cinfo;
@@ -232,7 +252,8 @@ static obs_result check_videodec2_oracle_census(void) {
         } else {
             obs_fault_unregister();
         }
-        obs_report_measure(id, "QueryComputeMemoryInfo", "rc", (uint64_t)(uint32_t)rc, "code");
+        obs_report_measure(id, "QueryComputeMemoryInfo", "rc", (uint64_t)(uint32_t)rc,
+                           "code");
         obs_report_bytes(id, "QueryComputeMemoryInfo", "info-0x18", 0,
                          (const unsigned char *)&cinfo, (unsigned int)sizeof(cinfo));
 
@@ -248,7 +269,8 @@ static obs_result check_videodec2_oracle_census(void) {
         } else {
             obs_fault_unregister();
         }
-        obs_report_measure(id, "QueryComputeMemoryInfo-bad-size-0x10", "rc", (uint64_t)(uint32_t)rc_bad, "code");
+        obs_report_measure(id, "QueryComputeMemoryInfo-bad-size-0x10", "rc",
+                           (uint64_t)(uint32_t)rc_bad, "code");
 
         /* Null */
         int rc_null = -1;
@@ -259,193 +281,295 @@ static obs_result check_videodec2_oracle_census(void) {
         } else {
             obs_fault_unregister();
         }
-        obs_report_measure(id, "QueryComputeMemoryInfo-null", "rc", (uint64_t)(uint32_t)rc_null, "code");
+        obs_report_measure(id, "QueryComputeMemoryInfo-null", "rc",
+                           (uint64_t)(uint32_t)rc_null, "code");
     }
 
-    /* 2. AllocateComputeQueue */
+    /* 2. AllocateComputeQueue (rf03: shared block 0x495300, 64 KiB and 2 MiB aligned)
+     */
     void *queue_handle = (void *)0xccccccccccccccccULL;
-    static uint8_t direct_shared[0x20000] __attribute__((aligned(256)));
+    size_t sh_size = (cinfo.shared_size != 0) ? (size_t)cinfo.shared_size : 0x495300;
+
+#if !defined(OBSCENE_HOST_BUILD)
+    void *sh_64k = oops_mem_alloc(sh_size, 0x10000, OOPS_MEM_WB_ONION);
+    void *sh_2m = oops_mem_alloc(sh_size, 0x200000, OOPS_MEM_WB_ONION);
+#else
+    void *sh_64k = malloc(sh_size);
+    void *sh_2m = malloc(sh_size);
+#endif
+
     if (obs_address_is_callable((const void *)fn_alloc_q)) {
-        SceVideodec2ComputeQueueConfig qcfg;
-        qcfg.this_size = 0x10;
-        qcfg.pipe = 0;
-        qcfg.queue = 0;
+        /* Arm A: 64 KiB aligned */
+        SceVideodec2ComputeQueueConfig qcfg_64k;
+        qcfg_64k.this_size = 0x10;
+        qcfg_64k.pipe = 0;
+        qcfg_64k.queue = 0;
 
-        SceVideodec2ComputeMemoryInfo mem_in;
-        memset(&mem_in, 0, sizeof(mem_in));
-        mem_in.this_size = sizeof(mem_in);
-        mem_in.shared_size = (cinfo.shared_size > 0 && cinfo.shared_size <= sizeof(direct_shared)) ? cinfo.shared_size : 0x10000;
-        mem_in.shared = direct_shared;
-        obs_report_bytes(id, "AllocateComputeQueue", "passed-qcfg-0x10", 0,
-                         (const unsigned char *)&qcfg, (unsigned int)sizeof(qcfg));
-        obs_report_bytes(id, "AllocateComputeQueue", "passed-mem_in-0x18", 0,
-                         (const unsigned char *)&mem_in, (unsigned int)sizeof(mem_in));
+        SceVideodec2ComputeMemoryInfo mem_64k;
+        memset(&mem_64k, 0, sizeof(mem_64k));
+        mem_64k.this_size = sizeof(mem_64k);
+        mem_64k.shared_size = sh_size;
+        mem_64k.shared = sh_64k;
 
-        int rc = -1;
+        obs_report_bytes(id, "AllocateComputeQueue-64k", "passed-qcfg-0x10", 0,
+                         (const unsigned char *)&qcfg_64k,
+                         (unsigned int)sizeof(qcfg_64k));
+        obs_report_bytes(id, "AllocateComputeQueue-64k", "passed-mem_in-0x18", 0,
+                         (const unsigned char *)&mem_64k,
+                         (unsigned int)sizeof(mem_64k));
+
+        void *queue_64k = (void *)0xccccccccccccccccULL;
+        int rc_64k = -1;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc = fn_alloc_q(&qcfg, &mem_in, &queue_handle);
+            rc_64k = fn_alloc_q(&qcfg_64k, &mem_64k, &queue_64k);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
         }
-        obs_report_measure(id, "AllocateComputeQueue", "rc", (uint64_t)(uint32_t)rc, "code");
-        obs_report_measure(id, "AllocateComputeQueue", "queue-ptr", (uint64_t)(uintptr_t)queue_handle, "addr");
+        obs_report_measure(id, "AllocateComputeQueue-64k", "rc",
+                           (uint64_t)(uint32_t)rc_64k, "code");
+        obs_report_measure(id, "AllocateComputeQueue-64k", "queue-ptr",
+                           (uint64_t)(uintptr_t)queue_64k, "addr");
+
+        /* Arm B: 2 MiB aligned */
+        SceVideodec2ComputeQueueConfig qcfg_2m;
+        qcfg_2m.this_size = 0x10;
+        qcfg_2m.pipe = 0;
+        qcfg_2m.queue = 0;
+
+        SceVideodec2ComputeMemoryInfo mem_2m;
+        memset(&mem_2m, 0, sizeof(mem_2m));
+        mem_2m.this_size = sizeof(mem_2m);
+        mem_2m.shared_size = sh_size;
+        mem_2m.shared = sh_2m;
+
+        obs_report_bytes(id, "AllocateComputeQueue-2m", "passed-qcfg-0x10", 0,
+                         (const unsigned char *)&qcfg_2m,
+                         (unsigned int)sizeof(qcfg_2m));
+        obs_report_bytes(id, "AllocateComputeQueue-2m", "passed-mem_in-0x18", 0,
+                         (const unsigned char *)&mem_2m, (unsigned int)sizeof(mem_2m));
+
+        void *queue_2m = (void *)0xccccccccccccccccULL;
+        int rc_2m = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_2m = fn_alloc_q(&qcfg_2m, &mem_2m, &queue_2m);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+        }
+        obs_report_measure(id, "AllocateComputeQueue-2m", "rc",
+                           (uint64_t)(uint32_t)rc_2m, "code");
+        obs_report_measure(id, "AllocateComputeQueue-2m", "queue-ptr",
+                           (uint64_t)(uintptr_t)queue_2m, "addr");
+
+        if (rc_64k == 0) {
+            queue_handle = queue_64k;
+        } else if (rc_2m == 0) {
+            queue_handle = queue_2m;
+        }
+
+        /* Legacy name records */
+        obs_report_bytes(id, "AllocateComputeQueue", "passed-qcfg-0x10", 0,
+                         (const unsigned char *)&qcfg_64k,
+                         (unsigned int)sizeof(qcfg_64k));
+        obs_report_bytes(id, "AllocateComputeQueue", "passed-mem_in-0x18", 0,
+                         (const unsigned char *)&mem_64k,
+                         (unsigned int)sizeof(mem_64k));
+        obs_report_measure(id, "AllocateComputeQueue", "rc",
+                           (uint64_t)(uint32_t)(rc_64k == 0 ? rc_64k : rc_2m), "code");
+        obs_report_measure(id, "AllocateComputeQueue", "queue-ptr",
+                           (uint64_t)(uintptr_t)queue_handle, "addr");
 
         /* Pipe 5 */
-        qcfg.pipe = 5;
+        qcfg_64k.pipe = 5;
         void *q_refuse = NULL;
-        int rc_p5 = fn_alloc_q(&qcfg, &mem_in, &q_refuse);
-        obs_report_measure(id, "AllocateComputeQueue-pipe5", "rc", (uint64_t)(uint32_t)rc_p5, "code");
+        int rc_p5 = fn_alloc_q(&qcfg_64k, &mem_64k, &q_refuse);
+        obs_report_measure(id, "AllocateComputeQueue-pipe5", "rc",
+                           (uint64_t)(uint32_t)rc_p5, "code");
 
         /* Queue 8 */
-        qcfg.pipe = 0;
-        qcfg.queue = 8;
-        int rc_q8 = fn_alloc_q(&qcfg, &mem_in, &q_refuse);
-        obs_report_measure(id, "AllocateComputeQueue-queue8", "rc", (uint64_t)(uint32_t)rc_q8, "code");
+        qcfg_64k.pipe = 0;
+        qcfg_64k.queue = 8;
+        int rc_q8 = fn_alloc_q(&qcfg_64k, &mem_64k, &q_refuse);
+        obs_report_measure(id, "AllocateComputeQueue-queue8", "rc",
+                           (uint64_t)(uint32_t)rc_q8, "code");
 
         /* Shared size 0x8000 */
-        qcfg.queue = 0;
-        mem_in.shared_size = 0x8000;
-        int rc_short = fn_alloc_q(&qcfg, &mem_in, &q_refuse);
-        obs_report_measure(id, "AllocateComputeQueue-short-shared", "rc", (uint64_t)(uint32_t)rc_short, "code");
+        qcfg_64k.queue = 0;
+        mem_64k.shared_size = 0x8000;
+        int rc_short = fn_alloc_q(&qcfg_64k, &mem_64k, &q_refuse);
+        obs_report_measure(id, "AllocateComputeQueue-short-shared", "rc",
+                           (uint64_t)(uint32_t)rc_short, "code");
 
         /* Shared NULL */
-        mem_in.shared_size = 0x10000;
-        mem_in.shared = NULL;
-        int rc_null_shared = fn_alloc_q(&qcfg, &mem_in, &q_refuse);
-        obs_report_measure(id, "AllocateComputeQueue-null-shared", "rc", (uint64_t)(uint32_t)rc_null_shared, "code");
+        mem_64k.shared_size = 0x10000;
+        mem_64k.shared = NULL;
+        int rc_null_shared = fn_alloc_q(&qcfg_64k, &mem_64k, &q_refuse);
+        obs_report_measure(id, "AllocateComputeQueue-null-shared", "rc",
+                           (uint64_t)(uint32_t)rc_null_shared, "code");
 
         /* Release 0 */
         if (obs_address_is_callable((const void *)fn_rel_q)) {
             int rc_rel0 = fn_rel_q(NULL);
-            obs_report_measure(id, "ReleaseComputeQueue-0", "rc", (uint64_t)(uint32_t)rc_rel0, "code");
+            obs_report_measure(id, "ReleaseComputeQueue-0", "rc",
+                               (uint64_t)(uint32_t)rc_rel0, "code");
         }
     }
 
-    /* 3. QueryDecoderMemoryInfo */
-    SceVideodec2DecoderConfig dcfg;
-    memset(&dcfg, 0, sizeof(dcfg));
-    dcfg.this_size = (uint32_t)sizeof(dcfg);
-    dcfg.resource_type = 1;
-    dcfg.codec_type = 1; /* AVC */
-    dcfg.profile = 100;
-    dcfg.level = 41;
-    dcfg.max_width = 1920;
-    dcfg.max_height = 1088;
-    dcfg.max_dpb = -1;
-    dcfg.queue_depth = 4;
-    dcfg.compute_queue = (uint64_t)(uintptr_t)queue_handle;
-
-    SceVideodec2DecoderMemoryInfo minfo;
-    memset(&minfo, 0xcc, sizeof(minfo));
-    minfo.this_size = sizeof(minfo);
-    obs_report_bytes(id, "QueryDecoderMemoryInfo-1080p", "passed-minfo-0x48", 0,
-                     (const unsigned char *)&minfo, (unsigned int)sizeof(minfo));
-    obs_report_bytes(id, "QueryDecoderMemoryInfo-1080p", "passed-dcfg-0x40", 0,
-                     (const unsigned char *)&dcfg, (unsigned int)sizeof(dcfg));
+    /* 3. QueryDecoderMemoryInfo (rf03: size sweeps) */
+    uint8_t dcfg_raw[0x180];
+    uint8_t minfo_raw[0x180];
+    uint64_t accepted_dcfg_sz = 0;
+    uint64_t accepted_minfo_sz = 0;
 
     if (obs_address_is_callable((const void *)fn_qdec)) {
-        int rc = -1;
-        int sig = OBS_FAULT_ARM(&guard);
-        if (sig == 0) {
-            rc = fn_qdec(&dcfg, &minfo);
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
+        /* Sweep DecoderConfigInfo size word 0x10..0x100 step 8 with minfo size fixed at
+         * 0x48 */
+        for (uint64_t dsz = 0x10; dsz <= 0x100; dsz += 8) {
+            memset(dcfg_raw, 0, sizeof(dcfg_raw));
+            *(uint64_t *)(void *)(dcfg_raw + 0x00) = dsz;
+            *(uint32_t *)(void *)(dcfg_raw + 0x08) = 1;    /* resource_type */
+            *(uint32_t *)(void *)(dcfg_raw + 0x0c) = 1;    /* codec_type AVC */
+            *(uint32_t *)(void *)(dcfg_raw + 0x10) = 100;  /* profile */
+            *(uint32_t *)(void *)(dcfg_raw + 0x14) = 41;   /* level */
+            *(uint32_t *)(void *)(dcfg_raw + 0x18) = 1920; /* max_width */
+            *(uint32_t *)(void *)(dcfg_raw + 0x1c) = 1088; /* max_height */
+            *(int32_t *)(void *)(dcfg_raw + 0x20) = -1;    /* max_dpb */
+            *(uint32_t *)(void *)(dcfg_raw + 0x24) = 4;    /* queue_depth */
+            *(uint64_t *)(void *)(dcfg_raw + 0x28) = (uint64_t)(uintptr_t)queue_handle;
+
+            memset(minfo_raw, 0xcc, sizeof(minfo_raw));
+            *(uint64_t *)(void *)(minfo_raw + 0x00) = 0x48;
+
+            int rc = -1;
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc = fn_qdec(dcfg_raw, minfo_raw);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            char stag[48];
+            oops_snprintf(stag, sizeof(stag), "sweep-dcfg-sz-0x%x", (unsigned int)dsz);
+            obs_report_measure(id, stag, "rc", (uint64_t)(uint32_t)rc, "code");
+            if (rc == 0 && accepted_dcfg_sz == 0) {
+                accepted_dcfg_sz = dsz;
+                obs_report_bytes(id, stag, "minfo-0x48", 0, minfo_raw, 0x48);
+            }
         }
-        obs_report_measure(id, "QueryDecoderMemoryInfo-1080p", "rc", (uint64_t)(uint32_t)rc, "code");
-        obs_report_bytes(id, "QueryDecoderMemoryInfo-1080p", "mem-0x48", 0,
-                         (const unsigned char *)&minfo, (unsigned int)sizeof(minfo));
 
-        /* 4K 3840x2160 */
-        dcfg.max_width = 3840;
-        dcfg.max_height = 2160;
-        memset(&minfo, 0xcc, sizeof(minfo));
-        minfo.this_size = sizeof(minfo);
-        rc = fn_qdec(&dcfg, &minfo);
-        obs_report_measure(id, "QueryDecoderMemoryInfo-4K", "rc", (uint64_t)(uint32_t)rc, "code");
-        obs_report_bytes(id, "QueryDecoderMemoryInfo-4K", "mem-0x48", 0,
-                         (const unsigned char *)&minfo, (unsigned int)sizeof(minfo));
+        /* Sweep DecoderMemoryInfo size word 0x10..0x100 step 8 with accepted/best dcfg
+         * size */
+        uint64_t best_dcfg_sz = (accepted_dcfg_sz != 0) ? accepted_dcfg_sz : 0x40;
+        for (uint64_t msz = 0x10; msz <= 0x100; msz += 8) {
+            memset(dcfg_raw, 0, sizeof(dcfg_raw));
+            *(uint64_t *)(void *)(dcfg_raw + 0x00) = best_dcfg_sz;
+            *(uint32_t *)(void *)(dcfg_raw + 0x08) = 1;
+            *(uint32_t *)(void *)(dcfg_raw + 0x0c) = 1;
+            *(uint32_t *)(void *)(dcfg_raw + 0x10) = 100;
+            *(uint32_t *)(void *)(dcfg_raw + 0x14) = 41;
+            *(uint32_t *)(void *)(dcfg_raw + 0x18) = 1920;
+            *(uint32_t *)(void *)(dcfg_raw + 0x1c) = 1088;
+            *(int32_t *)(void *)(dcfg_raw + 0x20) = -1;
+            *(uint32_t *)(void *)(dcfg_raw + 0x24) = 4;
+            *(uint64_t *)(void *)(dcfg_raw + 0x28) = (uint64_t)(uintptr_t)queue_handle;
 
-        /* HEVC codec (974921) */
-        dcfg.codec_type = 974921;
-        dcfg.max_width = 1920;
-        dcfg.max_height = 1088;
-        memset(&minfo, 0xcc, sizeof(minfo));
-        minfo.this_size = sizeof(minfo);
-        rc = fn_qdec(&dcfg, &minfo);
-        obs_report_measure(id, "QueryDecoderMemoryInfo-HEVC", "rc", (uint64_t)(uint32_t)rc, "code");
+            memset(minfo_raw, 0xcc, sizeof(minfo_raw));
+            *(uint64_t *)(void *)(minfo_raw + 0x00) = msz;
 
-        /* compute_queue 0 */
-        dcfg.codec_type = 1;
-        dcfg.compute_queue = 0;
-        memset(&minfo, 0xcc, sizeof(minfo));
-        minfo.this_size = sizeof(minfo);
-        rc = fn_qdec(&dcfg, &minfo);
-        obs_report_measure(id, "QueryDecoderMemoryInfo-q0", "rc", (uint64_t)(uint32_t)rc, "code");
-
-        /* resource 0 */
-        dcfg.resource_type = 0;
-        rc = fn_qdec(&dcfg, &minfo);
-        obs_report_measure(id, "QueryDecoderMemoryInfo-resource0", "rc", (uint64_t)(uint32_t)rc, "code");
-
-        /* input_depth 0 */
-        dcfg.resource_type = 1;
-        dcfg.queue_depth = 0;
-        rc = fn_qdec(&dcfg, &minfo);
-        obs_report_measure(id, "QueryDecoderMemoryInfo-depth0", "rc", (uint64_t)(uint32_t)rc, "code");
-
-        /* max_dpb 0 */
-        dcfg.queue_depth = 4;
-        dcfg.max_dpb = 0;
-        rc = fn_qdec(&dcfg, &minfo);
-        obs_report_measure(id, "QueryDecoderMemoryInfo-dpb0", "rc", (uint64_t)(uint32_t)rc, "code");
+            int rc = -1;
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc = fn_qdec(dcfg_raw, minfo_raw);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+            }
+            char stag[48];
+            oops_snprintf(stag, sizeof(stag), "sweep-minfo-sz-0x%x", (unsigned int)msz);
+            obs_report_measure(id, stag, "rc", (uint64_t)(uint32_t)rc, "code");
+            if (rc == 0 && accepted_minfo_sz == 0) {
+                accepted_minfo_sz = msz;
+                obs_report_bytes(id, stag, "minfo", 0, minfo_raw, (unsigned int)msz);
+            }
+        }
     }
 
     /* 4. CreateDecoder & DeleteDecoder */
     void *dec_h = NULL;
+    uint64_t final_dcfg_sz = (accepted_dcfg_sz != 0) ? accepted_dcfg_sz : 0x40;
+    uint64_t final_minfo_sz = (accepted_minfo_sz != 0) ? accepted_minfo_sz : 0x48;
+
     if (obs_address_is_callable((const void *)fn_create)) {
-        dcfg.resource_type = 1;
-        dcfg.codec_type = 1;
-        dcfg.profile = 100;
-        dcfg.level = 41;
-        dcfg.max_width = 320;
-        dcfg.max_height = 240;
-        dcfg.max_dpb = -1;
-        dcfg.queue_depth = 4;
-        dcfg.compute_queue = 0;
-
         /* compute_queue 0 -> error */
-        int rc_q0 = fn_create(&dcfg, &minfo, &dec_h);
-        obs_report_measure(id, "CreateDecoder-queue0", "rc", (uint64_t)(uint32_t)rc_q0, "code");
+        memset(dcfg_raw, 0, sizeof(dcfg_raw));
+        *(uint64_t *)(void *)(dcfg_raw + 0x00) = final_dcfg_sz;
+        *(uint32_t *)(void *)(dcfg_raw + 0x08) = 1;
+        *(uint32_t *)(void *)(dcfg_raw + 0x0c) = 1;
+        *(uint32_t *)(void *)(dcfg_raw + 0x10) = 100;
+        *(uint32_t *)(void *)(dcfg_raw + 0x14) = 41;
+        *(uint32_t *)(void *)(dcfg_raw + 0x18) = 320;
+        *(uint32_t *)(void *)(dcfg_raw + 0x1c) = 240;
+        *(int32_t *)(void *)(dcfg_raw + 0x20) = -1;
+        *(uint32_t *)(void *)(dcfg_raw + 0x24) = 4;
+        *(uint64_t *)(void *)(dcfg_raw + 0x28) = 0; /* q0 */
 
-        /* Real compute queue */
-        dcfg.compute_queue = (uint64_t)(uintptr_t)queue_handle;
+        memset(minfo_raw, 0xcc, sizeof(minfo_raw));
+        *(uint64_t *)(void *)(minfo_raw + 0x00) = final_minfo_sz;
+
+        int rc_q0 = fn_create(dcfg_raw, minfo_raw, &dec_h);
+        obs_report_measure(id, "CreateDecoder-queue0", "rc", (uint64_t)(uint32_t)rc_q0,
+                           "code");
+
+        /* Real compute queue & query memory */
+        *(uint64_t *)(void *)(dcfg_raw + 0x28) = (uint64_t)(uintptr_t)queue_handle;
         if (obs_address_is_callable((const void *)fn_qdec)) {
-            memset(&minfo, 0, sizeof(minfo));
-            minfo.this_size = sizeof(minfo);
-            (void)fn_qdec(&dcfg, &minfo);
+            memset(minfo_raw, 0, sizeof(minfo_raw));
+            *(uint64_t *)(void *)(minfo_raw + 0x00) = final_minfo_sz;
+            (void)fn_qdec(dcfg_raw, minfo_raw);
         }
 
+        uint64_t cpu_sz = *(uint64_t *)(void *)(minfo_raw + 0x08);
+        uint64_t gpu_sz = *(uint64_t *)(void *)(minfo_raw + 0x18);
+        uint64_t mem_sh_sz = *(uint64_t *)(void *)(minfo_raw + 0x28);
+        uint64_t align = *(uint64_t *)(void *)(minfo_raw + 0x40);
+        if (align < 256)
+            align = 256;
+        if (cpu_sz == 0 || cpu_sz > 0x10000000ULL)
+            cpu_sz = 0x40000;
+        if (gpu_sz == 0 || gpu_sz > 0x10000000ULL)
+            gpu_sz = 0x40000;
+        if (mem_sh_sz == 0 || mem_sh_sz > 0x10000000ULL)
+            mem_sh_sz = 0x40000;
 
-        static uint8_t mem_cpu[0x40000] __attribute__((aligned(256)));
-        static uint8_t mem_gpu[0x40000] __attribute__((aligned(256)));
-        static uint8_t mem_sh[0x40000] __attribute__((aligned(256)));
-        minfo.cpu_memory = mem_cpu;
-        minfo.gpu_memory = mem_gpu;
-        minfo.shared_memory = mem_sh;
+#if !defined(OBSCENE_HOST_BUILD)
+        void *cpu_p = oops_mem_alloc(cpu_sz, align, OOPS_MEM_WB_ONION);
+        void *gpu_p = oops_mem_alloc(gpu_sz, align, OOPS_MEM_WB_GARLIC);
+        void *sh_p = oops_mem_alloc(mem_sh_sz, align, OOPS_MEM_WB_ONION);
+#else
+        void *cpu_p = malloc(cpu_sz);
+        void *gpu_p = malloc(gpu_sz);
+        void *sh_p = malloc(mem_sh_sz);
+#endif
+
+        *(void **)(void *)(minfo_raw + 0x10) = cpu_p;
+        *(void **)(void *)(minfo_raw + 0x20) = gpu_p;
+        *(void **)(void *)(minfo_raw + 0x30) = sh_p;
 
         int rc_create = -1;
         int sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
-            rc_create = fn_create(&dcfg, &minfo, &dec_h);
+            rc_create = fn_create(dcfg_raw, minfo_raw, &dec_h);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
         }
-        obs_report_measure(id, "CreateDecoder-normal", "rc", (uint64_t)(uint32_t)rc_create, "code");
-        obs_report_measure(id, "CreateDecoder-normal", "handle", (uint64_t)(uintptr_t)dec_h, "addr");
+        obs_report_measure(id, "CreateDecoder-normal", "rc",
+                           (uint64_t)(uint32_t)rc_create, "code");
+        obs_report_measure(id, "CreateDecoder-normal", "handle",
+                           (uint64_t)(uintptr_t)dec_h, "addr");
 
         /* 5. Decode AVC 320x240 frame */
         if (obs_address_is_callable((const void *)fn_decode) && dec_h != NULL) {
@@ -464,8 +588,8 @@ static obs_result check_videodec2_oracle_census(void) {
             out_info.frame_buffer = frame_buf;
             out_info.size = sizeof(frame_buf);
             obs_report_bytes(id, "decode-frame1-idr", "passed-out-info-56", 0,
-                             (const unsigned char *)&out_info, (unsigned int)sizeof(out_info));
-
+                             (const unsigned char *)&out_info,
+                             (unsigned int)sizeof(out_info));
 
             uint8_t pic_info[64];
             memset(pic_info, 0xcc, sizeof(pic_info));
@@ -478,37 +602,58 @@ static obs_result check_videodec2_oracle_census(void) {
             } else {
                 obs_fault_unregister();
             }
-            obs_report_measure(id, "decode-frame1-idr", "rc", (uint64_t)(uint32_t)rc_dec, "code");
+            obs_report_measure(id, "decode-frame1-idr", "rc",
+                               (uint64_t)(uint32_t)rc_dec, "code");
             obs_report_bytes(id, "decode-frame1-idr", "output-info-56", 0,
                              (const unsigned char *)&out_info, 56);
-            obs_report_bytes(id, "decode-frame1-idr", "picture-info-64", 0, pic_info, sizeof(pic_info));
-            obs_report_bytes(id, "decode-frame1-idr", "frame-first-64", 0, frame_buf, 64);
+            obs_report_bytes(id, "decode-frame1-idr", "picture-info-64", 0, pic_info,
+                             sizeof(pic_info));
+            obs_report_bytes(id, "decode-frame1-idr", "frame-first-64", 0, frame_buf,
+                             64);
 
             /* Flush and Reset */
             if (obs_address_is_callable((const void *)fn_flush)) {
                 int rc_flush = fn_flush(dec_h, &out_info, pic_info);
-                obs_report_measure(id, "flush", "rc", (uint64_t)(uint32_t)rc_flush, "code");
+                obs_report_measure(id, "flush", "rc", (uint64_t)(uint32_t)rc_flush,
+                                   "code");
             }
             if (obs_address_is_callable((const void *)fn_reset)) {
                 int rc_reset = fn_reset(dec_h);
-                obs_report_measure(id, "reset", "rc", (uint64_t)(uint32_t)rc_reset, "code");
+                obs_report_measure(id, "reset", "rc", (uint64_t)(uint32_t)rc_reset,
+                                   "code");
             }
         }
 
         /* DeleteDecoder */
         if (obs_address_is_callable((const void *)fn_delete) && dec_h != NULL) {
             int rc_del1 = fn_delete(dec_h);
-            obs_report_measure(id, "delete-first", "rc", (uint64_t)(uint32_t)rc_del1, "code");
+            obs_report_measure(id, "delete-first", "rc", (uint64_t)(uint32_t)rc_del1,
+                               "code");
             int rc_del2 = fn_delete(dec_h);
-            obs_report_measure(id, "delete-second", "rc", (uint64_t)(uint32_t)rc_del2, "code");
+            obs_report_measure(id, "delete-second", "rc", (uint64_t)(uint32_t)rc_del2,
+                               "code");
         }
     }
 
     /* Release compute queue */
-    if (obs_address_is_callable((const void *)fn_rel_q) && queue_handle != NULL && (uintptr_t)queue_handle != 0xccccccccccccccccULL) {
+    if (obs_address_is_callable((const void *)fn_rel_q) && queue_handle != NULL &&
+        (uintptr_t)queue_handle != 0xccccccccccccccccULL) {
         int rc_rel = fn_rel_q(queue_handle);
-        obs_report_measure(id, "ReleaseComputeQueue-allocated", "rc", (uint64_t)(uint32_t)rc_rel, "code");
+        obs_report_measure(id, "ReleaseComputeQueue-allocated", "rc",
+                           (uint64_t)(uint32_t)rc_rel, "code");
     }
+
+#if !defined(OBSCENE_HOST_BUILD)
+    if (sh_64k)
+        oops_mem_free(sh_64k);
+    if (sh_2m)
+        oops_mem_free(sh_2m);
+#else
+    if (sh_64k)
+        free(sh_64k);
+    if (sh_2m)
+        free(sh_2m);
+#endif
 
     /* 6. Vdecsw twins */
     if (obs_address_is_callable((const void *)fn_vdecsw_qcomp)) {
@@ -516,9 +661,11 @@ static obs_result check_videodec2_oracle_census(void) {
         memset(&sw_cinfo, 0xcc, sizeof(sw_cinfo));
         sw_cinfo.this_size = 0x18;
         int rc_sw_c = fn_vdecsw_qcomp(&sw_cinfo);
-        obs_report_measure(id, "Vdecsw-QueryComputeMemoryInfo", "rc", (uint64_t)(uint32_t)rc_sw_c, "code");
+        obs_report_measure(id, "Vdecsw-QueryComputeMemoryInfo", "rc",
+                           (uint64_t)(uint32_t)rc_sw_c, "code");
         obs_report_bytes(id, "Vdecsw-QueryComputeMemoryInfo", "bytes-0x18", 0,
-                         (const unsigned char *)&sw_cinfo, (unsigned int)sizeof(sw_cinfo));
+                         (const unsigned char *)&sw_cinfo,
+                         (unsigned int)sizeof(sw_cinfo));
     }
     if (obs_address_is_callable((const void *)fn_vdecsw_qdec)) {
         SceVdecswDecoderConfig sw_dcfg;
@@ -537,18 +684,20 @@ static obs_result check_videodec2_oracle_census(void) {
         sw_minfo.this_size = 0x48;
 
         int rc_sw_d = fn_vdecsw_qdec(&sw_dcfg, &sw_minfo);
-        obs_report_measure(id, "Vdecsw-QueryDecoderMemoryInfo", "rc", (uint64_t)(uint32_t)rc_sw_d, "code");
+        obs_report_measure(id, "Vdecsw-QueryDecoderMemoryInfo", "rc",
+                           (uint64_t)(uint32_t)rc_sw_d, "code");
         obs_report_bytes(id, "Vdecsw-QueryDecoderMemoryInfo", "bytes-0x48", 0,
-                         (const unsigned char *)&sw_minfo, (unsigned int)sizeof(sw_minfo));
+                         (const unsigned char *)&sw_minfo,
+                         (unsigned int)sizeof(sw_minfo));
 
         /* Size != 0x50 -> STRUCT */
         sw_dcfg.this_size = 0x48;
         int rc_sw_bad = fn_vdecsw_qdec(&sw_dcfg, &sw_minfo);
-        obs_report_measure(id, "Vdecsw-QueryDecoderMemoryInfo-size0x48", "rc", (uint64_t)(uint32_t)rc_sw_bad, "code");
+        obs_report_measure(id, "Vdecsw-QueryDecoderMemoryInfo-size0x48", "rc",
+                           (uint64_t)(uint32_t)rc_sw_bad, "code");
     }
 
     return obs_pass();
 }
 
 #endif /* OBS_VIDEODEC_ORACLE_INC */
-

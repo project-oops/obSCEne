@@ -1553,6 +1553,27 @@ static const struct {
     {"UbQoYawOsfY", "UbQoYawOsfY"},
     {"sceAvPlayerClose", "NkJwDzKmIlw"},
     {"NkJwDzKmIlw", "NkJwDzKmIlw"},
+    {"sceAvPlayerStop", "ZC17w3vB5Lo"},
+    {"ZC17w3vB5Lo", "ZC17w3vB5Lo"},
+    {"sceAjmInstanceCreate", "AxoDrINp4J8"},
+    {"AxoDrINp4J8", "AxoDrINp4J8"},
+    {"sceAjmInstanceDestroy", "RbLbuKv8zho"},
+    {"RbLbuKv8zho", "RbLbuKv8zho"},
+    {"sceAgcQueueEndOfPipeActionPatchData", "MlEw1feXcjg"},
+    {"MlEw1feXcjg", "MlEw1feXcjg"},
+    {"sceAgcAcbPushMarker", "cpCILPya5Zk"},
+    {"cpCILPya5Zk", "cpCILPya5Zk"},
+    {"sceAgcAcbPopMarker", "6mFxkVqdmbQ"},
+    {"6mFxkVqdmbQ", "6mFxkVqdmbQ"},
+    {"sceAgcAcbSetMarker", "xAeBOa0A3kk"},
+    {"xAeBOa0A3kk", "xAeBOa0A3kk"},
+    {"scePadDeviceClassParseData", "IHPqcbc0zCA"},
+    {"IHPqcbc0zCA", "IHPqcbc0zCA"},
+    {"sceNpUniversalDataSystemDestroyHandle", "AUIHb7jUX3I"},
+    {"AUIHb7jUX3I", "AUIHb7jUX3I"},
+    {"sceNpUniversalDataSystemEventPropertyObjectSetString", "MfDb+4Nln64"},
+    {"MfDb+4Nln64", "MfDb+4Nln64"},
+    {"MfDb-4Nln64", "MfDb+4Nln64"},
 };
 
 const char *obs_prospero_name_to_nid(const char *name) {
@@ -2496,6 +2517,29 @@ const obs_check *obs_get_current_check(void) {
     return s_current_check;
 }
 
+static void obs_harness_heartbeat(void) {
+    static uint64_t s_last_heartbeat_us = 0;
+    uint64_t now = obs_time_now_us();
+    if (s_last_heartbeat_us != 0 && (now - s_last_heartbeat_us) < 2000000ULL) {
+        return;
+    }
+    s_last_heartbeat_us = now;
+
+    obs_jmp_buf guard;
+    if (OBS_FAULT_ARM(&guard) == 0) {
+        if (obs_address_is_callable(
+                (const void *)&sceAgcDriverSysEnableSubmitDone45Exception)) {
+            sceAgcDriverSysEnableSubmitDone45Exception(0u);
+        }
+        if (obs_address_is_callable((const void *)&sceSystemServicePowerTick)) {
+            sceSystemServicePowerTick();
+        }
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+    }
+}
+
 obs_tally obs_run_all(void) {
     obs_boot_note("obscene: obs_run_all enter\n");
     /* Arm the fault guard before any check runs, so a call that would end the
@@ -2573,6 +2617,7 @@ obs_tally obs_run_all(void) {
     obs_boot_note("obscene: starting section loop\n");
     uint64_t run_start_us = obs_time_now_us();
     obs_report_time_start(run_start_us);
+    obs_harness_heartbeat();
 
     for (unsigned int s = 0; s < obs_section_count; s++) {
         const obs_section *section = obs_sections[s];
@@ -2688,11 +2733,13 @@ obs_tally obs_run_all(void) {
             obs_screen_check(check->id, result);
             tally_add(&section_tally, result.status);
             tally_add(&total, result.status);
+            obs_harness_heartbeat();
         }
         uint64_t section_dur_us = obs_time_now_us() - section_start_us;
         obs_report_section_tally(section, section_tally, section_dur_us);
         obs_report_time_section(section->id, section_dur_us);
         obs_screen_section(section->id, section_tally);
+        obs_harness_heartbeat();
 
         /* The deepest section that came out wholly green. Sections run base-first,
          * so this is how far up the stack the platform held together - a proxy for
