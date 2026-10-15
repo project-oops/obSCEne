@@ -2472,6 +2472,10 @@ OBS_WEAK int
 sceNpUniversalDataSystemDestroyHandle_static(uint64_t handle) __asm__("$AUIHb7jUX3I");
 
 /* REQ-20261015T0017Z-ai01: sceAjmInstanceCreate / Destroy / Batch */
+OBS_WEAK int sceAjmInitialize_static(uint64_t param, void *ctx) __asm__("$dl+4eHSzUu4");
+OBS_WEAK int sceAjmModuleRegister_static(uint32_t ctx, uint32_t codec,
+                                         uint64_t flags) __asm__("$Q3dyFuwGn64");
+OBS_WEAK int sceAjmFinalize_static(uint32_t ctx) __asm__("$MHur6qCsUus");
 OBS_WEAK int sceAjmInstanceCreate_static(uint32_t ctx, uint32_t codec, uint32_t flags,
                                          void *out) __asm__("$AxoDrINp4J8");
 OBS_WEAK int sceAjmInstanceDestroy_static(uint32_t ctx,
