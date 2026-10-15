@@ -2494,6 +2494,22 @@ sceAudioPropagationSystemDestroy_static(uint64_t handle) __asm__("$x5VPqg5iyAk")
 OBS_WEAK int sceAcmContextCreate_static(uint64_t *out) __asm__("$ZIXln2K3XMk");
 OBS_WEAK int sceAcmContextDestroy_static(uint64_t handle) __asm__("$jBgBjAj02R8");
 
+/* REQ-20261015T1234Z-gt01: ContentDelete, Net SockInfo, Voice */
+OBS_WEAK int
+sceContentDeleteInitialize_static(const void *param) __asm__("$zoxb0wEChEM");
+OBS_WEAK int sceNetGetSockInfo_static(int s, void *info, int n,
+                                      int flags) __asm__("$hLuXdjHnhiI");
+OBS_WEAK int sceVoiceInit_static(const void *param,
+                                 uint32_t version) __asm__("$9TrhuGzberQ");
+
+/* REQ-20261015T1522Z-ai02: Ajm batch start and wait */
+OBS_WEAK int sceAjmBatchStartBuffer_static(uint32_t ctx, void *buffer, size_t size,
+                                           uint32_t *batch_id) __asm__("$fFFkk0xfGWs");
+OBS_WEAK int sceAjmBatchStart_static(uint32_t ctx, void *batch,
+                                     uint32_t *batch_id) __asm__("$5tOfnaClcqM");
+OBS_WEAK int sceAjmBatchWait_static(uint32_t ctx, uint32_t batch_id, uint32_t timeout,
+                                    void *error_res) __asm__("$-qLsfDAywIY");
+
 OBS_WEAK int sceSystemServicePowerTick(void) __asm__("$ky8+cQvJtl0");
 
 #endif /* OBSCENE_PLATFORM_H */

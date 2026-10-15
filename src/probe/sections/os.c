@@ -1610,7 +1610,7 @@ static obs_result check_oneshot_setup_calls(void) {
             obs_report_bytes(id, "ai01-registered-codec0-inst2", "out-8b", 0, out_inst2,
                              8);
 
-            /* Batch calls per update (2026-10-15T09:10Z) */
+            /* Batch calls per update (2026-10-15T09:10Z) and REQ-20261015T1522Z-ai02 */
             int bound_bi =
                 obs_address_is_callable((const void *)&sceAjmBatchInitialize_static);
             int bound_jd =
@@ -1666,6 +1666,208 @@ static obs_result check_oneshot_setup_calls(void) {
                                      batch_buf, 32);
                 }
             }
+
+            /* -------------------------------------------------------------- */
+            /* REQ-20261015T1522Z-ai02: GTA's size, shape, run & wait         */
+            /* -------------------------------------------------------------- */
+            uint32_t id2 = *(uint32_t *)out_inst2;
+
+            /* 1. Initialize, GTA's size: buffer 0x80 bytes filled 0xcc, size 0x40 */
+            uint8_t buf_gta[0x80];
+            memset(buf_gta, 0xcc, sizeof(buf_gta));
+            uint64_t batch_gta = 0xccccccccccccccccULL;
+            int rc_bi_gta = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_bi_gta = sceAjmBatchInitialize_static(buf_gta, 0x40, &batch_gta);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "ai02-batch-init-gta", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+            obs_report_measure(id, "ai02-batch-init-gta", "rc",
+                               (uint64_t)(uint32_t)rc_bi_gta, "code");
+            obs_report_bytes(id, "ai02-batch-init-gta", "batch-slot-8b", 0,
+                             (const unsigned char *)&batch_gta, 8);
+            obs_report_bytes(id, "ai02-batch-init-gta", "buffer-80b", 0, buf_gta,
+                             sizeof(buf_gta));
+
+            /* 2. JobDecode, GTA's shape: input 960 bytes, output 9216 bytes filled 0xcc
+             */
+            uint8_t mpeg_frame[960];
+            memset(mpeg_frame, 0, sizeof(mpeg_frame));
+            mpeg_frame[0] = 0xff;
+            mpeg_frame[1] = 0xfa;
+            mpeg_frame[2] = 0x64;
+            mpeg_frame[3] = 0xc0;
+
+            static uint8_t dec_out_gta[9216];
+            memset(dec_out_gta, 0xcc, sizeof(dec_out_gta));
+
+            int rc_jd_gta = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_jd_gta = sceAjmBatchJobDecode_static(
+                    &batch_gta, (uint64_t)id2, mpeg_frame, (void *)(uintptr_t)960,
+                    dec_out_gta, (void *)(uintptr_t)9216);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "ai02-job-decode-gta", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+            obs_report_measure(id, "ai02-job-decode-gta", "rc",
+                               (uint64_t)(uint32_t)rc_jd_gta, "code");
+            obs_report_bytes(id, "ai02-job-decode-gta", "buffer-after-80b", 0, buf_gta,
+                             sizeof(buf_gta));
+            size_t gta_out_diff = 0;
+            for (size_t i = 0; i < sizeof(dec_out_gta); i++) {
+                if (dec_out_gta[i] != 0xcc) {
+                    gta_out_diff++;
+                }
+            }
+            obs_report_measure(id, "ai02-job-decode-gta", "output-changed",
+                               (uint64_t)(gta_out_diff > 0), "bool");
+            obs_report_measure(id, "ai02-job-decode-gta", "output-changed-bytes",
+                               (uint64_t)gta_out_diff, "bytes");
+
+            /* Same on a 0x1000-byte batch, dumping 0x80 bytes (job's whole 56 bytes
+             * rowed) */
+            static uint8_t buf_1000[0x1000];
+            memset(buf_1000, 0xcc, sizeof(buf_1000));
+            uint64_t batch_1000 = 0xccccccccccccccccULL;
+            int rc_bi_1000 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_bi_1000 =
+                    sceAjmBatchInitialize_static(buf_1000, 0x1000, &batch_1000);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "ai02-batch-init-1000", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+            obs_report_measure(id, "ai02-batch-init-1000", "rc",
+                               (uint64_t)(uint32_t)rc_bi_1000, "code");
+            obs_report_bytes(id, "ai02-batch-init-1000", "batch-slot-8b", 0,
+                             (const unsigned char *)&batch_1000, 8);
+
+            int rc_jd_1000 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_jd_1000 = sceAjmBatchJobDecode_static(
+                    &batch_1000, (uint64_t)id2, mpeg_frame, (void *)(uintptr_t)960,
+                    dec_out_gta, (void *)(uintptr_t)9216);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "ai02-job-decode-1000", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+            obs_report_measure(id, "ai02-job-decode-1000", "rc",
+                               (uint64_t)(uint32_t)rc_jd_1000, "code");
+            obs_report_bytes(id, "ai02-job-decode-1000", "buffer-dump-80b", 0, buf_1000,
+                             0x80);
+
+            /* 3. Running it: bind sceAjmBatchStartBuffer, sceAjmBatchStart and
+             * sceAjmBatchWait */
+            int bound_start_buf =
+                obs_address_is_callable((const void *)&sceAjmBatchStartBuffer_static);
+            int bound_start =
+                obs_address_is_callable((const void *)&sceAjmBatchStart_static);
+            int bound_wait =
+                obs_address_is_callable((const void *)&sceAjmBatchWait_static);
+
+            obs_report_measure(id, "sceAjmBatchStartBuffer", "bound",
+                               (uint64_t)bound_start_buf, "bool");
+            obs_report_measure(id, "sceAjmBatchStart", "bound", (uint64_t)bound_start,
+                               "bool");
+            obs_report_measure(id, "sceAjmBatchWait", "bound", (uint64_t)bound_wait,
+                               "bool");
+
+            uint32_t run_batch_id = 0xccccccccu;
+            int rc_start = -1;
+            if (bound_start) {
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_start = sceAjmBatchStart_static(ctx_id, (void *)&batch_1000,
+                                                       &run_batch_id);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                    obs_report_measure(id, "ai02-batch-start", "fault", (uint64_t)sig,
+                                       "signal");
+                }
+            } else if (bound_start_buf) {
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_start = sceAjmBatchStartBuffer_static(ctx_id, buf_1000, 0x1000,
+                                                             &run_batch_id);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                    obs_report_measure(id, "ai02-batch-start", "fault", (uint64_t)sig,
+                                       "signal");
+                }
+            } else {
+                obs_report_measure(id, "ai02-batch-start", "route", 0,
+                                   "tried-static-link-both");
+            }
+            obs_report_measure(id, "ai02-batch-start", "rc",
+                               (uint64_t)(uint32_t)rc_start, "code");
+            obs_report_measure(id, "ai02-batch-start", "batch-id",
+                               (uint64_t)run_batch_id, "id");
+
+            int rc_wait = -1;
+            uint8_t err_block[0x40];
+            memset(err_block, 0xcc, sizeof(err_block));
+            if (bound_wait) {
+                sig = OBS_FAULT_ARM(&guard);
+                if (sig == 0) {
+                    rc_wait = sceAjmBatchWait_static(ctx_id, run_batch_id, 1000000u,
+                                                     err_block);
+                    obs_fault_unregister();
+                } else {
+                    obs_fault_unregister();
+                    obs_report_measure(id, "ai02-batch-wait", "fault", (uint64_t)sig,
+                                       "signal");
+                }
+            } else {
+                obs_report_measure(id, "ai02-batch-wait", "route", 0,
+                                   "tried-static-link");
+            }
+            obs_report_measure(id, "ai02-batch-wait", "rc", (uint64_t)(uint32_t)rc_wait,
+                               "code");
+            obs_report_bytes(id, "ai02-batch-wait", "error-block-40h", 0, err_block,
+                             sizeof(err_block));
+
+            obs_report_bytes(id, "ai02-running", "output-first-64b", 0, dec_out_gta,
+                             64);
+            size_t post_run_diff = 0;
+            for (size_t i = 0; i < sizeof(dec_out_gta); i++) {
+                if (dec_out_gta[i] != 0xcc) {
+                    post_run_diff++;
+                }
+            }
+            obs_report_measure(id, "ai02-running", "output-changed-bytes",
+                               (uint64_t)post_run_diff, "bytes");
+
+            /* 4. A second JobDecode on the 0x40-byte batch after the first */
+            int rc_second_jd = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_second_jd = sceAjmBatchJobDecode_static(
+                    &batch_gta, (uint64_t)id2, mpeg_frame, (void *)(uintptr_t)960,
+                    dec_out_gta, (void *)(uintptr_t)9216);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, "ai02-second-job-decode", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+            obs_report_measure(id, "ai02-second-job-decode-40b-batch", "rc",
+                               (uint64_t)(uint32_t)rc_second_jd, "code");
 
             /* 3. Codecs 1 to 3 */
             for (uint32_t c = 1; c <= 3; c++) {

@@ -27622,7 +27622,7 @@ static obs_result check_agc_builder_6dd715e95973a4fc(void) {
     return obs_pass();
 }
 
-/* REQ-20261015T0240Z-sc01: image_sample_c_lz on colour format */
+/* REQ-20261015T0240Z-sc01 & REQ-20261015T1459Z-sc02: image_sample_c_lz on colour format */
 static obs_result check_agc_sc01_image_sample_c_lz(void) {
     const char *id = "166-agc/sc01-image-sample-c-lz";
 
@@ -27647,35 +27647,32 @@ static obs_result check_agc_sc01_image_sample_c_lz(void) {
     memset(smp_desc_always, 0, sizeof(smp_desc_always));
     smp_desc_always[0] = (7u << 12);
 
+    obs_report_bytes(id, "arm1-8888-unorm", "texel-words-8b", 0,
+                     (const unsigned char *)texels, sizeof(texels));
     obs_report_bytes(id, "arm1-8888-unorm", "image-desc-32b", 0,
                      (const unsigned char *)img_desc, 32);
     obs_report_bytes(id, "arm1-8888-unorm", "sampler-desc-16b", 0,
                      (const unsigned char *)smp_desc_less, 16);
 
-    obs_report_measure(id, "compute-dispatch", "dispatch-supported", 0, "bool");
-    obs_report_measure(id, "compute-dispatch", "status", 0, "not-possible-unprivileged-queue");
-
-    obs_report_measure(id, "arm1-texel0-ref0.5", "v0", 0x3f800000u, "hex");
-    obs_report_measure(id, "arm1-texel1-ref0.5", "v0", 0x00000000u, "hex");
-
     obs_report_bytes(id, "arm2-never", "sampler-desc-16b", 0,
                      (const unsigned char *)smp_desc_never, 16);
     obs_report_bytes(id, "arm2-always", "sampler-desc-16b", 0,
                      (const unsigned char *)smp_desc_always, 16);
-    obs_report_measure(id, "arm2-texel0-ref0.1-less", "v0", 0x00000000u, "hex");
-    obs_report_measure(id, "arm2-texel1-ref0.1-less", "v0", 0x00000000u, "hex");
-    obs_report_measure(id, "arm2-texel0-ref0.9-less", "v0", 0x3f800000u, "hex");
-    obs_report_measure(id, "arm2-texel1-ref0.9-less", "v0", 0x3f800000u, "hex");
-    obs_report_measure(id, "arm2-never", "v0", 0x00000000u, "hex");
-    obs_report_measure(id, "arm2-always", "v0", 0x3f800000u, "hex");
 
     uint32_t texels_green[2] = {0x0000ff00u, 0x0000ff00u};
+    uint64_t texels_green_va = (uint64_t)(uintptr_t)texels_green;
     uint32_t img_desc_green[8];
     memcpy(img_desc_green, img_desc, sizeof(img_desc));
-    img_desc_green[0] = (uint32_t)(uintptr_t)texels_green;
+    img_desc_green[0] = (uint32_t)texels_green_va;
+    img_desc_green[1] = (uint32_t)((texels_green_va >> 32) & 0xffffu) | (34u << 20);
+    obs_report_bytes(id, "arm3-channel", "texel-words-8b", 0,
+                     (const unsigned char *)texels_green, sizeof(texels_green));
     obs_report_bytes(id, "arm3-channel", "image-desc-32b", 0,
                      (const unsigned char *)img_desc_green, 32);
-    obs_report_measure(id, "arm3-channel-red-compare", "v0", 0x3f800000u, "hex");
+
+    /* REQ-20261015T1459Z-sc02 acceptance: honest route refusal with no synthetic v0 rows */
+    obs_report_measure(id, "shader-execution", "route", 0, "no-route-could-run-shader");
+    obs_report_measure(id, "shader-execution", "status", 0, "not-possible-unprivileged-queue");
 
     return obs_pass();
 }

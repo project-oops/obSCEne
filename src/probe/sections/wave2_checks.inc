@@ -3093,4 +3093,335 @@ static obs_result check_ly01_layer_export_topology7(void) {
     return obs_pass();
 }
 
+/* -------------------------------------------------------------------------- */
+/* REQ-20261015T1234Z-gt01: four calls whose placeholder holds PPSA04263 back */
+/* -------------------------------------------------------------------------- */
+
+static obs_result check_gt01_npmanager(void) {
+    const char *id = "000-boot/gt01-npmanager";
+    obs_jmp_buf guard;
+
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x009d);
+    }
+
+    typedef int (*fn_np_set_title_id_t)(const void *, const void *);
+    fn_np_set_title_id_t fn_set = NULL;
+    int is_link = 0;
+    if (obs_address_is_callable((const void *)&sceNpSetNpTitleId_static)) {
+        fn_set = (fn_np_set_title_id_t)&sceNpSetNpTitleId_static;
+        is_link = 1;
+    } else {
+        int h = obs_module_open("libSceNpManager");
+        if (h > 0) {
+            fn_set = (fn_np_set_title_id_t)obs_module_symbol(h, "$Ec63y59l9tw");
+            if (!fn_set)
+                fn_set = (fn_np_set_title_id_t)obs_module_symbol(
+                    h, "sceNpSetNpTitleId");
+        }
+    }
+
+    int bound = (fn_set != NULL && obs_address_is_callable((const void *)fn_set));
+    obs_report_measure(id, "sceNpSetNpTitleId", "bound", (uint64_t)bound, "bool");
+    if (bound) {
+        obs_report_measure(id, "sceNpSetNpTitleId", "how", (uint64_t)(is_link ? 1 : 2),
+                           is_link ? "link" : "dlsym");
+    } else {
+        obs_report_measure(id, "sceNpSetNpTitleId", "route", 0,
+                           "tried-static-and-sysmodule");
+        return obs_pass();
+    }
+
+    /* PPSA04263 shape: 0x10-byte id block "PPSA01721_00\0\0\0\0" */
+    uint8_t title_id_block[16];
+    memset(title_id_block, 0, sizeof(title_id_block));
+    memcpy(title_id_block, "PPSA01721_00", 12);
+
+    /* secret block directly after it, non-zero */
+    uint8_t secret_block[128];
+    for (size_t i = 0; i < sizeof(secret_block); i++) {
+        secret_block[i] = (uint8_t)(0x5a ^ (i * 7 + 0x33));
+    }
+
+    int rc1 = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc1 = fn_set(title_id_block, secret_block);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "call-1", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "call-1", "rc", (uint64_t)(uint32_t)rc1, "code");
+
+    int rc2 = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc2 = fn_set(title_id_block, secret_block);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "call-2", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "call-2", "rc", (uint64_t)(uint32_t)rc2, "code");
+
+    return obs_pass();
+}
+
+static obs_result check_gt01_contentdelete(void) {
+    const char *id = "000-boot/gt01-contentdelete";
+    obs_jmp_buf guard;
+
+    typedef int (*fn_cd_init_t)(const void *);
+    fn_cd_init_t fn_init = NULL;
+    int is_link = 0;
+    if (obs_address_is_callable(
+            (const void *)&sceContentDeleteInitialize_static)) {
+        fn_init = (fn_cd_init_t)&sceContentDeleteInitialize_static;
+        is_link = 1;
+    } else {
+        int h = obs_module_open("libSceContentDelete");
+        if (h <= 1 &&
+            obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+            h = sceKernelLoadStartModule(
+                "/system/common/lib/libSceContentDelete.sprx", 0, NULL, 0, NULL,
+                NULL);
+        }
+        if (h > 0) {
+            fn_init = (fn_cd_init_t)obs_module_symbol(h, "$zoxb0wEChEM");
+            if (!fn_init)
+                fn_init = (fn_cd_init_t)obs_module_symbol(
+                    h, "sceContentDeleteInitialize");
+        }
+    }
+
+    int bound = (fn_init != NULL && obs_address_is_callable((const void *)fn_init));
+    obs_report_measure(id, "sceContentDeleteInitialize", "bound", (uint64_t)bound,
+                       "bool");
+    if (bound) {
+        obs_report_measure(id, "sceContentDeleteInitialize", "how",
+                           (uint64_t)(is_link ? 1 : 2),
+                           is_link ? "link" : "dlsym");
+    } else {
+        obs_report_measure(id, "sceContentDeleteInitialize", "route", 0,
+                           "tried-static-and-sprx");
+        return obs_pass();
+    }
+
+    int rc_null = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_null = fn_init(NULL);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "init-null", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "init-null", "rc", (uint64_t)(uint32_t)rc_null, "code");
+
+    uint8_t cd_param[0x20];
+    memset(cd_param, 0, sizeof(cd_param));
+    int rc_param = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_param = fn_init(cd_param);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "init-param-zeroed", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "init-param-zeroed", "rc",
+                       (uint64_t)(uint32_t)rc_param, "code");
+
+    int rc_sec = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_sec = fn_init(cd_param);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "init-second", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "init-second", "rc", (uint64_t)(uint32_t)rc_sec, "code");
+
+    return obs_pass();
+}
+
+static obs_result check_gt01_net_sockinfo(void) {
+    const char *id = "000-boot/gt01-net-sockinfo";
+    obs_jmp_buf guard;
+
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x0001);
+    }
+    if (obs_address_is_callable((const void *)&sceNetInit)) {
+        (void)sceNetInit();
+    }
+
+    typedef int (*fn_sockinfo_t)(int, void *, int, int);
+    fn_sockinfo_t fn_info = NULL;
+    int is_link = 0;
+    if (obs_address_is_callable((const void *)&sceNetGetSockInfo_static)) {
+        fn_info = (fn_sockinfo_t)&sceNetGetSockInfo_static;
+        is_link = 1;
+    } else {
+        int h = obs_module_open("libSceNet");
+        if (h > 0) {
+            fn_info = (fn_sockinfo_t)obs_module_symbol(h, "$hLuXdjHnhiI");
+            if (!fn_info)
+                fn_info =
+                    (fn_sockinfo_t)obs_module_symbol(h, "sceNetGetSockInfo");
+        }
+    }
+
+    int bound = (fn_info != NULL && obs_address_is_callable((const void *)fn_info));
+    obs_report_measure(id, "sceNetGetSockInfo", "bound", (uint64_t)bound, "bool");
+    if (bound) {
+        obs_report_measure(id, "sceNetGetSockInfo", "how", (uint64_t)(is_link ? 1 : 2),
+                           is_link ? "link" : "dlsym");
+    } else {
+        obs_report_measure(id, "sceNetGetSockInfo", "route", 0,
+                           "tried-static-and-libscenet");
+        return obs_pass();
+    }
+
+    int s = -1;
+    if (obs_address_is_callable((const void *)&sceNetSocket)) {
+        s = sceNetSocket("gt01_udp", OBS_NET_AF_INET, 2 /* SOCK_DGRAM */, 0);
+    }
+    obs_report_measure(id, "socket-udp", "fd", (uint64_t)(uint32_t)s, "fd");
+
+    uint8_t info[0x200];
+    memset(info, 0xcc, sizeof(info));
+    int rc_info = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_info = fn_info(s, info, 1, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "get-sock-info-udp", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "get-sock-info-udp", "rc",
+                       (uint64_t)(uint32_t)rc_info, "code");
+
+    /* Report changed bytes */
+    size_t changed_len = 0;
+    for (size_t i = sizeof(info); i > 0; i--) {
+        if (info[i - 1] != 0xcc) {
+            changed_len = i;
+            break;
+        }
+    }
+    if (changed_len > 0) {
+        obs_report_bytes(id, "get-sock-info-udp", "info-changed", 0, info,
+                         (unsigned int)changed_len);
+    } else {
+        obs_report_bytes(id, "get-sock-info-udp", "info-first-32b", 0, info, 32);
+    }
+
+    /* Bad socket ID */
+    uint8_t bad_info[0x200];
+    memset(bad_info, 0xcc, sizeof(bad_info));
+    int rc_bad = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_bad = fn_info(-1, bad_info, 1, 0);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "get-sock-info-bad-fd", "fault", (uint64_t)sig,
+                           "signal");
+    }
+    obs_report_measure(id, "get-sock-info-bad-fd", "rc",
+                       (uint64_t)(uint32_t)rc_bad, "code");
+
+    if (s >= 0 && obs_address_is_callable((const void *)&sceNetSocketClose)) {
+        (void)sceNetSocketClose(s);
+    }
+
+    return obs_pass();
+}
+
+static obs_result check_gt01_voice(void) {
+    const char *id = "000-boot/gt01-voice";
+    obs_jmp_buf guard;
+
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x001A);
+    }
+
+    typedef int (*fn_voice_init_t)(const void *, uint32_t);
+    fn_voice_init_t fn_init = NULL;
+    int is_link = 0;
+    if (obs_address_is_callable((const void *)&sceVoiceInit_static)) {
+        fn_init = (fn_voice_init_t)&sceVoiceInit_static;
+        is_link = 1;
+    } else {
+        int h = obs_module_open("libSceVoice");
+        if (h > 0) {
+            fn_init = (fn_voice_init_t)obs_module_symbol(h, "$9TrhuGzberQ");
+            if (!fn_init)
+                fn_init = (fn_voice_init_t)obs_module_symbol(h, "sceVoiceInit");
+        }
+    }
+
+    int bound = (fn_init != NULL && obs_address_is_callable((const void *)fn_init));
+    obs_report_measure(id, "sceVoiceInit", "bound", (uint64_t)bound, "bool");
+    if (bound) {
+        obs_report_measure(id, "sceVoiceInit", "how", (uint64_t)(is_link ? 1 : 2),
+                           is_link ? "link" : "dlsym");
+    } else {
+        obs_report_measure(id, "sceVoiceInit", "route", 0,
+                           "tried-static-and-sysmodule");
+        return obs_pass();
+    }
+
+    /* zeroed 0x10-byte param */
+    uint8_t voice_param[0x10];
+    memset(voice_param, 0, sizeof(voice_param));
+
+    /* Try version 1 */
+    int rc_v1 = -1;
+    int sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_v1 = fn_init(voice_param, 1);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "init-ver1", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "init-ver1", "rc", (uint64_t)(uint32_t)rc_v1, "code");
+
+    /* Also try version 0x01000000 if ver1 was invalid */
+    if (rc_v1 != 0) {
+        int rc_v100 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_v100 = fn_init(voice_param, 0x01000000u);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            obs_report_measure(id, "init-ver-0x01000000", "fault",
+                               (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "init-ver-0x01000000", "rc",
+                           (uint64_t)(uint32_t)rc_v100, "code");
+    }
+
+    /* Again (already-initialized code) */
+    int rc_sec = -1;
+    sig = OBS_FAULT_ARM(&guard);
+    if (sig == 0) {
+        rc_sec = fn_init(voice_param, rc_v1 == 0 ? 1 : 0x01000000u);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        obs_report_measure(id, "init-second", "fault", (uint64_t)sig, "signal");
+    }
+    obs_report_measure(id, "init-second", "rc", (uint64_t)(uint32_t)rc_sec, "code");
+
+    return obs_pass();
+}
+
 #endif /* OBS_WAVE2_CHECKS_INC */

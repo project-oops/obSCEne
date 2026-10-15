@@ -1889,6 +1889,20 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAcm", "sceAcmContextDestroy"},
     {"libSceSystemService", "$ky8+cQvJtl0"},
     {"libSceSystemService", "sceSystemServicePowerTick"},
+    /* REQ-20261015T1234Z-gt01 */
+    {"libSceContentDelete", "$zoxb0wEChEM"},
+    {"libSceContentDelete", "sceContentDeleteInitialize"},
+    {"libSceNet", "$hLuXdjHnhiI"},
+    {"libSceNet", "sceNetGetSockInfo"},
+    {"libSceVoice", "$9TrhuGzberQ"},
+    {"libSceVoice", "sceVoiceInit"},
+    /* REQ-20261015T1522Z-ai02 */
+    {"libSceAjm", "$fFFkk0xfGWs"},
+    {"libSceAjm", "sceAjmBatchStartBuffer"},
+    {"libSceAjm", "$5tOfnaClcqM"},
+    {"libSceAjm", "sceAjmBatchStart"},
+    {"libSceAjm", "$-qLsfDAywIY"},
+    {"libSceAjm", "sceAjmBatchWait"},
 };
 
 /* Calls `fn` once per import declared outside the census. */
