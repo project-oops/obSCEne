@@ -10277,6 +10277,13 @@ static const obs_check boot_checks[] = {
     {"000-boot/gt02-contentdelete", "libSceContentDelete", "sceContentDeleteInitialize",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt02_contentdelete,
      OBS_FROM_SPEC},
+    {"000-boot/gt03-contentdelete", "libSceContentDelete", "sceContentDeleteInitialize",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt03_contentdelete,
+     OBS_FROM_SPEC},
+    {"000-boot/gt03-net-sockinfo", "libSceNet", "sceNetGetSockInfo", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt03_net_sockinfo, OBS_FROM_SPEC},
+    {"000-boot/gt03-ajm-batch", "libSceAjm", "sceAjmBatchStart", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt03_ajm_batch, OBS_FROM_SPEC},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };
