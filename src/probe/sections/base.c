@@ -10284,6 +10284,11 @@ static const obs_check boot_checks[] = {
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt03_net_sockinfo, OBS_FROM_SPEC},
     {"000-boot/gt03-ajm-batch", "libSceAjm", "sceAjmBatchStart", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt03_ajm_batch, OBS_FROM_SPEC},
+    {"000-boot/gt04-memory-path", "libc", "stat", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_gt04_memory_path, OBS_FROM_SPEC},
+    {"000-boot/gt04-notice-skip", "libSceSystemService",
+     "sceSystemServiceGetNoticeScreenSkipFlag", OBS_CAP_NONE, OBS_CAP_NONE,
+     OBS_NO_SYMBOL, check_gt04_notice_skip, OBS_FROM_SPEC},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };

@@ -124,6 +124,8 @@ STAMP += -DOBSCENE_GEN=$(GEN)
 # still sees them stop being run.
 EXCLUDE ?=
 STAMP += -DOBSCENE_EXCLUDE='"$(EXCLUDE)"'
+ONLY ?=
+STAMP += -DOBSCENE_ONLY='"$(ONLY)"'
 
 # The SDK version this module declares in its process parameter.
 #

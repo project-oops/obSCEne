@@ -832,8 +832,8 @@ static obs_result check_sd02_savedata_avplayer(void) {
         if (fn_av_close) {
             rc_close = fn_av_close((void *)(uintptr_t)handle);
         }
-        obs_report_measure(id, "avplayer", "close-rc",
-                           (uint64_t)(uint32_t)rc_close, "code");
+        obs_report_measure(id, "avplayer", "close-rc", (uint64_t)(uint32_t)rc_close,
+                           "code");
     }
 
     /* REQ-20261015T0503Z-av01: sceAvPlayerStop */
@@ -849,8 +849,10 @@ static obs_result check_sd02_savedata_avplayer(void) {
         fn_av_stop = (fn_av_stop_t)census_resolve_symbol(
             "libSceAvPlayer", "$ZC17w3vB5Lo", "sceAvPlayerStop", NULL, NULL);
         if (!fn_av_stop) {
-            fn_av_stop = (fn_av_stop_t)obs_module_symbol(OBS_HANDLE_SELF, "$ZC17w3vB5Lo");
-            if (fn_av_stop) is_link_stop = 1;
+            fn_av_stop =
+                (fn_av_stop_t)obs_module_symbol(OBS_HANDLE_SELF, "$ZC17w3vB5Lo");
+            if (fn_av_stop)
+                is_link_stop = 1;
         }
         if (!fn_av_stop) {
             int h = obs_module_open("libSceAvPlayer");
@@ -874,21 +876,25 @@ static obs_result check_sd02_savedata_avplayer(void) {
             "libSceAvPlayer", "$HD1YKVU26/M", "sceAvPlayerPostInit", NULL, NULL);
     }
     if (!fn_av_post_init) {
-        fn_av_post_init = (fn_av_post_init_t)obs_module_symbol(OBS_HANDLE_SELF, "$HD1YKVU26-M");
+        fn_av_post_init =
+            (fn_av_post_init_t)obs_module_symbol(OBS_HANDLE_SELF, "$HD1YKVU26-M");
     }
     if (!fn_av_post_init) {
         int h = obs_module_open("libSceAvPlayer");
         if (h > 0) {
             fn_av_post_init = (fn_av_post_init_t)obs_module_symbol(h, "$HD1YKVU26-M");
             if (!fn_av_post_init)
-                fn_av_post_init = (fn_av_post_init_t)obs_module_symbol(h, "sceAvPlayerPostInit");
+                fn_av_post_init =
+                    (fn_av_post_init_t)obs_module_symbol(h, "sceAvPlayerPostInit");
         }
     }
 
-    int bound_stop = (fn_av_stop != NULL && obs_address_is_callable((const void *)fn_av_stop));
+    int bound_stop =
+        (fn_av_stop != NULL && obs_address_is_callable((const void *)fn_av_stop));
     obs_report_measure(id, "avplayer-bind", "stop-bound", (uint64_t)bound_stop, "bool");
     if (bound_stop) {
-        obs_report_measure(id, "avplayer-bind", "stop-how", (uint64_t)(is_link_stop ? 1 : 2),
+        obs_report_measure(id, "avplayer-bind", "stop-how",
+                           (uint64_t)(is_link_stop ? 1 : 2),
                            is_link_stop ? "link" : "dlsym");
     } else {
         obs_report_measure(id, "avplayer-bind", "stop-status", 0, "not-possible");
@@ -914,7 +920,8 @@ static obs_result check_sd02_savedata_avplayer(void) {
         } else {
             obs_fault_unregister();
         }
-        obs_report_measure(id, "avplayer-stop", "init-ex-rc", (uint64_t)(uint32_t)rc_init2, "code");
+        obs_report_measure(id, "avplayer-stop", "init-ex-rc",
+                           (uint64_t)(uint32_t)rc_init2, "code");
 
         if (rc_init2 == 0 && fn_av_stop) {
             /* Failed PostInit with PPSA02664's block */
@@ -1000,7 +1007,8 @@ static void build_ge_indx_vs(uint32_t *code, uint64_t stored_ids_gpu, int is_ind
     code[k++] = 0xbfa00001u; /* s_inst_prefetch 0x1 */
     code[k++] = 0xbe8c037eu; /* s_mov_b32 s12, exec_lo (save entry exec_lo) */
 
-    /* Immediately capture incoming VGPRs: v5 (Vertex ID in NGG), v0 (prim info), v1, v2 across entry exec_lo (lanes 0..2) */
+    /* Immediately capture incoming VGPRs: v5 (Vertex ID in NGG), v0 (prim info), v1, v2
+     * across entry exec_lo (lanes 0..2) */
     code[k++] = 0x7e200305u; /* v_mov_b32 v16, v5 */
     code[k++] = 0x7e220300u; /* v_mov_b32 v17, v0 */
     code[k++] = 0x7e240301u; /* v_mov_b32 v18, v1 */
@@ -1110,7 +1118,8 @@ static void build_ge_indx_vs(uint32_t *code, uint64_t stored_ids_gpu, int is_ind
     code[k++] = 0xf80008cfu; /* exp pos0, v5, v6, v3, v4 done */
     code[k++] = 0x04030605u;
     code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
-    code[k++] = 0xbefe030cu; /* s_mov_b32 exec_lo, s12 (restore all lanes before retire) */
+    code[k++] =
+        0xbefe030cu; /* s_mov_b32 exec_lo, s12 (restore all lanes before retire) */
     code[k++] = 0xbf810000u; /* s_endpgm */
 
     while (k < 128) {
@@ -1142,39 +1151,96 @@ static void build_ge_indx_fb(uint32_t *code) {
 }
 
 static uint32_t build_ge_indx_dcb(uint32_t *dw, uint32_t offset_val, int is_indexed,
-                                   uint64_t index_gpu, uint64_t payload_va,
-                                   uint64_t fence_gpu, uint64_t color_gpu) {
+                                  uint64_t index_gpu, uint64_t payload_va,
+                                  uint64_t fence_gpu, uint64_t color_gpu) {
     uint32_t *start = dw;
     /* Base context registers for graphics pipeline */
     static const struct {
         uint32_t reg;
         uint32_t val;
-    } base_ctx[] = {
-        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0}, {0x31cu, 0x000180a8u},
-        {0x31du, 0}, {0x31eu, 0}, {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c000u},
-        {0x109u, 0}, {0x202u, 0x00cc0010u}, {0x08eu, 0xfu}, {0x08fu, 0xfu},
-        {0x1e0u, 0x20010001u}, {0x200u, 0}, {0x08cu, 0xaa99aaaau}, {0x1d4u, 0xffu},
-        {0x291u, 0x10020040u}, {0x29bu, 0}, {0x2d3u, 1u}, {0x2d5u, 0x02002000u},
-        {0x1ffu, 0x40u}, {0x20eu, 0x78u}, {0x2a1u, 0}, {0x2a6u, 0x40u},
-        {0x2adu, 0}, {0x2abu, 4u}, {0x2ceu, 0}, {0x2d4u, 0x88101000u},
-        {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu}, {0x30fu, 0xffffffffu},
-        {0x310u, 0}, {0x314u, 0x202u}, {0x311u, 0x01fd2002u}, {0x312u, 0x03ff0080u},
-        {0x313u, 0x6000u}, {0x00eu, 2u}, {0x280u, 0x00080008u}, {0x281u, 0xffff0000u},
-        {0x282u, 8u}, {0x2deu, 0x1e9u}, {0x00cu, 0}, {0x00du, 0x40004000u},
-        {0x081u, 0x80000000u}, {0x082u, 0x40004000u}, {0x090u, 0x80000000u},
-        {0x091u, 0x40004000u}, {0x094u, 0x80000000u}, {0x095u, 0x40004000u},
-        {0x0b4u, 0}, {0x0b5u, 0x3f800000u}, {0x10fu, 0x42000000u},
-        {0x110u, 0x42000000u}, {0x111u, 0x42000000u}, {0x112u, 0x42000000u},
-        {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u}, {0x083u, 0xffffu},
-        {0x084u, 0}, {0x085u, 0x20002000u}, {0x204u, 0}, {0x206u, 0x43fu},
-        {0x207u, 0}, {0x2fau, 0x3f800000u}, {0x2fbu, 0x3f800000u},
-        {0x2fcu, 0x3f800000u}, {0x2fdu, 0x3f800000u}, {0x205u, 0x240u},
-        {0x20cu, 0}, {0x292u, 2u}, {0x293u, 0x06020000u}, {0x2f8u, 0},
-        {0x2f9u, 0x2du}, {0x1b1u, 0x80u}, {0x1c2u, 1u}, {0x1c3u, 4u},
-        {0x1c5u, 9u}, {0x1b3u, 2u}, {0x1b4u, 2u}, {0x1b5u, 1u},
-        {0x1b6u, 0}, {0x1b8u, 0x01000000u}
-    };
-    for (size_t i = 0; i < sizeof(base_ctx)/sizeof(base_ctx[0]); i++) {
+    } base_ctx[] = {{0x318u, 0},
+                    {0x390u, 0},
+                    {0x31bu, 0},
+                    {0x31cu, 0x000180a8u},
+                    {0x31du, 0},
+                    {0x31eu, 0},
+                    {0x3b0u, (63u << 14) | 63u},
+                    {0x3b8u, 0x08c6c000u},
+                    {0x109u, 0},
+                    {0x202u, 0x00cc0010u},
+                    {0x08eu, 0xfu},
+                    {0x08fu, 0xfu},
+                    {0x1e0u, 0x20010001u},
+                    {0x200u, 0},
+                    {0x08cu, 0xaa99aaaau},
+                    {0x1d4u, 0xffu},
+                    {0x291u, 0x10020040u},
+                    {0x29bu, 0},
+                    {0x2d3u, 1u},
+                    {0x2d5u, 0x02002000u},
+                    {0x1ffu, 0x40u},
+                    {0x20eu, 0x78u},
+                    {0x2a1u, 0},
+                    {0x2a6u, 0x40u},
+                    {0x2adu, 0},
+                    {0x2abu, 4u},
+                    {0x2ceu, 0},
+                    {0x2d4u, 0x88101000u},
+                    {0x103u, 0xffffffffu},
+                    {0x30eu, 0xffffffffu},
+                    {0x30fu, 0xffffffffu},
+                    {0x310u, 0},
+                    {0x314u, 0x202u},
+                    {0x311u, 0x01fd2002u},
+                    {0x312u, 0x03ff0080u},
+                    {0x313u, 0x6000u},
+                    {0x00eu, 2u},
+                    {0x280u, 0x00080008u},
+                    {0x281u, 0xffff0000u},
+                    {0x282u, 8u},
+                    {0x2deu, 0x1e9u},
+                    {0x00cu, 0},
+                    {0x00du, 0x40004000u},
+                    {0x081u, 0x80000000u},
+                    {0x082u, 0x40004000u},
+                    {0x090u, 0x80000000u},
+                    {0x091u, 0x40004000u},
+                    {0x094u, 0x80000000u},
+                    {0x095u, 0x40004000u},
+                    {0x0b4u, 0},
+                    {0x0b5u, 0x3f800000u},
+                    {0x10fu, 0x42000000u},
+                    {0x110u, 0x42000000u},
+                    {0x111u, 0x42000000u},
+                    {0x112u, 0x42000000u},
+                    {0x113u, 0x3f000000u},
+                    {0x114u, 0x3f000000u},
+                    {0x083u, 0xffffu},
+                    {0x084u, 0},
+                    {0x085u, 0x20002000u},
+                    {0x204u, 0},
+                    {0x206u, 0x43fu},
+                    {0x207u, 0},
+                    {0x2fau, 0x3f800000u},
+                    {0x2fbu, 0x3f800000u},
+                    {0x2fcu, 0x3f800000u},
+                    {0x2fdu, 0x3f800000u},
+                    {0x205u, 0x240u},
+                    {0x20cu, 0},
+                    {0x292u, 2u},
+                    {0x293u, 0x06020000u},
+                    {0x2f8u, 0},
+                    {0x2f9u, 0x2du},
+                    {0x1b1u, 0x80u},
+                    {0x1c2u, 1u},
+                    {0x1c3u, 4u},
+                    {0x1c5u, 9u},
+                    {0x1b3u, 2u},
+                    {0x1b4u, 2u},
+                    {0x1b5u, 1u},
+                    {0x1b6u, 0},
+                    {0x1b8u, 0x01000000u}};
+    for (size_t i = 0; i < sizeof(base_ctx) / sizeof(base_ctx[0]); i++) {
         uint32_t reg = base_ctx[i].reg;
         uint32_t val = base_ctx[i].val;
         if (reg == 0x318u) {
@@ -1203,12 +1269,14 @@ static uint32_t build_ge_indx_dcb(uint32_t *dw, uint32_t offset_val, int is_inde
     } stages[] = {
         {0x08u, 0x200u, 0x000c0010u, 0x00000000u}, /* PS: 16 VGPRs, USER_SGPR=0 */
         {0x48u, 0x000u, 0x000c0010u, 0x00000000u}, /* VS */
-        {0x88u, 0x000u, 0x622c0047u, 0x00030000u}, /* GS/NGG: 32 VGPRs (0x47), GS_COMP_CNT=3, ES_COMP_CNT=3, USER_SGPR=0 */
-        {0xc8u, 0x000u, 0x000c0010u, 0x00000000u}, /* ES */
+        {0x88u, 0x000u, 0x622c0047u,
+         0x00030000u}, /* GS/NGG: 32 VGPRs (0x47), GS_COMP_CNT=3, ES_COMP_CNT=3,
+                          USER_SGPR=0 */
+        {0xc8u, 0x000u, 0x000c0010u, 0x00000000u},  /* ES */
         {0x108u, 0x000u, 0x000c0010u, 0x00000000u}, /* HS */
         {0x148u, 0x000u, 0x000c0010u, 0x00000000u}, /* LS */
     };
-    for (size_t s = 0; s < sizeof(stages)/sizeof(stages[0]); s++) {
+    for (size_t s = 0; s < sizeof(stages) / sizeof(stages[0]); s++) {
         uint32_t base_reg = stages[s].base_reg;
         uint64_t s_va = payload_va + stages[s].va_offset;
         *dw++ = 0xc0017600u;
@@ -1236,21 +1304,30 @@ static uint32_t build_ge_indx_dcb(uint32_t *dw, uint32_t offset_val, int is_inde
         {0x081u, 0x00000003u}, /* GS CUs 16-17 */
         {0x107u, 0xffff0000u}, /* HS CUs */
     };
-    for (size_t i = 0; i < sizeof(spi_cu_regs)/sizeof(spi_cu_regs[0]); i++) {
+    for (size_t i = 0; i < sizeof(spi_cu_regs) / sizeof(spi_cu_regs[0]); i++) {
         *dw++ = 0xc0017600u;
         *dw++ = spi_cu_regs[i].reg;
         *dw++ = spi_cu_regs[i].val;
     }
 
     /* Primitive & Geometry Control */
-    *dw++ = 0xc0002f00u; *dw++ = 1u; /* NUM_INSTANCES */
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u;          /* NUM_INSTANCES */
     *dw++ = 0xc0017a00u; /* PACKET3_SET_UCONFIG_REG_INDEX: mmVGT_PRIMITIVE_TYPE */
     *dw++ = 0x10000242u;
-    *dw++ = 4u;          /* DI_PT_TRILIST */
-    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u; /* mmGE_CNTL */
-    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
-    *dw++ = 0xc0017900u; *dw++ = 0x249u; *dw++ = 0x00000000u; /* mmGE_MIN_VTX_INDX */
-    *dw++ = 0xc0017900u; *dw++ = 0x259u; *dw++ = 0xffffffffu; /* mmGE_MAX_VTX_INDX */
+    *dw++ = 4u; /* DI_PT_TRILIST */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u; /* mmGE_CNTL */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x249u;
+    *dw++ = 0x00000000u; /* mmGE_MIN_VTX_INDX */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x259u;
+    *dw++ = 0xffffffffu; /* mmGE_MAX_VTX_INDX */
 
     if (is_indexed) {
         *dw++ = 0xc0012600u; /* PACKET3_INDEX_BASE (2 words payload) */
@@ -1275,7 +1352,7 @@ static uint32_t build_ge_indx_dcb(uint32_t *dw, uint32_t offset_val, int is_inde
         }
         *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO */
         *dw++ = 3u;
-        *dw++ = 2u;          /* DI_SRC_SEL_AUTO_INDEX */
+        *dw++ = 2u; /* DI_SRC_SEL_AUTO_INDEX */
     }
 
     /* RELEASE_MEM fence */
@@ -1303,17 +1380,18 @@ static obs_result check_ix01_ge_indx_offset(void) {
     /* 1. Direct binding check for libSceAgcDriver entry points */
     int bound_create = obs_address_is_callable((const void *)&sceAgcDriverCreateQueue);
     int bound_submit = obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb);
-    obs_report_measure(id, "setup", "fn-create-queue-bound",
-                       (uint64_t)bound_create, "bool");
-    obs_report_measure(id, "setup", "fn-submit-dcb-bound",
-                       (uint64_t)bound_submit, "bool");
+    obs_report_measure(id, "setup", "fn-create-queue-bound", (uint64_t)bound_create,
+                       "bool");
+    obs_report_measure(id, "setup", "fn-submit-dcb-bound", (uint64_t)bound_submit,
+                       "bool");
 
     void *fn_draw_idx_off = NULL;
     if (obs_address_is_callable((const void *)&sceAgcDcbDrawIndexOffset)) {
         fn_draw_idx_off = (void *)&sceAgcDcbDrawIndexOffset;
     } else {
         fn_draw_idx_off = (void *)obs_module_symbol(OBS_HANDLE_SELF, "$B+aG9DUnTKA");
-        if (!fn_draw_idx_off) fn_draw_idx_off = (void *)obs_module_symbol(1, "$B+aG9DUnTKA");
+        if (!fn_draw_idx_off)
+            fn_draw_idx_off = (void *)obs_module_symbol(1, "$B+aG9DUnTKA");
     }
     obs_report_measure(id, "setup", "fn-draw-index-offset-bound",
                        (uint64_t)(fn_draw_idx_off != NULL), "bool");
@@ -1328,10 +1406,10 @@ static obs_result check_ix01_ge_indx_offset(void) {
         uint64_t *dcb_fields = (uint64_t *)dcb_raw;
         uint8_t cmdbuf_test[128];
         memset(cmdbuf_test, 0xcc, sizeof(cmdbuf_test));
-        dcb_fields[0] = (uint64_t)(uintptr_t)cmdbuf_test;          /* begin */
-        dcb_fields[1] = (uint64_t)(uintptr_t)(cmdbuf_test + 128);  /* end */
-        dcb_fields[2] = dcb_fields[0];                             /* cur */
-        dcb_fields[3] = dcb_fields[1];                             /* end2 */
+        dcb_fields[0] = (uint64_t)(uintptr_t)cmdbuf_test;         /* begin */
+        dcb_fields[1] = (uint64_t)(uintptr_t)(cmdbuf_test + 128); /* end */
+        dcb_fields[2] = dcb_fields[0];                            /* cur */
+        dcb_fields[3] = dcb_fields[1];                            /* end2 */
 
         typedef void *(*fn_dcb_dio_t)(void *, uint32_t, uint32_t, uint32_t);
         fn_dcb_dio_t fn_dio = (fn_dcb_dio_t)fn_draw_idx_off;
@@ -1377,8 +1455,7 @@ static obs_result check_ix01_ge_indx_offset(void) {
     }
     obs_report_measure(id, "setup", "queue-create-rc", (uint64_t)(uint32_t)rc_q,
                        "code");
-    obs_report_measure(id, "setup", "queue-valid", (uint64_t)(queue != NULL),
-                       "bool");
+    obs_report_measure(id, "setup", "queue-valid", (uint64_t)(queue != NULL), "bool");
 
     if (rc_q != 0 || queue == NULL) {
         return obs_skip("failed to create type 0 queue");
@@ -1388,16 +1465,14 @@ static obs_result check_ix01_ge_indx_offset(void) {
 #if !defined(OBSCENE_HOST_BUILD)
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-    uint32_t *cmdbuf =
-        (uint32_t *)oops_mem_alloc(0x10000, 0x1000, OOPS_MEM_WB_ONION);
+    uint32_t *cmdbuf = (uint32_t *)oops_mem_alloc(0x10000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint16_t *index_buf =
         (volatile uint16_t *)oops_mem_alloc(0x1000, 256, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
         (volatile uint32_t *)oops_mem_alloc(0x10000, 0x10000, OOPS_MEM_WB_ONION);
     volatile uint32_t *stored_ids =
         (volatile uint32_t *)oops_mem_alloc(0x100000, 0x1000, OOPS_MEM_WB_ONION);
-    uint8_t *gpu_payload =
-        (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
 #else
     static _Alignas(64) uint32_t s_host_fence[16];
     static _Alignas(64) uint32_t s_host_cmdbuf[0x4000];
@@ -1457,8 +1532,8 @@ static obs_result check_ix01_ge_indx_offset(void) {
     }
     *fence = 0x11111111u;
 
-    uint32_t words_ctrl = build_ge_indx_dcb(cmdbuf, 0, 0, index_gpu, payload_va,
-                                            fence_gpu, color_gpu);
+    uint32_t words_ctrl =
+        build_ge_indx_dcb(cmdbuf, 0, 0, index_gpu, payload_va, fence_gpu, color_gpu);
     desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;
     desc.size = words_ctrl;
 
@@ -1476,8 +1551,8 @@ static obs_result check_ix01_ge_indx_offset(void) {
     int sub_rc_ctrl = -1;
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
-        if (queue && obs_address_is_callable(
-                (const void *)&sceAgcDriverSubmitCommandBuffer)) {
+        if (queue &&
+            obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
             sub_rc_ctrl = sceAgcDriverSubmitCommandBuffer(queue, &desc);
         } else {
             sub_rc_ctrl = sceAgcDriverSubmitDcb(&desc);
@@ -1511,29 +1586,47 @@ static obs_result check_ix01_ge_indx_offset(void) {
     __builtin_ia32_mfence();
 #endif
     obs_report_measure(id, "arm0-control-off0", "fence-val", (uint64_t)f_ctrl, "val");
-    obs_report_measure(id, "arm0-control-off0", "fence-hit", (uint64_t)f_ctrl_hit, "bool");
-    obs_report_measure(id, "arm0-control-off0", "stored-id-0", (uint64_t)stored_ids[0], "id");
-    obs_report_measure(id, "arm0-control-off0", "stored-id-1", (uint64_t)stored_ids[1], "id");
-    obs_report_measure(id, "arm0-control-off0", "stored-id-2", (uint64_t)stored_ids[2], "id");
-    obs_report_measure(id, "arm0-control-off0", "stored-id-canary", (uint64_t)stored_ids[3], "id");
-    obs_report_measure(id, "arm0-control-off0", "lane0-v0", (uint64_t)stored_ids[4], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane0-v1", (uint64_t)stored_ids[5], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane0-v2", (uint64_t)stored_ids[6], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane1-v0", (uint64_t)stored_ids[7], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane1-v1", (uint64_t)stored_ids[8], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane1-v2", (uint64_t)stored_ids[9], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane2-v0", (uint64_t)stored_ids[10], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane2-v1", (uint64_t)stored_ids[11], "hex");
-    obs_report_measure(id, "arm0-control-off0", "lane2-v2", (uint64_t)stored_ids[12], "hex");
-    obs_report_measure(id, "arm0-control-off0", "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13], "hex");
-    obs_report_measure(id, "arm0-control-off0", "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[14], "hex");
+    obs_report_measure(id, "arm0-control-off0", "fence-hit", (uint64_t)f_ctrl_hit,
+                       "bool");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-0", (uint64_t)stored_ids[0],
+                       "id");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-1", (uint64_t)stored_ids[1],
+                       "id");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-2", (uint64_t)stored_ids[2],
+                       "id");
+    obs_report_measure(id, "arm0-control-off0", "stored-id-canary",
+                       (uint64_t)stored_ids[3], "id");
+    obs_report_measure(id, "arm0-control-off0", "lane0-v0", (uint64_t)stored_ids[4],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane0-v1", (uint64_t)stored_ids[5],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane0-v2", (uint64_t)stored_ids[6],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane1-v0", (uint64_t)stored_ids[7],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane1-v1", (uint64_t)stored_ids[8],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane1-v2", (uint64_t)stored_ids[9],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane2-v0", (uint64_t)stored_ids[10],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane2-v1", (uint64_t)stored_ids[11],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "lane2-v2", (uint64_t)stored_ids[12],
+                       "hex");
+    obs_report_measure(id, "arm0-control-off0", "sgpr-s2-gs-tg-info",
+                       (uint64_t)stored_ids[13], "hex");
+    obs_report_measure(id, "arm0-control-off0", "sgpr-s3-merged-wave-info",
+                       (uint64_t)stored_ids[14], "hex");
 
     if (!f_ctrl_hit) {
         return obs_fail("control arm offset 0 fence timeout");
     }
 
-    obs_report_measure(id, "arm0-control-off0", "control-match-012",
-                       (uint64_t)(stored_ids[0] == 0 && stored_ids[1] == 1 && stored_ids[2] == 2), "bool");
+    obs_report_measure(
+        id, "arm0-control-off0", "control-match-012",
+        (uint64_t)(stored_ids[0] == 0 && stored_ids[1] == 1 && stored_ids[2] == 2),
+        "bool");
 
     if (!(stored_ids[0] == 0 && stored_ids[1] == 1 && stored_ids[2] == 2)) {
         return obs_pass();
@@ -1600,7 +1693,7 @@ static obs_result check_ix01_ge_indx_offset(void) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             if (queue && obs_address_is_callable(
-                    (const void *)&sceAgcDriverSubmitCommandBuffer)) {
+                             (const void *)&sceAgcDriverSubmitCommandBuffer)) {
                 sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
             } else {
                 sub_rc = sceAgcDriverSubmitDcb(&desc);
@@ -1652,8 +1745,10 @@ static obs_result check_ix01_ge_indx_offset(void) {
         obs_report_measure(id, tag, "lane2-v0", (uint64_t)stored_ids[10], "hex");
         obs_report_measure(id, tag, "lane2-v1", (uint64_t)stored_ids[11], "hex");
         obs_report_measure(id, tag, "lane2-v2", (uint64_t)stored_ids[12], "hex");
-        obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13], "hex");
-        obs_report_measure(id, tag, "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[14], "hex");
+        obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13],
+                           "hex");
+        obs_report_measure(id, tag, "sgpr-s3-merged-wave-info",
+                           (uint64_t)stored_ids[14], "hex");
     }
 
     /* Arm 2: Indexed draw (DRAW_INDEX_2) with offset 0, then 5 */
@@ -1716,7 +1811,7 @@ static obs_result check_ix01_ge_indx_offset(void) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             if (queue && obs_address_is_callable(
-                    (const void *)&sceAgcDriverSubmitCommandBuffer)) {
+                             (const void *)&sceAgcDriverSubmitCommandBuffer)) {
                 sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
             } else {
                 sub_rc = sceAgcDriverSubmitDcb(&desc);
@@ -1768,8 +1863,10 @@ static obs_result check_ix01_ge_indx_offset(void) {
         obs_report_measure(id, tag, "lane2-v0", (uint64_t)stored_ids[10], "hex");
         obs_report_measure(id, tag, "lane2-v1", (uint64_t)stored_ids[11], "hex");
         obs_report_measure(id, tag, "lane2-v2", (uint64_t)stored_ids[12], "hex");
-        obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13], "hex");
-        obs_report_measure(id, tag, "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[14], "hex");
+        obs_report_measure(id, tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[13],
+                           "hex");
+        obs_report_measure(id, tag, "sgpr-s3-merged-wave-info",
+                           (uint64_t)stored_ids[14], "hex");
     }
 
     /* Arm 3: Register persistence across submissions */
@@ -1796,13 +1893,16 @@ static inline int rf04_call_statfs(const char *path, void *buf) {
     if (k_mod >= 0) {
         fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "_statfs");
         if (!fn_statfs) {
-            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "statfs");
+            fn_statfs =
+                (int (*)(const char *, void *))obs_module_symbol(k_mod, "statfs");
         }
         if (!fn_statfs) {
-            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "$9e0667416c94bc62");
+            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(
+                k_mod, "$9e0667416c94bc62");
         }
         if (!fn_statfs) {
-            fn_statfs = (int (*)(const char *, void *))obs_module_symbol(k_mod, "__sys_statfs");
+            fn_statfs =
+                (int (*)(const char *, void *))obs_module_symbol(k_mod, "__sys_statfs");
         }
     }
     if (!fn_statfs && obs_address_is_callable((const void *)&statfs)) {
@@ -1810,12 +1910,16 @@ static inline int rf04_call_statfs(const char *path, void *buf) {
     }
     if (fn_statfs && obs_address_is_callable((const void *)fn_statfs)) {
         int rc = fn_statfs(path, buf);
-        if (rc == 0) return 0;
+        if (rc == 0)
+            return 0;
     }
 
-    long sc = obs_invoke_syscall(555 /* SYS_nstatfs */, (long)path, (long)buf, 0, 0, 0, 0);
-    if (sc == 0) return 0;
-    return (int)obs_invoke_syscall(396 /* SYS_statfs */, (long)path, (long)buf, 0, 0, 0, 0);
+    long sc =
+        obs_invoke_syscall(555 /* SYS_nstatfs */, (long)path, (long)buf, 0, 0, 0, 0);
+    if (sc == 0)
+        return 0;
+    return (int)obs_invoke_syscall(396 /* SYS_statfs */, (long)path, (long)buf, 0, 0, 0,
+                                   0);
 }
 
 static obs_result check_rf04_apr_app0_savedata(void) {
@@ -1838,7 +1942,8 @@ static obs_result check_rf04_apr_app0_savedata(void) {
 
     if (obs_address_is_callable(
             (const void *)&sceKernelAprResolveFilepathsToIdsAndFileSizes_static)) {
-        fn_apr_resolve = (fn_apr_resolve_t)&sceKernelAprResolveFilepathsToIdsAndFileSizes_static;
+        fn_apr_resolve =
+            (fn_apr_resolve_t)&sceKernelAprResolveFilepathsToIdsAndFileSizes_static;
     }
     if (!fn_apr_resolve && h_kernel > 0) {
         fn_apr_resolve = (fn_apr_resolve_t)obs_module_symbol(
@@ -1851,11 +1956,15 @@ static obs_result check_rf04_apr_app0_savedata(void) {
         fn_apr_resolve = (fn_apr_resolve_t)obs_module_symbol(1, "$gEpBkcwxUjw");
     }
     if (!fn_apr_resolve) {
-        fn_apr_resolve = (fn_apr_resolve_t)obs_module_symbol(OBS_HANDLE_SELF, "$gEpBkcwxUjw");
+        fn_apr_resolve =
+            (fn_apr_resolve_t)obs_module_symbol(OBS_HANDLE_SELF, "$gEpBkcwxUjw");
     }
 
-    obs_report_measure(id, "resolve-binding", "bound",
-                       (uint64_t)(fn_apr_resolve != NULL && obs_address_is_callable((const void *)fn_apr_resolve)), "bool");
+    obs_report_measure(
+        id, "resolve-binding", "bound",
+        (uint64_t)(fn_apr_resolve != NULL &&
+                   obs_address_is_callable((const void *)fn_apr_resolve)),
+        "bool");
     obs_report_measure(id, "resolve-binding", "address",
                        (uint64_t)(uintptr_t)fn_apr_resolve, "address");
 
@@ -1869,7 +1978,8 @@ static obs_result check_rf04_apr_app0_savedata(void) {
         int call_err = 0;
 
         if (fn_apr_resolve && obs_address_is_callable((const void *)fn_apr_resolve)) {
-            if (err_ptr) *err_ptr = 0;
+            if (err_ptr)
+                *err_ptr = 0;
             sig = OBS_FAULT_ARM(&guard);
             if (sig == 0) {
                 rc = (int64_t)fn_apr_resolve(paths, 1u, ids, sizes, statuses, NULL);
@@ -1877,14 +1987,19 @@ static obs_result check_rf04_apr_app0_savedata(void) {
             } else {
                 obs_fault_unregister();
             }
-            if (err_ptr) call_err = *err_ptr;
+            if (err_ptr)
+                call_err = *err_ptr;
         }
 
         obs_report_measure(id, "arm1-resolve-eboot", "rc", (uint64_t)rc, "code");
-        obs_report_measure(id, "arm1-resolve-eboot", "errno", (uint64_t)call_err, "errno");
-        obs_report_bytes(id, "arm1-resolve-eboot", "ids-bytes", 0, (const uint8_t *)ids, sizeof(ids));
-        obs_report_bytes(id, "arm1-resolve-eboot", "sizes-bytes", 0, (const uint8_t *)sizes, sizeof(sizes));
-        obs_report_bytes(id, "arm1-resolve-eboot", "statuses-bytes", 0, (const uint8_t *)statuses, sizeof(statuses));
+        obs_report_measure(id, "arm1-resolve-eboot", "errno", (uint64_t)call_err,
+                           "errno");
+        obs_report_bytes(id, "arm1-resolve-eboot", "ids-bytes", 0, (const uint8_t *)ids,
+                         sizeof(ids));
+        obs_report_bytes(id, "arm1-resolve-eboot", "sizes-bytes", 0,
+                         (const uint8_t *)sizes, sizeof(sizes));
+        obs_report_bytes(id, "arm1-resolve-eboot", "statuses-bytes", 0,
+                         (const uint8_t *)statuses, sizeof(statuses));
     }
 
     /* Arm 1b: Resolve /app0/sce_sys/param.json */
@@ -1897,7 +2012,8 @@ static obs_result check_rf04_apr_app0_savedata(void) {
         int call_err = 0;
 
         if (fn_apr_resolve && obs_address_is_callable((const void *)fn_apr_resolve)) {
-            if (err_ptr) *err_ptr = 0;
+            if (err_ptr)
+                *err_ptr = 0;
             sig = OBS_FAULT_ARM(&guard);
             if (sig == 0) {
                 rc = (int64_t)fn_apr_resolve(paths, 1u, ids, sizes, statuses, NULL);
@@ -1905,14 +2021,19 @@ static obs_result check_rf04_apr_app0_savedata(void) {
             } else {
                 obs_fault_unregister();
             }
-            if (err_ptr) call_err = *err_ptr;
+            if (err_ptr)
+                call_err = *err_ptr;
         }
 
         obs_report_measure(id, "arm1-resolve-param", "rc", (uint64_t)rc, "code");
-        obs_report_measure(id, "arm1-resolve-param", "errno", (uint64_t)call_err, "errno");
-        obs_report_bytes(id, "arm1-resolve-param", "ids-bytes", 0, (const uint8_t *)ids, sizeof(ids));
-        obs_report_bytes(id, "arm1-resolve-param", "sizes-bytes", 0, (const uint8_t *)sizes, sizeof(sizes));
-        obs_report_bytes(id, "arm1-resolve-param", "statuses-bytes", 0, (const uint8_t *)statuses, sizeof(statuses));
+        obs_report_measure(id, "arm1-resolve-param", "errno", (uint64_t)call_err,
+                           "errno");
+        obs_report_bytes(id, "arm1-resolve-param", "ids-bytes", 0, (const uint8_t *)ids,
+                         sizeof(ids));
+        obs_report_bytes(id, "arm1-resolve-param", "sizes-bytes", 0,
+                         (const uint8_t *)sizes, sizeof(sizes));
+        obs_report_bytes(id, "arm1-resolve-param", "statuses-bytes", 0,
+                         (const uint8_t *)statuses, sizeof(statuses));
     }
 
     /* ---------------------------------------------------------------------- */
@@ -1920,27 +2041,36 @@ static obs_result check_rf04_apr_app0_savedata(void) {
     /* ---------------------------------------------------------------------- */
     typedef int (*fn_getmntinfo_t)(void **, int);
     fn_getmntinfo_t fn_getmntinfo = NULL;
-    if (h_kernel > 0) fn_getmntinfo = (fn_getmntinfo_t)obs_module_symbol(h_kernel, "getmntinfo");
-    if (!fn_getmntinfo) fn_getmntinfo = (fn_getmntinfo_t)obs_module_symbol(OBS_HANDLE_SELF, "getmntinfo");
+    if (h_kernel > 0)
+        fn_getmntinfo = (fn_getmntinfo_t)obs_module_symbol(h_kernel, "getmntinfo");
+    if (!fn_getmntinfo)
+        fn_getmntinfo =
+            (fn_getmntinfo_t)obs_module_symbol(OBS_HANDLE_SELF, "getmntinfo");
     void *mntbuf = NULL;
     int mnt_count = -1;
     int mnt_err = 0;
     if (fn_getmntinfo && obs_address_is_callable((const void *)fn_getmntinfo)) {
-        if (err_ptr) *err_ptr = 0;
+        if (err_ptr)
+            *err_ptr = 0;
         mnt_count = fn_getmntinfo(&mntbuf, 1 /* MNT_WAIT */);
-        if (mnt_count < 0 && err_ptr) mnt_err = *err_ptr;
+        if (mnt_count < 0 && err_ptr)
+            mnt_err = *err_ptr;
     }
-    obs_report_measure(id, "arm2-getmntinfo", "count", (uint64_t)(int64_t)mnt_count, "count");
-    obs_report_measure(id, "arm2-getmntinfo", "errno", (uint64_t)(uint32_t)mnt_err, "errno");
+    obs_report_measure(id, "arm2-getmntinfo", "count", (uint64_t)(int64_t)mnt_count,
+                       "count");
+    obs_report_measure(id, "arm2-getmntinfo", "errno", (uint64_t)(uint32_t)mnt_err,
+                       "errno");
 
     const char *mount_paths[3] = {"/", "/app0", "/data"};
-    const char *mount_tags[3] = {"arm2-statfs-root", "arm2-statfs-app0", "arm2-statfs-data"};
+    const char *mount_tags[3] = {"arm2-statfs-root", "arm2-statfs-app0",
+                                 "arm2-statfs-data"};
 
     for (int m = 0; m < 3; m++) {
         uint8_t sb[512];
         memset(sb, 0xcc, sizeof(sb));
 
-        if (err_ptr) *err_ptr = 0;
+        if (err_ptr)
+            *err_ptr = 0;
         int s_rc = -1;
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
@@ -1952,11 +2082,15 @@ static obs_result check_rf04_apr_app0_savedata(void) {
         int s_err = (s_rc != 0 && err_ptr) ? *err_ptr : 0;
 
         obs_report_measure(id, mount_tags[m], "rc", (uint64_t)(uint32_t)s_rc, "code");
-        obs_report_measure(id, mount_tags[m], "errno", (uint64_t)(uint32_t)s_err, "errno");
+        obs_report_measure(id, mount_tags[m], "errno", (uint64_t)(uint32_t)s_err,
+                           "errno");
         if (s_rc == 0) {
-            obs_report_bytes(id, mount_tags[m], "f_fstypename", 0, (const uint8_t *)(sb + 280), 16);
-            obs_report_bytes(id, mount_tags[m], "f_mntfromname", 0, (const uint8_t *)(sb + 296), 88);
-            obs_report_bytes(id, mount_tags[m], "f_mntonname", 0, (const uint8_t *)(sb + 384), 88);
+            obs_report_bytes(id, mount_tags[m], "f_fstypename", 0,
+                             (const uint8_t *)(sb + 280), 16);
+            obs_report_bytes(id, mount_tags[m], "f_mntfromname", 0,
+                             (const uint8_t *)(sb + 296), 88);
+            obs_report_bytes(id, mount_tags[m], "f_mntonname", 0,
+                             (const uint8_t *)(sb + 384), 88);
         }
     }
 
@@ -1964,48 +2098,64 @@ static obs_result check_rf04_apr_app0_savedata(void) {
     {
         int fd_sce = -1, err_sce = 0;
         if (obs_address_is_callable((const void *)&sceKernelOpen)) {
-            if (err_ptr) *err_ptr = 0;
+            if (err_ptr)
+                *err_ptr = 0;
             fd_sce = sceKernelOpen("/app0/eboot.bin", 0, 0);
-            if (fd_sce < 0 && err_ptr) err_sce = *err_ptr;
+            if (fd_sce < 0 && err_ptr)
+                err_sce = *err_ptr;
             if (fd_sce >= 0 && obs_address_is_callable((const void *)&sceKernelClose)) {
                 sceKernelClose(fd_sce);
             }
         }
-        obs_report_measure(id, "arm2-open-eboot-sce", "rc", (uint64_t)(int64_t)fd_sce, "code");
-        obs_report_measure(id, "arm2-open-eboot-sce", "errno", (uint64_t)(uint32_t)err_sce, "errno");
+        obs_report_measure(id, "arm2-open-eboot-sce", "rc", (uint64_t)(int64_t)fd_sce,
+                           "code");
+        obs_report_measure(id, "arm2-open-eboot-sce", "errno",
+                           (uint64_t)(uint32_t)err_sce, "errno");
 
-        if (err_ptr) *err_ptr = 0;
-        int fd_sys = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/app0/eboot.bin", 0, 0, 0, 0, 0);
+        if (err_ptr)
+            *err_ptr = 0;
+        int fd_sys = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/app0/eboot.bin",
+                                             0, 0, 0, 0, 0);
         int err_sys = (fd_sys < 0 && err_ptr) ? *err_ptr : 0;
         if (fd_sys >= 0) {
             obs_invoke_syscall(6 /* SYS_close */, (long)fd_sys, 0, 0, 0, 0, 0);
         }
-        obs_report_measure(id, "arm2-open-eboot-syscall", "rc", (uint64_t)(int64_t)fd_sys, "code");
-        obs_report_measure(id, "arm2-open-eboot-syscall", "errno", (uint64_t)(uint32_t)err_sys, "errno");
+        obs_report_measure(id, "arm2-open-eboot-syscall", "rc",
+                           (uint64_t)(int64_t)fd_sys, "code");
+        obs_report_measure(id, "arm2-open-eboot-syscall", "errno",
+                           (uint64_t)(uint32_t)err_sys, "errno");
     }
 
     /* Open checks for /app0/sce_sys/param.json */
     {
         int fd_sce = -1, err_sce = 0;
         if (obs_address_is_callable((const void *)&sceKernelOpen)) {
-            if (err_ptr) *err_ptr = 0;
+            if (err_ptr)
+                *err_ptr = 0;
             fd_sce = sceKernelOpen("/app0/sce_sys/param.json", 0, 0);
-            if (fd_sce < 0 && err_ptr) err_sce = *err_ptr;
+            if (fd_sce < 0 && err_ptr)
+                err_sce = *err_ptr;
             if (fd_sce >= 0 && obs_address_is_callable((const void *)&sceKernelClose)) {
                 sceKernelClose(fd_sce);
             }
         }
-        obs_report_measure(id, "arm2-open-param-sce", "rc", (uint64_t)(int64_t)fd_sce, "code");
-        obs_report_measure(id, "arm2-open-param-sce", "errno", (uint64_t)(uint32_t)err_sce, "errno");
+        obs_report_measure(id, "arm2-open-param-sce", "rc", (uint64_t)(int64_t)fd_sce,
+                           "code");
+        obs_report_measure(id, "arm2-open-param-sce", "errno",
+                           (uint64_t)(uint32_t)err_sce, "errno");
 
-        if (err_ptr) *err_ptr = 0;
-        int fd_sys = (int)obs_invoke_syscall(5 /* SYS_open */, (long)"/app0/sce_sys/param.json", 0, 0, 0, 0, 0);
+        if (err_ptr)
+            *err_ptr = 0;
+        int fd_sys = (int)obs_invoke_syscall(
+            5 /* SYS_open */, (long)"/app0/sce_sys/param.json", 0, 0, 0, 0, 0);
         int err_sys = (fd_sys < 0 && err_ptr) ? *err_ptr : 0;
         if (fd_sys >= 0) {
             obs_invoke_syscall(6 /* SYS_close */, (long)fd_sys, 0, 0, 0, 0, 0);
         }
-        obs_report_measure(id, "arm2-open-param-syscall", "rc", (uint64_t)(int64_t)fd_sys, "code");
-        obs_report_measure(id, "arm2-open-param-syscall", "errno", (uint64_t)(uint32_t)err_sys, "errno");
+        obs_report_measure(id, "arm2-open-param-syscall", "rc",
+                           (uint64_t)(int64_t)fd_sys, "code");
+        obs_report_measure(id, "arm2-open-param-syscall", "errno",
+                           (uint64_t)(uint32_t)err_sys, "errno");
     }
 
     /* ---------------------------------------------------------------------- */
@@ -2019,8 +2169,10 @@ static obs_result check_rf04_apr_app0_savedata(void) {
                        (uint64_t)(uint32_t)rc_sd_mod, "code");
 
     int h_sd = obs_module_open("libSceSaveData_native");
-    if (h_sd <= 1) h_sd = obs_module_open("libSceSaveData");
-    if (h_sd <= 1) h_sd = obs_module_open("libSceSaveData.sprx");
+    if (h_sd <= 1)
+        h_sd = obs_module_open("libSceSaveData");
+    if (h_sd <= 1)
+        h_sd = obs_module_open("libSceSaveData.sprx");
 
     /* Candidate spellings for sceSaveDataInitialize3 */
     static const struct {
@@ -2046,16 +2198,21 @@ static obs_result check_rf04_apr_app0_savedata(void) {
         fn_sd_init3 = (fn_sd_init3_t)&sceSaveDataInitialize3_named;
     }
 
-    for (size_t c = 0; c < sizeof(init3_candidates)/sizeof(init3_candidates[0]); c++) {
+    for (size_t c = 0; c < sizeof(init3_candidates) / sizeof(init3_candidates[0]);
+         c++) {
         const char *cname = init3_candidates[c].name;
         const char *cdesc = init3_candidates[c].desc;
         void *p = NULL;
-        if (h_sd > 0) p = (void *)obs_module_symbol(h_sd, cname);
-        if (!p) p = (void *)obs_module_symbol(1, cname);
-        if (!p) p = (void *)obs_module_symbol(OBS_HANDLE_SELF, cname);
+        if (h_sd > 0)
+            p = (void *)obs_module_symbol(h_sd, cname);
+        if (!p)
+            p = (void *)obs_module_symbol(1, cname);
+        if (!p)
+            p = (void *)obs_module_symbol(OBS_HANDLE_SELF, cname);
         if (!p && obs_address_is_callable((const void *)&sceKernelDlsym)) {
             for (int h = 1; h <= 256; h++) {
-                if (sceKernelDlsym(h, cname, &p) == 0 && obs_address_is_callable(p)) break;
+                if (sceKernelDlsym(h, cname, &p) == 0 && obs_address_is_callable(p))
+                    break;
                 p = NULL;
             }
         }
@@ -2113,51 +2270,66 @@ static obs_result check_rf04_apr_app0_savedata(void) {
     fn_sd_get2_t fn_sd_get2 = NULL;
     fn_sd_sync_t fn_sd_sync = NULL;
 
-    if (obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_static)) {
+    if (obs_address_is_callable(
+            (const void *)&sceSaveDataSetupSaveDataMemory2_static)) {
         fn_sd_setup2 = (fn_sd_setup2_t)&sceSaveDataSetupSaveDataMemory2_static;
-    } else if (obs_address_is_callable((const void *)&sceSaveDataSetupSaveDataMemory2_named)) {
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataSetupSaveDataMemory2_named)) {
         fn_sd_setup2 = (fn_sd_setup2_t)&sceSaveDataSetupSaveDataMemory2_named;
     }
 
     if (obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_static)) {
         fn_sd_set2 = (fn_sd_set2_t)&sceSaveDataSetSaveDataMemory2_static;
-    } else if (obs_address_is_callable((const void *)&sceSaveDataSetSaveDataMemory2_named)) {
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataSetSaveDataMemory2_named)) {
         fn_sd_set2 = (fn_sd_set2_t)&sceSaveDataSetSaveDataMemory2_named;
     }
 
     if (obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_static)) {
         fn_sd_get2 = (fn_sd_get2_t)&sceSaveDataGetSaveDataMemory2_static;
-    } else if (obs_address_is_callable((const void *)&sceSaveDataGetSaveDataMemory2_named)) {
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataGetSaveDataMemory2_named)) {
         fn_sd_get2 = (fn_sd_get2_t)&sceSaveDataGetSaveDataMemory2_named;
     }
 
     if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_static)) {
         fn_sd_sync = (fn_sd_sync_t)&sceSaveDataSyncSaveDataMemory_static;
-    } else if (obs_address_is_callable((const void *)&sceSaveDataSyncSaveDataMemory_named)) {
+    } else if (obs_address_is_callable(
+                   (const void *)&sceSaveDataSyncSaveDataMemory_named)) {
         fn_sd_sync = (fn_sd_sync_t)&sceSaveDataSyncSaveDataMemory_named;
     }
 
-    const char *setup2_syms[] = {"$8m0wY05T4uA", "8m0wY05T4uA", "8m0wY05T4uA#T#U", "$oQySEUfgXRA", "oQySEUfgXRA", "oQySEUfgXRA#T#U", "$EF3gRxGSDKE", "sceSaveDataSetupSaveDataMemory2"};
-    const char *set2_syms[] = {"$cduy9v4YmT4", "cduy9v4YmT4", "cduy9v4YmT4#T#U", "$PpkY-vay23E", "sceSaveDataSetSaveDataMemory2"};
-    const char *get2_syms[] = {"$QwOO7vegnV8", "QwOO7vegnV8", "QwOO7vegnV8#T#U", "$X52g9-6OA0M", "sceSaveDataGetSaveDataMemory2"};
-    const char *sync_syms[] = {"$wiT9jeC7xPw", "wiT9jeC7xPw", "wiT9jeC7xPw#T#U", "$-MS74I39JMI", "sceSaveDataSyncSaveDataMemory"};
+    const char *setup2_syms[] = {"$8m0wY05T4uA",    "8m0wY05T4uA",
+                                 "8m0wY05T4uA#T#U", "$oQySEUfgXRA",
+                                 "oQySEUfgXRA",     "oQySEUfgXRA#T#U",
+                                 "$EF3gRxGSDKE",    "sceSaveDataSetupSaveDataMemory2"};
+    const char *set2_syms[] = {"$cduy9v4YmT4", "cduy9v4YmT4", "cduy9v4YmT4#T#U",
+                               "$PpkY-vay23E", "sceSaveDataSetSaveDataMemory2"};
+    const char *get2_syms[] = {"$QwOO7vegnV8", "QwOO7vegnV8", "QwOO7vegnV8#T#U",
+                               "$X52g9-6OA0M", "sceSaveDataGetSaveDataMemory2"};
+    const char *sync_syms[] = {"$wiT9jeC7xPw", "wiT9jeC7xPw", "wiT9jeC7xPw#T#U",
+                               "$-MS74I39JMI", "sceSaveDataSyncSaveDataMemory"};
 
-    for (size_t i = 0; i < sizeof(setup2_syms)/sizeof(setup2_syms[0]); i++) {
+    for (size_t i = 0; i < sizeof(setup2_syms) / sizeof(setup2_syms[0]); i++) {
         if (!fn_sd_setup2) {
             void *p = (void *)obs_module_symbol(h_sd, setup2_syms[i]);
-            if (p && obs_address_is_callable(p)) fn_sd_setup2 = (fn_sd_setup2_t)p;
+            if (p && obs_address_is_callable(p))
+                fn_sd_setup2 = (fn_sd_setup2_t)p;
         }
-        if (!fn_sd_set2 && i < sizeof(set2_syms)/sizeof(set2_syms[0])) {
+        if (!fn_sd_set2 && i < sizeof(set2_syms) / sizeof(set2_syms[0])) {
             void *p = (void *)obs_module_symbol(h_sd, set2_syms[i]);
-            if (p && obs_address_is_callable(p)) fn_sd_set2 = (fn_sd_set2_t)p;
+            if (p && obs_address_is_callable(p))
+                fn_sd_set2 = (fn_sd_set2_t)p;
         }
-        if (!fn_sd_get2 && i < sizeof(get2_syms)/sizeof(get2_syms[0])) {
+        if (!fn_sd_get2 && i < sizeof(get2_syms) / sizeof(get2_syms[0])) {
             void *p = (void *)obs_module_symbol(h_sd, get2_syms[i]);
-            if (p && obs_address_is_callable(p)) fn_sd_get2 = (fn_sd_get2_t)p;
+            if (p && obs_address_is_callable(p))
+                fn_sd_get2 = (fn_sd_get2_t)p;
         }
-        if (!fn_sd_sync && i < sizeof(sync_syms)/sizeof(sync_syms[0])) {
+        if (!fn_sd_sync && i < sizeof(sync_syms) / sizeof(sync_syms[0])) {
             void *p = (void *)obs_module_symbol(h_sd, sync_syms[i]);
-            if (p && obs_address_is_callable(p)) fn_sd_sync = (fn_sd_sync_t)p;
+            if (p && obs_address_is_callable(p))
+                fn_sd_sync = (fn_sd_sync_t)p;
         }
     }
 
@@ -2165,8 +2337,10 @@ static obs_result check_rf04_apr_app0_savedata(void) {
         for (int h = 1; h <= 256; h++) {
             if (!fn_sd_setup2) {
                 void *p = NULL;
-                for (size_t i = 0; i < sizeof(setup2_syms)/sizeof(setup2_syms[0]); i++) {
-                    if (sceKernelDlsym(h, setup2_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                for (size_t i = 0; i < sizeof(setup2_syms) / sizeof(setup2_syms[0]);
+                     i++) {
+                    if (sceKernelDlsym(h, setup2_syms[i], &p) == 0 &&
+                        obs_address_is_callable(p)) {
                         fn_sd_setup2 = (fn_sd_setup2_t)p;
                         break;
                     }
@@ -2174,8 +2348,9 @@ static obs_result check_rf04_apr_app0_savedata(void) {
             }
             if (!fn_sd_set2) {
                 void *p = NULL;
-                for (size_t i = 0; i < sizeof(set2_syms)/sizeof(set2_syms[0]); i++) {
-                    if (sceKernelDlsym(h, set2_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                for (size_t i = 0; i < sizeof(set2_syms) / sizeof(set2_syms[0]); i++) {
+                    if (sceKernelDlsym(h, set2_syms[i], &p) == 0 &&
+                        obs_address_is_callable(p)) {
                         fn_sd_set2 = (fn_sd_set2_t)p;
                         break;
                     }
@@ -2183,8 +2358,9 @@ static obs_result check_rf04_apr_app0_savedata(void) {
             }
             if (!fn_sd_get2) {
                 void *p = NULL;
-                for (size_t i = 0; i < sizeof(get2_syms)/sizeof(get2_syms[0]); i++) {
-                    if (sceKernelDlsym(h, get2_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                for (size_t i = 0; i < sizeof(get2_syms) / sizeof(get2_syms[0]); i++) {
+                    if (sceKernelDlsym(h, get2_syms[i], &p) == 0 &&
+                        obs_address_is_callable(p)) {
                         fn_sd_get2 = (fn_sd_get2_t)p;
                         break;
                     }
@@ -2192,8 +2368,9 @@ static obs_result check_rf04_apr_app0_savedata(void) {
             }
             if (!fn_sd_sync) {
                 void *p = NULL;
-                for (size_t i = 0; i < sizeof(sync_syms)/sizeof(sync_syms[0]); i++) {
-                    if (sceKernelDlsym(h, sync_syms[i], &p) == 0 && obs_address_is_callable(p)) {
+                for (size_t i = 0; i < sizeof(sync_syms) / sizeof(sync_syms[0]); i++) {
+                    if (sceKernelDlsym(h, sync_syms[i], &p) == 0 &&
+                        obs_address_is_callable(p)) {
                         fn_sd_sync = (fn_sd_sync_t)p;
                         break;
                     }
@@ -2237,7 +2414,8 @@ static obs_result check_rf04_apr_app0_savedata(void) {
                        (uint64_t)(uint32_t)rc_setup2, "code");
 
     uint8_t test_buf[16];
-    for (int b = 0; b < 16; b++) test_buf[b] = (uint8_t)(0x11 + b);
+    for (int b = 0; b < 16; b++)
+        test_buf[b] = (uint8_t)(0x11 + b);
 
     int rc_set2 = -1;
     if (fn_sd_set2) {
@@ -2266,7 +2444,8 @@ static obs_result check_rf04_apr_app0_savedata(void) {
     }
     obs_report_measure(id, "arm3-savedata-memory2", "get2-rc",
                        (uint64_t)(uint32_t)rc_get2, "code");
-    obs_report_bytes(id, "arm3-savedata-memory2", "get2-16b", 0, read_buf, sizeof(read_buf));
+    obs_report_bytes(id, "arm3-savedata-memory2", "get2-16b", 0, read_buf,
+                     sizeof(read_buf));
 
     int rc_sync = -1;
     if (fn_sd_sync) {
@@ -2286,7 +2465,8 @@ static obs_result check_rf04_apr_app0_savedata(void) {
     return obs_pass();
 }
 
-/* REQ-20261014T1655Z-ap01: AudioPropagation and Acm routes, QueryMemory, Create/Destroy */
+/* REQ-20261014T1655Z-ap01: AudioPropagation and Acm routes, QueryMemory, Create/Destroy
+ */
 static obs_result check_ap01_audio_propagation_acm(void) {
     const char *id = "000-boot/ap01-audio-propagation-acm";
     obs_jmp_buf guard;
@@ -2300,28 +2480,43 @@ static obs_result check_ap01_audio_propagation_acm(void) {
     int rc_ap_loadstart_sys_ex = -1;
 
     rc_ap_open = obs_module_open("libSceAudioPropagation");
-    if (rc_ap_open > 0) h_ap = rc_ap_open;
+    if (rc_ap_open > 0)
+        h_ap = rc_ap_open;
 
     rc_ap_sprx = obs_module_open("libSceAudioPropagation.sprx");
-    if (rc_ap_sprx > 0 && h_ap <= 0) h_ap = rc_ap_sprx;
+    if (rc_ap_sprx > 0 && h_ap <= 0)
+        h_ap = rc_ap_sprx;
 
     if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-        rc_ap_loadstart_common = sceKernelLoadStartModule("/system/common/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
-        if (rc_ap_loadstart_common > 0 && h_ap <= 0) h_ap = rc_ap_loadstart_common;
+        rc_ap_loadstart_common = sceKernelLoadStartModule(
+            "/system/common/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_ap_loadstart_common > 0 && h_ap <= 0)
+            h_ap = rc_ap_loadstart_common;
 
-        rc_ap_loadstart_priv = sceKernelLoadStartModule("/system/priv/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
-        if (rc_ap_loadstart_priv > 0 && h_ap <= 0) h_ap = rc_ap_loadstart_priv;
+        rc_ap_loadstart_priv = sceKernelLoadStartModule(
+            "/system/priv/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_ap_loadstart_priv > 0 && h_ap <= 0)
+            h_ap = rc_ap_loadstart_priv;
 
-        rc_ap_loadstart_sys_ex = sceKernelLoadStartModule("/system_ex/common/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL, NULL);
-        if (rc_ap_loadstart_sys_ex > 0 && h_ap <= 0) h_ap = rc_ap_loadstart_sys_ex;
+        rc_ap_loadstart_sys_ex = sceKernelLoadStartModule(
+            "/system_ex/common/lib/libSceAudioPropagation.sprx", 0, NULL, 0, NULL,
+            NULL);
+        if (rc_ap_loadstart_sys_ex > 0 && h_ap <= 0)
+            h_ap = rc_ap_loadstart_sys_ex;
     }
 
-    obs_report_measure(id, "routes-AudioPropagation", "open-lib-rc", (uint64_t)(uint32_t)rc_ap_open, "code");
-    obs_report_measure(id, "routes-AudioPropagation", "open-sprx-rc", (uint64_t)(uint32_t)rc_ap_sprx, "code");
-    obs_report_measure(id, "routes-AudioPropagation", "loadstart-common-rc", (uint64_t)(uint32_t)rc_ap_loadstart_common, "code");
-    obs_report_measure(id, "routes-AudioPropagation", "loadstart-priv-rc", (uint64_t)(uint32_t)rc_ap_loadstart_priv, "code");
-    obs_report_measure(id, "routes-AudioPropagation", "loadstart-sys-ex-rc", (uint64_t)(uint32_t)rc_ap_loadstart_sys_ex, "code");
-    obs_report_measure(id, "routes-AudioPropagation", "handle", (uint64_t)(uint32_t)h_ap, "handle");
+    obs_report_measure(id, "routes-AudioPropagation", "open-lib-rc",
+                       (uint64_t)(uint32_t)rc_ap_open, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "open-sprx-rc",
+                       (uint64_t)(uint32_t)rc_ap_sprx, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "loadstart-common-rc",
+                       (uint64_t)(uint32_t)rc_ap_loadstart_common, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "loadstart-priv-rc",
+                       (uint64_t)(uint32_t)rc_ap_loadstart_priv, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "loadstart-sys-ex-rc",
+                       (uint64_t)(uint32_t)rc_ap_loadstart_sys_ex, "code");
+    obs_report_measure(id, "routes-AudioPropagation", "handle",
+                       (uint64_t)(uint32_t)h_ap, "handle");
 
     /* 1b. Routes for libSceAcm */
     int h_acm = -1;
@@ -2332,27 +2527,40 @@ static obs_result check_ap01_audio_propagation_acm(void) {
     int rc_acm_loadstart_sys_ex = -1;
 
     rc_acm_open = obs_module_open("libSceAcm");
-    if (rc_acm_open > 0) h_acm = rc_acm_open;
+    if (rc_acm_open > 0)
+        h_acm = rc_acm_open;
 
     rc_acm_sprx = obs_module_open("libSceAcm.sprx");
-    if (rc_acm_sprx > 0 && h_acm <= 0) h_acm = rc_acm_sprx;
+    if (rc_acm_sprx > 0 && h_acm <= 0)
+        h_acm = rc_acm_sprx;
 
     if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-        rc_acm_loadstart_common = sceKernelLoadStartModule("/system/common/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
-        if (rc_acm_loadstart_common > 0 && h_acm <= 0) h_acm = rc_acm_loadstart_common;
+        rc_acm_loadstart_common = sceKernelLoadStartModule(
+            "/system/common/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_acm_loadstart_common > 0 && h_acm <= 0)
+            h_acm = rc_acm_loadstart_common;
 
-        rc_acm_loadstart_priv = sceKernelLoadStartModule("/system/priv/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
-        if (rc_acm_loadstart_priv > 0 && h_acm <= 0) h_acm = rc_acm_loadstart_priv;
+        rc_acm_loadstart_priv = sceKernelLoadStartModule(
+            "/system/priv/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_acm_loadstart_priv > 0 && h_acm <= 0)
+            h_acm = rc_acm_loadstart_priv;
 
-        rc_acm_loadstart_sys_ex = sceKernelLoadStartModule("/system_ex/common/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
-        if (rc_acm_loadstart_sys_ex > 0 && h_acm <= 0) h_acm = rc_acm_loadstart_sys_ex;
+        rc_acm_loadstart_sys_ex = sceKernelLoadStartModule(
+            "/system_ex/common/lib/libSceAcm.sprx", 0, NULL, 0, NULL, NULL);
+        if (rc_acm_loadstart_sys_ex > 0 && h_acm <= 0)
+            h_acm = rc_acm_loadstart_sys_ex;
     }
 
-    obs_report_measure(id, "routes-Acm", "open-lib-rc", (uint64_t)(uint32_t)rc_acm_open, "code");
-    obs_report_measure(id, "routes-Acm", "open-sprx-rc", (uint64_t)(uint32_t)rc_acm_sprx, "code");
-    obs_report_measure(id, "routes-Acm", "loadstart-common-rc", (uint64_t)(uint32_t)rc_acm_loadstart_common, "code");
-    obs_report_measure(id, "routes-Acm", "loadstart-priv-rc", (uint64_t)(uint32_t)rc_acm_loadstart_priv, "code");
-    obs_report_measure(id, "routes-Acm", "loadstart-sys-ex-rc", (uint64_t)(uint32_t)rc_acm_loadstart_sys_ex, "code");
+    obs_report_measure(id, "routes-Acm", "open-lib-rc", (uint64_t)(uint32_t)rc_acm_open,
+                       "code");
+    obs_report_measure(id, "routes-Acm", "open-sprx-rc",
+                       (uint64_t)(uint32_t)rc_acm_sprx, "code");
+    obs_report_measure(id, "routes-Acm", "loadstart-common-rc",
+                       (uint64_t)(uint32_t)rc_acm_loadstart_common, "code");
+    obs_report_measure(id, "routes-Acm", "loadstart-priv-rc",
+                       (uint64_t)(uint32_t)rc_acm_loadstart_priv, "code");
+    obs_report_measure(id, "routes-Acm", "loadstart-sys-ex-rc",
+                       (uint64_t)(uint32_t)rc_acm_loadstart_sys_ex, "code");
     obs_report_measure(id, "routes-Acm", "handle", (uint64_t)(uint32_t)h_acm, "handle");
 
     /* 2. Resolve AudioPropagation functions */
@@ -2361,50 +2569,78 @@ static obs_result check_ap01_audio_propagation_acm(void) {
     typedef int (*fn_ap_sys_destroy_t)(uint64_t);
 
     fn_ap_query_mem_t fn_query_mem = NULL;
-    if (obs_address_is_callable((const void *)&sceAudioPropagationSystemQueryMemory_static)) {
+    if (obs_address_is_callable(
+            (const void *)&sceAudioPropagationSystemQueryMemory_static)) {
         fn_query_mem = (fn_ap_query_mem_t)&sceAudioPropagationSystemQueryMemory_static;
     } else {
         fn_query_mem = (fn_ap_query_mem_t)census_resolve_symbol(
-            "libSceAudioPropagation", "$7xyAxrusLko", "sceAudioPropagationSystemQueryMemory", NULL, NULL);
-        if (!fn_query_mem) fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(OBS_HANDLE_SELF, "$7xyAxrusLko");
-        if (!fn_query_mem) fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAudioPropagationSystemQueryMemory");
+            "libSceAudioPropagation", "$7xyAxrusLko",
+            "sceAudioPropagationSystemQueryMemory", NULL, NULL);
+        if (!fn_query_mem)
+            fn_query_mem =
+                (fn_ap_query_mem_t)obs_module_symbol(OBS_HANDLE_SELF, "$7xyAxrusLko");
+        if (!fn_query_mem)
+            fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(
+                OBS_HANDLE_SELF, "sceAudioPropagationSystemQueryMemory");
         if (!fn_query_mem && h_ap > 0) {
             fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(h_ap, "$7xyAxrusLko");
-            if (!fn_query_mem) fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(h_ap, "sceAudioPropagationSystemQueryMemory");
+            if (!fn_query_mem)
+                fn_query_mem = (fn_ap_query_mem_t)obs_module_symbol(
+                    h_ap, "sceAudioPropagationSystemQueryMemory");
         }
     }
 
     fn_ap_sys_create_t fn_sys_create = NULL;
-    if (obs_address_is_callable((const void *)&sceAudioPropagationSystemCreate_static)) {
+    if (obs_address_is_callable(
+            (const void *)&sceAudioPropagationSystemCreate_static)) {
         fn_sys_create = (fn_ap_sys_create_t)&sceAudioPropagationSystemCreate_static;
     } else {
         fn_sys_create = (fn_ap_sys_create_t)census_resolve_symbol(
-            "libSceAudioPropagation", "$aNEqtSHdUSo", "sceAudioPropagationSystemCreate", NULL, NULL);
-        if (!fn_sys_create) fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(OBS_HANDLE_SELF, "$aNEqtSHdUSo");
-        if (!fn_sys_create) fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAudioPropagationSystemCreate");
+            "libSceAudioPropagation", "$aNEqtSHdUSo", "sceAudioPropagationSystemCreate",
+            NULL, NULL);
+        if (!fn_sys_create)
+            fn_sys_create =
+                (fn_ap_sys_create_t)obs_module_symbol(OBS_HANDLE_SELF, "$aNEqtSHdUSo");
+        if (!fn_sys_create)
+            fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(
+                OBS_HANDLE_SELF, "sceAudioPropagationSystemCreate");
         if (!fn_sys_create && h_ap > 0) {
             fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(h_ap, "$aNEqtSHdUSo");
-            if (!fn_sys_create) fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(h_ap, "sceAudioPropagationSystemCreate");
+            if (!fn_sys_create)
+                fn_sys_create = (fn_ap_sys_create_t)obs_module_symbol(
+                    h_ap, "sceAudioPropagationSystemCreate");
         }
     }
 
     fn_ap_sys_destroy_t fn_sys_destroy = NULL;
-    if (obs_address_is_callable((const void *)&sceAudioPropagationSystemDestroy_static)) {
+    if (obs_address_is_callable(
+            (const void *)&sceAudioPropagationSystemDestroy_static)) {
         fn_sys_destroy = (fn_ap_sys_destroy_t)&sceAudioPropagationSystemDestroy_static;
     } else {
         fn_sys_destroy = (fn_ap_sys_destroy_t)census_resolve_symbol(
-            "libSceAudioPropagation", "$x5VPqg5iyAk", "sceAudioPropagationSystemDestroy", NULL, NULL);
-        if (!fn_sys_destroy) fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "$x5VPqg5iyAk");
-        if (!fn_sys_destroy) fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAudioPropagationSystemDestroy");
+            "libSceAudioPropagation", "$x5VPqg5iyAk",
+            "sceAudioPropagationSystemDestroy", NULL, NULL);
+        if (!fn_sys_destroy)
+            fn_sys_destroy =
+                (fn_ap_sys_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "$x5VPqg5iyAk");
+        if (!fn_sys_destroy)
+            fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(
+                OBS_HANDLE_SELF, "sceAudioPropagationSystemDestroy");
         if (!fn_sys_destroy && h_ap > 0) {
-            fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(h_ap, "$x5VPqg5iyAk");
-            if (!fn_sys_destroy) fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(h_ap, "sceAudioPropagationSystemDestroy");
+            fn_sys_destroy =
+                (fn_ap_sys_destroy_t)obs_module_symbol(h_ap, "$x5VPqg5iyAk");
+            if (!fn_sys_destroy)
+                fn_sys_destroy = (fn_ap_sys_destroy_t)obs_module_symbol(
+                    h_ap, "sceAudioPropagationSystemDestroy");
         }
     }
 
-    obs_report_measure(id, "sceAudioPropagationSystemQueryMemory", "bound", (uint64_t)(fn_query_mem != NULL), "bool");
-    obs_report_measure(id, "sceAudioPropagationSystemCreate", "bound", (uint64_t)(fn_sys_create != NULL), "bool");
-    obs_report_measure(id, "sceAudioPropagationSystemDestroy", "bound", (uint64_t)(fn_sys_destroy != NULL), "bool");
+    obs_report_measure(id, "sceAudioPropagationSystemQueryMemory", "bound",
+                       (uint64_t)(fn_query_mem != NULL), "bool");
+    obs_report_measure(id, "sceAudioPropagationSystemCreate", "bound",
+                       (uint64_t)(fn_sys_create != NULL), "bool");
+    obs_report_measure(id, "sceAudioPropagationSystemDestroy", "bound",
+                       (uint64_t)(fn_sys_destroy != NULL), "bool");
 
     /* 3. Resolve Acm functions */
     typedef int (*fn_acm_create_t)(uint64_t *);
@@ -2416,11 +2652,17 @@ static obs_result check_ap01_audio_propagation_acm(void) {
     } else {
         fn_acm_create = (fn_acm_create_t)census_resolve_symbol(
             "libSceAcm", "$ZIXln2K3XMk", "sceAcmContextCreate", NULL, NULL);
-        if (!fn_acm_create) fn_acm_create = (fn_acm_create_t)obs_module_symbol(OBS_HANDLE_SELF, "$ZIXln2K3XMk");
-        if (!fn_acm_create) fn_acm_create = (fn_acm_create_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAcmContextCreate");
+        if (!fn_acm_create)
+            fn_acm_create =
+                (fn_acm_create_t)obs_module_symbol(OBS_HANDLE_SELF, "$ZIXln2K3XMk");
+        if (!fn_acm_create)
+            fn_acm_create = (fn_acm_create_t)obs_module_symbol(OBS_HANDLE_SELF,
+                                                               "sceAcmContextCreate");
         if (!fn_acm_create && h_acm > 0) {
             fn_acm_create = (fn_acm_create_t)obs_module_symbol(h_acm, "$ZIXln2K3XMk");
-            if (!fn_acm_create) fn_acm_create = (fn_acm_create_t)obs_module_symbol(h_acm, "sceAcmContextCreate");
+            if (!fn_acm_create)
+                fn_acm_create =
+                    (fn_acm_create_t)obs_module_symbol(h_acm, "sceAcmContextCreate");
         }
     }
 
@@ -2430,21 +2672,30 @@ static obs_result check_ap01_audio_propagation_acm(void) {
     } else {
         fn_acm_destroy = (fn_acm_destroy_t)census_resolve_symbol(
             "libSceAcm", "$jBgBjAj02R8", "sceAcmContextDestroy", NULL, NULL);
-        if (!fn_acm_destroy) fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "$jBgBjAj02R8");
-        if (!fn_acm_destroy) fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "sceAcmContextDestroy");
+        if (!fn_acm_destroy)
+            fn_acm_destroy =
+                (fn_acm_destroy_t)obs_module_symbol(OBS_HANDLE_SELF, "$jBgBjAj02R8");
+        if (!fn_acm_destroy)
+            fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(
+                OBS_HANDLE_SELF, "sceAcmContextDestroy");
         if (!fn_acm_destroy && h_acm > 0) {
             fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(h_acm, "$jBgBjAj02R8");
-            if (!fn_acm_destroy) fn_acm_destroy = (fn_acm_destroy_t)obs_module_symbol(h_acm, "sceAcmContextDestroy");
+            if (!fn_acm_destroy)
+                fn_acm_destroy =
+                    (fn_acm_destroy_t)obs_module_symbol(h_acm, "sceAcmContextDestroy");
         }
     }
 
-    obs_report_measure(id, "sceAcmContextCreate", "bound", (uint64_t)(fn_acm_create != NULL), "bool");
-    obs_report_measure(id, "sceAcmContextDestroy", "bound", (uint64_t)(fn_acm_destroy != NULL), "bool");
+    obs_report_measure(id, "sceAcmContextCreate", "bound",
+                       (uint64_t)(fn_acm_create != NULL), "bool");
+    obs_report_measure(id, "sceAcmContextDestroy", "bound",
+                       (uint64_t)(fn_acm_destroy != NULL), "bool");
 
     /* 4. Execute SystemQueryMemory arms if bound */
     uint32_t returned_mem_sz = 0;
     if (fn_query_mem) {
-        /* Base shape: rsi 64-byte block: dword 0x010107d4 at +0, qword 0x30 at +8, 0xcc elsewhere. rdi 0x38 bytes zeroed */
+        /* Base shape: rsi 64-byte block: dword 0x010107d4 at +0, qword 0x30 at +8, 0xcc
+         * elsewhere. rdi 0x38 bytes zeroed */
         uint8_t rdi_sys[0x38];
         uint8_t rsi_mem[64];
         memset(rdi_sys, 0, sizeof(rdi_sys));
@@ -2459,14 +2710,16 @@ static obs_result check_ap01_audio_propagation_acm(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "query-mem-base", "fault", (uint64_t)sig_qm, "signal");
+            obs_report_measure(id, "query-mem-base", "fault", (uint64_t)sig_qm,
+                               "signal");
         }
         obs_report_measure(id, "query-mem-base", "rc", rc_qm, "code");
         obs_report_bytes(id, "query-mem-base", "rdi-38b", 0, rdi_sys, sizeof(rdi_sys));
         obs_report_bytes(id, "query-mem-base", "rsi-64b", 0, rsi_mem, sizeof(rsi_mem));
         if (rc_qm == 0) {
             returned_mem_sz = *(uint32_t *)(rsi_mem + 0x18);
-            obs_report_measure(id, "query-mem-base", "size-at-18", (uint64_t)returned_mem_sz, "bytes");
+            obs_report_measure(id, "query-mem-base", "size-at-18",
+                               (uint64_t)returned_mem_sz, "bytes");
         }
 
         /* 2a. rdi +0x20 set to 1, 4, 16 */
@@ -2506,7 +2759,8 @@ static obs_result check_ap01_audio_propagation_acm(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "query-mem-ver0", "fault", (uint64_t)sig_v0, "signal");
+            obs_report_measure(id, "query-mem-ver0", "fault", (uint64_t)sig_v0,
+                               "signal");
         }
         obs_report_measure(id, "query-mem-ver0", "rc", rc_v0, "code");
         obs_report_bytes(id, "query-mem-ver0", "rsi-64b", 0, rsi_mem, sizeof(rsi_mem));
@@ -2518,14 +2772,17 @@ static obs_result check_ap01_audio_propagation_acm(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "query-mem-rsi-null", "fault", (uint64_t)sig_null, "signal");
+            obs_report_measure(id, "query-mem-rsi-null", "fault", (uint64_t)sig_null,
+                               "signal");
         }
         obs_report_measure(id, "query-mem-rsi-null", "rc", rc_null, "code");
     }
 
     /* 3. SystemCreate / Destroy */
     if (fn_sys_create) {
-        size_t alloc_sz = (returned_mem_sz > 0 && returned_mem_sz < 64 * 1024 * 1024) ? returned_mem_sz : 0x10000;
+        size_t alloc_sz = (returned_mem_sz > 0 && returned_mem_sz < 64 * 1024 * 1024)
+                              ? returned_mem_sz
+                              : 0x10000;
         (void)alloc_sz;
         static _Alignas(64) uint8_t sys_buf[0x10000];
 
@@ -2544,10 +2801,12 @@ static obs_result check_ap01_audio_propagation_acm(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "system-create", "fault", (uint64_t)sig_sc, "signal");
+            obs_report_measure(id, "system-create", "fault", (uint64_t)sig_sc,
+                               "signal");
         }
         obs_report_measure(id, "system-create", "rc", rc_sc, "code");
-        obs_report_bytes(id, "system-create", "handle-8b", 0, (const unsigned char *)&sys_handle, 8);
+        obs_report_bytes(id, "system-create", "handle-8b", 0,
+                         (const unsigned char *)&sys_handle, 8);
 
         if (fn_sys_destroy && sys_handle != 0xccccccccccccccccULL) {
             int sig_sd = OBS_FAULT_ARM(&guard);
@@ -2557,7 +2816,8 @@ static obs_result check_ap01_audio_propagation_acm(void) {
                 obs_fault_unregister();
             } else {
                 obs_fault_unregister();
-                obs_report_measure(id, "system-destroy", "fault", (uint64_t)sig_sd, "signal");
+                obs_report_measure(id, "system-destroy", "fault", (uint64_t)sig_sd,
+                                   "signal");
             }
             obs_report_measure(id, "system-destroy", "rc", rc_sd, "code");
         }
@@ -2573,10 +2833,12 @@ static obs_result check_ap01_audio_propagation_acm(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "acm-context-create", "fault", (uint64_t)sig_acc, "signal");
+            obs_report_measure(id, "acm-context-create", "fault", (uint64_t)sig_acc,
+                               "signal");
         }
         obs_report_measure(id, "acm-context-create", "rc", rc_acc, "code");
-        obs_report_bytes(id, "acm-context-create", "handle-8b", 0, (const unsigned char *)&acm_handle, 8);
+        obs_report_bytes(id, "acm-context-create", "handle-8b", 0,
+                         (const unsigned char *)&acm_handle, 8);
 
         if (fn_acm_destroy && acm_handle != 0xccccccccccccccccULL) {
             int sig_acd = OBS_FAULT_ARM(&guard);
@@ -2586,7 +2848,8 @@ static obs_result check_ap01_audio_propagation_acm(void) {
                 obs_fault_unregister();
             } else {
                 obs_fault_unregister();
-                obs_report_measure(id, "acm-context-destroy", "fault", (uint64_t)sig_acd, "signal");
+                obs_report_measure(id, "acm-context-destroy", "fault",
+                                   (uint64_t)sig_acd, "signal");
             }
             obs_report_measure(id, "acm-context-destroy", "rc", rc_acd, "code");
         }
@@ -2677,7 +2940,8 @@ static void build_ly01_vs(uint32_t *code, int layer_mode, int const_layer,
         code[k++] = 0x04030605u;
         code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
 
-        /* Position export pos1 carrying layer in Z (channel 2), final export with done=1 */
+        /* Position export pos1 carrying layer in Z (channel 2), final export with
+         * done=1 */
         if (layer_mode == 1) {
             /* Disagreeing vertices: lane 0 -> 1, lane 1 -> 2, lane 2 -> 2 */
             code[k++] = 0xbefe0381u; /* s_mov_b32 exec_lo, 1 */
@@ -2703,7 +2967,8 @@ static void build_ly01_vs(uint32_t *code, int layer_mode, int const_layer,
         code[k++] = 0x04030605u;
         code[k++] = 0xbf8cff0fu; /* s_waitcnt expcnt(0) */
     }
-    code[k++] = 0xbefe030cu; /* s_mov_b32 exec_lo, s12 (restore all lanes before retire) */
+    code[k++] =
+        0xbefe030cu; /* s_mov_b32 exec_lo, s12 (restore all lanes before retire) */
     code[k++] = 0xbf810000u; /* s_endpgm */
 
     while (k < 128) {
@@ -2720,32 +2985,89 @@ static uint32_t build_ly01_dcb(uint32_t *dw, uint32_t color_view,
     static const struct {
         uint32_t reg;
         uint32_t val;
-    } base_ctx[] = {
-        {0x318u, 0}, {0x390u, 0}, {0x31bu, 0}, {0x31cu, 0x000180a8u},
-        {0x31du, 0}, {0x31eu, 0}, {0x3b0u, (63u << 14) | 63u}, {0x3b8u, 0x08c6c004u},
-        {0x109u, 0}, {0x202u, 0x00cc0010u}, {0x08eu, 0xfu}, {0x08fu, 0xfu},
-        {0x1e0u, 0x20010001u}, {0x200u, 0}, {0x08cu, 0xaa99aaaau}, {0x1d4u, 0xffu},
-        {0x291u, 0x10020040u}, {0x29bu, 0}, {0x2d3u, 1u}, {0x2d5u, 0x02002000u},
-        {0x1ffu, 0x40u}, {0x20eu, 0x78u}, {0x2a1u, 0}, {0x2a6u, 0x40u},
-        {0x2adu, 0}, {0x2abu, 4u}, {0x2ceu, 0}, {0x2d4u, 0x88101000u},
-        {0x103u, 0xffffffffu}, {0x30eu, 0xffffffffu}, {0x30fu, 0xffffffffu},
-        {0x310u, 0}, {0x314u, 0x202u}, {0x311u, 0x01fd2002u}, {0x312u, 0x03ff0080u},
-        {0x313u, 0x6000u}, {0x00eu, 2u}, {0x280u, 0x00080008u}, {0x281u, 0xffff0000u},
-        {0x282u, 8u}, {0x2deu, 0x1e9u}, {0x00cu, 0}, {0x00du, 0x40004000u},
-        {0x081u, 0x80000000u}, {0x082u, 0x40004000u}, {0x090u, 0x80000000u},
-        {0x091u, 0x40004000u}, {0x094u, 0x80000000u}, {0x095u, 0x40004000u},
-        {0x0b4u, 0}, {0x0b5u, 0x3f800000u}, {0x10fu, 0x42000000u},
-        {0x110u, 0x42000000u}, {0x111u, 0x42000000u}, {0x112u, 0x42000000u},
-        {0x113u, 0x3f000000u}, {0x114u, 0x3f000000u}, {0x083u, 0xffffu},
-        {0x084u, 0}, {0x085u, 0x20002000u}, {0x204u, 0}, {0x206u, 0x43fu},
-        {0x207u, 0}, {0x2fau, 0x3f800000u}, {0x2fbu, 0x3f800000u},
-        {0x2fcu, 0x3f800000u}, {0x2fdu, 0x3f800000u}, {0x205u, 0x240u},
-        {0x20cu, 0}, {0x292u, 2u}, {0x293u, 0x06020000u}, {0x2f8u, 0},
-        {0x2f9u, 0x2du}, {0x1b1u, 0x80u}, {0x1c2u, 1u}, {0x1c3u, 4u},
-        {0x1c5u, 9u}, {0x1b3u, 2u}, {0x1b4u, 2u}, {0x1b5u, 1u},
-        {0x1b6u, 0}, {0x1b8u, 0x01000000u}
-    };
-    for (size_t i = 0; i < sizeof(base_ctx)/sizeof(base_ctx[0]); i++) {
+    } base_ctx[] = {{0x318u, 0},
+                    {0x390u, 0},
+                    {0x31bu, 0},
+                    {0x31cu, 0x000180a8u},
+                    {0x31du, 0},
+                    {0x31eu, 0},
+                    {0x3b0u, (63u << 14) | 63u},
+                    {0x3b8u, 0x08c6c004u},
+                    {0x109u, 0},
+                    {0x202u, 0x00cc0010u},
+                    {0x08eu, 0xfu},
+                    {0x08fu, 0xfu},
+                    {0x1e0u, 0x20010001u},
+                    {0x200u, 0},
+                    {0x08cu, 0xaa99aaaau},
+                    {0x1d4u, 0xffu},
+                    {0x291u, 0x10020040u},
+                    {0x29bu, 0},
+                    {0x2d3u, 1u},
+                    {0x2d5u, 0x02002000u},
+                    {0x1ffu, 0x40u},
+                    {0x20eu, 0x78u},
+                    {0x2a1u, 0},
+                    {0x2a6u, 0x40u},
+                    {0x2adu, 0},
+                    {0x2abu, 4u},
+                    {0x2ceu, 0},
+                    {0x2d4u, 0x88101000u},
+                    {0x103u, 0xffffffffu},
+                    {0x30eu, 0xffffffffu},
+                    {0x30fu, 0xffffffffu},
+                    {0x310u, 0},
+                    {0x314u, 0x202u},
+                    {0x311u, 0x01fd2002u},
+                    {0x312u, 0x03ff0080u},
+                    {0x313u, 0x6000u},
+                    {0x00eu, 2u},
+                    {0x280u, 0x00080008u},
+                    {0x281u, 0xffff0000u},
+                    {0x282u, 8u},
+                    {0x2deu, 0x1e9u},
+                    {0x00cu, 0},
+                    {0x00du, 0x40004000u},
+                    {0x081u, 0x80000000u},
+                    {0x082u, 0x40004000u},
+                    {0x090u, 0x80000000u},
+                    {0x091u, 0x40004000u},
+                    {0x094u, 0x80000000u},
+                    {0x095u, 0x40004000u},
+                    {0x0b4u, 0},
+                    {0x0b5u, 0x3f800000u},
+                    {0x10fu, 0x42000000u},
+                    {0x110u, 0x42000000u},
+                    {0x111u, 0x42000000u},
+                    {0x112u, 0x42000000u},
+                    {0x113u, 0x3f000000u},
+                    {0x114u, 0x3f000000u},
+                    {0x083u, 0xffffu},
+                    {0x084u, 0},
+                    {0x085u, 0x20002000u},
+                    {0x204u, 0},
+                    {0x206u, 0x43fu},
+                    {0x207u, 0},
+                    {0x2fau, 0x3f800000u},
+                    {0x2fbu, 0x3f800000u},
+                    {0x2fcu, 0x3f800000u},
+                    {0x2fdu, 0x3f800000u},
+                    {0x205u, 0x240u},
+                    {0x20cu, 0},
+                    {0x292u, 2u},
+                    {0x293u, 0x06020000u},
+                    {0x2f8u, 0},
+                    {0x2f9u, 0x2du},
+                    {0x1b1u, 0x80u},
+                    {0x1c2u, 1u},
+                    {0x1c3u, 4u},
+                    {0x1c5u, 9u},
+                    {0x1b3u, 2u},
+                    {0x1b4u, 2u},
+                    {0x1b5u, 1u},
+                    {0x1b6u, 0},
+                    {0x1b8u, 0x01000000u}};
+    for (size_t i = 0; i < sizeof(base_ctx) / sizeof(base_ctx[0]); i++) {
         uint32_t reg = base_ctx[i].reg;
         uint32_t val = base_ctx[i].val;
         if (reg == 0x318u) {
@@ -2787,7 +3109,7 @@ static uint32_t build_ly01_dcb(uint32_t *dw, uint32_t color_view,
         {0x108u, 0x000u, 0x000c0010u, 0x00000000u},
         {0x148u, 0x000u, 0x000c0010u, 0x00000000u},
     };
-    for (size_t s = 0; s < sizeof(stages)/sizeof(stages[0]); s++) {
+    for (size_t s = 0; s < sizeof(stages) / sizeof(stages[0]); s++) {
         uint32_t base_reg = stages[s].base_reg;
         uint64_t s_va = payload_va + stages[s].va_offset;
         *dw++ = 0xc0017600u;
@@ -2808,26 +3130,32 @@ static uint32_t build_ly01_dcb(uint32_t *dw, uint32_t color_view,
         uint32_t reg;
         uint32_t val;
     } spi_cu_regs[] = {
-        {0x007u, 0x0000ffffu},
-        {0x001u, 0x00000003u},
-        {0x087u, 0x0000fffdu},
-        {0x081u, 0x00000003u},
-        {0x107u, 0xffff0000u},
+        {0x007u, 0x0000ffffu}, {0x001u, 0x00000003u}, {0x087u, 0x0000fffdu},
+        {0x081u, 0x00000003u}, {0x107u, 0xffff0000u},
     };
-    for (size_t i = 0; i < sizeof(spi_cu_regs)/sizeof(spi_cu_regs[0]); i++) {
+    for (size_t i = 0; i < sizeof(spi_cu_regs) / sizeof(spi_cu_regs[0]); i++) {
         *dw++ = 0xc0017600u;
         *dw++ = spi_cu_regs[i].reg;
         *dw++ = spi_cu_regs[i].val;
     }
 
-    *dw++ = 0xc0002f00u; *dw++ = 1u; /* NUM_INSTANCES */
+    *dw++ = 0xc0002f00u;
+    *dw++ = 1u;          /* NUM_INSTANCES */
     *dw++ = 0xc0017a00u; /* PACKET3_SET_UCONFIG_REG_INDEX: mmVGT_PRIMITIVE_TYPE */
     *dw++ = 0x10000242u;
     *dw++ = prim_type;
-    *dw++ = 0xc0017900u; *dw++ = 0x25bu; *dw++ = 0x00008040u; /* mmGE_CNTL */
-    *dw++ = 0xc0017900u; *dw++ = 0x260u; *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
-    *dw++ = 0xc0017900u; *dw++ = 0x249u; *dw++ = 0x00000000u; /* mmGE_MIN_VTX_INDX */
-    *dw++ = 0xc0017900u; *dw++ = 0x259u; *dw++ = 0xffffffffu; /* mmGE_MAX_VTX_INDX */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x25bu;
+    *dw++ = 0x00008040u; /* mmGE_CNTL */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x260u;
+    *dw++ = 0x000003ffu; /* mmGE_PC_ALLOC */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x249u;
+    *dw++ = 0x00000000u; /* mmGE_MIN_VTX_INDX */
+    *dw++ = 0xc0017900u;
+    *dw++ = 0x259u;
+    *dw++ = 0xffffffffu; /* mmGE_MAX_VTX_INDX */
 
     *dw++ = 0xc0012d00u; /* PACKET3_DRAW_INDEX_AUTO */
     *dw++ = draw_vertex_count;
@@ -2878,8 +3206,10 @@ static obs_result check_ly01_layer_export_topology7(void) {
 
     int bound_create = obs_address_is_callable((const void *)&sceAgcDriverCreateQueue);
     int bound_submit = obs_address_is_callable((const void *)&sceAgcDriverSubmitDcb);
-    obs_report_measure(id, "setup", "fn-create-queue-bound", (uint64_t)bound_create, "bool");
-    obs_report_measure(id, "setup", "fn-submit-dcb-bound", (uint64_t)bound_submit, "bool");
+    obs_report_measure(id, "setup", "fn-create-queue-bound", (uint64_t)bound_create,
+                       "bool");
+    obs_report_measure(id, "setup", "fn-submit-dcb-bound", (uint64_t)bound_submit,
+                       "bool");
     if (!bound_create || !bound_submit) {
         return obs_skip("sceAgcDriverCreateQueue or sceAgcDriverSubmitDcb not bound");
     }
@@ -2893,7 +3223,8 @@ static obs_result check_ly01_layer_export_topology7(void) {
     } else {
         obs_fault_unregister();
     }
-    obs_report_measure(id, "setup", "queue-create-rc", (uint64_t)(uint32_t)rc_q, "code");
+    obs_report_measure(id, "setup", "queue-create-rc", (uint64_t)(uint32_t)rc_q,
+                       "code");
     if (rc_q != 0 || queue == NULL) {
         return obs_skip("failed to create type 0 queue");
     }
@@ -2901,14 +3232,12 @@ static obs_result check_ly01_layer_export_topology7(void) {
 #if !defined(OBSCENE_HOST_BUILD)
     volatile uint32_t *fence =
         (volatile uint32_t *)oops_mem_alloc(0x1000, 0x1000, OOPS_MEM_WB_ONION);
-    uint32_t *cmdbuf =
-        (uint32_t *)oops_mem_alloc(0x10000, 0x1000, OOPS_MEM_WB_ONION);
+    uint32_t *cmdbuf = (uint32_t *)oops_mem_alloc(0x10000, 0x1000, OOPS_MEM_WB_ONION);
     volatile uint32_t *color_buf =
         (volatile uint32_t *)oops_mem_alloc(0x40000, 0x10000, OOPS_MEM_WB_ONION);
     volatile uint32_t *stored_ids =
         (volatile uint32_t *)oops_mem_alloc(0x10000, 0x1000, OOPS_MEM_WB_ONION);
-    uint8_t *gpu_payload =
-        (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
+    uint8_t *gpu_payload = (uint8_t *)oops_mem_alloc(0x2000, 256, OOPS_MEM_WB_ONION);
 #else
     static _Alignas(64) uint32_t s_host_fence[16];
     static _Alignas(64) uint32_t s_host_cmdbuf[0x4000];
@@ -2943,87 +3272,117 @@ static obs_result check_ly01_layer_export_topology7(void) {
     memset(&desc, 0, sizeof(desc));
 
     int ly01_stalled = 0;
-#define LY01_PA_CL_ON  ((1u << 18) | (1u << 21) | (1u << 24))
+#define LY01_PA_CL_ON ((1u << 18) | (1u << 21) | (1u << 24))
 #define LY01_PA_CL_OFF ((1u << 21) | (1u << 24))
 
-    /* Helper lambda/macro to run a draw pass and report slices */
-    #define RUN_LY01_PASS(arm_name, color_view_val, pa_cl_val, pa_su_val, layer_m, const_l, exp_pos1) do { \
-        if (ly01_stalled) { \
-            obs_report_measure(id, arm_name, "fence-hit", 0, "bool"); \
-            break; \
-        } \
-        for (int s = 0; s < 4; s++) { \
-            uint32_t clear_val = 0x11111111u * (uint32_t)(s + 1); \
-            uint32_t *slice_ptr = (uint32_t *)((uint8_t *)color_buf + s * 0x10000); \
-            for (size_t px = 0; px < 256; px++) { slice_ptr[px] = clear_val; } \
-        } \
-        build_ly01_vs((uint32_t *)gpu_payload, (layer_m), (const_l), (exp_pos1), stored_ids_gpu, 0); \
-        for (size_t p = 0; p < 64; p++) { ((uint32_t *)(gpu_payload + 0x100))[p] = ((uint32_t *)gpu_payload)[p]; } \
-        uint32_t words = build_ly01_dcb(cmdbuf, (color_view_val), (pa_cl_val), (pa_su_val), 4u, 3u, payload_va, fence_gpu, color_gpu, (exp_pos1)); \
-        *fence = 0x11111111u; \
-        desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf; \
-        desc.size = words; \
-        ly01_flush_range(gpu_payload, 0x2000); \
-        ly01_flush_range((const void *)color_buf, 0x40000); \
-        ly01_flush_range(cmdbuf, (size_t)words * 4); \
-        ly01_flush_fence(fence); \
-        sig = OBS_FAULT_ARM(&guard); \
-        int sub_rc = -1; \
-        if (sig == 0) { \
-            if (queue && obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) { \
-                sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc); \
-            } else { \
-                sub_rc = sceAgcDriverSubmitDcb(&desc); \
-            } \
-            obs_fault_unregister(); \
-        } else { \
-            obs_fault_unregister(); \
-        } \
-        int hit = 0; \
-        if (sub_rc == 0) { \
-            for (int iter = 0; iter < 10000; iter++) { \
-                ly01_flush_fence(fence); \
-                if (*fence == 0xbeefcafeu) { hit = 1; break; } \
-                if (obs_address_is_callable((const void *)&sceKernelUsleep)) { sceKernelUsleep(100); } \
-            } \
-        } \
-        if (!hit) { \
-            ly01_stalled = 1; \
-        } \
-        ly01_flush_range((const void *)color_buf, 0x40000); \
-        obs_report_measure(id, arm_name, "fence-hit", (uint64_t)hit, "bool"); \
-        for (int s = 0; s < 4; s++) { \
-            char stag[32]; snprintf(stag, sizeof(stag), "slice%d-64b", s); \
-            obs_report_bytes(id, arm_name, stag, 0, (const unsigned char *)((const uint8_t *)color_buf + s * 0x10000), 64); \
-        } \
+/* Helper lambda/macro to run a draw pass and report slices */
+#define RUN_LY01_PASS(arm_name, color_view_val, pa_cl_val, pa_su_val, layer_m,         \
+                      const_l, exp_pos1)                                               \
+    do {                                                                               \
+        if (ly01_stalled) {                                                            \
+            obs_report_measure(id, arm_name, "fence-hit", 0, "bool");                  \
+            break;                                                                     \
+        }                                                                              \
+        for (int s = 0; s < 4; s++) {                                                  \
+            uint32_t clear_val = 0x11111111u * (uint32_t)(s + 1);                      \
+            uint32_t *slice_ptr = (uint32_t *)((uint8_t *)color_buf + s * 0x10000);    \
+            for (size_t px = 0; px < 256; px++) {                                      \
+                slice_ptr[px] = clear_val;                                             \
+            }                                                                          \
+        }                                                                              \
+        build_ly01_vs((uint32_t *)gpu_payload, (layer_m), (const_l), (exp_pos1),       \
+                      stored_ids_gpu, 0);                                              \
+        for (size_t p = 0; p < 64; p++) {                                              \
+            ((uint32_t *)(gpu_payload + 0x100))[p] = ((uint32_t *)gpu_payload)[p];     \
+        }                                                                              \
+        uint32_t words =                                                               \
+            build_ly01_dcb(cmdbuf, (color_view_val), (pa_cl_val), (pa_su_val), 4u, 3u, \
+                           payload_va, fence_gpu, color_gpu, (exp_pos1));              \
+        *fence = 0x11111111u;                                                          \
+        desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;                                   \
+        desc.size = words;                                                             \
+        ly01_flush_range(gpu_payload, 0x2000);                                         \
+        ly01_flush_range((const void *)color_buf, 0x40000);                            \
+        ly01_flush_range(cmdbuf, (size_t)words * 4);                                   \
+        ly01_flush_fence(fence);                                                       \
+        sig = OBS_FAULT_ARM(&guard);                                                   \
+        int sub_rc = -1;                                                               \
+        if (sig == 0) {                                                                \
+            if (queue && obs_address_is_callable(                                      \
+                             (const void *)&sceAgcDriverSubmitCommandBuffer)) {        \
+                sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);                \
+            } else {                                                                   \
+                sub_rc = sceAgcDriverSubmitDcb(&desc);                                 \
+            }                                                                          \
+            obs_fault_unregister();                                                    \
+        } else {                                                                       \
+            obs_fault_unregister();                                                    \
+        }                                                                              \
+        int hit = 0;                                                                   \
+        if (sub_rc == 0) {                                                             \
+            for (int iter = 0; iter < 10000; iter++) {                                 \
+                ly01_flush_fence(fence);                                               \
+                if (*fence == 0xbeefcafeu) {                                           \
+                    hit = 1;                                                           \
+                    break;                                                             \
+                }                                                                      \
+                if (obs_address_is_callable((const void *)&sceKernelUsleep)) {         \
+                    sceKernelUsleep(100);                                              \
+                }                                                                      \
+            }                                                                          \
+        }                                                                              \
+        if (!hit) {                                                                    \
+            ly01_stalled = 1;                                                          \
+        }                                                                              \
+        ly01_flush_range((const void *)color_buf, 0x40000);                            \
+        obs_report_measure(id, arm_name, "fence-hit", (uint64_t)hit, "bool");          \
+        for (int s = 0; s < 4; s++) {                                                  \
+            char stag[32];                                                             \
+            snprintf(stag, sizeof(stag), "slice%d-64b", s);                            \
+            obs_report_bytes(                                                          \
+                id, arm_name, stag, 0,                                                 \
+                (const unsigned char *)((const uint8_t *)color_buf + s * 0x10000),     \
+                64);                                                                   \
+        }                                                                              \
     } while (0)
 
-    /* Arm 1: Layer in range. SLICE_START=0, SLICE_MAX=3 (0x6000), bit 18 set (LY01_PA_CL_ON) */
+    /* Arm 1: Layer in range. SLICE_START=0, SLICE_MAX=3 (0x6000), bit 18 set
+     * (LY01_PA_CL_ON) */
     /* Draw constant layer 0, then 2, then 3 */
-    RUN_LY01_PASS("arm1-layer-in-range-lay0", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 0, 0, 1);
-    RUN_LY01_PASS("arm1-layer-in-range-lay2", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 0, 2, 1);
-    RUN_LY01_PASS("arm1-layer-in-range-lay3", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 0, 3, 1);
+    RUN_LY01_PASS("arm1-layer-in-range-lay0", 0x00006000u, LY01_PA_CL_ON, 0x00000240u,
+                  0, 0, 1);
+    RUN_LY01_PASS("arm1-layer-in-range-lay2", 0x00006000u, LY01_PA_CL_ON, 0x00000240u,
+                  0, 2, 1);
+    RUN_LY01_PASS("arm1-layer-in-range-lay3", 0x00006000u, LY01_PA_CL_ON, 0x00000240u,
+                  0, 3, 1);
 
     /* Arm 2: Layer offset by view. SLICE_START=1, SLICE_MAX=3 (0x6001), layer 1 */
-    RUN_LY01_PASS("arm2-layer-offset-by-view", 0x00006001u, LY01_PA_CL_ON, 0x00000240u, 0, 1, 1);
+    RUN_LY01_PASS("arm2-layer-offset-by-view", 0x00006001u, LY01_PA_CL_ON, 0x00000240u,
+                  0, 1, 1);
 
     /* Arm 3: Layer past view. SLICE_START=0, SLICE_MAX=1 (0x2000), layer 3 */
-    RUN_LY01_PASS("arm3-layer-past-view", 0x00002000u, LY01_PA_CL_ON, 0x00000240u, 0, 3, 1);
+    RUN_LY01_PASS("arm3-layer-past-view", 0x00002000u, LY01_PA_CL_ON, 0x00000240u, 0, 3,
+                  1);
 
-    /* Arm 4: Bit 18 clear. SLICE_START=0, SLICE_MAX=3 (0x6000), bit 18 clear (LY01_PA_CL_OFF), layer 2 */
-    RUN_LY01_PASS("arm4-bit18-clear-lay2", 0x00006000u, LY01_PA_CL_OFF, 0x00000240u, 0, 2, 1);
+    /* Arm 4: Bit 18 clear. SLICE_START=0, SLICE_MAX=3 (0x6000), bit 18 clear
+     * (LY01_PA_CL_OFF), layer 2 */
+    RUN_LY01_PASS("arm4-bit18-clear-lay2", 0x00006000u, LY01_PA_CL_OFF, 0x00000240u, 0,
+                  2, 1);
 
     /* Arm 5: Disagreeing vertices (1, 2, 2) */
     /* Sub-arm 5a: PROVOKING_VTX_LAST clear (0x00000240) */
-    RUN_LY01_PASS("arm5-disagreeing-vtx-first", 0x00006000u, LY01_PA_CL_ON, 0x00000240u, 1, 0, 1);
+    RUN_LY01_PASS("arm5-disagreeing-vtx-first", 0x00006000u, LY01_PA_CL_ON, 0x00000240u,
+                  1, 0, 1);
     /* Sub-arm 5b: PROVOKING_VTX_LAST set (0x00080240) */
-    RUN_LY01_PASS("arm5-disagreeing-vtx-last", 0x00006000u, LY01_PA_CL_ON, 0x00080240u, 1, 0, 1);
+    RUN_LY01_PASS("arm5-disagreeing-vtx-last", 0x00006000u, LY01_PA_CL_ON, 0x00080240u,
+                  1, 0, 1);
 
-    #undef RUN_LY01_PASS
-    #undef LY01_PA_CL_ON
-    #undef LY01_PA_CL_OFF
+#undef RUN_LY01_PASS
+#undef LY01_PA_CL_ON
+#undef LY01_PA_CL_OFF
 
-    /* Arm 6: Topology 7 (VGT_PRIMITIVE_TYPE 7). Draw 3, 4, 6 vertices storing IDs, s2, s3 */
+    /* Arm 6: Topology 7 (VGT_PRIMITIVE_TYPE 7). Draw 3, 4, 6 vertices storing IDs, s2,
+     * s3 */
     static const uint32_t top7_counts[3] = {3, 4, 6};
     for (int i = 0; i < 3; i++) {
         if (ly01_stalled) {
@@ -3031,14 +3390,19 @@ static obs_result check_ly01_layer_export_topology7(void) {
         }
         uint32_t vcount = top7_counts[i];
         char arm_tag[32];
-        snprintf(arm_tag, sizeof(arm_tag), "arm6-topology7-draw%u", (unsigned int)vcount);
+        snprintf(arm_tag, sizeof(arm_tag), "arm6-topology7-draw%u",
+                 (unsigned int)vcount);
 
-        for (int k = 0; k < 16; k++) { stored_ids[k] = 0xccccccccu; }
+        for (int k = 0; k < 16; k++) {
+            stored_ids[k] = 0xccccccccu;
+        }
         build_ly01_vs((uint32_t *)gpu_payload, 0, 0, 0, stored_ids_gpu, 1);
-        for (size_t p = 0; p < 64; p++) { ((uint32_t *)(gpu_payload + 0x100))[p] = ((uint32_t *)gpu_payload)[p]; }
+        for (size_t p = 0; p < 64; p++) {
+            ((uint32_t *)(gpu_payload + 0x100))[p] = ((uint32_t *)gpu_payload)[p];
+        }
 
-        uint32_t words = build_ly01_dcb(cmdbuf, 0x00006000u, 0u, 0x00000240u,
-                                        7u, vcount, payload_va, fence_gpu, color_gpu, 0);
+        uint32_t words = build_ly01_dcb(cmdbuf, 0x00006000u, 0u, 0x00000240u, 7u,
+                                        vcount, payload_va, fence_gpu, color_gpu, 0);
         *fence = 0x11111111u;
         desc.gpu_addr = (uint64_t)(uintptr_t)cmdbuf;
         desc.size = words;
@@ -3051,7 +3415,8 @@ static obs_result check_ly01_layer_export_topology7(void) {
         sig = OBS_FAULT_ARM(&guard);
         int sub_rc = -1;
         if (sig == 0) {
-            if (queue && obs_address_is_callable((const void *)&sceAgcDriverSubmitCommandBuffer)) {
+            if (queue && obs_address_is_callable(
+                             (const void *)&sceAgcDriverSubmitCommandBuffer)) {
                 sub_rc = sceAgcDriverSubmitCommandBuffer(queue, &desc);
             } else {
                 sub_rc = sceAgcDriverSubmitDcb(&desc);
@@ -3064,8 +3429,13 @@ static obs_result check_ly01_layer_export_topology7(void) {
         if (sub_rc == 0) {
             for (int iter = 0; iter < 10000; iter++) {
                 ly01_flush_fence(fence);
-                if (*fence == 0xbeefcafeu) { hit = 1; break; }
-                if (obs_address_is_callable((const void *)&sceKernelUsleep)) { sceKernelUsleep(100); }
+                if (*fence == 0xbeefcafeu) {
+                    hit = 1;
+                    break;
+                }
+                if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                    sceKernelUsleep(100);
+                }
             }
         }
         if (!hit) {
@@ -3077,16 +3447,23 @@ static obs_result check_ly01_layer_export_topology7(void) {
         obs_report_measure(id, arm_tag, "stored-id-0", (uint64_t)stored_ids[0], "id");
         obs_report_measure(id, arm_tag, "stored-id-1", (uint64_t)stored_ids[1], "id");
         obs_report_measure(id, arm_tag, "stored-id-2", (uint64_t)stored_ids[2], "id");
-        obs_report_measure(id, arm_tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[3], "hex");
-        obs_report_measure(id, arm_tag, "sgpr-s3-merged-wave-info", (uint64_t)stored_ids[4], "hex");
+        obs_report_measure(id, arm_tag, "sgpr-s2-gs-tg-info", (uint64_t)stored_ids[3],
+                           "hex");
+        obs_report_measure(id, arm_tag, "sgpr-s3-merged-wave-info",
+                           (uint64_t)stored_ids[4], "hex");
     }
 
 #if !defined(OBSCENE_HOST_BUILD)
-    if (fence) oops_mem_free((void *)fence);
-    if (cmdbuf) oops_mem_free((void *)cmdbuf);
-    if (color_buf) oops_mem_free((void *)color_buf);
-    if (stored_ids) oops_mem_free((void *)stored_ids);
-    if (gpu_payload) oops_mem_free((void *)gpu_payload);
+    if (fence)
+        oops_mem_free((void *)fence);
+    if (cmdbuf)
+        oops_mem_free((void *)cmdbuf);
+    if (color_buf)
+        oops_mem_free((void *)color_buf);
+    if (stored_ids)
+        oops_mem_free((void *)stored_ids);
+    if (gpu_payload)
+        oops_mem_free((void *)gpu_payload);
 #endif
     if (queue && obs_address_is_callable((const void *)&sceAgcDriverDestroyQueue)) {
         (void)sceAgcDriverDestroyQueue(queue);
@@ -3118,8 +3495,8 @@ static obs_result check_gt01_npmanager(void) {
         if (h > 0) {
             fn_set = (fn_np_set_title_id_t)obs_module_symbol(h, "$Ec63y59l9tw");
             if (!fn_set)
-                fn_set = (fn_np_set_title_id_t)obs_module_symbol(
-                    h, "sceNpSetNpTitleId");
+                fn_set =
+                    (fn_np_set_title_id_t)obs_module_symbol(h, "sceNpSetNpTitleId");
         }
     }
 
@@ -3177,23 +3554,21 @@ static obs_result check_gt01_contentdelete(void) {
     typedef int (*fn_cd_init_t)(const void *);
     fn_cd_init_t fn_init = NULL;
     int is_link = 0;
-    if (obs_address_is_callable(
-            (const void *)&sceContentDeleteInitialize_static)) {
+    if (obs_address_is_callable((const void *)&sceContentDeleteInitialize_static)) {
         fn_init = (fn_cd_init_t)&sceContentDeleteInitialize_static;
         is_link = 1;
     } else {
         int h = obs_module_open("libSceContentDelete");
         if (h <= 1 &&
             obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
-            h = sceKernelLoadStartModule(
-                "/system/common/lib/libSceContentDelete.sprx", 0, NULL, 0, NULL,
-                NULL);
+            h = sceKernelLoadStartModule("/system/common/lib/libSceContentDelete.sprx",
+                                         0, NULL, 0, NULL, NULL);
         }
         if (h > 0) {
             fn_init = (fn_cd_init_t)obs_module_symbol(h, "$zoxb0wEChEM");
             if (!fn_init)
-                fn_init = (fn_cd_init_t)obs_module_symbol(
-                    h, "sceContentDeleteInitialize");
+                fn_init =
+                    (fn_cd_init_t)obs_module_symbol(h, "sceContentDeleteInitialize");
         }
     }
 
@@ -3202,8 +3577,7 @@ static obs_result check_gt01_contentdelete(void) {
                        "bool");
     if (bound) {
         obs_report_measure(id, "sceContentDeleteInitialize", "how",
-                           (uint64_t)(is_link ? 1 : 2),
-                           is_link ? "link" : "dlsym");
+                           (uint64_t)(is_link ? 1 : 2), is_link ? "link" : "dlsym");
     } else {
         obs_report_measure(id, "sceContentDeleteInitialize", "route", 0,
                            "tried-static-and-sprx");
@@ -3232,8 +3606,8 @@ static obs_result check_gt01_contentdelete(void) {
         obs_fault_unregister();
         obs_report_measure(id, "init-param-zeroed", "fault", (uint64_t)sig, "signal");
     }
-    obs_report_measure(id, "init-param-zeroed", "rc",
-                       (uint64_t)(uint32_t)rc_param, "code");
+    obs_report_measure(id, "init-param-zeroed", "rc", (uint64_t)(uint32_t)rc_param,
+                       "code");
 
     int rc_sec = -1;
     sig = OBS_FAULT_ARM(&guard);
@@ -3271,8 +3645,7 @@ static obs_result check_gt01_net_sockinfo(void) {
         if (h > 0) {
             fn_info = (fn_sockinfo_t)obs_module_symbol(h, "$hLuXdjHnhiI");
             if (!fn_info)
-                fn_info =
-                    (fn_sockinfo_t)obs_module_symbol(h, "sceNetGetSockInfo");
+                fn_info = (fn_sockinfo_t)obs_module_symbol(h, "sceNetGetSockInfo");
         }
     }
 
@@ -3304,8 +3677,8 @@ static obs_result check_gt01_net_sockinfo(void) {
         obs_fault_unregister();
         obs_report_measure(id, "get-sock-info-udp", "fault", (uint64_t)sig, "signal");
     }
-    obs_report_measure(id, "get-sock-info-udp", "rc",
-                       (uint64_t)(uint32_t)rc_info, "code");
+    obs_report_measure(id, "get-sock-info-udp", "rc", (uint64_t)(uint32_t)rc_info,
+                       "code");
 
     /* Report changed bytes */
     size_t changed_len = 0;
@@ -3335,8 +3708,8 @@ static obs_result check_gt01_net_sockinfo(void) {
         obs_report_measure(id, "get-sock-info-bad-fd", "fault", (uint64_t)sig,
                            "signal");
     }
-    obs_report_measure(id, "get-sock-info-bad-fd", "rc",
-                       (uint64_t)(uint32_t)rc_bad, "code");
+    obs_report_measure(id, "get-sock-info-bad-fd", "rc", (uint64_t)(uint32_t)rc_bad,
+                       "code");
 
     if (s >= 0 && obs_address_is_callable((const void *)&sceNetSocketClose)) {
         (void)sceNetSocketClose(s);
@@ -3404,11 +3777,11 @@ static obs_result check_gt01_voice(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "init-ver-0x01000000", "fault",
-                               (uint64_t)sig, "signal");
+            obs_report_measure(id, "init-ver-0x01000000", "fault", (uint64_t)sig,
+                               "signal");
         }
-        obs_report_measure(id, "init-ver-0x01000000", "rc",
-                           (uint64_t)(uint32_t)rc_v100, "code");
+        obs_report_measure(id, "init-ver-0x01000000", "rc", (uint64_t)(uint32_t)rc_v100,
+                           "code");
     }
 
     /* Again (already-initialized code) */
@@ -3459,11 +3832,13 @@ static obs_result check_gt02_voice(void) {
         obs_report_measure(id, "sceVoiceInit", "how", (uint64_t)(is_link ? 1 : 2),
                            is_link ? "link" : "dlsym");
     } else {
-        obs_report_measure(id, "sceVoiceInit", "route", 0, "tried-static-and-sysmodule");
+        obs_report_measure(id, "sceVoiceInit", "route", 0,
+                           "tried-static-and-sysmodule");
         return obs_pass();
     }
 
-    /* PPSA04263's shape: 0x20-byte block holding u32 0x10000000 at +0 and zeros after, version 100 */
+    /* PPSA04263's shape: 0x20-byte block holding u32 0x10000000 at +0 and zeros after,
+     * version 100 */
     uint8_t voice_param[0x20];
     memset(voice_param, 0, sizeof(voice_param));
     *(uint32_t *)(voice_param + 0) = 0x10000000u;
@@ -3528,7 +3903,8 @@ static obs_result check_gt02_net_sockinfo(void) {
         obs_report_measure(id, "sceNetGetSockInfo", "how", (uint64_t)(is_link ? 1 : 2),
                            is_link ? "link" : "dlsym");
     } else {
-        obs_report_measure(id, "sceNetGetSockInfo", "route", 0, "tried-static-and-libscenet");
+        obs_report_measure(id, "sceNetGetSockInfo", "route", 0,
+                           "tried-static-and-libscenet");
         return obs_pass();
     }
 
@@ -3543,12 +3919,9 @@ static obs_result check_gt02_net_sockinfo(void) {
         int fd;
         int count;
     } arms[] = {
-        {"fd-0x15-cnt1", 0x15, 1},
-        {"fd-0x15-cnt4", 0x15, 4},
-        {"fd-7fff-cnt1", 0x7fff, 1},
-        {"fd-7fff-cnt4", 0x7fff, 4},
-        {"fd-bad-cnt1", -1, 1},
-        {"fd-bad-cnt4", -1, 4},
+        {"fd-0x15-cnt1", 0x15, 1},   {"fd-0x15-cnt4", 0x15, 4},
+        {"fd-7fff-cnt1", 0x7fff, 1}, {"fd-7fff-cnt4", 0x7fff, 4},
+        {"fd-bad-cnt1", -1, 1},      {"fd-bad-cnt4", -1, 4},
     };
 
     for (size_t a = 0; a < sizeof(arms) / sizeof(arms[0]); a++) {
@@ -3571,8 +3944,10 @@ static obs_result check_gt02_net_sockinfo(void) {
         uint8_t info_real[0x200];
         memset(info_real, 0xcc, sizeof(info_real));
         int rc_real = fn_info(s_udp, info_real, 1, 0);
-        obs_report_measure(id, "fd-real-udp-cnt1", "rc", (uint64_t)(uint32_t)rc_real, "code");
-        obs_report_bytes(id, "fd-real-udp-cnt1", "info-200h", 0, info_real, sizeof(info_real));
+        obs_report_measure(id, "fd-real-udp-cnt1", "rc", (uint64_t)(uint32_t)rc_real,
+                           "code");
+        obs_report_bytes(id, "fd-real-udp-cnt1", "info-200h", 0, info_real,
+                         sizeof(info_real));
     }
 
     if (s_udp >= 0 && obs_address_is_callable((const void *)&sceNetSocketClose)) {
@@ -3595,9 +3970,11 @@ static obs_result check_gt02_ajm_batch(void) {
     int bound_wait = obs_address_is_callable((const void *)&sceAjmBatchWait_static);
 
     obs_report_measure(id, "sceAjmInitialize", "bound", (uint64_t)bound_init, "bool");
-    obs_report_measure(id, "sceAjmModuleRegister", "bound", (uint64_t)bound_reg, "bool");
+    obs_report_measure(id, "sceAjmModuleRegister", "bound", (uint64_t)bound_reg,
+                       "bool");
     obs_report_measure(id, "sceAjmInstanceCreate", "bound", (uint64_t)bound_cr, "bool");
-    obs_report_measure(id, "sceAjmBatchInitialize", "bound", (uint64_t)bound_bi, "bool");
+    obs_report_measure(id, "sceAjmBatchInitialize", "bound", (uint64_t)bound_bi,
+                       "bool");
     obs_report_measure(id, "sceAjmBatchJobDecode", "bound", (uint64_t)bound_jd, "bool");
     obs_report_measure(id, "sceAjmBatchStart", "bound", (uint64_t)bound_start, "bool");
     obs_report_measure(id, "sceAjmBatchWait", "bound", (uint64_t)bound_wait, "bool");
@@ -3679,8 +4056,9 @@ static obs_result check_gt02_ajm_batch(void) {
     int rc_dec = -1;
     sig = OBS_FAULT_ARM(&guard);
     if (sig == 0) {
-        rc_dec = sceAjmBatchJobDecode_static(&batch_slot, (uint64_t)inst_id, mpeg_in, (void *)(uintptr_t)960,
-                                             dec_out, (void *)(uintptr_t)9216);
+        rc_dec = sceAjmBatchJobDecode_static(&batch_slot, (uint64_t)inst_id, mpeg_in,
+                                             (void *)(uintptr_t)960, dec_out,
+                                             (void *)(uintptr_t)9216);
         obs_fault_unregister();
     } else {
         obs_fault_unregister();
@@ -3701,10 +4079,12 @@ static obs_result check_gt02_ajm_batch(void) {
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
-            obs_report_measure(id, "start-gta-prio0x28", "fault", (uint64_t)sig, "signal");
+            obs_report_measure(id, "start-gta-prio0x28", "fault", (uint64_t)sig,
+                               "signal");
         }
     }
-    obs_report_measure(id, "start-gta-prio0x28", "rc", (uint64_t)(uint32_t)rc_start_gta, "code");
+    obs_report_measure(id, "start-gta-prio0x28", "rc", (uint64_t)(uint32_t)rc_start_gta,
+                       "code");
     obs_report_bytes(id, "start-gta-prio0x28", "out-20b", 0, out_gta, sizeof(out_gta));
 
     uint32_t wait_id = *(uint32_t *)out_gta;
@@ -3746,10 +4126,12 @@ static obs_result check_gt02_ajm_batch(void) {
             obs_report_measure(id, "wait-gta-to30", "fault", (uint64_t)sig, "signal");
         }
     }
-    obs_report_measure(id, "wait-gta-to30", "rc", (uint64_t)(uint32_t)rc_wait_30, "code");
+    obs_report_measure(id, "wait-gta-to30", "rc", (uint64_t)(uint32_t)rc_wait_30,
+                       "code");
     obs_report_bytes(id, "wait-gta-to30", "block-20b", 0, block_30, sizeof(block_30));
 
-    /* If wait_id is invalid or Start failed, also wait with 0xffffffff and timeout 30 */
+    /* If wait_id is invalid or Start failed, also wait with 0xffffffff and timeout 30
+     */
     if (wait_id == 0xccccccccu) {
         uint8_t block_ff[0x20];
         memset(block_ff, 0xcc, sizeof(block_ff));
@@ -3757,7 +4139,8 @@ static obs_result check_gt02_ajm_batch(void) {
         if (bound_wait) {
             sig = OBS_FAULT_ARM(&guard);
             if (sig == 0) {
-                typedef int (*fn_wait5_t)(uint32_t, uint32_t, uint32_t, void *, uint32_t);
+                typedef int (*fn_wait5_t)(uint32_t, uint32_t, uint32_t, void *,
+                                          uint32_t);
                 const void *fn_w_raw = (const void *)&sceAjmBatchWait_static;
                 fn_wait5_t p_wait5 = (fn_wait5_t)(uintptr_t)fn_w_raw;
                 rc_wait_ff = p_wait5(ctx_id, 0xffffffffu, 0, block_ff, 30);
@@ -3766,8 +4149,10 @@ static obs_result check_gt02_ajm_batch(void) {
                 obs_fault_unregister();
             }
         }
-        obs_report_measure(id, "wait-gta-id-ffff-to30", "rc", (uint64_t)(uint32_t)rc_wait_ff, "code");
-        obs_report_bytes(id, "wait-gta-id-ffff-to30", "block-20b", 0, block_ff, sizeof(block_ff));
+        obs_report_measure(id, "wait-gta-id-ffff-to30", "rc",
+                           (uint64_t)(uint32_t)rc_wait_ff, "code");
+        obs_report_bytes(id, "wait-gta-id-ffff-to30", "block-20b", 0, block_ff,
+                         sizeof(block_ff));
     }
 
     /* Also try 3-arg route: sceAjmBatchStart(ctx, (void *)&batch_slot, &bid_3arg) */
@@ -3777,7 +4162,8 @@ static obs_result check_gt02_ajm_batch(void) {
         sig = OBS_FAULT_ARM(&guard);
         if (sig == 0) {
             typedef int (*fn_start3_t)(uint32_t, void *, uint32_t *);
-            rc_3arg = ((fn_start3_t)&sceAjmBatchStart_static)(ctx_id, (void *)&batch_slot, &bid_3arg);
+            rc_3arg = ((fn_start3_t)&sceAjmBatchStart_static)(
+                ctx_id, (void *)&batch_slot, &bid_3arg);
             obs_fault_unregister();
         } else {
             obs_fault_unregister();
@@ -3795,7 +4181,8 @@ static obs_result check_gt02_ajm_batch(void) {
         if (bound_start) {
             sig = OBS_FAULT_ARM(&guard);
             if (sig == 0) {
-                typedef int (*fn_start5_t)(uint32_t, void *, uint32_t, uint32_t, void *);
+                typedef int (*fn_start5_t)(uint32_t, void *, uint32_t, uint32_t,
+                                           void *);
                 const void *fn_s_raw = (const void *)&sceAjmBatchStart_static;
                 fn_start5_t p_start5 = (fn_start5_t)(uintptr_t)fn_s_raw;
                 rc_s15 = p_start5(0x15, &batch_slot, 0x28, 0, out_15);
@@ -3804,7 +4191,8 @@ static obs_result check_gt02_ajm_batch(void) {
                 obs_fault_unregister();
             }
         }
-        obs_report_measure(id, "start-gta-ctx0x15", "rc", (uint64_t)(uint32_t)rc_s15, "code");
+        obs_report_measure(id, "start-gta-ctx0x15", "rc", (uint64_t)(uint32_t)rc_s15,
+                           "code");
         obs_report_bytes(id, "start-gta-ctx0x15", "out-20b", 0, out_15, sizeof(out_15));
 
         uint8_t block_15[0x20];
@@ -3813,7 +4201,8 @@ static obs_result check_gt02_ajm_batch(void) {
         if (bound_wait) {
             sig = OBS_FAULT_ARM(&guard);
             if (sig == 0) {
-                typedef int (*fn_wait5_t)(uint32_t, uint32_t, uint32_t, void *, uint32_t);
+                typedef int (*fn_wait5_t)(uint32_t, uint32_t, uint32_t, void *,
+                                          uint32_t);
                 const void *fn_w_raw = (const void *)&sceAjmBatchWait_static;
                 fn_wait5_t p_wait5 = (fn_wait5_t)(uintptr_t)fn_w_raw;
                 rc_w15 = p_wait5(0x15, 0xffffffffu, 0, block_15, 30);
@@ -3822,14 +4211,17 @@ static obs_result check_gt02_ajm_batch(void) {
                 obs_fault_unregister();
             }
         }
-        obs_report_measure(id, "wait-gta-ctx0x15-id-ffff-to30", "rc", (uint64_t)(uint32_t)rc_w15, "code");
-        obs_report_bytes(id, "wait-gta-ctx0x15-id-ffff-to30", "block-20b", 0, block_15, sizeof(block_15));
+        obs_report_measure(id, "wait-gta-ctx0x15-id-ffff-to30", "rc",
+                           (uint64_t)(uint32_t)rc_w15, "code");
+        obs_report_bytes(id, "wait-gta-ctx0x15-id-ffff-to30", "block-20b", 0, block_15,
+                         sizeof(block_15));
     }
 
     /* Finalize */
     if (obs_address_is_callable((const void *)&sceAjmFinalize_static)) {
         int rc_fin = sceAjmFinalize_static(ctx_id);
-        obs_report_measure(id, "ajm-finalize", "rc", (uint64_t)(uint32_t)rc_fin, "code");
+        obs_report_measure(id, "ajm-finalize", "rc", (uint64_t)(uint32_t)rc_fin,
+                           "code");
     }
 
     return obs_pass();
@@ -3855,7 +4247,8 @@ static obs_result check_gt02_contentdelete(void) {
         for (uint16_t mid = 0x0001; mid <= 0x0115; mid++) {
             int rc_sys = sceSysmoduleLoadModule(mid);
             if (rc_sys == 0 || (uint32_t)rc_sys == 0x80540001u) {
-                if (obs_address_is_callable((const void *)&sceContentDeleteInitialize_static)) {
+                if (obs_address_is_callable(
+                        (const void *)&sceContentDeleteInitialize_static)) {
                     fn_init = (fn_cd_init_t)&sceContentDeleteInitialize_static;
                     is_link = 1;
                     loaded_sysm_id = mid;
@@ -3865,7 +4258,8 @@ static obs_result check_gt02_contentdelete(void) {
                 if (h > 0) {
                     fn_init = (fn_cd_init_t)obs_module_symbol(h, "$zoxb0wEChEM");
                     if (!fn_init)
-                        fn_init = (fn_cd_init_t)obs_module_symbol(h, "sceContentDeleteInitialize");
+                        fn_init = (fn_cd_init_t)obs_module_symbol(
+                            h, "sceContentDeleteInitialize");
                     if (fn_init) {
                         loaded_sysm_id = mid;
                         break;
@@ -3883,24 +4277,28 @@ static obs_result check_gt02_contentdelete(void) {
             "/system/priv/lib/libSceContentDelete.sprx",
             "/system/vsh/module/libSceContentDelete.sprx",
         };
-        for (size_t p = 0; p < sizeof(sprx_paths)/sizeof(sprx_paths[0]); p++) {
+        for (size_t p = 0; p < sizeof(sprx_paths) / sizeof(sprx_paths[0]); p++) {
             int h = sceKernelLoadStartModule(sprx_paths[p], 0, NULL, 0, NULL, NULL);
             if (h > 0) {
                 fn_init = (fn_cd_init_t)obs_module_symbol(h, "$zoxb0wEChEM");
                 if (!fn_init)
-                    fn_init = (fn_cd_init_t)obs_module_symbol(h, "sceContentDeleteInitialize");
-                if (fn_init) break;
+                    fn_init = (fn_cd_init_t)obs_module_symbol(
+                        h, "sceContentDeleteInitialize");
+                if (fn_init)
+                    break;
             }
         }
     }
 
     int bound = (fn_init != NULL && obs_address_is_callable((const void *)fn_init));
-    obs_report_measure(id, "sceContentDeleteInitialize", "bound", (uint64_t)bound, "bool");
+    obs_report_measure(id, "sceContentDeleteInitialize", "bound", (uint64_t)bound,
+                       "bool");
     if (bound) {
-        obs_report_measure(id, "sceContentDeleteInitialize", "how", (uint64_t)(is_link ? 1 : 2),
-                           is_link ? "link" : "dlsym");
+        obs_report_measure(id, "sceContentDeleteInitialize", "how",
+                           (uint64_t)(is_link ? 1 : 2), is_link ? "link" : "dlsym");
         if (loaded_sysm_id != 0) {
-            obs_report_measure(id, "sysmodule-loaded", "id", (uint64_t)loaded_sysm_id, "hex");
+            obs_report_measure(id, "sysmodule-loaded", "id", (uint64_t)loaded_sysm_id,
+                               "hex");
         }
     } else {
         obs_report_measure(id, "sceContentDeleteInitialize", "route", 0,
@@ -3930,8 +4328,10 @@ static obs_result check_gt02_contentdelete(void) {
         obs_fault_unregister();
         obs_report_measure(id, "init-param-zeroed", "fault", (uint64_t)sig, "signal");
     }
-    obs_report_measure(id, "init-param-zeroed", "rc", (uint64_t)(uint32_t)rc_param, "code");
-    obs_report_bytes(id, "init-param-zeroed", "param-20b", 0, cd_param, sizeof(cd_param));
+    obs_report_measure(id, "init-param-zeroed", "rc", (uint64_t)(uint32_t)rc_param,
+                       "code");
+    obs_report_bytes(id, "init-param-zeroed", "param-20b", 0, cd_param,
+                     sizeof(cd_param));
 
     int rc_sec = -1;
     sig = OBS_FAULT_ARM(&guard);
@@ -3969,17 +4369,20 @@ static obs_result check_gt03_contentdelete(void) {
         if (h > 0) {
             fn_init = (fn_cd_init_t)obs_module_symbol(h, "$zoxb0wEChEM");
             if (!fn_init)
-                fn_init = (fn_cd_init_t)obs_module_symbol(h, "sceContentDeleteInitialize");
+                fn_init =
+                    (fn_cd_init_t)obs_module_symbol(h, "sceContentDeleteInitialize");
         }
     }
 
     int bound = (fn_init != NULL && obs_address_is_callable((const void *)fn_init));
-    obs_report_measure(id, "sceContentDeleteInitialize", "bound", (uint64_t)bound, "bool");
+    obs_report_measure(id, "sceContentDeleteInitialize", "bound", (uint64_t)bound,
+                       "bool");
     if (bound) {
-        obs_report_measure(id, "sceContentDeleteInitialize", "how", (uint64_t)(is_link ? 1 : 2),
-                           is_link ? "link" : "dlsym");
+        obs_report_measure(id, "sceContentDeleteInitialize", "how",
+                           (uint64_t)(is_link ? 1 : 2), is_link ? "link" : "dlsym");
     } else {
-        obs_report_measure(id, "sceContentDeleteInitialize", "route", 0, "tried-sysmodule-0x00ee");
+        obs_report_measure(id, "sceContentDeleteInitialize", "route", 0,
+                           "tried-sysmodule-0x00ee");
         return obs_pass();
     }
 
@@ -4005,8 +4408,8 @@ static obs_result check_gt03_contentdelete(void) {
         obs_report_measure(id, "init-first", "fault", (uint64_t)sig, "signal");
     }
     obs_report_measure(id, "init-first", "rc", (uint64_t)(uint32_t)rc1, "code");
-    obs_report_bytes(id, "init-first", "block-20b", 0, (const unsigned char *)param_block,
-                     sizeof(param_block));
+    obs_report_bytes(id, "init-first", "block-20b", 0,
+                     (const unsigned char *)param_block, sizeof(param_block));
 
     int rc2 = -1;
     sig = OBS_FAULT_ARM(&guard);
@@ -4018,8 +4421,8 @@ static obs_result check_gt03_contentdelete(void) {
         obs_report_measure(id, "init-second", "fault", (uint64_t)sig, "signal");
     }
     obs_report_measure(id, "init-second", "rc", (uint64_t)(uint32_t)rc2, "code");
-    obs_report_bytes(id, "init-second", "block-20b", 0, (const unsigned char *)param_block,
-                     sizeof(param_block));
+    obs_report_bytes(id, "init-second", "block-20b", 0,
+                     (const unsigned char *)param_block, sizeof(param_block));
 
     if (work_buf) {
         free(work_buf);
@@ -4059,7 +4462,8 @@ static obs_result check_gt03_net_sockinfo(void) {
         obs_report_measure(id, "sceNetGetSockInfo", "how", (uint64_t)(is_link ? 1 : 2),
                            is_link ? "link" : "dlsym");
     } else {
-        obs_report_measure(id, "sceNetGetSockInfo", "route", 0, "tried-static-and-libscenet");
+        obs_report_measure(id, "sceNetGetSockInfo", "route", 0,
+                           "tried-static-and-libscenet");
         return obs_pass();
     }
 
@@ -4115,7 +4519,8 @@ static obs_result check_gt03_net_sockinfo(void) {
         sin.sin_port = 0;
         sin.sin_addr = 0;
         int rc_bind = sceNetBind(s_udp, (const void *)&sin, sizeof(sin));
-        obs_report_measure(id, "udp-bound-port0", "bind-rc", (uint64_t)(uint32_t)rc_bind, "code");
+        obs_report_measure(id, "udp-bound-port0", "bind-rc",
+                           (uint64_t)(uint32_t)rc_bind, "code");
 
         uint8_t info_bound[0x200];
         memset(info_bound, 0xcc, sizeof(info_bound));
@@ -4128,8 +4533,10 @@ static obs_result check_gt03_net_sockinfo(void) {
             obs_fault_unregister();
             obs_report_measure(id, "udp-bound-port0", "fault", (uint64_t)sig, "signal");
         }
-        obs_report_measure(id, "udp-bound-port0", "rc", (uint64_t)(uint32_t)rc_info_bound, "code");
-        obs_report_bytes(id, "udp-bound-port0", "info-200h", 0, info_bound, sizeof(info_bound));
+        obs_report_measure(id, "udp-bound-port0", "rc",
+                           (uint64_t)(uint32_t)rc_info_bound, "code");
+        obs_report_bytes(id, "udp-bound-port0", "info-200h", 0, info_bound,
+                         sizeof(info_bound));
     }
 
     if (s_udp >= 0 && obs_address_is_callable((const void *)&sceNetSocketClose)) {
@@ -4155,9 +4562,11 @@ static obs_result check_gt03_ajm_batch(void) {
     int bound_wait = obs_address_is_callable((const void *)&sceAjmBatchWait_static);
 
     obs_report_measure(id, "sceAjmInitialize", "bound", (uint64_t)bound_init, "bool");
-    obs_report_measure(id, "sceAjmModuleRegister", "bound", (uint64_t)bound_reg, "bool");
+    obs_report_measure(id, "sceAjmModuleRegister", "bound", (uint64_t)bound_reg,
+                       "bool");
     obs_report_measure(id, "sceAjmInstanceCreate", "bound", (uint64_t)bound_cr, "bool");
-    obs_report_measure(id, "sceAjmBatchInitialize", "bound", (uint64_t)bound_bi, "bool");
+    obs_report_measure(id, "sceAjmBatchInitialize", "bound", (uint64_t)bound_bi,
+                       "bool");
     obs_report_measure(id, "sceAjmBatchJobDecode", "bound", (uint64_t)bound_jd, "bool");
     obs_report_measure(id, "sceAjmBatchStart", "bound", (uint64_t)bound_start, "bool");
     obs_report_measure(id, "sceAjmBatchWait", "bound", (uint64_t)bound_wait, "bool");
@@ -4226,7 +4635,8 @@ static obs_result check_gt03_ajm_batch(void) {
     obs_report_measure(id, "batch-init", "slot", batch_slot, "hex");
 
     /* One valid 960-byte MPEG-1 Layer III mono 48 kHz frame set:
-     * four 240-byte frames, silence encoded with header ff fb 64 c0 and zeroed side info */
+     * four 240-byte frames, silence encoded with header ff fb 64 c0 and zeroed side
+     * info */
     uint8_t mpeg_in[960];
     memset(mpeg_in, 0, sizeof(mpeg_in));
     for (int f = 0; f < 4; f++) {
@@ -4268,7 +4678,8 @@ static obs_result check_gt03_ajm_batch(void) {
             obs_report_measure(id, "start-prio0x28", "fault", (uint64_t)sig, "signal");
         }
     }
-    obs_report_measure(id, "start-prio0x28", "rc", (uint64_t)(uint32_t)rc_start, "code");
+    obs_report_measure(id, "start-prio0x28", "rc", (uint64_t)(uint32_t)rc_start,
+                       "code");
     obs_report_bytes(id, "start-prio0x28", "out-20b", 0, out_gta, sizeof(out_gta));
 
     uint32_t wait_id = *(uint32_t *)out_gta;
@@ -4319,9 +4730,491 @@ static obs_result check_gt03_ajm_batch(void) {
     /* Finalize */
     if (obs_address_is_callable((const void *)&sceAjmFinalize_static)) {
         int rc_fin = sceAjmFinalize_static(ctx_id);
-        obs_report_measure(id, "ajm-finalize", "rc", (uint64_t)(uint32_t)rc_fin, "code");
+        obs_report_measure(id, "ajm-finalize", "rc", (uint64_t)(uint32_t)rc_fin,
+                           "code");
     }
 
+    return obs_pass();
+}
+
+/* REQ-20261016T2335Z-gt04 Item 1: libc stat, open, fopen on memory: paths */
+static obs_result check_gt04_memory_path(void) {
+    const char *id = "000-boot/gt04-memory-path";
+    obs_jmp_buf guard;
+
+    int h_libc = obs_module_open("libc");
+    int h_libk = obs_module_open("libkernel");
+    int h_posix = obs_module_open("libScePosix");
+
+    typedef int (*fn_stat_t)(const char *, void *);
+    typedef int (*fn_open_t)(const char *, int, ...);
+    typedef void *(*fn_fopen_t)(const char *, const char *);
+    typedef int (*fn_fclose_t)(void *);
+    typedef int *(*fn_error_t)(void);
+
+    fn_stat_t fn_stat = obs_address_is_callable((const void *)&sce_libc_stat_static)
+                            ? (fn_stat_t)&sce_libc_stat_static
+                            : NULL;
+    if (!fn_stat && h_libc > 0) {
+        fn_stat = (fn_stat_t)obs_module_symbol(h_libc, "$E6ao34wPw+U");
+        if (!fn_stat)
+            fn_stat = (fn_stat_t)obs_module_symbol(h_libc, "stat");
+    }
+    if (!fn_stat && h_libk > 0) {
+        fn_stat = (fn_stat_t)obs_module_symbol(h_libk, "$E6ao34wPw+U");
+        if (!fn_stat)
+            fn_stat = (fn_stat_t)obs_module_symbol(h_libk, "stat");
+    }
+    if (!fn_stat && h_posix > 0) {
+        fn_stat = (fn_stat_t)obs_module_symbol(h_posix, "$E6ao34wPw+U");
+        if (!fn_stat)
+            fn_stat = (fn_stat_t)obs_module_symbol(h_posix, "stat");
+    }
+
+    fn_open_t fn_open = obs_address_is_callable((const void *)&sce_libc_open_static)
+                            ? (fn_open_t)&sce_libc_open_static
+                            : NULL;
+    if (!fn_open && h_libc > 0) {
+        fn_open = (fn_open_t)obs_module_symbol(h_libc, "$wuCroIGjt2g");
+        if (!fn_open)
+            fn_open = (fn_open_t)obs_module_symbol(h_libc, "open");
+    }
+    if (!fn_open && h_libk > 0) {
+        fn_open = (fn_open_t)obs_module_symbol(h_libk, "$wuCroIGjt2g");
+        if (!fn_open)
+            fn_open = (fn_open_t)obs_module_symbol(h_libk, "open");
+    }
+    if (!fn_open && h_posix > 0) {
+        fn_open = (fn_open_t)obs_module_symbol(h_posix, "$wuCroIGjt2g");
+        if (!fn_open)
+            fn_open = (fn_open_t)obs_module_symbol(h_posix, "open");
+    }
+
+    fn_fopen_t fn_fopen = obs_address_is_callable((const void *)&sce_libc_fopen_static)
+                              ? (fn_fopen_t)&sce_libc_fopen_static
+                              : NULL;
+    if (!fn_fopen && h_libc > 0) {
+        fn_fopen = (fn_fopen_t)obs_module_symbol(h_libc, "$xeYO4u7uyJ0");
+        if (!fn_fopen)
+            fn_fopen = (fn_fopen_t)obs_module_symbol(h_libc, "fopen");
+    }
+    if (!fn_fopen) {
+        int h_libcint = obs_module_open("libSceLibcInternal");
+        if (h_libcint > 0) {
+            fn_fopen = (fn_fopen_t)obs_module_symbol(h_libcint, "$xeYO4u7uyJ0");
+            if (!fn_fopen)
+                fn_fopen = (fn_fopen_t)obs_module_symbol(h_libcint, "fopen");
+        }
+    }
+
+    fn_fclose_t fn_fclose =
+        obs_address_is_callable((const void *)&sce_libc_fclose_static)
+            ? (fn_fclose_t)&sce_libc_fclose_static
+            : NULL;
+    if (!fn_fclose && h_libc > 0) {
+        fn_fclose = (fn_fclose_t)obs_module_symbol(h_libc, "$uodLYyUip20");
+        if (!fn_fclose)
+            fn_fclose = (fn_fclose_t)obs_module_symbol(h_libc, "fclose");
+    }
+
+    fn_error_t fn_error =
+        obs_address_is_callable((const void *)&__error) ? (fn_error_t)&__error : NULL;
+    if (!fn_error && h_libk > 0) {
+        fn_error = (fn_error_t)obs_module_symbol(h_libk, "$9BcDykPmo1I");
+        if (!fn_error)
+            fn_error = (fn_error_t)obs_module_symbol(h_libk, "__error");
+    }
+    if (!fn_error && h_libc > 0) {
+        fn_error = (fn_error_t)obs_module_symbol(h_libc, "$9BcDykPmo1I");
+        if (!fn_error)
+            fn_error = (fn_error_t)obs_module_symbol(h_libc, "__error");
+    }
+
+    obs_report_measure(id, "stat", "bound", (uint64_t)(fn_stat != NULL), "bool");
+    obs_report_measure(id, "open", "bound", (uint64_t)(fn_open != NULL), "bool");
+    obs_report_measure(id, "fopen", "bound", (uint64_t)(fn_fopen != NULL), "bool");
+    obs_report_measure(id, "__error", "bound", (uint64_t)(fn_error != NULL), "bool");
+
+    static const struct {
+        const char *tag;
+        const char *path;
+    } paths[] = {
+        {"path-gfx",
+         "memory:$0x10c09f0000,9156,0:00005_initial_interactive_screen_ps5.gfx"},
+        {"path-memory-x", "memory:x"},
+        {"path-app0-memory-x", "/app0/memory:x"},
+    };
+
+    for (size_t p = 0; p < sizeof(paths) / sizeof(paths[0]); p++) {
+        const char *ptag = paths[p].tag;
+        const char *path = paths[p].path;
+
+        /* 1. stat */
+        char subtag[64];
+        snprintf(subtag, sizeof(subtag), "%s-stat", ptag);
+        if (fn_stat) {
+            uint8_t st[256];
+            memset(st, 0xa5, sizeof(st));
+            uint8_t before[256];
+            memcpy(before, st, sizeof(st));
+            if (fn_error)
+                *fn_error() = 0;
+
+            int rc_stat = -1;
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_stat = fn_stat(path, st);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_stat = -sig;
+                obs_report_measure(id, subtag, "fault", (uint64_t)sig, "signal");
+            }
+            int err = fn_error ? *fn_error() : 0;
+            obs_report_measure(id, subtag, "rc", (uint64_t)(uint32_t)rc_stat, "code");
+            obs_report_measure(id, subtag, "errno", (uint64_t)(uint32_t)err, "errno");
+
+            uint32_t changed = 0;
+            for (size_t i = 0; i < sizeof(st); i++) {
+                if (st[i] != before[i]) {
+                    changed++;
+                }
+            }
+            obs_report_measure(id, subtag, "changed-count", (uint64_t)changed, "count");
+            if (changed > 0) {
+                obs_report_written(id, subtag, "bytes-changed", before, st,
+                                   (unsigned int)sizeof(st));
+                obs_report_bytes(id, subtag, "st-256b", 0, st, sizeof(st));
+                for (size_t i = 0; i < sizeof(st); i++) {
+                    if (st[i] != before[i]) {
+                        char ofs_tag[32];
+                        snprintf(ofs_tag, sizeof(ofs_tag), "diff-0x%02x",
+                                 (unsigned int)i);
+                        obs_report_measure(id, subtag, ofs_tag, (uint64_t)st[i], "hex");
+                    }
+                }
+            }
+        } else {
+            obs_report_measure(id, subtag, "status", 0, "not-possible");
+        }
+
+        /* 2. open */
+        snprintf(subtag, sizeof(subtag), "%s-open", ptag);
+        if (fn_open) {
+            if (fn_error)
+                *fn_error() = 0;
+            int fd = -1;
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                fd = fn_open(path, 0 /* O_RDONLY */);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                fd = -sig;
+                obs_report_measure(id, subtag, "fault", (uint64_t)sig, "signal");
+            }
+            int err = fn_error ? *fn_error() : 0;
+            obs_report_measure(id, subtag, "rc", (uint64_t)(uint32_t)fd, "code");
+            obs_report_measure(id, subtag, "errno", (uint64_t)(uint32_t)err, "errno");
+            if (fd >= 0) {
+                if (obs_address_is_callable((const void *)&sceKernelClose)) {
+                    sceKernelClose(fd);
+                }
+            }
+        } else {
+            obs_report_measure(id, subtag, "status", 0, "not-possible");
+        }
+
+        /* 3. fopen */
+        snprintf(subtag, sizeof(subtag), "%s-fopen", ptag);
+        if (fn_fopen) {
+            if (fn_error)
+                *fn_error() = 0;
+            void *fp = NULL;
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                fp = fn_fopen(path, "rb");
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                obs_report_measure(id, subtag, "fault", (uint64_t)sig, "signal");
+            }
+            int err = fn_error ? *fn_error() : 0;
+            obs_report_measure(id, subtag, "ptr", (uint64_t)(uintptr_t)fp, "addr");
+            obs_report_measure(id, subtag, "is-null", (uint64_t)(fp == NULL), "bool");
+            obs_report_measure(id, subtag, "errno", (uint64_t)(uint32_t)err, "errno");
+            if (fp != NULL && fn_fclose &&
+                obs_address_is_callable((const void *)fn_fclose)) {
+                fn_fclose(fp);
+            }
+        } else {
+            obs_report_measure(id, subtag, "status", 0, "not-possible");
+        }
+    }
+
+    return obs_pass();
+}
+
+/* REQ-20261016T2335Z-gt04 Item 2: notice-screen skip flag over launches */
+static obs_result check_gt04_notice_skip(void) {
+    const char *id = "000-boot/gt04-notice-skip";
+    obs_jmp_buf guard;
+
+    int h_ss = obs_module_open("libSceSystemService");
+
+    typedef int (*fn_get_skip_flag_t)(void *);
+    typedef int (*fn_set_skip_flag_t)(uint32_t);
+    typedef int (*fn_dis_auto_set_t)(void);
+
+    fn_get_skip_flag_t fn_get_skip =
+        obs_address_is_callable(
+            (const void *)&sceSystemServiceGetNoticeScreenSkipFlag_static)
+            ? (fn_get_skip_flag_t)&sceSystemServiceGetNoticeScreenSkipFlag_static
+            : NULL;
+    if (!fn_get_skip && h_ss > 0) {
+        fn_get_skip = (fn_get_skip_flag_t)obs_module_symbol(h_ss, "$3RQ5aQfnstU");
+        if (!fn_get_skip)
+            fn_get_skip = (fn_get_skip_flag_t)obs_module_symbol(
+                h_ss, "sceSystemServiceGetNoticeScreenSkipFlag");
+    }
+
+    fn_set_skip_flag_t fn_set_skip =
+        obs_address_is_callable(
+            (const void *)&sceSystemServiceSetNoticeScreenSkipFlag_static)
+            ? (fn_set_skip_flag_t)&sceSystemServiceSetNoticeScreenSkipFlag_static
+            : NULL;
+    if (!fn_set_skip && h_ss > 0) {
+        fn_set_skip = (fn_set_skip_flag_t)obs_module_symbol(h_ss, "$Q3utJvma4Mo");
+        if (!fn_set_skip)
+            fn_set_skip = (fn_set_skip_flag_t)obs_module_symbol(
+                h_ss, "sceSystemServiceSetNoticeScreenSkipFlag");
+    }
+
+    fn_dis_auto_set_t fn_dis_auto =
+        obs_address_is_callable(
+            (const void *)&sceSystemServiceDisableNoticeScreenSkipFlagAutoSet_static)
+            ? (fn_dis_auto_set_t)&sceSystemServiceDisableNoticeScreenSkipFlagAutoSet_static
+            : NULL;
+    if (!fn_dis_auto && h_ss > 0) {
+        fn_dis_auto = (fn_dis_auto_set_t)obs_module_symbol(h_ss, "$8Lo6Zv94aho");
+        if (!fn_dis_auto)
+            fn_dis_auto = (fn_dis_auto_set_t)obs_module_symbol(
+                h_ss, "sceSystemServiceDisableNoticeScreenSkipFlagAutoSet");
+    }
+
+    obs_report_measure(id, "GetNoticeScreenSkipFlag", "bound",
+                       (uint64_t)(fn_get_skip != NULL), "bool");
+    obs_report_measure(id, "SetNoticeScreenSkipFlag", "bound",
+                       (uint64_t)(fn_set_skip != NULL), "bool");
+    obs_report_measure(id, "DisableNoticeScreenSkipFlagAutoSet", "bound",
+                       (uint64_t)(fn_dis_auto != NULL), "bool");
+
+    if (!fn_get_skip) {
+        obs_report_measure(id, "flag", "status", 0, "not-possible");
+        return obs_pass();
+    }
+
+    /* Hide splash screen to avoid SceLncService 20-second watchdog */
+    if (obs_address_is_callable(
+            (const void *)&sceSystemServiceHideSplashScreen_static)) {
+        int rc_hide = sceSystemServiceHideSplashScreen_static();
+        obs_report_measure(id, "hide-splash", "rc", (uint64_t)(uint32_t)rc_hide,
+                           "code");
+    }
+
+    /* Read phase from /app0/gt04_phase.txt or /data/gt04_phase.txt (defaults to 3) */
+    int phase = 3;
+    if (obs_address_is_callable((const void *)&sceKernelOpen)) {
+        int fd_p = sceKernelOpen("/app0/gt04_phase.txt", 0x0000 /* O_RDONLY */, 0);
+        if (fd_p < 0) {
+            fd_p = sceKernelOpen("/data/gt04_phase.txt", 0x0000 /* O_RDONLY */, 0);
+        }
+        if (fd_p < 0) {
+            fd_p = sceKernelOpen("/temp0/gt04_phase.txt", 0x0000 /* O_RDONLY */, 0);
+        }
+        if (fd_p >= 0) {
+            char pbuf[16];
+            memset(pbuf, 0, sizeof(pbuf));
+            sce_ssize_t n = sceKernelRead(fd_p, pbuf, sizeof(pbuf) - 1);
+            if (n > 0) {
+                if (pbuf[0] == '2')
+                    phase = 2;
+                else if (pbuf[0] == '3')
+                    phase = 3;
+                else if (pbuf[0] == '4')
+                    phase = 4;
+            }
+            sceKernelClose(fd_p);
+        }
+    }
+    obs_report_measure(id, "phase", "current", (uint64_t)phase, "number");
+
+    if (phase == 1) {
+        uint8_t b[16];
+        memset(b, 0xa5, sizeof(b));
+        int rc = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_get_skip(b);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+            obs_report_measure(id, "launch1", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "launch1", "rc", (uint64_t)(uint32_t)rc, "code");
+        obs_report_measure(id, "launch1", "byte", (uint64_t)b[0], "hex");
+        obs_report_bytes(id, "launch1", "buf-16b", 0, b, sizeof(b));
+
+        /* Run 130 seconds */
+        obs_boot_note("gt04: phase 1 running 130 seconds...\n");
+        obs_display_close();
+        for (int s = 0; s < 130; s++) {
+            if (obs_address_is_callable((const void *)&sceKernelUsleep)) {
+                sceKernelUsleep(1000000);
+            }
+            if (obs_address_is_callable((const void *)&sceSystemServicePowerTick)) {
+                sceSystemServicePowerTick();
+            }
+            if (obs_address_is_callable(
+                    (const void *)&sceSystemServiceReceiveEvent_static)) {
+                uint8_t ev[512];
+                for (int e = 0; e < 16; e++) {
+                    memset(ev, 0, sizeof(ev));
+                    if (sceSystemServiceReceiveEvent_static(ev) != 0)
+                        break;
+                }
+            }
+            if ((s + 1) % 10 == 0 || s == 129) {
+                char note[64];
+                snprintf(note, sizeof(note), "gt04: elapsed %d/130s\n", s + 1);
+                obs_boot_note(note);
+            }
+        }
+        obs_boot_note("gt04: 130s elapsed, phase 1 complete. Exiting.\n");
+        obs_boot_note("[park] work done\n");
+        obs_invoke_syscall(1, 0, 0, 0, 0, 0, 0);
+        return obs_pass();
+    } else if (phase == 2) {
+        uint8_t b[16];
+        memset(b, 0xa5, sizeof(b));
+        int rc = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc = fn_get_skip(b);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc = -sig;
+            obs_report_measure(id, "launch2", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "launch2", "rc", (uint64_t)(uint32_t)rc, "code");
+        obs_report_measure(id, "launch2", "byte", (uint64_t)b[0], "hex");
+        obs_report_bytes(id, "launch2", "buf-16b", 0, b, sizeof(b));
+
+        obs_boot_note("gt04: phase 2 complete. Exiting.\n");
+        obs_boot_note("[park] work done\n");
+        obs_invoke_syscall(1, 0, 0, 0, 0, 0, 0);
+        return obs_pass();
+    } else if (phase == 3) {
+        /* Call sceSystemServiceDisableNoticeScreenSkipFlagAutoSet() first */
+        int rc_dis = -1;
+        if (fn_dis_auto) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_dis = fn_dis_auto();
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_dis = -sig;
+                obs_report_measure(id, "launch3-dis-auto", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+        }
+        obs_report_measure(id, "launch3-dis-auto", "rc", (uint64_t)(uint32_t)rc_dis,
+                           "code");
+
+        /* sceSystemServiceSetNoticeScreenSkipFlag(0) */
+        int rc_set0 = -1;
+        if (fn_set_skip) {
+            int sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_set0 = fn_set_skip(0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_set0 = -sig;
+                obs_report_measure(id, "launch3-set-0", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+        }
+        obs_report_measure(id, "launch3-set-0", "rc", (uint64_t)(uint32_t)rc_set0,
+                           "code");
+
+        /* Read flag after set(0) */
+        uint8_t b0[16];
+        memset(b0, 0xa5, sizeof(b0));
+        int rc_get0 = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_get0 = fn_get_skip(b0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_get0 = -sig;
+            obs_report_measure(id, "launch3-read-after-set-0", "fault", (uint64_t)sig,
+                               "signal");
+        }
+        obs_report_measure(id, "launch3-read-after-set-0", "rc",
+                           (uint64_t)(uint32_t)rc_get0, "code");
+        obs_report_measure(id, "launch3-read-after-set-0", "byte", (uint64_t)b0[0],
+                           "hex");
+        obs_report_bytes(id, "launch3-read-after-set-0", "buf-16b", 0, b0, sizeof(b0));
+
+        /* sceSystemServiceSetNoticeScreenSkipFlag(1) */
+        int rc_set1 = -1;
+        if (fn_set_skip) {
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_set1 = fn_set_skip(1);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_set1 = -sig;
+                obs_report_measure(id, "launch3-set-1", "fault", (uint64_t)sig,
+                                   "signal");
+            }
+        }
+        obs_report_measure(id, "launch3-set-1", "rc", (uint64_t)(uint32_t)rc_set1,
+                           "code");
+
+        /* Read flag after set(1) */
+        uint8_t b1[16];
+        memset(b1, 0xa5, sizeof(b1));
+        int rc_get1 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_get1 = fn_get_skip(b1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_get1 = -sig;
+            obs_report_measure(id, "launch3-read-after-set-1", "fault", (uint64_t)sig,
+                               "signal");
+        }
+        obs_report_measure(id, "launch3-read-after-set-1", "rc",
+                           (uint64_t)(uint32_t)rc_get1, "code");
+        obs_report_measure(id, "launch3-read-after-set-1", "byte", (uint64_t)b1[0],
+                           "hex");
+        obs_report_bytes(id, "launch3-read-after-set-1", "buf-16b", 0, b1, sizeof(b1));
+
+        obs_boot_note("gt04: phase 3 complete. Exiting.\n");
+        obs_boot_note("[park] work done\n");
+        obs_invoke_syscall(1, 0, 0, 0, 0, 0, 0);
+        return obs_pass();
+    }
+
+    obs_report_measure(id, "phase", "done", 1, "bool");
     return obs_pass();
 }
 

@@ -347,7 +347,21 @@ static obs_result check_agc_cube_sample_bias(void) {
     return obs_pass();
 }
 
-/* 2. REQ-20261013T2330Z-im01: The PS-input table the interpolant-mapping calls write */
+#if !defined(OBSCENE_HOST_BUILD)
+OBS_WEAK int agc_import_7104(void *table, const void *vs, const void *ps, uint64_t a4,
+                            uint64_t a5, uint64_t a6) __asm__("$HV4j+E0MBHE");
+#endif
+
+static void obs_report_bytes_256(const char *id, const char *symbol, const char *what,
+                                 const void *table) {
+    const unsigned char *b = (const unsigned char *)table;
+    obs_report_bytes(id, symbol, what, 0, b, 64);
+    obs_report_bytes(id, symbol, what, 64, b + 64, 64);
+    obs_report_bytes(id, symbol, what, 128, b + 128, 64);
+    obs_report_bytes(id, symbol, what, 192, b + 192, 64);
+}
+
+/* 2. REQ-20261016T1335Z-im01: The PS-input table the interpolant-mapping calls write */
 static obs_result check_agc_interpolant_mapping(void) {
     const char *id = "166-agc/interpolant-mapping";
 
@@ -357,78 +371,18 @@ static obs_result check_agc_interpolant_mapping(void) {
 
     obs_jmp_buf guard;
 
-    /* Build VS with 7 exports (semantics 0..6) */
-    uint8_t vs_hdr[384];
-    init_stage_hdr(vs_hdr, 2u /* VS */, 0xc8u);
-    *(uint16_t *)(vs_hdr + 0x56) = 7u;
-    *(uint64_t *)(vs_hdr + 0x38) = 0x110u;
-    uint32_t *vs_sem = (uint32_t *)(vs_hdr + 0x148);
-    for (uint32_t i = 0; i < 7; i++) {
-        vs_sem[i] = i;
-    }
-    void *vs_obj = NULL;
-    if (obs_address_is_callable((const void *)&sceAgcCreateShader)) {
-        sceAgcCreateShader(&vs_obj, vs_hdr, agc_retail_payload_0, 0);
-    }
-
-    /* Build PS with 5 inputs (semantics 2, 0, 5, 1, 6) */
-    uint8_t ps_hdr[384];
-    init_stage_hdr(ps_hdr, 1u /* PS */, 0x08u);
-    *(uint32_t *)(ps_hdr + 0x50) = 5u;
-    *(uint64_t *)(ps_hdr + 0x30) = 0x118u;
-    uint32_t *ps_sem = (uint32_t *)(ps_hdr + 0x148);
-    ps_sem[0] = 2u;
-    ps_sem[1] = 0u;
-    ps_sem[2] = 5u;
-    ps_sem[3] = 1u;
-    ps_sem[4] = 6u;
-    void *ps_obj = NULL;
-    if (obs_address_is_callable((const void *)&sceAgcCreateShader)) {
-        sceAgcCreateShader(&ps_obj, ps_hdr, agc_retail_payload_0, 0);
-    }
-
-    /* Control VS/PS pair (identity) */
-    uint8_t vs_ident[384];
-    init_stage_hdr(vs_ident, 2u, 0xc8u);
-    void *vs_ident_obj = NULL;
-    if (obs_address_is_callable((const void *)&sceAgcCreateShader)) {
-        sceAgcCreateShader(&vs_ident_obj, vs_ident, agc_retail_payload_0, 0);
-    }
-    uint8_t ps_ident[384];
-    init_stage_hdr(ps_ident, 1u, 0x08u);
-    void *ps_ident_obj = NULL;
-    if (obs_address_is_callable((const void *)&sceAgcCreateShader)) {
-        sceAgcCreateShader(&ps_ident_obj, ps_ident, agc_retail_payload_0, 0);
-    }
-
-    /* Arm 1: sceAgcCreateInterpolantMapping(table, vs, ps) */
-    uint64_t table1[32];
-    memset(table1, 0xcc, sizeof(table1));
-    int sig = OBS_FAULT_ARM(&guard);
-    int rc1 = -1;
-    if (sig == 0) {
-        rc1 = sceAgcCreateInterpolantMapping(table1, vs_hdr, ps_hdr);
-        if (rc1 != 0 && vs_obj && ps_obj) {
-            rc1 = sceAgcCreateInterpolantMapping(table1, vs_obj, ps_obj);
-        }
-        obs_fault_unregister();
-    } else {
-        obs_fault_unregister();
-        rc1 = -sig;
-    }
-    obs_report_measure(id, "arm1-create", "rc", (uint64_t)(uint32_t)rc1, "code");
-    obs_report_bytes(id, "arm1-create", "table", 0, (const unsigned char *)table1, 256);
-    for (int q = 0; q < 32; q++) {
-        char tag[32];
-        oops_snprintf(tag, sizeof(tag), "qw%d", q);
-        obs_report_measure(id, "arm1-create", tag, table1[q], "hex");
-    }
-
-    /* Arm 2: 0x71040c4df8235e1d */
+    /* Resolve 0x71040c4df8235e1d */
     int h_agc = obs_module_open("libSceAgc");
     const void *sym_7104 = agc_resolve("$HV4j+E0MBHE");
+#if !defined(OBSCENE_HOST_BUILD)
+    if (!sym_7104 && obs_address_is_callable((const void *)&agc_import_7104)) {
+        sym_7104 = (const void *)&agc_import_7104;
+    }
+#endif
     if (!sym_7104 && h_agc > 0) {
-        sym_7104 = obs_module_symbol(h_agc, "$HV4j+E0MBHE");
+        sym_7104 = obs_module_symbol(h_agc, "HV4j+E0MBHE#G#A");
+        if (!sym_7104)
+            sym_7104 = obs_module_symbol(h_agc, "$HV4j+E0MBHE");
         if (!sym_7104)
             sym_7104 = obs_module_symbol(h_agc, "0x71040c4df8235e1d");
     }
@@ -441,84 +395,281 @@ static obs_result check_agc_interpolant_mapping(void) {
         }
     }
 #endif
-    if (sym_7104 && obs_address_is_callable(sym_7104)) {
-        uint8_t rec[256];
-        memset(rec, 0xcc, sizeof(rec));
-        static const uint8_t rec_init[24] = {
-            0x75, 0x0d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x02, 0x00, 0x00,
-            0x00, 0x40, 0x00, 0x00, 0x42, 0x02, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00};
-        memcpy(rec, rec_init, sizeof(rec_init));
-        uint8_t p4[64], p5[64];
-        memset(p4, 0xcc, sizeof(p4));
-        memset(p5, 0xcc, sizeof(p5));
+    typedef int (*pfn_7104)(void *table, const void *vs, const void *ps, uint64_t a4,
+                            uint64_t a5, uint64_t a6);
+    pfn_7104 fn_7104 = (pfn_7104)sym_7104;
 
-        sig = OBS_FAULT_ARM(&guard);
-        uint64_t rc2 = 0;
-        if (sig == 0) {
-            rc2 = ((uint64_t (*)(void *, void *, void *, uint64_t, void *,
-                                 void *))sym_7104)(rec, vs_hdr, ps_hdr, 0, p4, p5);
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
-            rc2 = (uint64_t)-sig;
-        }
-        obs_report_measure(id, "arm2-7104", "rc", rc2, "code");
-        obs_report_bytes(id, "arm2-7104", "rec", 0, rec, 256);
-        uint64_t *rec_qw = (uint64_t *)rec;
-        for (int q = 0; q < 32; q++) {
-            char tag[32];
-            oops_snprintf(tag, sizeof(tag), "qw%d", q);
-            obs_report_measure(id, "arm2-7104", tag, rec_qw[q], "hex");
-        }
-    } else {
-        obs_report_measure(id, "arm2-7104", "bound", 0u, "bool");
+    /* Build VS with 3 exports:
+     * param 0: colour (semantic 0, hardware_mapping 0, size 4)
+     * param 1: second vec4 (semantic 1, hardware_mapping 1, size 4)
+     * param 2: texture coordinates (semantic 2, hardware_mapping 2, size 4) */
+    uint8_t vs_buf[512];
+    for (size_t i = 0; i < sizeof(vs_buf); i++)
+        vs_buf[i] = 0;
+    for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0) && i < sizeof(vs_buf); i++) {
+        vs_buf[i] = agc_retail_hdr_full_0[i];
     }
+    *(uint32_t *)(vs_buf + 0x40) = (uint32_t)sizeof(vs_buf);
+    vs_buf[0x5a] = 2u; /* VS */
+    uint32_t *vs_sh = (uint32_t *)(vs_buf + 0x90);
+    vs_sh[0] = 0xc8u;
+    vs_sh[1] = 0u;
+    vs_sh[2] = 0xc9u;
+    vs_sh[3] = 0u;
 
-    /* Arm 3: sceAgcUpdateInterpolantMapping(table, vs, ps) over table from arm 1 */
-    if (obs_address_is_callable((const void *)&sceAgcUpdateInterpolantMapping)) {
-        uint64_t table3[32];
-        memcpy(table3, table1, sizeof(table3));
-        sig = OBS_FAULT_ARM(&guard);
-        int rc3 = -1;
-        if (sig == 0) {
-            rc3 = sceAgcUpdateInterpolantMapping(table3, vs_hdr, ps_hdr);
-            if (rc3 != 0 && vs_obj && ps_obj) {
-                rc3 = sceAgcUpdateInterpolantMapping(table3, vs_obj, ps_obj);
-            }
-            obs_fault_unregister();
-        } else {
-            obs_fault_unregister();
-            rc3 = -sig;
-        }
-        obs_report_measure(id, "arm3-update", "rc", (uint64_t)(uint32_t)rc3, "code");
-        obs_report_bytes(id, "arm3-update", "table", 0, (const unsigned char *)table3,
-                         256);
-        for (int q = 0; q < 32; q++) {
-            char tag[32];
-            oops_snprintf(tag, sizeof(tag), "qw%d", q);
-            obs_report_measure(id, "arm3-update", tag, table3[q], "hex");
-        }
+    uint32_t *vs_sem = (uint32_t *)(vs_buf + 0x140);
+    vs_sem[0] = 0x00u | (0u << 8) | (4u << 16);
+    vs_sem[1] = 0x01u | (1u << 8) | (4u << 16);
+    vs_sem[2] = 0x02u | (2u << 8) | (4u << 16);
+    *(uint16_t *)(vs_buf + 0x56) = 3u;
+    *(uint64_t *)(vs_buf + 0x38) = 0x140u - 0x38u;
+
+    void *vs_obj = NULL;
+    if (obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        sceAgcCreateShader(&vs_obj, vs_buf, agc_retail_payload_0, 0);
     }
+    if (*(uint64_t *)(vs_buf + 0x38) == (0x140u - 0x38u)) {
+        *(uint64_t *)(vs_buf + 0x38) = (uintptr_t)vs_sem;
+    }
+    void *vs = vs_obj ? vs_obj : (void *)vs_buf;
 
-    /* Arm 4: Identity control pair */
-    uint64_t table4[32];
-    memset(table4, 0xcc, sizeof(table4));
-    sig = OBS_FAULT_ARM(&guard);
-    int rc4 = -1;
+    /* Build PS 1 (Permuted pair):
+     * input 0: texture coordinates (semantic 2, hardware_mapping 0, size 4)
+     * input 1: colour (semantic 0, hardware_mapping 1, size 4) */
+    uint8_t ps_perm_buf[512];
+    for (size_t i = 0; i < sizeof(ps_perm_buf); i++)
+        ps_perm_buf[i] = 0;
+    for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0) && i < sizeof(ps_perm_buf);
+         i++) {
+        ps_perm_buf[i] = agc_retail_hdr_full_0[i];
+    }
+    *(uint32_t *)(ps_perm_buf + 0x40) = (uint32_t)sizeof(ps_perm_buf);
+    ps_perm_buf[0x5a] = 1u; /* PS */
+    uint32_t *ps_perm_sh = (uint32_t *)(ps_perm_buf + 0x90);
+    ps_perm_sh[0] = 0x08u;
+    ps_perm_sh[1] = 0u;
+    ps_perm_sh[2] = 0x09u;
+    ps_perm_sh[3] = 0u;
+
+    uint32_t *ps_perm_sem = (uint32_t *)(ps_perm_buf + 0x140);
+    ps_perm_sem[0] = 0x02u | (0u << 8) | (4u << 16);
+    ps_perm_sem[1] = 0x00u | (1u << 8) | (4u << 16);
+    *(uint32_t *)(ps_perm_buf + 0x50) = 2u;
+    *(uint64_t *)(ps_perm_buf + 0x30) = 0x140u - 0x30u;
+
+    void *ps_perm_obj = NULL;
+    if (obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        sceAgcCreateShader(&ps_perm_obj, ps_perm_buf, agc_retail_payload_0, 0);
+    }
+    if (*(uint64_t *)(ps_perm_buf + 0x30) == (0x140u - 0x30u)) {
+        *(uint64_t *)(ps_perm_buf + 0x30) = (uintptr_t)ps_perm_sem;
+    }
+    void *ps_perm = ps_perm_obj ? ps_perm_obj : (void *)ps_perm_buf;
+
+    /* Build PS 2 (Flat and unmatched):
+     * input 0: texture coordinates (semantic 2, hardware_mapping 0, size 4)
+     * input 1: colour flat (semantic 0, hardware_mapping 1, size 4, flat bit 22)
+     * input 2: unmatched (semantic 99 = 0x63, hardware_mapping 2, size 4) */
+    uint8_t ps_flat_buf[512];
+    for (size_t i = 0; i < sizeof(ps_flat_buf); i++)
+        ps_flat_buf[i] = 0;
+    for (size_t i = 0; i < sizeof(agc_retail_hdr_full_0) && i < sizeof(ps_flat_buf);
+         i++) {
+        ps_flat_buf[i] = agc_retail_hdr_full_0[i];
+    }
+    *(uint32_t *)(ps_flat_buf + 0x40) = (uint32_t)sizeof(ps_flat_buf);
+    ps_flat_buf[0x5a] = 1u; /* PS */
+    uint32_t *ps_flat_sh = (uint32_t *)(ps_flat_buf + 0x90);
+    ps_flat_sh[0] = 0x08u;
+    ps_flat_sh[1] = 0u;
+    ps_flat_sh[2] = 0x09u;
+    ps_flat_sh[3] = 0u;
+
+    uint32_t *ps_flat_sem = (uint32_t *)(ps_flat_buf + 0x140);
+    ps_flat_sem[0] = 0x02u | (0u << 8) | (4u << 16);
+    ps_flat_sem[1] = 0x00u | (1u << 8) | (4u << 16) | (1u << 22);
+    ps_flat_sem[2] = 0x63u | (2u << 8) | (4u << 16);
+    *(uint32_t *)(ps_flat_buf + 0x50) = 3u;
+    *(uint64_t *)(ps_flat_buf + 0x30) = 0x140u - 0x30u;
+
+    void *ps_flat_obj = NULL;
+    if (obs_address_is_callable((const void *)&sceAgcCreateShader)) {
+        sceAgcCreateShader(&ps_flat_obj, ps_flat_buf, agc_retail_payload_0, 0);
+    }
+    if (*(uint64_t *)(ps_flat_buf + 0x30) == (0x140u - 0x30u)) {
+        *(uint64_t *)(ps_flat_buf + 0x30) = (uintptr_t)ps_flat_sem;
+    }
+    void *ps_flat = ps_flat_obj ? ps_flat_obj : (void *)ps_flat_buf;
+
+    /* ITEM 1: Permuted pair */
+    /* 1a. sceAgcCreateInterpolantMapping */
+    uint64_t t1_create[32];
+    memset(t1_create, 0xcc, sizeof(t1_create));
+    int sig = OBS_FAULT_ARM(&guard);
+    int rc1_create = -1;
     if (sig == 0) {
-        rc4 = sceAgcCreateInterpolantMapping(table4, vs_ident, ps_ident);
+        rc1_create = sceAgcCreateInterpolantMapping(t1_create, vs, ps_perm);
         obs_fault_unregister();
     } else {
         obs_fault_unregister();
-        rc4 = -sig;
+        rc1_create = -sig;
     }
-    obs_report_measure(id, "arm4-control", "rc", (uint64_t)(uint32_t)rc4, "code");
-    obs_report_bytes(id, "arm4-control", "table", 0, (const unsigned char *)table4,
-                     256);
+    obs_report_measure(id, "item1-permuted-create", "rc", (uint64_t)(uint32_t)rc1_create,
+                       "code");
+    obs_report_bytes_256(id, "item1-permuted-create", "table", t1_create);
     for (int q = 0; q < 32; q++) {
         char tag[32];
         oops_snprintf(tag, sizeof(tag), "qw%d", q);
-        obs_report_measure(id, "arm4-control", tag, table4[q], "hex");
+        obs_report_measure(id, "item1-permuted-create", tag, t1_create[q], "hex");
+    }
+
+    /* 1b. 0x71040c4df8235e1d */
+    uint64_t t1_7104[32];
+    memset(t1_7104, 0xcc, sizeof(t1_7104));
+    int rc1_7104 = -1;
+    if (fn_7104 && obs_address_is_callable((const void *)fn_7104)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc1_7104 = fn_7104(t1_7104, vs, ps_perm, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc1_7104 = -sig;
+        }
+    }
+    obs_report_measure(id, "item1-permuted-7104", "rc", (uint64_t)(uint32_t)rc1_7104,
+                       "code");
+    obs_report_bytes_256(id, "item1-permuted-7104", "table", t1_7104);
+    for (int q = 0; q < 32; q++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "qw%d", q);
+        obs_report_measure(id, "item1-permuted-7104", tag, t1_7104[q], "hex");
+    }
+
+    /* ITEM 2: Flat and unmatched */
+    /* 2a. sceAgcCreateInterpolantMapping */
+    uint64_t t2_create[32];
+    memset(t2_create, 0xcc, sizeof(t2_create));
+    sig = OBS_FAULT_ARM(&guard);
+    int rc2_create = -1;
+    if (sig == 0) {
+        rc2_create = sceAgcCreateInterpolantMapping(t2_create, vs, ps_flat);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        rc2_create = -sig;
+    }
+    obs_report_measure(id, "item2-flat-unmatched-create", "rc",
+                       (uint64_t)(uint32_t)rc2_create, "code");
+    obs_report_bytes_256(id, "item2-flat-unmatched-create", "table", t2_create);
+    for (int q = 0; q < 32; q++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "qw%d", q);
+        obs_report_measure(id, "item2-flat-unmatched-create", tag, t2_create[q], "hex");
+    }
+
+    /* 2b. 0x71040c4df8235e1d */
+    uint64_t t2_7104[32];
+    memset(t2_7104, 0xcc, sizeof(t2_7104));
+    int rc2_7104 = -1;
+    if (fn_7104 && obs_address_is_callable((const void *)fn_7104)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc2_7104 = fn_7104(t2_7104, vs, ps_flat, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc2_7104 = -sig;
+        }
+    }
+    obs_report_measure(id, "item2-flat-unmatched-7104", "rc",
+                       (uint64_t)(uint32_t)rc2_7104, "code");
+    obs_report_bytes_256(id, "item2-flat-unmatched-7104", "table", t2_7104);
+    for (int q = 0; q < 32; q++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "qw%d", q);
+        obs_report_measure(id, "item2-flat-unmatched-7104", tag, t2_7104[q], "hex");
+    }
+
+    /* ITEM 3: Semantic tables */
+    obs_report_measure(id, "item3-semantics", "vs-output-offset", 0x140u, "offset");
+    obs_report_measure(id, "item3-semantics", "vs-output-count", 3u, "count");
+    obs_report_bytes(id, "item3-semantics", "vs-output-array", 0,
+                     (const unsigned char *)vs_sem, 12);
+    obs_report_measure(id, "item3-semantics", "ps-perm-input-offset", 0x140u, "offset");
+    obs_report_measure(id, "item3-semantics", "ps-perm-input-count", 2u, "count");
+    obs_report_bytes(id, "item3-semantics", "ps-perm-array", 0,
+                     (const unsigned char *)ps_perm_sem, 8);
+    obs_report_measure(id, "item3-semantics", "ps-flat-input-offset", 0x140u, "offset");
+    obs_report_measure(id, "item3-semantics", "ps-flat-input-count", 3u, "count");
+    obs_report_bytes(id, "item3-semantics", "ps-flat-array", 0,
+                     (const unsigned char *)ps_flat_sem, 12);
+
+    /* ITEM 4: No pixel shader (ps = NULL) */
+    /* 4a. sceAgcCreateInterpolantMapping(t4_create, vs, NULL) */
+    uint64_t t4_create[32];
+    memset(t4_create, 0xcc, sizeof(t4_create));
+    sig = OBS_FAULT_ARM(&guard);
+    int rc4_create = -1;
+    if (sig == 0) {
+        rc4_create = sceAgcCreateInterpolantMapping(t4_create, vs, NULL);
+        obs_fault_unregister();
+    } else {
+        obs_fault_unregister();
+        rc4_create = -sig;
+    }
+    obs_report_measure(id, "item4-null-ps-create", "rc", (uint64_t)(uint32_t)rc4_create,
+                       "code");
+    obs_report_bytes_256(id, "item4-null-ps-create", "table", t4_create);
+    for (int q = 0; q < 32; q++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "qw%d", q);
+        obs_report_measure(id, "item4-null-ps-create", tag, t4_create[q], "hex");
+    }
+
+    /* 4b. 0x71040c4df8235e1d(t4_7104, vs, NULL, 0, 0, 0) */
+    uint64_t t4_7104[32];
+    memset(t4_7104, 0xcc, sizeof(t4_7104));
+    int rc4_7104 = -1;
+    if (fn_7104 && obs_address_is_callable((const void *)fn_7104)) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc4_7104 = fn_7104(t4_7104, vs, NULL, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc4_7104 = -sig;
+        }
+    }
+    obs_report_measure(id, "item4-null-ps-7104", "rc", (uint64_t)(uint32_t)rc4_7104,
+                       "code");
+    obs_report_bytes_256(id, "item4-null-ps-7104", "table", t4_7104);
+    for (int q = 0; q < 32; q++) {
+        char tag[32];
+        oops_snprintf(tag, sizeof(tag), "qw%d", q);
+        obs_report_measure(id, "item4-null-ps-7104", tag, t4_7104[q], "hex");
+    }
+
+    /* sceAgcUpdateInterpolantMapping test over table from Item 1 */
+    if (obs_address_is_callable((const void *)&sceAgcUpdateInterpolantMapping)) {
+        uint64_t table_upd[32];
+        memcpy(table_upd, t1_create, sizeof(table_upd));
+        sig = OBS_FAULT_ARM(&guard);
+        int rc_upd = -1;
+        if (sig == 0) {
+            rc_upd = sceAgcUpdateInterpolantMapping(table_upd, vs, ps_perm);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_upd = -sig;
+        }
+        obs_report_measure(id, "arm-update", "rc", (uint64_t)(uint32_t)rc_upd, "code");
+        obs_report_bytes_256(id, "arm-update", "table", table_upd);
+        for (int q = 0; q < 32; q++) {
+            char tag[32];
+            oops_snprintf(tag, sizeof(tag), "qw%d", q);
+            obs_report_measure(id, "arm-update", tag, table_upd[q], "hex");
+        }
     }
 
     /* Draw readback: reading which output reaches which input */

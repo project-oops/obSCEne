@@ -33,10 +33,12 @@ set -e
 BUILD="${1:?usage: build-native.sh <BUILD> [TARGET]}"
 TARGET_NAME="${2:-prospero}"
 SELFISH="${SELFISH:-../selfish}"
-# The title identity comes from app.env.
+# The title identity comes from app.env, unless overridden by environment.
+orig_title_id="${TITLE_ID:-}"
 app_env="$(dirname "$0")/../app.env"
 # shellcheck source=/dev/null
 [ -f "$app_env" ] && . "$app_env"
+[ -n "$orig_title_id" ] && TITLE_ID="$orig_title_id"
 TITLE_CODE="${TITLE_CODE:-O00001}"
 TITLE="${TITLE:-${TITLE_NAME:-obSCEne}}"
 if [ -n "${CONTENT_ID:-}" ] && [ -z "${TITLE_ID:-}" ]; then

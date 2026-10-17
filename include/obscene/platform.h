@@ -2291,6 +2291,22 @@ OBS_WEAK int sceMsgDialogUpdateStatus_static(void) __asm__("$6fIC3XKt2k0");
 OBS_WEAK int sceSystemServiceGetStatus(void *status);
 OBS_WEAK int
 sceSystemServiceGetStatus_static(void *status) __asm__("sceSystemServiceGetStatus");
+OBS_WEAK int
+sceSystemServiceGetNoticeScreenSkipFlag_static(void *flag) __asm__("$3RQ5aQfnstU");
+OBS_WEAK int
+sceSystemServiceSetNoticeScreenSkipFlag_static(uint32_t flag) __asm__("$Q3utJvma4Mo");
+OBS_WEAK int
+sceSystemServiceDisableNoticeScreenSkipFlagAutoSet_static(void) __asm__("$8Lo6Zv94aho");
+OBS_WEAK int sceSystemServiceReceiveEvent_static(void *event) __asm__("$656LMQSrg6U");
+OBS_WEAK int sceSystemServiceHideSplashScreen_static(void) __asm__("$Vo5V8KAwCmk");
+
+/* libc / libkernel file I/O */
+OBS_WEAK int sce_libc_stat_static(const char *path, void *sb) __asm__("$E6ao34wPw+U");
+OBS_WEAK int sce_libc_open_static(const char *path, int flags,
+                                  ...) __asm__("$wuCroIGjt2g");
+OBS_WEAK void *sce_libc_fopen_static(const char *path,
+                                     const char *mode) __asm__("$xeYO4u7uyJ0");
+OBS_WEAK int sce_libc_fclose_static(void *fp) __asm__("$uodLYyUip20");
 
 /* libSceAppContent additional */
 OBS_WEAK int

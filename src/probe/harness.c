@@ -7,6 +7,10 @@
 #define OBSCENE_EXCLUDE ""
 #endif
 
+#ifndef OBSCENE_ONLY
+#define OBSCENE_ONLY ""
+#endif
+
 #include "oops/freestd.h"
 #include "oops/krw.h"
 #include "obscene/harness.h"
@@ -132,6 +136,20 @@ static int obs_id_matches(const char *id, const char *list, size_t id_len) {
     return 0;
 }
 
+static int obs_str_contains(const char *haystack, const char *needle) {
+    if (!haystack || !needle || needle[0] == '\0')
+        return 1;
+    for (size_t i = 0; haystack[i] != '\0'; i++) {
+        size_t j = 0;
+        while (needle[j] != '\0' && haystack[i + j] == needle[j]) {
+            j++;
+        }
+        if (needle[j] == '\0')
+            return 1;
+    }
+    return 0;
+}
+
 int obs_check_is_excluded(const char *id) {
     if (id == NULL) {
         return 0;
@@ -139,6 +157,12 @@ int obs_check_is_excluded(const char *id) {
     size_t len = 0;
     while (id[len] != '\0') {
         len++;
+    }
+    if (OBSCENE_ONLY[0] != '\0') {
+        if (!obs_str_contains(id, OBSCENE_ONLY) &&
+            !obs_id_matches(id, OBSCENE_ONLY, len)) {
+            return OBS_EXCLUDED_AT_BUILD;
+        }
     }
     if (obs_id_matches(id, OBSCENE_EXCLUDE, len)) {
         return OBS_EXCLUDED_AT_BUILD;
