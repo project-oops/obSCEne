@@ -1919,6 +1919,44 @@ static const obs_import obs_platform_imports[] = {
     {"libSceAjm", "sceAjmBatchStart"},
     {"libSceAjm", "$-qLsfDAywIY"},
     {"libSceAjm", "sceAjmBatchWait"},
+
+    /* REQ-20261017T0530Z-gt07 */
+    {"libSceVoice", "$clyKUyi3RYU"},
+    {"libSceVoice", "sceVoiceSetThreadsParams"},
+    {"libSceAppContent", "$R9lA82OraNs"},
+    {"libSceAppContent", "sceAppContentInitialize"},
+    {"libSceAppContent", "$Gl6w5i0JokY"},
+    {"libSceAppContent", "sceAppContentDownloadDataGetAvailableSpaceKb"},
+    {"libSceVideoRecording", "$Fc8qxlKINYQ"},
+    {"libSceVideoRecording", "sceVideoRecordingSetInfo"},
+
+    /* REQ-20261017T0230Z-gt06 */
+    {"libSceNpManager", "$qQJfO8HAiaY"},
+    {"libSceNpManager", "sceNpRegisterStateCallbackA"},
+    {"libSceNpManager", "$3Zl8BePTh9Y"},
+    {"libSceNpManager", "sceNpCheckCallback"},
+    {"libSceNpManager", "$eQH7nWPcAgc"},
+    {"libSceNpManager", "sceNpGetState"},
+
+    /* REQ-20261016T2335Z-gt05 */
+    {"libScePad", "$xk0AcarP3V4"},
+    {"libScePad", "scePadOpen"},
+    {"libScePad", "$YndgXqQVV7c"},
+    {"libScePad", "scePadReadState"},
+    {"libScePad", "$6ncge5+l5Qs"},
+    {"libScePad", "scePadClose"},
+    {"libSceNpEntitlementAccess", "$jO8DM8oyego"},
+    {"libSceNpEntitlementAccess", "sceNpEntitlementAccessInitialize"},
+    {"libSceNpTrophy2", "$Bagshr7OQ6Q"},
+    {"libSceNpTrophy2", "sceNpTrophy2CreateContext"},
+    {"libSceNpUniversalDataSystem", "$47UAEuQl+iI"},
+    {"libSceNpUniversalDataSystem", "sceNpUniversalDataSystemTerminate"},
+    {"libSceRtc", "$zO9UL3qIINQ"},
+    {"libSceRtc", "sceRtcGetCurrentNetworkTick"},
+    {"libSceContentSearch", "$dPj4ZtRcIWk"},
+    {"libSceContentSearch", "sceContentSearchInit"},
+    {"libSceUserService", "$yH17Q6NWtVg"},
+    {"libSceUserService", "sceUserServiceGetEvent"},
 };
 
 /* Calls `fn` once per import declared outside the census. */

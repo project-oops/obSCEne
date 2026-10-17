@@ -10289,6 +10289,13 @@ static const obs_check boot_checks[] = {
     {"000-boot/gt04-notice-skip", "libSceSystemService",
      "sceSystemServiceGetNoticeScreenSkipFlag", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_gt04_notice_skip, OBS_FROM_SPEC},
+    {"000-boot/gt05-pad-and-np", "libScePad", "scePadReadState", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt05_pad_and_np, OBS_FROM_SPEC},
+    {"000-boot/gt06-np-callbacks", "libSceNpManager", "sceNpRegisterStateCallbackA",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt06_np_callbacks, OBS_FROM_SPEC},
+    {"000-boot/gt07-stubbed-calls", "libSceVoice", "sceVoiceSetThreadsParams",
+     OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt07_stubbed_calls,
+     OBS_FROM_SPEC},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };
