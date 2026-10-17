@@ -5732,8 +5732,8 @@ static obs_result check_gt06_np_callbacks(void) {
             }
         }
         int count_after = s_gt06_count;
-        char step_tag[32];
-        snprintf(step_tag, sizeof(step_tag), "chk-step-%d", step);
+        char step_tag[32] = "chk-step-";
+        obs_format_u64(step_tag + 9, (uint64_t)step);
         obs_report_measure(id, step_tag, "rc", (uint64_t)(uint32_t)rc_chk, "code");
         obs_report_measure(id, step_tag, "delta-invoked",
                            (uint64_t)(count_after - count_before), "count");
@@ -5746,8 +5746,8 @@ static obs_result check_gt06_np_callbacks(void) {
     obs_report_measure(id, "chk-10x", "total-invocations", (uint64_t)s_gt06_count,
                        "count");
     for (int k = 0; k < s_gt06_count && k < 32; k++) {
-        char inv_tag[32];
-        snprintf(inv_tag, sizeof(inv_tag), "inv-%d", k);
+        char inv_tag[32] = "inv-";
+        obs_format_u64(inv_tag + 4, (uint64_t)k);
         obs_report_measure(id, inv_tag, "cb-id", (uint64_t)s_gt06_invocations[k].cb_id,
                            "id");
         obs_report_measure(id, inv_tag, "user-id",
@@ -5973,9 +5973,9 @@ static obs_result check_gt05_pad_and_np(void) {
     }
     int worked_sysmod_id = -1;
     if (h_ea <= 0 && obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
-        for (uint16_t sm = 0x0080; sm <= 0x0115; sm++) {
-            if (sm == 0x008e || sm == 0x00cf)
-                continue;
+        static const uint16_t s_np_sysmods[] = { 0x009D, 0x00A8, 0x00AD, 0x0105 };
+        for (size_t i = 0; i < sizeof(s_np_sysmods)/sizeof(s_np_sysmods[0]); i++) {
+            uint16_t sm = s_np_sysmods[i];
             int rc_sm = sceSysmoduleLoadModule(sm);
             if (rc_sm == 0) {
                 int test_h = obs_module_open("libSceNpEntitlementAccess");
@@ -6224,7 +6224,7 @@ static obs_result check_gt05_pad_and_np(void) {
 
     if (p_us_ev && obs_address_is_callable((const void *)&sceKernelGetProcessTime)) {
         uint64_t t_start = sceKernelGetProcessTime();
-        uint64_t t_end = t_start + 5000000; /* 5 seconds */
+        uint64_t t_end = t_start + 1000000; /* 1 second */
 
         while (sceKernelGetProcessTime() < t_end) {
             uint8_t ev[256];
@@ -6246,8 +6246,8 @@ static obs_result check_gt05_pad_and_np(void) {
                 if (ev_user == user && (ev_type == 1 || ev_type == 0)) {
                     initial_user_login_found = 1;
                 }
-                char ev_tag[32];
-                snprintf(ev_tag, sizeof(ev_tag), "event-%d", ev_idx);
+                char ev_tag[32] = "event-";
+                obs_format_u64(ev_tag + 6, (uint64_t)ev_idx);
                 obs_report_measure(id, ev_tag, "type", (uint64_t)ev_type, "type");
                 obs_report_measure(id, ev_tag, "user-id", (uint64_t)(uint32_t)ev_user,
                                    "id");
@@ -6447,6 +6447,565 @@ static obs_result check_gt09_placeholders(void) {
         obs_report_measure(id, "shareplay", "init-call2-rc",
                            (uint64_t)(uint32_t)rc_sp2, "code");
     }
+
+    return obs_pass();
+}
+
+/* ========================================================================== */
+/* REQ-20261017T2000Z-gt10: Socket Info and Voice Thread Parameters            */
+/* ========================================================================== */
+static obs_result check_gt10_socket_voice(void) {
+    const char *id = "000-boot/gt10-socket-voice";
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    /* 1. sceNetGetSockInfo */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x0001);
+    }
+    if (obs_address_is_callable((const void *)&sceNetInit)) {
+        (void)sceNetInit();
+    }
+
+    typedef int (*fn_sockinfo_t)(int, void *, int, int);
+    typedef int (*fn_sockclose_t)(int);
+    fn_sockinfo_t fn_info = NULL;
+    fn_sockclose_t fn_close = NULL;
+    int h_net = obs_module_open("libSceNet");
+    if (obs_address_is_callable((const void *)&sceNetGetSockInfo_static)) {
+        fn_info = (fn_sockinfo_t)&sceNetGetSockInfo_static;
+    } else if (h_net > 0) {
+        fn_info = (fn_sockinfo_t)obs_module_symbol(h_net, "$hLuXdjHnhiI");
+        if (!fn_info)
+            fn_info = (fn_sockinfo_t)obs_module_symbol(h_net, "sceNetGetSockInfo");
+    }
+    if (h_net > 0) {
+        fn_close = (fn_sockclose_t)obs_module_symbol(h_net, "sceNetSocketClose");
+        if (!fn_close)
+            fn_close = (fn_sockclose_t)obs_module_symbol(h_net, "$XhC0s4r4h4c");
+    }
+
+    obs_report_measure(id, "sceNetGetSockInfo", "bound", (uint64_t)(fn_info != NULL), "bool");
+
+    if (fn_info && obs_address_is_callable((const void *)&sceNetSocket)) {
+        /* 1a. Unbound UDP socket */
+        int s = sceNetSocket("gt10_u", OBS_NET_AF_INET, 2 /* SOCK_DGRAM */, 0);
+        obs_report_measure(id, "udp-unbound", "fd", (uint64_t)(uint32_t)s, "fd");
+        if (s >= 0) {
+            uint8_t info_unbound[0xa0];
+            memset(info_unbound, 0xcc, sizeof(info_unbound));
+            int rc_unbound = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_unbound = fn_info(s, info_unbound, 1, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_unbound = -sig;
+                obs_report_measure(id, "udp-unbound", "fault", (uint64_t)sig, "signal");
+            }
+            obs_report_measure(id, "udp-unbound", "rc", (uint64_t)(uint32_t)rc_unbound, "code");
+            obs_report_bytes(id, "udp-unbound", "info-160b", 0, info_unbound, sizeof(info_unbound));
+
+            /* 1b. Bound to port 0 */
+            obs_net_sockaddr_in addr0;
+            memset(&addr0, 0, sizeof(addr0));
+            addr0.sin_len = sizeof(addr0);
+            addr0.sin_family = OBS_NET_AF_INET;
+            addr0.sin_port = 0;
+            addr0.sin_addr = 0;
+            int rc_b0 = -1;
+            if (obs_address_is_callable((const void *)&sceNetBind)) {
+                rc_b0 = sceNetBind(s, &addr0, sizeof(addr0));
+            }
+            obs_report_measure(id, "udp-port0", "bind-rc", (uint64_t)(uint32_t)rc_b0, "code");
+
+            uint8_t info_p0[0xa0];
+            memset(info_p0, 0xcc, sizeof(info_p0));
+            int rc_p0 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_p0 = fn_info(s, info_p0, 1, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_p0 = -sig;
+                obs_report_measure(id, "udp-port0", "fault", (uint64_t)sig, "signal");
+            }
+            obs_report_measure(id, "udp-port0", "rc", (uint64_t)(uint32_t)rc_p0, "code");
+            obs_report_bytes(id, "udp-port0", "info-160b", 0, info_p0, sizeof(info_p0));
+
+            /* Close s */
+            if (fn_close) {
+                fn_close(s);
+            }
+
+            /* 1d. Closed socket query */
+            uint8_t info_closed[0xa0];
+            memset(info_closed, 0xcc, sizeof(info_closed));
+            int rc_closed = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_closed = fn_info(s, info_closed, 1, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_closed = -sig;
+                obs_report_measure(id, "udp-closed", "fault", (uint64_t)sig, "signal");
+            }
+            obs_report_measure(id, "udp-closed", "rc", (uint64_t)(uint32_t)rc_closed, "code");
+            obs_report_bytes(id, "udp-closed", "info-160b", 0, info_closed, sizeof(info_closed));
+        }
+
+        /* 1c. Bound to port 6672 on INADDR_ANY */
+        int s6672 = sceNetSocket("gt10_6", OBS_NET_AF_INET, 2 /* SOCK_DGRAM */, 0);
+        obs_report_measure(id, "udp-6672", "fd", (uint64_t)(uint32_t)s6672, "fd");
+        if (s6672 >= 0) {
+            obs_net_sockaddr_in addr6672;
+            memset(&addr6672, 0, sizeof(addr6672));
+            addr6672.sin_len = sizeof(addr6672);
+            addr6672.sin_family = OBS_NET_AF_INET;
+            addr6672.sin_port = ((6672 & 0xff) << 8) | ((6672 >> 8) & 0xff);
+            addr6672.sin_addr = 0;
+            int rc_b6672 = -1;
+            if (obs_address_is_callable((const void *)&sceNetBind)) {
+                rc_b6672 = sceNetBind(s6672, &addr6672, sizeof(addr6672));
+            }
+            obs_report_measure(id, "udp-port6672", "bind-rc", (uint64_t)(uint32_t)rc_b6672, "code");
+
+            uint8_t info_6672[0xa0];
+            memset(info_6672, 0xcc, sizeof(info_6672));
+            int rc_6672 = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_6672 = fn_info(s6672, info_6672, 1, 0);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_6672 = -sig;
+                obs_report_measure(id, "udp-port6672", "fault", (uint64_t)sig, "signal");
+            }
+            obs_report_measure(id, "udp-port6672", "rc", (uint64_t)(uint32_t)rc_6672, "code");
+            obs_report_bytes(id, "udp-port6672", "info-160b", 0, info_6672, sizeof(info_6672));
+
+            if (fn_close) {
+                fn_close(s6672);
+            }
+        }
+    }
+
+    /* 2. sceVoiceSetThreadsParams */
+    typedef int (*fn_v_init_t)(const void *, uint32_t);
+    typedef int (*fn_v_set_t)(void *);
+    fn_v_init_t p_v_init = NULL;
+    fn_v_set_t p_v_set = NULL;
+
+    if (obs_address_is_callable((const void *)&sceVoiceInit_static)) {
+        p_v_init = (fn_v_init_t)&sceVoiceInit_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceSetThreadsParams_static)) {
+        p_v_set = (fn_v_set_t)&sceVoiceSetThreadsParams_static;
+    }
+    if (!p_v_init || !p_v_set) {
+        if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+            (void)sceSysmoduleLoadModule(0x001A);
+        }
+        int h_voice = obs_module_open("libSceVoice");
+        if (h_voice > 0) {
+            if (!p_v_init) {
+                p_v_init = (fn_v_init_t)obs_module_symbol(h_voice, "$9TrhuGzberQ");
+                if (!p_v_init)
+                    p_v_init = (fn_v_init_t)obs_module_symbol(h_voice, "sceVoiceInit");
+            }
+            if (!p_v_set) {
+                p_v_set = (fn_v_set_t)obs_module_symbol(h_voice, "$clyKUyi3RYU");
+                if (!p_v_set)
+                    p_v_set = (fn_v_set_t)obs_module_symbol(h_voice, "sceVoiceSetThreadsParams");
+            }
+        }
+    }
+
+    obs_report_measure(id, "sceVoiceSetThreadsParams", "bound", (uint64_t)(p_v_set != NULL), "bool");
+    if (p_v_set) {
+        /* GTA V 0x38 bytes: {u32 1, u32 0x2bc, u64 0x7f, u32 0x2bc, u32 0, u64 0x7f, u32 0x2bc, u32 0, u64 0x7f, u64 0} */
+        uint8_t p38[0x38];
+        memset(p38, 0, sizeof(p38));
+        *(uint32_t *)(p38 + 0x00) = 1;
+        *(uint32_t *)(p38 + 0x04) = 0x2bc;
+        *(uint64_t *)(p38 + 0x08) = 0x7f;
+        *(uint32_t *)(p38 + 0x10) = 0x2bc;
+        *(uint32_t *)(p38 + 0x14) = 0;
+        *(uint64_t *)(p38 + 0x18) = 0x7f;
+        *(uint32_t *)(p38 + 0x20) = 0x2bc;
+        *(uint32_t *)(p38 + 0x24) = 0;
+        *(uint64_t *)(p38 + 0x28) = 0x7f;
+        *(uint64_t *)(p38 + 0x30) = 0;
+
+        uint8_t p38_copy[0x38];
+        memcpy(p38_copy, p38, sizeof(p38));
+
+        int rc_s38 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_s38 = p_v_set(p38);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_s38 = -sig;
+            obs_report_measure(id, "voice-params-0x38", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "voice-params-0x38", "rc", (uint64_t)(uint32_t)rc_s38, "code");
+        int changed38 = (memcmp(p38, p38_copy, sizeof(p38)) != 0);
+        obs_report_measure(id, "voice-params-0x38", "changed", (uint64_t)changed38, "bool");
+        obs_report_bytes(id, "voice-params-0x38", "out-56b", 0, p38, sizeof(p38));
+
+        /* Zeroed block */
+        uint8_t p_zero[0x38];
+        memset(p_zero, 0, sizeof(p_zero));
+        int rc_szero = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_szero = p_v_set(p_zero);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_szero = -sig;
+            obs_report_measure(id, "voice-params-zero", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "voice-params-zero", "rc", (uint64_t)(uint32_t)rc_szero, "code");
+        int changed_zero = 0;
+        for (size_t i = 0; i < sizeof(p_zero); i++) {
+            if (p_zero[i] != 0) { changed_zero = 1; break; }
+        }
+        obs_report_measure(id, "voice-params-zero", "changed", (uint64_t)changed_zero, "bool");
+    }
+
+    return obs_pass();
+}
+
+/* ========================================================================== */
+/* REQ-20261017T2300Z-gt11: Share Feature Permits and Video Recording Info     */
+/* ========================================================================== */
+static obs_result check_gt11_share_recording(void) {
+    const char *id = "000-boot/gt11-share-recording";
+    obs_jmp_buf guard;
+
+    /* 1. sceShareFeaturePermit */
+    typedef int (*fn_share_init_t)(uint64_t, uint64_t, uint64_t);
+    typedef int (*fn_share_permit_t)(uint32_t);
+
+    fn_share_init_t fn_init = NULL;
+    fn_share_permit_t fn_permit = NULL;
+
+    int h_sh = -1;
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        h_sh = sceKernelLoadStartModule("/system/common/lib/libSceShare.native.sprx", 0, NULL, 0, NULL, NULL);
+    }
+    if (h_sh <= 0) {
+        h_sh = obs_module_open("libSceShare");
+    }
+    if (h_sh > 0) {
+        fn_init = (fn_share_init_t)obs_module_symbol(h_sh, "$nBDD66kiFW8");
+        if (!fn_init) fn_init = (fn_share_init_t)obs_module_symbol(h_sh, "sceShareInitialize");
+        fn_permit = (fn_share_permit_t)obs_module_symbol(h_sh, "$YBiIdcDPrxs");
+        if (!fn_permit) fn_permit = (fn_share_permit_t)obs_module_symbol(h_sh, "sceShareFeaturePermit");
+    }
+
+    obs_report_measure(id, "sceShareInitialize", "bound", (uint64_t)(fn_init != NULL), "bool");
+    obs_report_measure(id, "sceShareFeaturePermit", "bound", (uint64_t)(fn_permit != NULL), "bool");
+
+    if (fn_init) {
+        int rc_si = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_si = fn_init(0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_si = -sig;
+        }
+        obs_report_measure(id, "share-init", "rc", (uint64_t)(uint32_t)rc_si, "code");
+    }
+
+    if (fn_permit) {
+        /* Permit(0x24) call 1 */
+        int rc_p24_1 = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p24_1 = fn_permit(0x24);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p24_1 = -sig;
+        }
+        obs_report_measure(id, "permit-0x24-call1", "rc", (uint64_t)(uint32_t)rc_p24_1, "code");
+
+        /* Permit(0x10) call 1 */
+        int rc_p10_1 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p10_1 = fn_permit(0x10);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p10_1 = -sig;
+        }
+        obs_report_measure(id, "permit-0x10-call1", "rc", (uint64_t)(uint32_t)rc_p10_1, "code");
+
+        /* Permit(0x24) call 2 */
+        int rc_p24_2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p24_2 = fn_permit(0x24);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p24_2 = -sig;
+        }
+        obs_report_measure(id, "permit-0x24-call2", "rc", (uint64_t)(uint32_t)rc_p24_2, "code");
+
+        /* Permit(0x10) call 2 */
+        int rc_p10_2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p10_2 = fn_permit(0x10);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p10_2 = -sig;
+        }
+        obs_report_measure(id, "permit-0x10-call2", "rc", (uint64_t)(uint32_t)rc_p10_2, "code");
+
+        /* Permit(0) */
+        int rc_p0 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p0 = fn_permit(0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p0 = -sig;
+        }
+        obs_report_measure(id, "permit-0-call", "rc", (uint64_t)(uint32_t)rc_p0, "code");
+    }
+
+    /* 2. libSceVideoRecordingP and sceVideoRecordingSetInfo */
+    int h_vr = -1;
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        h_vr = sceKernelLoadStartModule("/system/common/lib/libSceVideoRecordingP.sprx", 0, NULL, 0, NULL, NULL);
+        if (h_vr <= 0) {
+            h_vr = sceKernelLoadStartModule("/system_ex/common/lib/libSceVideoRecordingP.sprx", 0, NULL, 0, NULL, NULL);
+        }
+        if (h_vr <= 0) {
+            h_vr = sceKernelLoadStartModule("/system/common/lib/libSceVideoRecording.sprx", 0, NULL, 0, NULL, NULL);
+        }
+    }
+    if (h_vr <= 0) {
+        h_vr = obs_module_open("libSceVideoRecordingP");
+    }
+    if (h_vr <= 0) {
+        h_vr = obs_module_open("libSceVideoRecording");
+    }
+
+    typedef int (*fn_vr_setinfo_t)(uint32_t, const void *, size_t);
+    fn_vr_setinfo_t p_vr_set = NULL;
+    if (h_vr > 0) {
+        p_vr_set = (fn_vr_setinfo_t)obs_module_symbol(h_vr, "$o0V2f24x1mY");
+        if (!p_vr_set) p_vr_set = (fn_vr_setinfo_t)obs_module_symbol(h_vr, "sceVideoRecordingSetInfo");
+    }
+
+    obs_report_measure(id, "libSceVideoRecordingP", "handle", (uint64_t)(uint32_t)h_vr, "handle");
+    obs_report_measure(id, "sceVideoRecordingSetInfo", "bound", (uint64_t)(p_vr_set != NULL), "bool");
+
+    if (p_vr_set) {
+        static const uint16_t title1[19] = {
+            'G', 'r', 'a', 'n', 'd', ' ', 'T', 'h', 'e', 'f', 't', ' ', 'A', 'u', 't', 'o', ' ', 'V', 0
+        };
+        uint16_t title1_buf[20];
+        memcpy(title1_buf, title1, sizeof(title1));
+        int rc_set6 = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_set6 = p_vr_set(6, title1_buf, 0x24);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_set6 = -sig;
+            obs_report_measure(id, "setinfo-type6", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "setinfo-type6", "rc", (uint64_t)(uint32_t)rc_set6, "code");
+        int ch6 = (memcmp(title1_buf, title1, sizeof(title1)) != 0);
+        obs_report_measure(id, "setinfo-type6", "changed", (uint64_t)ch6, "bool");
+
+        static const uint16_t title2[5] = { 'G', 'T', 'A', 'V', 0 };
+        uint16_t title2_buf[6];
+        memcpy(title2_buf, title2, sizeof(title2));
+        int rc_set2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_set2 = p_vr_set(2, title2_buf, 8);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_set2 = -sig;
+            obs_report_measure(id, "setinfo-type2", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "setinfo-type2", "rc", (uint64_t)(uint32_t)rc_set2, "code");
+        int ch2 = (memcmp(title2_buf, title2, sizeof(title2)) != 0);
+        obs_report_measure(id, "setinfo-type2", "changed", (uint64_t)ch2, "bool");
+    }
+
+    return obs_pass();
+}
+
+/* ========================================================================== */
+/* REQ-20261017T1945Z-tr01: Trophies, Save Search and RTC Tick Offline         */
+/* ========================================================================== */
+static obs_result check_tr01_trophy_savedata_rtc(void) {
+    const char *id = "000-boot/tr01-trophy-savedata-rtc";
+    obs_jmp_buf guard;
+
+    /* 1. libSceNpTrophy2 binding routes */
+    int h_tr = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        int rc_sm4c = sceSysmoduleLoadModule(0x004c);
+        obs_report_measure(id, "trophy2", "sysmodule-0x004c-rc", (uint64_t)(uint32_t)rc_sm4c, "code");
+        int rc_sm108 = sceSysmoduleLoadModule(0x0108);
+        obs_report_measure(id, "trophy2", "sysmodule-0x0108-rc", (uint64_t)(uint32_t)rc_sm108, "code");
+        int rc_sm10c = sceSysmoduleLoadModule(0x010c);
+        obs_report_measure(id, "trophy2", "sysmodule-0x010c-rc", (uint64_t)(uint32_t)rc_sm10c, "code");
+    }
+    if (obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        h_tr = sceKernelLoadStartModule("/system/common/lib/libSceNpTrophy2.sprx", 0, NULL, 0, NULL, NULL);
+        if (h_tr <= 0) {
+            h_tr = sceKernelLoadStartModule("/system_ex/common/lib/libSceNpTrophy2.sprx", 0, NULL, 0, NULL, NULL);
+        }
+    }
+    if (h_tr <= 0) {
+        h_tr = obs_module_open("libSceNpTrophy2");
+    }
+    obs_report_measure(id, "trophy2", "module-handle", (uint64_t)(uint32_t)h_tr, "handle");
+
+    typedef int (*fn_tr_create_ctx_t)(uint64_t *, int32_t, uint32_t, uint32_t);
+    typedef int (*fn_tr_destroy_ctx_t)(uint64_t);
+
+    fn_tr_create_ctx_t fn_cctx = NULL;
+    fn_tr_destroy_ctx_t fn_dctx = NULL;
+
+    if (h_tr > 0) {
+        fn_cctx = (fn_tr_create_ctx_t)obs_module_symbol(h_tr, "$zS1L88oYvj4");
+        if (!fn_cctx) fn_cctx = (fn_tr_create_ctx_t)obs_module_symbol(h_tr, "sceNpTrophy2CreateContext");
+        fn_dctx = (fn_tr_destroy_ctx_t)obs_module_symbol(h_tr, "sceNpTrophy2DestroyContext");
+    }
+    obs_report_measure(id, "trophy2", "create-context-bound", (uint64_t)(fn_cctx != NULL), "bool");
+
+    int32_t user = -1;
+    if (obs_address_is_callable((const void *)&sceUserServiceInitialize_static)) {
+        (void)sceUserServiceInitialize_static(NULL);
+    }
+    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser_static)) {
+        (void)sceUserServiceGetInitialUser_static(&user);
+    }
+    obs_report_measure(id, "trophy2", "user-id", (uint64_t)(uint32_t)user, "id");
+
+    if (fn_cctx) {
+        uint64_t ctx1 = 0;
+        int rc_c1 = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_c1 = fn_cctx(&ctx1, user, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_c1 = -sig;
+        }
+        obs_report_measure(id, "trophy2", "create-ctx1-rc", (uint64_t)(uint32_t)rc_c1, "code");
+        obs_report_measure(id, "trophy2", "create-ctx1-handle", ctx1, "hex");
+
+        /* user -1 */
+        uint64_t ctx_neg = 0;
+        int rc_neg = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_neg = fn_cctx(&ctx_neg, -1, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_neg = -sig;
+        }
+        obs_report_measure(id, "trophy2", "create-ctx-neg1-rc", (uint64_t)(uint32_t)rc_neg, "code");
+
+        if (fn_dctx && ctx1 != 0) {
+            fn_dctx(ctx1);
+        }
+    }
+
+    /* 2. libSceSaveData_native DirNameSearch */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x0015); /* SAVE_DATA */
+    }
+    int h_sd = obs_module_open("libSceSaveData_native");
+    if (h_sd <= 0) h_sd = obs_module_open("libSceSaveData");
+    obs_report_measure(id, "savedata", "module-handle", (uint64_t)(uint32_t)h_sd, "handle");
+
+    typedef int (*fn_sd_search_t)(const void *, void *);
+    fn_sd_search_t fn_search = NULL;
+    if (h_sd > 0) {
+        fn_search = (fn_sd_search_t)obs_module_symbol(h_sd, "$dyIhnXq-0SM");
+        if (!fn_search) fn_search = (fn_sd_search_t)obs_module_symbol(h_sd, "sceSaveDataDirNameSearch");
+    }
+    obs_report_measure(id, "savedata", "dir-search-bound", (uint64_t)(fn_search != NULL), "bool");
+
+    /* 3. sceRtcGetCurrentNetworkTick beside sceRtcGetCurrentTick */
+    typedef int (*fn_rtc_tick_t)(uint64_t *);
+    fn_rtc_tick_t fn_cur_tick = NULL;
+    fn_rtc_tick_t fn_net_tick = NULL;
+
+    if (obs_address_is_callable((const void *)&sceRtcGetCurrentNetworkTick_static)) {
+        fn_net_tick = (fn_rtc_tick_t)&sceRtcGetCurrentNetworkTick_static;
+    }
+    int h_rtc = obs_module_open("libSceRtc");
+    if (h_rtc > 0) {
+        fn_cur_tick = (fn_rtc_tick_t)obs_module_symbol(h_rtc, "$RfVyLTV2wNc");
+        if (!fn_cur_tick) fn_cur_tick = (fn_rtc_tick_t)obs_module_symbol(h_rtc, "sceRtcGetCurrentTick");
+        if (!fn_net_tick) {
+            fn_net_tick = (fn_rtc_tick_t)obs_module_symbol(h_rtc, "$zO9UL3qIINQ");
+            if (!fn_net_tick) fn_net_tick = (fn_rtc_tick_t)obs_module_symbol(h_rtc, "sceRtcGetCurrentNetworkTick");
+        }
+    }
+
+    obs_report_measure(id, "rtc", "cur-tick-bound", (uint64_t)(fn_cur_tick != NULL), "bool");
+    obs_report_measure(id, "rtc", "net-tick-bound", (uint64_t)(fn_net_tick != NULL), "bool");
+
+    uint64_t tick_cur = 0;
+    int rc_cur = -1;
+    if (fn_cur_tick) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_cur = fn_cur_tick(&tick_cur);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_cur = -sig;
+        }
+    }
+    obs_report_measure(id, "rtc", "cur-tick-rc", (uint64_t)(uint32_t)rc_cur, "code");
+    obs_report_measure(id, "rtc", "cur-tick-val", tick_cur, "tick");
+
+    uint64_t tick_net = 0;
+    int rc_net = -1;
+    if (fn_net_tick) {
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_net = fn_net_tick(&tick_net);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_net = -sig;
+        }
+    }
+    obs_report_measure(id, "rtc", "net-tick-rc", (uint64_t)(uint32_t)rc_net, "code");
+    obs_report_measure(id, "rtc", "net-tick-val", tick_net, "tick");
 
     return obs_pass();
 }
