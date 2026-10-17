@@ -6266,4 +6266,189 @@ static obs_result check_gt05_pad_and_np(void) {
     return obs_pass();
 }
 
+/* ========================================================================= */
+/* REQ-20261017T1135Z-gt09: Next three online start-up placeholders           */
+/* ========================================================================= */
+static obs_result check_gt09_placeholders(void) {
+    const char *id = "000-boot/gt09-placeholders";
+    obs_jmp_buf guard;
+
+    /* 1. sceWebBrowserDialogInitialize() */
+    int rc_sm_wb = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        rc_sm_wb = sceSysmoduleLoadModule(0x00AB);
+    }
+    obs_report_measure(id, "webbrowserdialog", "sysmodule-id", 0x00AB, "id");
+    obs_report_measure(id, "webbrowserdialog", "sysmodule-load-rc",
+                       (uint64_t)(uint32_t)rc_sm_wb, "code");
+
+    typedef int (*fn_wb_init_t)(void);
+    fn_wb_init_t p_wb_init = NULL;
+    int h_wb = obs_module_open("libSceWebBrowserDialog");
+    if (h_wb <= 0 && obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        h_wb = sceKernelLoadStartModule("/system/common/lib/libSceWebBrowserDialog.sprx",
+                                        0, NULL, 0, NULL, NULL);
+    }
+    if (h_wb > 0) {
+        p_wb_init = (fn_wb_init_t)obs_module_symbol(h_wb, "$jqb7HntFQFc");
+        if (!p_wb_init)
+            p_wb_init = (fn_wb_init_t)obs_module_symbol(h_wb, "sceWebBrowserDialogInitialize");
+    }
+    obs_report_measure(id, "webbrowserdialog", "bound",
+                       (uint64_t)(p_wb_init != NULL), "bool");
+
+    if (p_wb_init) {
+        int rc_wb1 = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_wb1 = p_wb_init();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_wb1 = -sig;
+            obs_report_measure(id, "webbrowserdialog", "init-call1-fault",
+                               (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "webbrowserdialog", "init-call1-rc",
+                           (uint64_t)(uint32_t)rc_wb1, "code");
+
+        int rc_wb2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_wb2 = p_wb_init();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_wb2 = -sig;
+            obs_report_measure(id, "webbrowserdialog", "init-call2-fault",
+                               (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "webbrowserdialog", "init-call2-rc",
+                           (uint64_t)(uint32_t)rc_wb2, "code");
+    }
+
+    /* 2. sceGameLiveStreamingInitialize(0x4000) */
+    int rc_sm_gls = -1;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        rc_sm_gls = sceSysmoduleLoadModule(0x0081);
+    }
+    obs_report_measure(id, "gamelivestreaming", "sysmodule-id", 0x0081, "id");
+    obs_report_measure(id, "gamelivestreaming", "sysmodule-load-rc",
+                       (uint64_t)(uint32_t)rc_sm_gls, "code");
+
+    typedef int (*fn_gls_init_t)(uint64_t);
+    fn_gls_init_t p_gls_init = NULL;
+    int h_gls = obs_module_open("libSceGameLiveStreaming");
+    if (h_gls <= 0 && obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        h_gls = sceKernelLoadStartModule("/system/common/lib/libSceGameLiveStreaming.sprx",
+                                         0, NULL, 0, NULL, NULL);
+    }
+    if (h_gls > 0) {
+        p_gls_init = (fn_gls_init_t)obs_module_symbol(h_gls, "$kvYEw2lBndk");
+        if (!p_gls_init)
+            p_gls_init = (fn_gls_init_t)obs_module_symbol(h_gls, "sceGameLiveStreamingInitialize");
+    }
+    obs_report_measure(id, "gamelivestreaming", "bound",
+                       (uint64_t)(p_gls_init != NULL), "bool");
+
+    if (p_gls_init) {
+        int rc_gls1 = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_gls1 = p_gls_init(0x4000);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_gls1 = -sig;
+            obs_report_measure(id, "gamelivestreaming", "init-call1-fault",
+                               (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "gamelivestreaming", "init-call1-rc",
+                           (uint64_t)(uint32_t)rc_gls1, "code");
+
+        int rc_gls2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_gls2 = p_gls_init(0x4000);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_gls2 = -sig;
+            obs_report_measure(id, "gamelivestreaming", "init-call2-fault",
+                               (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "gamelivestreaming", "init-call2-rc",
+                           (uint64_t)(uint32_t)rc_gls2, "code");
+    }
+
+    /* 3. sceSharePlayInitialize(pool, 0x1800) */
+    int rc_sm_sp = -1;
+    uint32_t sm_sp_id = 0x010f;
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        rc_sm_sp = sceSysmoduleLoadModule(0x010f);
+    }
+    obs_report_measure(id, "shareplay", "sysmodule-id", (uint64_t)sm_sp_id, "id");
+    obs_report_measure(id, "shareplay", "sysmodule-load-rc",
+                       (uint64_t)(uint32_t)rc_sm_sp, "code");
+
+    typedef int (*fn_sp_init_t)(void *, size_t);
+    fn_sp_init_t p_sp_init = NULL;
+    int h_sp = obs_module_open("libSceSharePlay");
+    if (h_sp <= 0 && obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        h_sp = sceKernelLoadStartModule("/system/common/lib/libSceSharePlay.sprx",
+                                        0, NULL, 0, NULL, NULL);
+    }
+    if (h_sp > 0) {
+        p_sp_init = (fn_sp_init_t)obs_module_symbol(h_sp, "$isruqthpYcw");
+        if (!p_sp_init)
+            p_sp_init = (fn_sp_init_t)obs_module_symbol(h_sp, "sceSharePlayInitialize");
+    }
+    obs_report_measure(id, "shareplay", "bound",
+                       (uint64_t)(p_sp_init != NULL), "bool");
+
+    if (p_sp_init) {
+        uint8_t pool[0x1800];
+        memset(pool, 0xc7, sizeof(pool));
+
+        int rc_sp1 = -1;
+        int sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_sp1 = p_sp_init(pool, sizeof(pool));
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_sp1 = -sig;
+            obs_report_measure(id, "shareplay", "init-call1-fault",
+                               (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "shareplay", "init-call1-rc",
+                           (uint64_t)(uint32_t)rc_sp1, "code");
+
+        uint32_t changed = 0;
+        for (size_t i = 0; i < sizeof(pool); i++) {
+            if (pool[i] != 0xc7)
+                changed++;
+        }
+        obs_report_measure(id, "shareplay", "init-call1-pool-changed-count",
+                           (uint64_t)changed, "count");
+        obs_report_bytes(id, "shareplay", "pool-head-16b", 0, pool, 16);
+
+        int rc_sp2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_sp2 = p_sp_init(pool, sizeof(pool));
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_sp2 = -sig;
+            obs_report_measure(id, "shareplay", "init-call2-fault",
+                               (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "shareplay", "init-call2-rc",
+                           (uint64_t)(uint32_t)rc_sp2, "code");
+    }
+
+    return obs_pass();
+}
+
 #endif /* OBS_WAVE2_CHECKS_INC */

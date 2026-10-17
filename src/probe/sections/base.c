@@ -10296,6 +10296,9 @@ static const obs_check boot_checks[] = {
     {"000-boot/gt07-stubbed-calls", "libSceVoice", "sceVoiceSetThreadsParams",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt07_stubbed_calls,
      OBS_FROM_SPEC},
+    {"000-boot/gt09-placeholders", "libSceWebBrowserDialog",
+     "sceWebBrowserDialogInitialize", OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL,
+     check_gt09_placeholders, OBS_FROM_SPEC},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };

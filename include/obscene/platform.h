@@ -2535,26 +2535,16 @@ OBS_WEAK int sceSystemServicePowerTick(void) __asm__("$ky8+cQvJtl0");
 /* REQ-20261017T0530Z-gt07 */
 OBS_WEAK int
 sceVoiceSetThreadsParams_static(const void *params) __asm__("$clyKUyi3RYU");
-OBS_WEAK int sceAppContentInitialize_static(const void *init,
-                                            const void *boot) __asm__("$R9lA82OraNs");
-OBS_WEAK int sceAppContentDownloadDataGetAvailableSpaceKb_static(
-    const char *mount, uint64_t *kb) __asm__("$Gl6w5i0JokY");
-OBS_WEAK int sceVideoRecordingSetInfo_static(int type, const void *str,
-                                             size_t size) __asm__("$Fc8qxlKINYQ");
 
 /* REQ-20261017T0230Z-gt06 */
 OBS_WEAK int sceNpRegisterStateCallbackA_static(void (*cb)(int, int, void *),
                                                 void *arg) __asm__("$qQJfO8HAiaY");
-OBS_WEAK int sceNpCheckCallback_static(void) __asm__("$3Zl8BePTh9Y");
-OBS_WEAK int sceNpGetState_static(int user, void *state) __asm__("$eQH7nWPcAgc");
 
 /* REQ-20261016T2335Z-gt05 */
 OBS_WEAK int scePadOpen_static(int user, int type, int index,
                                const void *param) __asm__("$xk0AcarP3V4");
 OBS_WEAK int scePadReadState_static(int handle, void *state) __asm__("$YndgXqQVV7c");
 OBS_WEAK int scePadClose_static(int handle) __asm__("$6ncge5+l5Qs");
-OBS_WEAK int
-sceNpEntitlementAccessInitialize_static(const void *param) __asm__("$jO8DM8oyego");
 OBS_WEAK int sceNpTrophy2CreateContext_static(uint64_t *ctx, int user, uint64_t a3,
                                               uint64_t a4) __asm__("$Bagshr7OQ6Q");
 OBS_WEAK int sceNpUniversalDataSystemTerminate_static(void) __asm__("$47UAEuQl+iI");
