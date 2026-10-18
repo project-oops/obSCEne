@@ -1970,6 +1970,9 @@ static const obs_import obs_platform_imports[] = {
     {"libSceVoice", "sceVoiceStop"},
     {"libSceVoice", "$b7kJI+nx2hg"},
     {"libSceVoice", "sceVoiceDeletePort"},
+    /* REQ-20261018T1430Z-gt14 */
+    {"libSceVoice", "$ajVj3QG2um4"},
+    {"libSceVoice", "sceVoiceDisconnectIPortFromOPort"},
 };
 
 /* Calls `fn` once per import declared outside the census. */

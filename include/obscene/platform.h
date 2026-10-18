@@ -2563,5 +2563,9 @@ OBS_WEAK int sceVoiceGetPortInfo_static(uint32_t portId,
 OBS_WEAK int sceVoiceStart_static(void) __asm__("$54phPH2LZls");
 OBS_WEAK int sceVoiceStop_static(void) __asm__("$Ao2YNSA7-Qo");
 OBS_WEAK int sceVoiceDeletePort_static(uint32_t portId) __asm__("$b7kJI+nx2hg");
+/* REQ-20261018T1430Z-gt14: libSceVoice disconnect */
+OBS_WEAK int
+sceVoiceDisconnectIPortFromOPort_static(uint32_t inPortId,
+                                        uint32_t outPortId) __asm__("$ajVj3QG2um4");
 
 #endif /* OBSCENE_PLATFORM_H */

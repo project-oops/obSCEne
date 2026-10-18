@@ -7725,5 +7725,421 @@ static obs_result check_gt13_voice_ports(void) {
     return obs_pass();
 }
 
+/* REQ-20261018T1430Z-gt14: libSceVoice port disconnects */
+static obs_result check_gt14_voice_disconnects(void) {
+    const char *id = "000-boot/gt14-voice-disconnects";
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    /* Load sysmodule 0x001A (libSceVoice) */
+    if (obs_address_is_callable((const void *)&sceSysmoduleLoadModule)) {
+        (void)sceSysmoduleLoadModule(0x001A);
+    }
+    int h_voice = obs_module_open("libSceVoice");
+    obs_report_measure(id, "libSceVoice", "handle", (uint64_t)(uint32_t)h_voice,
+                       "handle");
+
+    typedef int (*fn_v_init_t)(const void *, uint32_t);
+    typedef int (*fn_v_set_t)(void *);
+    typedef int (*fn_v_create_t)(uint32_t *, const void *);
+    typedef int (*fn_v_connect_t)(uint32_t, uint32_t);
+    typedef int (*fn_v_disconnect_t)(uint32_t, uint32_t);
+    typedef int (*fn_v_getinfo_t)(uint32_t, void *);
+    typedef int (*fn_v_start_t)(void);
+    typedef int (*fn_v_stop_t)(void);
+    typedef int (*fn_v_del_t)(uint32_t);
+
+    fn_v_init_t p_v_init = NULL;
+    fn_v_set_t p_v_set = NULL;
+    fn_v_create_t p_v_create = NULL;
+    fn_v_connect_t p_v_connect = NULL;
+    fn_v_disconnect_t p_v_disconnect = NULL;
+    fn_v_getinfo_t p_v_getinfo = NULL;
+    fn_v_start_t p_v_start = NULL;
+    fn_v_stop_t p_v_stop = NULL;
+    fn_v_del_t p_v_del = NULL;
+
+    if (obs_address_is_callable((const void *)&sceVoiceInit_static)) {
+        p_v_init = (fn_v_init_t)&sceVoiceInit_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceSetThreadsParams_static)) {
+        p_v_set = (fn_v_set_t)&sceVoiceSetThreadsParams_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceCreatePort_static)) {
+        p_v_create = (fn_v_create_t)&sceVoiceCreatePort_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceConnectIPortToOPort_static)) {
+        p_v_connect = (fn_v_connect_t)&sceVoiceConnectIPortToOPort_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceDisconnectIPortFromOPort_static)) {
+        p_v_disconnect = (fn_v_disconnect_t)&sceVoiceDisconnectIPortFromOPort_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceGetPortInfo_static)) {
+        p_v_getinfo = (fn_v_getinfo_t)&sceVoiceGetPortInfo_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceStart_static)) {
+        p_v_start = (fn_v_start_t)&sceVoiceStart_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceStop_static)) {
+        p_v_stop = (fn_v_stop_t)&sceVoiceStop_static;
+    }
+    if (obs_address_is_callable((const void *)&sceVoiceDeletePort_static)) {
+        p_v_del = (fn_v_del_t)&sceVoiceDeletePort_static;
+    }
+
+    if (h_voice > 0) {
+        if (!p_v_init) {
+            p_v_init = (fn_v_init_t)obs_module_symbol(h_voice, "$9TrhuGzberQ");
+            if (!p_v_init) p_v_init = (fn_v_init_t)obs_module_symbol(h_voice, "sceVoiceInit");
+        }
+        if (!p_v_set) {
+            p_v_set = (fn_v_set_t)obs_module_symbol(h_voice, "$clyKUyi3RYU");
+            if (!p_v_set) p_v_set = (fn_v_set_t)obs_module_symbol(h_voice, "sceVoiceSetThreadsParams");
+        }
+        if (!p_v_create) {
+            p_v_create = (fn_v_create_t)obs_module_symbol(h_voice, "$nXpje5yNpaE");
+            if (!p_v_create) p_v_create = (fn_v_create_t)obs_module_symbol(h_voice, "sceVoiceCreatePort");
+        }
+        if (!p_v_connect) {
+            p_v_connect = (fn_v_connect_t)obs_module_symbol(h_voice, "$oV9GAdJ23Gw");
+            if (!p_v_connect) p_v_connect = (fn_v_connect_t)obs_module_symbol(h_voice, "sceVoiceConnectIPortToOPort");
+        }
+        if (!p_v_disconnect) {
+            p_v_disconnect = (fn_v_disconnect_t)obs_module_symbol(h_voice, "$ajVj3QG2um4");
+            if (!p_v_disconnect) p_v_disconnect = (fn_v_disconnect_t)obs_module_symbol(h_voice, "sceVoiceDisconnectIPortFromOPort");
+        }
+        if (!p_v_getinfo) {
+            p_v_getinfo = (fn_v_getinfo_t)obs_module_symbol(h_voice, "$CrLqDwWLoXM");
+            if (!p_v_getinfo) p_v_getinfo = (fn_v_getinfo_t)obs_module_symbol(h_voice, "sceVoiceGetPortInfo");
+        }
+        if (!p_v_start) {
+            p_v_start = (fn_v_start_t)obs_module_symbol(h_voice, "$54phPH2LZls");
+            if (!p_v_start) p_v_start = (fn_v_start_t)obs_module_symbol(h_voice, "sceVoiceStart");
+        }
+        if (!p_v_stop) {
+            p_v_stop = (fn_v_stop_t)obs_module_symbol(h_voice, "$Ao2YNSA7-Qo");
+            if (!p_v_stop) p_v_stop = (fn_v_stop_t)obs_module_symbol(h_voice, "sceVoiceStop");
+        }
+        if (!p_v_del) {
+            p_v_del = (fn_v_del_t)obs_module_symbol(h_voice, "$b7kJI+nx2hg");
+            if (!p_v_del) p_v_del = (fn_v_del_t)obs_module_symbol(h_voice, "$b7kJI-nx2hg");
+            if (!p_v_del) p_v_del = (fn_v_del_t)obs_module_symbol(h_voice, "sceVoiceDeletePort");
+        }
+    }
+
+    obs_report_measure(id, "sceVoiceDisconnectIPortFromOPort", "bound",
+                       (uint64_t)(p_v_disconnect != NULL), "bool");
+
+    /* Initialise voice subsystem as in gt02/gt10 */
+    if (p_v_init) {
+        uint8_t init_param[0x20];
+        memset(init_param, 0, sizeof(init_param));
+        *(uint32_t *)init_param = 0x10000000;
+        int rc_vi = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_vi = p_v_init(init_param, 100);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_vi = -sig;
+        }
+        obs_report_measure(id, "voice-init", "rc", (uint64_t)(uint32_t)rc_vi, "code");
+    }
+
+    if (p_v_set) {
+        uint8_t p38[0x38];
+        memset(p38, 0, sizeof(p38));
+        *(uint32_t *)(p38 + 0x00) = 1;
+        *(uint32_t *)(p38 + 0x04) = 0x2bc;
+        *(uint64_t *)(p38 + 0x08) = 0x7f;
+        *(uint32_t *)(p38 + 0x10) = 0x2bc;
+        *(uint32_t *)(p38 + 0x14) = 0;
+        *(uint64_t *)(p38 + 0x18) = 0x7f;
+        *(uint32_t *)(p38 + 0x20) = 0x2bc;
+        *(uint32_t *)(p38 + 0x24) = 0;
+        *(uint64_t *)(p38 + 0x28) = 0x7f;
+        *(uint64_t *)(p38 + 0x30) = 0;
+        int rc_set = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_set = p_v_set(p38);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_set = -sig;
+        }
+        obs_report_measure(id, "voice-set-threads", "rc", (uint64_t)(uint32_t)rc_set, "code");
+    }
+
+    int user_id = 0x1ea2f4d9;
+    if (obs_address_is_callable((const void *)&sceUserServiceGetInitialUser)) {
+        (void)sceUserServiceGetInitialUser(&user_id);
+    }
+    obs_report_measure(id, "user", "id", (uint64_t)(uint32_t)user_id, "id");
+
+    uint32_t p0 = 0xffffffff, p1 = 0xffffffff, p2 = 0xffffffff, p3 = 0xffffffff;
+
+    /* 1. Create p0, p1, p2, p3 */
+    if (p_v_create) {
+        uint8_t b0[0x18] = {0};
+        *(uint32_t *)(b0 + 0x00) = 0;
+        *(uint32_t *)(b0 + 0x04) = 0;
+        *(float *)(b0 + 0x08) = 1.0f;
+        *(uint32_t *)(b0 + 0x0c) = (uint32_t)user_id;
+        *(uint64_t *)(b0 + 0x10) = 0;
+        int rc_p0 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p0 = p_v_create(&p0, b0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p0 = -sig;
+        }
+        obs_report_measure(id, "create-p0", "rc", (uint64_t)(uint32_t)rc_p0, "code");
+        obs_report_measure(id, "create-p0", "port-id", (uint64_t)p0, "id");
+
+        uint8_t b1[0x18] = {0};
+        *(uint32_t *)(b1 + 0x00) = 4;
+        *(uint32_t *)(b1 + 0x04) = 0xa;
+        *(float *)(b1 + 0x08) = 1.0f;
+        *(uint32_t *)(b1 + 0x0c) = 0x1c84;
+        *(uint64_t *)(b1 + 0x10) = 0;
+        int rc_p1 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p1 = p_v_create(&p1, b1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p1 = -sig;
+        }
+        obs_report_measure(id, "create-p1", "rc", (uint64_t)(uint32_t)rc_p1, "code");
+        obs_report_measure(id, "create-p1", "port-id", (uint64_t)p1, "id");
+
+        uint8_t b2[0x18] = {0};
+        *(uint32_t *)(b2 + 0x00) = 3;
+        *(uint32_t *)(b2 + 0x04) = 0x40;
+        *(float *)(b2 + 0x08) = 1.0f;
+        *(uint32_t *)(b2 + 0x0c) = 0x800;
+        *(uint32_t *)(b2 + 0x10) = 0;
+        *(uint32_t *)(b2 + 0x14) = 0x3e80;
+        int rc_p2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p2 = p_v_create(&p2, b2);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p2 = -sig;
+        }
+        obs_report_measure(id, "create-p2", "rc", (uint64_t)(uint32_t)rc_p2, "code");
+        obs_report_measure(id, "create-p2", "port-id", (uint64_t)p2, "id");
+
+        uint8_t b3[0x18] = {0};
+        *(uint32_t *)(b3 + 0x00) = 5;
+        *(uint32_t *)(b3 + 0x04) = 0;
+        *(float *)(b3 + 0x08) = 1.0f;
+        *(uint32_t *)(b3 + 0x0c) = (uint32_t)user_id;
+        *(uint64_t *)(b3 + 0x10) = 2;
+        int rc_p3 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_p3 = p_v_create(&p3, b3);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_p3 = -sig;
+        }
+        obs_report_measure(id, "create-p3", "rc", (uint64_t)(uint32_t)rc_p3, "code");
+        obs_report_measure(id, "create-p3", "port-id", (uint64_t)p3, "id");
+    }
+
+    /* Connect (p0, p1) and (p0, p2) */
+    if (p_v_connect) {
+        int rc_c01 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_c01 = p_v_connect(p0, p1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_c01 = -sig;
+        }
+        obs_report_measure(id, "connect-p0-p1", "rc", (uint64_t)(uint32_t)rc_c01, "code");
+
+        int rc_c02 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_c02 = p_v_connect(p0, p2);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_c02 = -sig;
+        }
+        obs_report_measure(id, "connect-p0-p2", "rc", (uint64_t)(uint32_t)rc_c02, "code");
+    }
+
+    /* sceVoiceStart() and sceVoiceStop() */
+    int rc_start = -1;
+    if (p_v_start) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_start = p_v_start();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_start = -sig;
+        }
+    }
+    obs_report_measure(id, "voice-start", "rc", (uint64_t)(uint32_t)rc_start, "code");
+
+    int rc_stop = -1;
+    if (p_v_stop) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_stop = p_v_stop();
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_stop = -sig;
+        }
+    }
+    obs_report_measure(id, "voice-stop", "rc", (uint64_t)(uint32_t)rc_stop, "code");
+
+    /* 1. sceVoiceDisconnectIPortFromOPort(p0, p1), then the same again */
+    int rc_dc01_1 = -1;
+    int rc_dc01_2 = -1;
+    if (p_v_disconnect) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_dc01_1 = p_v_disconnect(p0, p1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_dc01_1 = -sig;
+        }
+
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_dc01_2 = p_v_disconnect(p0, p1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_dc01_2 = -sig;
+        }
+    }
+    obs_report_measure(id, "disconnect-p0-p1-first", "rc", (uint64_t)(uint32_t)rc_dc01_1, "code");
+    obs_report_measure(id, "disconnect-p0-p1-second", "rc", (uint64_t)(uint32_t)rc_dc01_2, "code");
+
+    /* 2. sceVoiceDisconnectIPortFromOPort(p0, p2) */
+    int rc_dc02 = -1;
+    if (p_v_disconnect) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_dc02 = p_v_disconnect(p0, p2);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_dc02 = -sig;
+        }
+    }
+    obs_report_measure(id, "disconnect-p0-p2", "rc", (uint64_t)(uint32_t)rc_dc02, "code");
+
+    /* 3. sceVoiceDisconnectIPortFromOPort(p0, p3) - never connected */
+    int rc_dc03 = -1;
+    if (p_v_disconnect) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_dc03 = p_v_disconnect(p0, p3);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_dc03 = -sig;
+        }
+    }
+    obs_report_measure(id, "disconnect-p0-p3-unconnected", "rc", (uint64_t)(uint32_t)rc_dc03, "code");
+
+    /* 4. sceVoiceDisconnectIPortFromOPort(p1, p0) - reverse order */
+    int rc_dc10 = -1;
+    if (p_v_disconnect) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_dc10 = p_v_disconnect(p1, p0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_dc10 = -sig;
+        }
+    }
+    obs_report_measure(id, "disconnect-p1-p0-reverse", "rc", (uint64_t)(uint32_t)rc_dc10, "code");
+
+    /* 5. sceVoiceDeletePort of p1, then sceVoiceDisconnectIPortFromOPort(p0, p1) - deleted port */
+    int rc_del_p1 = -1;
+    int rc_dc_after_del = -1;
+    if (p_v_del) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_del_p1 = p_v_del(p1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_del_p1 = -sig;
+        }
+    }
+    obs_report_measure(id, "del-p1", "rc", (uint64_t)(uint32_t)rc_del_p1, "code");
+
+    if (p_v_disconnect) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_dc_after_del = p_v_disconnect(p0, p1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_dc_after_del = -sig;
+        }
+    }
+    obs_report_measure(id, "disconnect-p0-p1-after-del", "rc", (uint64_t)(uint32_t)rc_dc_after_del, "code");
+
+    /* 6. sceVoiceDeletePort of p0, p2, p3 rc */
+    int rc_del_p0 = -1;
+    int rc_del_p2 = -1;
+    int rc_del_p3 = -1;
+    if (p_v_del) {
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_del_p0 = p_v_del(p0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_del_p0 = -sig;
+        }
+
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_del_p2 = p_v_del(p2);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_del_p2 = -sig;
+        }
+
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_del_p3 = p_v_del(p3);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_del_p3 = -sig;
+        }
+    }
+    obs_report_measure(id, "del-p0", "rc", (uint64_t)(uint32_t)rc_del_p0, "code");
+    obs_report_measure(id, "del-p2", "rc", (uint64_t)(uint32_t)rc_del_p2, "code");
+    obs_report_measure(id, "del-p3", "rc", (uint64_t)(uint32_t)rc_del_p3, "code");
+
+    return obs_pass();
+}
+
 #endif /* OBS_WAVE2_CHECKS_INC */
 
