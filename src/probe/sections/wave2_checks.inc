@@ -7010,4 +7010,348 @@ static obs_result check_tr01_trophy_savedata_rtc(void) {
     return obs_pass();
 }
 
+/* ========================================================================== */
+/* REQ-20261018T0045Z-gt12: Three Command-Buffer Builders in Story Mode Shapes */
+/* ========================================================================== */
+typedef struct {
+    uint64_t count_prefix;
+    uint64_t begin;
+    uint64_t end;
+    uint64_t cur;
+    uint64_t end2;
+    uint64_t overflow_cb;
+    uint64_t overflow_ctx;
+    uint32_t reserved_dw;
+    uint32_t pad34;
+    uint8_t cmdbuf[512];
+    uint8_t guard[64];
+} obs_gt12_cb_probe;
+
+static void gt12_cb_prepare(obs_gt12_cb_probe *probe) {
+    probe->count_prefix = 0;
+    probe->begin = (uint64_t)(uintptr_t)probe->cmdbuf;
+    probe->end = (uint64_t)(uintptr_t)(probe->cmdbuf + sizeof(probe->cmdbuf));
+    probe->cur = probe->begin;
+    probe->end2 = probe->end;
+    probe->overflow_cb = 0;
+    probe->overflow_ctx = 0;
+    probe->reserved_dw = 0;
+    probe->pad34 = 0;
+    memset(probe->cmdbuf, 0xcc, sizeof(probe->cmdbuf));
+    memset(probe->guard, 0xc7, sizeof(probe->guard));
+}
+
+static obs_result check_gt12_story_builders(void) {
+    const char *id = "000-boot/gt12-story-builders";
+    obs_jmp_buf guard;
+    int sig = 0;
+
+    int h_agc = obs_module_open("libSceAgc");
+    if (h_agc <= 0 && obs_address_is_callable((const void *)&sceKernelLoadStartModule)) {
+        h_agc = sceKernelLoadStartModule("/system/common/lib/libSceAgc.sprx", 0, NULL, 0, NULL, NULL);
+    }
+    obs_report_measure(id, "libSceAgc", "handle", (uint64_t)(uint32_t)h_agc, "handle");
+
+    typedef uint64_t (*fn_agc_builder_t)(void *writer, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5);
+    typedef uint64_t (*fn_agc_rewind_patch_t)(void *packet, uint64_t state);
+
+    fn_agc_builder_t fn_jump = NULL;
+    fn_agc_builder_t fn_write_data = NULL;
+    fn_agc_builder_t fn_event_write = NULL;
+    fn_agc_builder_t fn_rewind = NULL;
+    fn_agc_rewind_patch_t fn_rewind_patch = NULL;
+    fn_agc_builder_t fn_wait_reg_mem = NULL;
+
+    if (obs_address_is_callable((const void *)&sceAgcDcbJump)) {
+        fn_jump = (fn_agc_builder_t)&sceAgcDcbJump;
+    }
+    if (obs_address_is_callable((const void *)&sceAgcAcbWriteData)) {
+        fn_write_data = (fn_agc_builder_t)&sceAgcAcbWriteData;
+    }
+    if (obs_address_is_callable((const void *)&sceAgcAcbEventWrite)) {
+        fn_event_write = (fn_agc_builder_t)&sceAgcAcbEventWrite;
+    }
+    if (obs_address_is_callable((const void *)&sceAgcDcbRewind)) {
+        fn_rewind = (fn_agc_builder_t)&sceAgcDcbRewind;
+    }
+    if (obs_address_is_callable((const void *)&sceAgcAcbWaitRegMem)) {
+        fn_wait_reg_mem = (fn_agc_builder_t)&sceAgcAcbWaitRegMem;
+    }
+
+    if (h_agc > 0) {
+        if (!fn_jump) {
+            fn_jump = (fn_agc_builder_t)obs_module_symbol(h_agc, "$o0TctNARIMU");
+            if (!fn_jump) fn_jump = (fn_agc_builder_t)obs_module_symbol(h_agc, "$xSAR0LTcRKM");
+            if (!fn_jump) fn_jump = (fn_agc_builder_t)obs_module_symbol(h_agc, "sceAgcDcbJump");
+        }
+        if (!fn_write_data) {
+            fn_write_data = (fn_agc_builder_t)obs_module_symbol(h_agc, "$hM+Qs9c+nnk");
+            if (!fn_write_data) fn_write_data = (fn_agc_builder_t)obs_module_symbol(h_agc, "$eZ4+17OQz4Q");
+            if (!fn_write_data) fn_write_data = (fn_agc_builder_t)obs_module_symbol(h_agc, "sceAgcAcbWriteData");
+        }
+        if (!fn_event_write) {
+            fn_event_write = (fn_agc_builder_t)obs_module_symbol(h_agc, "$4STpdZqzVnA");
+            if (!fn_event_write) fn_event_write = (fn_agc_builder_t)obs_module_symbol(h_agc, "$cFazmnXpJOE");
+            if (!fn_event_write) fn_event_write = (fn_agc_builder_t)obs_module_symbol(h_agc, "sceAgcAcbEventWrite");
+        }
+        if (!fn_rewind) {
+            fn_rewind = (fn_agc_builder_t)obs_module_symbol(h_agc, "$rzCw94Mx980");
+            if (!fn_rewind) fn_rewind = (fn_agc_builder_t)obs_module_symbol(h_agc, "$zfcxg-ewMK8");
+            if (!fn_rewind) fn_rewind = (fn_agc_builder_t)obs_module_symbol(h_agc, "sceAgcDcbRewind");
+        }
+        if (!fn_rewind_patch) {
+            fn_rewind_patch = (fn_agc_rewind_patch_t)obs_module_symbol(h_agc, "$nt5pCN9AJc4");
+            if (!fn_rewind_patch) fn_rewind_patch = (fn_agc_rewind_patch_t)obs_module_symbol(h_agc, "sceAgcRewindPatchSetRewindState");
+        }
+        if (!fn_wait_reg_mem) {
+            fn_wait_reg_mem = (fn_agc_builder_t)obs_module_symbol(h_agc, "$TgbnA+r32YY");
+            if (!fn_wait_reg_mem) fn_wait_reg_mem = (fn_agc_builder_t)obs_module_symbol(h_agc, "sceAgcAcbWaitRegMem");
+        }
+    }
+
+    obs_report_measure(id, "sceAgcDcbJump", "bound", (uint64_t)(fn_jump != NULL), "bool");
+    obs_report_measure(id, "sceAgcAcbWriteData", "bound", (uint64_t)(fn_write_data != NULL), "bool");
+    obs_report_measure(id, "sceAgcAcbEventWrite", "bound", (uint64_t)(fn_event_write != NULL), "bool");
+    obs_report_measure(id, "sceAgcDcbRewind", "bound", (uint64_t)(fn_rewind != NULL), "bool");
+    obs_report_measure(id, "sceAgcRewindPatchSetRewindState", "bound", (uint64_t)(fn_rewind_patch != NULL), "bool");
+    obs_report_measure(id, "sceAgcAcbWaitRegMem", "bound", (uint64_t)(fn_wait_reg_mem != NULL), "bool");
+
+    static _Alignas(64) obs_gt12_cb_probe s_probe;
+    static _Alignas(64) uint8_t s_target_buf[256];
+    memset(s_target_buf, 0x5a, sizeof(s_target_buf));
+
+    /* 1. sceAgcDcbJump */
+    if (fn_jump) {
+        /* Arm 1: (dcb, 1, 2, target, 0xe) */
+        gt12_cb_prepare(&s_probe);
+        int rc1 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc1 = (int)fn_jump(&s_probe.begin, 1, 2, (uint64_t)(uintptr_t)s_target_buf, 0xe, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc1 = -sig;
+            obs_report_measure(id, "jump-arm1", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv1 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "jump-arm1", "rc", (uint64_t)(uint32_t)rc1, "code");
+        obs_report_measure(id, "jump-arm1", "advance", (uint64_t)adv1, "bytes");
+        obs_report_bytes(id, "jump-arm1", "packet", 0, s_probe.cmdbuf, adv1 > 0 && adv1 <= 64 ? adv1 : 16);
+
+        /* Arm 2: (dcb, 1, 2, 0, 0) */
+        gt12_cb_prepare(&s_probe);
+        int rc2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc2 = (int)fn_jump(&s_probe.begin, 1, 2, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc2 = -sig;
+            obs_report_measure(id, "jump-arm2", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv2 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "jump-arm2", "rc", (uint64_t)(uint32_t)rc2, "code");
+        obs_report_measure(id, "jump-arm2", "advance", (uint64_t)adv2, "bytes");
+        obs_report_bytes(id, "jump-arm2", "packet", 0, s_probe.cmdbuf, adv2 > 0 && adv2 <= 64 ? adv2 : 16);
+
+        /* Arm 3: (dcb, 0, 0, target, 0xe) */
+        gt12_cb_prepare(&s_probe);
+        int rc3 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc3 = (int)fn_jump(&s_probe.begin, 0, 0, (uint64_t)(uintptr_t)s_target_buf, 0xe, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc3 = -sig;
+            obs_report_measure(id, "jump-arm3", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv3 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "jump-arm3", "rc", (uint64_t)(uint32_t)rc3, "code");
+        obs_report_measure(id, "jump-arm3", "advance", (uint64_t)adv3, "bytes");
+        obs_report_bytes(id, "jump-arm3", "packet", 0, s_probe.cmdbuf, adv3 > 0 && adv3 <= 64 ? adv3 : 16);
+    }
+
+    /* 2. sceAgcAcbWriteData */
+    if (fn_write_data) {
+        static _Alignas(64) uint32_t s_src_data[64];
+        for (int i = 0; i < 64; i++) s_src_data[i] = 0x11111111u;
+        uint64_t dst_addr = 0x740040d00000ULL;
+
+        /* Arm 1: (acb, 2, 0, dst, src, 1) */
+        gt12_cb_prepare(&s_probe);
+        int rc_wd1 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_wd1 = (int)fn_write_data(&s_probe.begin, 2, 0, dst_addr, (uint64_t)(uintptr_t)s_src_data, 1);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_wd1 = -sig;
+            obs_report_measure(id, "writedata-cnt1", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv_wd1 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "writedata-cnt1", "rc", (uint64_t)(uint32_t)rc_wd1, "code");
+        obs_report_measure(id, "writedata-cnt1", "advance", (uint64_t)adv_wd1, "bytes");
+        obs_report_bytes(id, "writedata-cnt1", "packet", 0, s_probe.cmdbuf, adv_wd1 > 0 && adv_wd1 <= 128 ? adv_wd1 : 32);
+
+        /* Arm 2: (acb, 2, 0, dst, src, 0x40) */
+        gt12_cb_prepare(&s_probe);
+        int rc_wd40 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_wd40 = (int)fn_write_data(&s_probe.begin, 2, 0, dst_addr, (uint64_t)(uintptr_t)s_src_data, 0x40);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_wd40 = -sig;
+            obs_report_measure(id, "writedata-cnt40", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv_wd40 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "writedata-cnt40", "rc", (uint64_t)(uint32_t)rc_wd40, "code");
+        obs_report_measure(id, "writedata-cnt40", "advance", (uint64_t)adv_wd40, "bytes");
+        obs_report_bytes(id, "writedata-cnt40", "packet", 0, s_probe.cmdbuf, adv_wd40 > 0 && adv_wd40 <= 300 ? adv_wd40 : 64);
+    }
+
+    /* 3. sceAgcAcbEventWrite */
+    if (fn_event_write) {
+        /* Arm 1: (acb, 7, 0, 0x78, 0x4ee) */
+        gt12_cb_prepare(&s_probe);
+        int rc_ew1 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_ew1 = (int)fn_event_write(&s_probe.begin, 7, 0, 0x78, 0x4ee, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_ew1 = -sig;
+            obs_report_measure(id, "eventwrite-arm1", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv_ew1 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "eventwrite-arm1", "rc", (uint64_t)(uint32_t)rc_ew1, "code");
+        obs_report_measure(id, "eventwrite-arm1", "advance", (uint64_t)adv_ew1, "bytes");
+        obs_report_bytes(id, "eventwrite-arm1", "packet", 0, s_probe.cmdbuf, adv_ew1 > 0 && adv_ew1 <= 64 ? adv_ew1 : 16);
+
+        /* Arm 2: (acb, 7, 0, 0, 0) */
+        gt12_cb_prepare(&s_probe);
+        int rc_ew2 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_ew2 = (int)fn_event_write(&s_probe.begin, 7, 0, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_ew2 = -sig;
+            obs_report_measure(id, "eventwrite-arm2", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv_ew2 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "eventwrite-arm2", "rc", (uint64_t)(uint32_t)rc_ew2, "code");
+        obs_report_measure(id, "eventwrite-arm2", "advance", (uint64_t)adv_ew2, "bytes");
+        obs_report_bytes(id, "eventwrite-arm2", "packet", 0, s_probe.cmdbuf, adv_ew2 > 0 && adv_ew2 <= 64 ? adv_ew2 : 16);
+    }
+
+    /* 4. sceAgcDcbRewind and sceAgcRewindPatchSetRewindState */
+    if (fn_rewind) {
+        /* Arm 1: zero arguments */
+        gt12_cb_prepare(&s_probe);
+        int rc_rw0 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_rw0 = (int)fn_rewind(&s_probe.begin, 0, 0, 0, 0, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_rw0 = -sig;
+            obs_report_measure(id, "rewind-zero", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv_rw0 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "rewind-zero", "rc", (uint64_t)(uint32_t)rc_rw0, "code");
+        obs_report_measure(id, "rewind-zero", "advance", (uint64_t)adv_rw0, "bytes");
+        obs_report_bytes(id, "rewind-zero", "packet", 0, s_probe.cmdbuf, adv_rw0 > 0 && adv_rw0 <= 64 ? adv_rw0 : 16);
+
+        /* Arm 2: sentinel arguments */
+        gt12_cb_prepare(&s_probe);
+        int rc_rw1 = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_rw1 = (int)fn_rewind(&s_probe.begin, 0x11, 0x22, 0x33, 0x44, 0x55);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_rw1 = -sig;
+            obs_report_measure(id, "rewind-sentinels", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv_rw1 = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "rewind-sentinels", "rc", (uint64_t)(uint32_t)rc_rw1, "code");
+        obs_report_measure(id, "rewind-sentinels", "advance", (uint64_t)adv_rw1, "bytes");
+        obs_report_bytes(id, "rewind-sentinels", "packet", 0, s_probe.cmdbuf, adv_rw1 > 0 && adv_rw1 <= 64 ? adv_rw1 : 16);
+
+        /* Patch test */
+        if (fn_rewind_patch && adv_rw0 > 0) {
+            uint8_t pkt_copy[64];
+            memcpy(pkt_copy, s_probe.cmdbuf, sizeof(pkt_copy));
+            int rc_patch = -1;
+            sig = OBS_FAULT_ARM(&guard);
+            if (sig == 0) {
+                rc_patch = (int)fn_rewind_patch(s_probe.cmdbuf, 0x12345678ULL);
+                obs_fault_unregister();
+            } else {
+                obs_fault_unregister();
+                rc_patch = -sig;
+                obs_report_measure(id, "rewind-patch", "fault", (uint64_t)sig, "signal");
+            }
+            obs_report_measure(id, "rewind-patch", "rc", (uint64_t)(uint32_t)rc_patch, "code");
+            int changed = memcmp(pkt_copy, s_probe.cmdbuf, adv_rw0) != 0;
+            obs_report_measure(id, "rewind-patch", "changed", (uint64_t)changed, "bool");
+            obs_report_bytes(id, "rewind-patch", "packet-after", 0, s_probe.cmdbuf, adv_rw0);
+        }
+    }
+
+    /* 5. sceAgcAcbWaitRegMem */
+    if (fn_wait_reg_mem) {
+        gt12_cb_prepare(&s_probe);
+        int rc_wrm = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_wrm = (int)fn_wait_reg_mem(&s_probe.begin, 0, 3, 0, 3, 0);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_wrm = -sig;
+            obs_report_measure(id, "acb-waitregmem", "fault", (uint64_t)sig, "signal");
+        }
+        uint32_t adv_wrm = (uint32_t)(s_probe.cur - s_probe.begin);
+        obs_report_measure(id, "acb-waitregmem", "rc", (uint64_t)(uint32_t)rc_wrm, "code");
+        obs_report_measure(id, "acb-waitregmem", "advance", (uint64_t)adv_wrm, "bytes");
+        obs_report_bytes(id, "acb-waitregmem", "packet", 0, s_probe.cmdbuf, adv_wrm > 0 && adv_wrm <= 64 ? adv_wrm : 32);
+    }
+
+    /* 6. sceAgcDriverSubmitAcb */
+    int h_agcd = obs_module_open("libSceAgcDriver");
+    typedef int (*fn_submit_acb_t)(void *q, const void *acb, uint32_t count, void *extra);
+    fn_submit_acb_t fn_sub_acb = NULL;
+    if (h_agcd > 0) {
+        fn_sub_acb = (fn_submit_acb_t)obs_module_symbol(h_agcd, "$1PJFv69nJIE");
+        if (!fn_sub_acb) fn_sub_acb = (fn_submit_acb_t)obs_module_symbol(h_agcd, "sceAgcDriverSubmitAcb");
+    }
+    obs_report_measure(id, "sceAgcDriverSubmitAcb", "bound", (uint64_t)(fn_sub_acb != NULL), "bool");
+    if (fn_sub_acb) {
+        int rc_sub_null = -1;
+        sig = OBS_FAULT_ARM(&guard);
+        if (sig == 0) {
+            rc_sub_null = fn_sub_acb(NULL, NULL, 0, NULL);
+            obs_fault_unregister();
+        } else {
+            obs_fault_unregister();
+            rc_sub_null = -sig;
+            obs_report_measure(id, "submit-acb-null", "fault", (uint64_t)sig, "signal");
+        }
+        obs_report_measure(id, "submit-acb-null", "rc", (uint64_t)(uint32_t)rc_sub_null, "code");
+    }
+
+    return obs_pass();
+}
+
 #endif /* OBS_WAVE2_CHECKS_INC */

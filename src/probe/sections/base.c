@@ -10307,6 +10307,8 @@ static const obs_check boot_checks[] = {
     {"000-boot/tr01-trophy-savedata-rtc", "libSceRtc", "sceRtcGetCurrentNetworkTick",
      OBS_CAP_NONE, OBS_CAP_NONE, OBS_NO_SYMBOL, check_tr01_trophy_savedata_rtc,
      OBS_FROM_SPEC},
+    {"000-boot/gt12-story-builders", "libSceAgc", "sceAgcDcbJump", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt12_story_builders, OBS_FROM_SPEC},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };
