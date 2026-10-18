@@ -10309,6 +10309,8 @@ static const obs_check boot_checks[] = {
      OBS_FROM_SPEC},
     {"000-boot/gt12-story-builders", "libSceAgc", "sceAgcDcbJump", OBS_CAP_NONE,
      OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt12_story_builders, OBS_FROM_SPEC},
+    {"000-boot/gt13-voice-ports", "libSceVoice", "sceVoiceCreatePort", OBS_CAP_NONE,
+     OBS_CAP_NONE, OBS_NO_SYMBOL, check_gt13_voice_ports, OBS_FROM_SPEC},
     {"000-boot/stack-alignment", "obscene", "(self-check)", OBS_CAP_NONE, OBS_CAP_NONE,
      OBS_NO_SYMBOL, check_stack_alignment, OBS_FROM_SPEC},
 };

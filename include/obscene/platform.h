@@ -2552,4 +2552,16 @@ OBS_WEAK int sceRtcGetCurrentNetworkTick_static(void *tick) __asm__("$zO9UL3qIIN
 OBS_WEAK int sceContentSearchInit_static(const void *param) __asm__("$dPj4ZtRcIWk");
 OBS_WEAK int sceUserServiceGetEvent_static(void *event) __asm__("$yH17Q6NWtVg");
 
+/* REQ-20261018T1300Z-gt13: libSceVoice ports */
+OBS_WEAK int sceVoiceCreatePort_static(uint32_t *portId,
+                                       const void *param) __asm__("$nXpje5yNpaE");
+OBS_WEAK int
+sceVoiceConnectIPortToOPort_static(uint32_t inPortId,
+                                   uint32_t outPortId) __asm__("$oV9GAdJ23Gw");
+OBS_WEAK int sceVoiceGetPortInfo_static(uint32_t portId,
+                                        void *info) __asm__("$CrLqDwWLoXM");
+OBS_WEAK int sceVoiceStart_static(void) __asm__("$54phPH2LZls");
+OBS_WEAK int sceVoiceStop_static(void) __asm__("$Ao2YNSA7-Qo");
+OBS_WEAK int sceVoiceDeletePort_static(uint32_t portId) __asm__("$b7kJI+nx2hg");
+
 #endif /* OBSCENE_PLATFORM_H */

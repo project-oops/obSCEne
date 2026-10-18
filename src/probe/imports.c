@@ -1957,6 +1957,19 @@ static const obs_import obs_platform_imports[] = {
     {"libSceContentSearch", "sceContentSearchInit"},
     {"libSceUserService", "$yH17Q6NWtVg"},
     {"libSceUserService", "sceUserServiceGetEvent"},
+    /* REQ-20261018T1300Z-gt13 */
+    {"libSceVoice", "$nXpje5yNpaE"},
+    {"libSceVoice", "sceVoiceCreatePort"},
+    {"libSceVoice", "$oV9GAdJ23Gw"},
+    {"libSceVoice", "sceVoiceConnectIPortToOPort"},
+    {"libSceVoice", "$CrLqDwWLoXM"},
+    {"libSceVoice", "sceVoiceGetPortInfo"},
+    {"libSceVoice", "$54phPH2LZls"},
+    {"libSceVoice", "sceVoiceStart"},
+    {"libSceVoice", "$Ao2YNSA7-Qo"},
+    {"libSceVoice", "sceVoiceStop"},
+    {"libSceVoice", "$b7kJI+nx2hg"},
+    {"libSceVoice", "sceVoiceDeletePort"},
 };
 
 /* Calls `fn` once per import declared outside the census. */
